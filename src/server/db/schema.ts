@@ -154,6 +154,23 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   ),
 }));
 
+// ── Phase 5: Union Trade Configurations ─────────────────────────────────
+// Stores named trade/union configs per project. Wage rate fields are
+// informational labels — actual cost is always derived from payroll_entries
+// rate snapshots, never from these fields.
+
+export const unionTradeConfigs = sqliteTable('union_trade_configs', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  tradeCode: text('trade_code').notNull(),      // matches workerClassifications.tradeCode
+  tradeName: text('trade_name').notNull(),       // display label, e.g. "Ironworkers Local 433"
+  unionName: text('union_name'),                 // optional CBA/union name
+  baseRate: real('base_rate').notNull(),         // for display/reference only
+  fringeRate: real('fringe_rate').notNull().default(0),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
 export const otThresholds = sqliteTable('ot_thresholds', {
   id: text('id').primaryKey(),
   projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
@@ -164,6 +181,23 @@ export const otThresholds = sqliteTable('ot_thresholds', {
   dtMultiplier: real('dt_multiplier').notNull().default(2.0),
   source: text('source').notNull().default('cwhssa')
     .$type<'cwhssa' | 'cba' | 'state'>(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+// ── Phase 5: GSA Rate Configurations ─────────────────────────────────────
+// Stores named fully-loaded GSA labor rate builds per project.
+
+export const gsaRates = sqliteTable('gsa_rates', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),                   // user-defined label, e.g. "2026 GSA Electrician"
+  baseRate: real('base_rate').notNull(),
+  fringeRate: real('fringe_rate').notNull().default(0),
+  overheadPct: real('overhead_pct').notNull(),    // 0–200
+  gaPct: real('ga_pct').notNull(),                // 0–200
+  profitPct: real('profit_pct').notNull(),        // 0–100
+  billableRate: real('billable_rate').notNull(),  // computed and stored for quick display
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
