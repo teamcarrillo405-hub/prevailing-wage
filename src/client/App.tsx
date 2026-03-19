@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/shared/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
+import { WageLookupPage } from './pages/WageLookupPage.js';
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/projects/:id" element={<ProjectDetailPage />} />
+              <Route path="/wages" element={<WageLookupPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
