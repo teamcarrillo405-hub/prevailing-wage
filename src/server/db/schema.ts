@@ -201,3 +201,19 @@ export const gsaRates = sqliteTable('gsa_rates', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+// ── Phase 5: Project Budget Configuration ────────────────────────────────
+// One row per project. Stores the working budget and configuration for
+// variance reporting. varianceThresholdPct: flag weeks where
+// |variancePct| exceeds this value.
+
+export const projectBudgets = sqliteTable('project_budgets', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().unique().references(() => projects.id, { onDelete: 'cascade' }),
+  bidAmount: real('bid_amount'),               // original bid — display only
+  workingBudget: real('working_budget').notNull(),  // used for burn rate calculation
+  totalWeeks: integer('total_weeks').notNull(),     // denominator for linear burn rate
+  varianceThresholdPct: real('variance_threshold_pct').notNull().default(10), // default 10%
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
