@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
@@ -86,9 +86,21 @@ export function ProjectDetailPage() {
             </dl>
           </div>
 
-          <p className="mt-8 text-sm text-gray-400 italic">
-            Full project workspace coming in Phase 2.
-          </p>
+          {/* Project sub-page navigation */}
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              to={`/projects/${project.id}/payroll`}
+              className="inline-block rounded border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Payroll Weeks
+            </Link>
+            <Link
+              to={`/projects/${project.id}/ot-scenarios`}
+              className="inline-block rounded border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              OT Scenario Planner
+            </Link>
+          </div>
         </div>
       )}
     </Layout>
