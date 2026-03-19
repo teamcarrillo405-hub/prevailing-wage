@@ -8,4 +8,11 @@ mkdirSync('./data', { recursive: true });
 const sqlite = new Database(dbPath);
 sqlite.pragma('journal_mode = WAL');
 sqlite.pragma('foreign_keys = ON');
-export const db = drizzle(sqlite, { schema });
+const _db = drizzle(sqlite, { schema });
+
+// In test environments, use the in-memory DB set up by tests/helpers/db.ts
+export function getDb() {
+  return (globalThis as any).__testDb ?? _db;
+}
+
+export const db = _db;

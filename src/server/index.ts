@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { errorHandler } from './middleware/errorHandler.js';
+import authRouter from './routes/auth.js';
 
 const app = express();
 app.use(helmet());
@@ -11,6 +12,7 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', crede
 app.use(express.json());
 app.use(cookieParser());
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/api/auth', authRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
