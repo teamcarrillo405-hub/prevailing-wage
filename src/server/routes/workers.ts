@@ -30,7 +30,7 @@ const CreateClassificationSchema = z.object({
 
 // POST /api/projects/:projectId/workers — create a worker on a project
 router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res) => {
-  const { projectId } = req.params;
+  const projectId = req.params.projectId as string;
   const userId = req.user!.userId;
   const db = getDb();
 
@@ -72,7 +72,8 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
 
 // POST /api/projects/:projectId/workers/:workerId/classifications — add classification to worker
 router.post('/:projectId/workers/:workerId/classifications', validate(CreateClassificationSchema), async (req, res) => {
-  const { projectId, workerId } = req.params;
+  const projectId = req.params.projectId as string;
+  const workerId = req.params.workerId as string;
   const userId = req.user!.userId;
   const db = getDb();
 
@@ -97,7 +98,7 @@ router.post('/:projectId/workers/:workerId/classifications', validate(CreateClas
   const [worker] = await db
     .select()
     .from(workers)
-    .where(eq(workers.id, workerId))
+    .where(eq(workers.id, workerId as string))
     .limit(1);
 
   if (!worker || worker.projectId !== projectId) {
