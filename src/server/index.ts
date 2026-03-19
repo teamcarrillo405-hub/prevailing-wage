@@ -14,6 +14,7 @@ import { payrollRouter } from './routes/payroll.js';
 import { otRouter } from './routes/ot.js';
 import { exportRouter } from './routes/export.js';
 import { gsaRouter } from './routes/gsa.js';
+import { unionRouter } from './routes/union.js';
 import { runWageSync } from './services/wdolSync.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 
@@ -32,6 +33,7 @@ app.use('/api/payroll', payrollRouter);
 app.use('/api/ot-thresholds', otRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/gsa', gsaRouter);
+app.use('/api/union', unionRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
