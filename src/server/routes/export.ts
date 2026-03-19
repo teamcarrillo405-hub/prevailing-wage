@@ -24,6 +24,11 @@ import {
   type Wh347Data,
   type Wh347WorkerRow,
 } from '../services/wh347Generator.js';
+import {
+  generateLcpTrackerCsv,
+  generateEmarsCsv,
+  mapEntriesToExportRows,
+} from '../services/csvExporter.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -146,6 +151,86 @@ router.get('/wh347/:weekId', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Length', filledPdf.length);
   res.end(Buffer.from(filledPdf));
+});
+
+// ── GET /api/export/csv/lcptracker/:weekId ────────────────────────────────
+
+router.get('/csv/lcptracker/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const db = getDb();
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, week.projectId))
+    .limit(1);
+
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  if (project.userId !== userId) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  const entries = await getPayrollEntries(weekId);
+  const rows = mapEntriesToExportRows(entries, week, project.name, project.name);
+
+  const csv = generateLcpTrackerCsv(rows);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="lcptracker-payroll-${week.payrollNumber}.csv"`,
+  );
+  res.send(csv);
+});
+
+// ── GET /api/export/csv/emars/:weekId ─────────────────────────────────────
+
+router.get('/csv/emars/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const db = getDb();
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, week.projectId))
+    .limit(1);
+
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  if (project.userId !== userId) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  const entries = await getPayrollEntries(weekId);
+  const rows = mapEntriesToExportRows(entries, week, project.name, project.name);
+
+  const csv = generateEmarsCsv(rows);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="emars-payroll-${week.payrollNumber}.csv"`,
+  );
+  res.send(csv);
 });
 
 export { router as exportRouter };
