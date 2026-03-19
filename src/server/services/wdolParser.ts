@@ -1,0 +1,86 @@
+// src/server/services/wdolParser.ts
+// Extracts trade classifications from the plain-text WD document field.
+//
+// DBA WD documents use two main formats:
+//
+// CA (and most states) format — leading spaces, dot-fill, dollar sign:
+//   "   Carpenter..................$ 49.58            25.27"
+//
+// TX format — no leading indent, dots, dollar sign, optional ** (federal min wage marker):
+//   "CARPENTER........................$  7.25 **"
+//   "BOILERMAKER......................$ 16.35 **         2.315"
+//
+// Both formats use dots (.) as the fill character between description and rate.
+// Validated against CA20250001.txt (93 matches) and TX20250001.txt (16 matches).
+
+export interface ParsedClassification {
+  code: string;          // Uppercase slug, max 20 chars, e.g. "CARPENTER"
+  description: string;   // Human readable, e.g. "Carpenter"
+  baseRate: number;      // $/hour as float, e.g. 49.58
+  fringeRate: number;    // $/hour as float, e.g. 25.27 (0 if not specified)
+  totalRate: number;     // baseRate + fringeRate, rounded to 2 decimal places
+}
+
+// CA-style: 3+ leading spaces, uppercase-starting description, 2+ dots, $ sign, base, 2+ spaces, fringe
+const CA_RE =
+  /^\s{3,}([A-Z][A-Za-z0-9 \-\/\(\),:#]{2,60}?)\.{2,}\$\s*(\d{2,3}\.\d{2})\s{2,}(\d{1,3}\.\d{2})\s*$/gm;
+
+// TX-style: 0-4 leading spaces, uppercase-starting description, 2+ dots, $ sign, base, optional ** marker, optional fringe
+const TX_RE =
+  /^([ \t]{0,4}[A-Z][A-Za-z0-9 \-\/\(\),:#]{2,60}?)\.{2,}\$\s*(\d{1,3}\.\d{2})\s+\*{0,2}\s*(\d+\.\d+)?\s*$/gm;
+
+function extractMatches(
+  text: string,
+  re: RegExp,
+  seen: Set<string>,
+  results: ParsedClassification[]
+): void {
+  // Create fresh regex instance on every call to avoid lastIndex bleed from the g flag
+  const freshRe = new RegExp(re.source, re.flags);
+  let match: RegExpExecArray | null;
+
+  while ((match = freshRe.exec(text)) !== null) {
+    const description = match[1].trim();
+    if (description.length < 3) continue;
+
+    const baseRate = parseFloat(match[2]);
+    const fringeRate = match[3] ? parseFloat(match[3]) : 0;
+
+    if (isNaN(baseRate)) continue;
+
+    const code = description
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '')
+      .slice(0, 20);
+
+    const dedupKey = `${code}:${baseRate}:${fringeRate}`;
+    if (seen.has(dedupKey)) continue;
+    seen.add(dedupKey);
+
+    results.push({
+      code,
+      description,
+      baseRate,
+      fringeRate,
+      totalRate: parseFloat((baseRate + fringeRate).toFixed(2)),
+    });
+  }
+}
+
+export function parseWdDocument(document: string): ParsedClassification[] {
+  if (!document) return [];
+
+  const results: ParsedClassification[] = [];
+  const seen = new Set<string>();
+
+  // Run CA-style first (more specific — requires 3+ leading spaces)
+  extractMatches(document, CA_RE, seen, results);
+
+  // Run TX-style (catches lines without leading spaces that CA_RE misses)
+  // The shared `seen` set prevents duplicates if a line matches both
+  extractMatches(document, TX_RE, seen, results);
+
+  return results;
+}
