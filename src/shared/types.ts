@@ -18,3 +18,36 @@ export interface Project {
 }
 
 export interface ApiResponse<T> { data?: T; error?: string; }
+
+// ── Phase 2: Wage Data Types ──────────────────────────────────────────────
+// Shared between server routes and React client components.
+// Both sides import from here — never define these shapes in-file.
+
+export interface WageClassification {
+  id: string;
+  wageDeterminationId: string;
+  tradeCode: string;
+  tradeDescription: string;
+  laborType: 'journeyworker' | 'foreman' | 'apprentice';
+  baseRate: number;
+  fringeRate: number;
+  totalRate: number;
+  createdAt: string;
+}
+
+export interface WageDetermination {
+  id: string;
+  source: 'federal-dol' | 'ca-dir' | 'wa-li' | 'ny-dol' | 'manual';
+  wdNumber: string;
+  revisionNumber: number;
+  state: string;
+  county: string | null;
+  constructionType: string | null;
+  publishDate: string | null;
+  isActive: boolean;
+  cachedAt: string;
+  cacheExpiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+  classifications?: WageClassification[];
+}

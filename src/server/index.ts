@@ -8,6 +8,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import authRouter from './routes/auth.js';
 import projectsRouter from './routes/projects.js';
 import workersRouter from './routes/workers.js';
+import { wagesRouter } from './routes/wages.js';
 import { runWageSync } from './services/wdolSync.js';
 
 const app = express();
@@ -19,6 +20,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/projects', workersRouter);
+app.use('/api/wages', wagesRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
