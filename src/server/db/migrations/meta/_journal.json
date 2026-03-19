@@ -15,6 +15,13 @@
       "when": 1773932757240,
       "tag": "0001_ambitious_wendell_vaughn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773941877470,
+      "tag": "0002_safe_wild_child",
+      "breakpoints": true
     }
   ]
 }

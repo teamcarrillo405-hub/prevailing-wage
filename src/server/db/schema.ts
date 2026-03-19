@@ -103,3 +103,67 @@ export const wageSyncMeta = sqliteTable('wage_sync_meta', {
   wdsFailed: integer('wds_failed').default(0),
   errorMessage: text('error_message'),
 });
+
+// ── Phase 4: Certified Payroll Tables ─────────────────────────────────────
+
+export const payrollWeeks = sqliteTable('payroll_weeks', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  weekEndingDate: text('week_ending_date').notNull(), // ISO 8601 date string
+  payrollNumber: integer('payroll_number').notNull(),
+  isFinal: integer('is_final', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const payrollEntries = sqliteTable('payroll_entries', {
+  id: text('id').primaryKey(),
+  payrollWeekId: text('payroll_week_id').notNull().references(() => payrollWeeks.id, { onDelete: 'cascade' }),
+  workerId: text('worker_id').notNull().references(() => workers.id),
+  classificationId: text('classification_id').notNull().references(() => workerClassifications.id),
+  // Daily straight-time hours (Mon–Sun)
+  monSt: real('mon_st').notNull().default(0),
+  tueSt: real('tue_st').notNull().default(0),
+  wedSt: real('wed_st').notNull().default(0),
+  thuSt: real('thu_st').notNull().default(0),
+  friSt: real('fri_st').notNull().default(0),
+  satSt: real('sat_st').notNull().default(0),
+  sunSt: real('sun_st').notNull().default(0),
+  // Daily overtime hours (Mon–Sun)
+  monOt: real('mon_ot').notNull().default(0),
+  tueOt: real('tue_ot').notNull().default(0),
+  wedOt: real('wed_ot').notNull().default(0),
+  thuOt: real('thu_ot').notNull().default(0),
+  friOt: real('fri_ot').notNull().default(0),
+  satOt: real('sat_ot').notNull().default(0),
+  sunOt: real('sun_ot').notNull().default(0),
+  // Rate snapshots at time of entry
+  baseRateSnapshot: real('base_rate_snapshot').notNull(),
+  fringeRateSnapshot: real('fringe_rate_snapshot').notNull(),
+  // Computed pay fields
+  grossWages: real('gross_wages'),
+  deductions: real('deductions').notNull().default(0),
+  netPay: real('net_pay'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  payrollEntryUnique: uniqueIndex('payroll_entry_unique').on(
+    table.payrollWeekId,
+    table.workerId,
+    table.classificationId,
+  ),
+}));
+
+export const otThresholds = sqliteTable('ot_thresholds', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  weeklyOtThreshold: real('weekly_ot_threshold').notNull().default(40),
+  dailyOtThreshold: real('daily_ot_threshold'),    // null = no daily OT trigger
+  dailyDtThreshold: real('daily_dt_threshold'),    // null = no daily DT trigger
+  otMultiplier: real('ot_multiplier').notNull().default(1.5),
+  dtMultiplier: real('dt_multiplier').notNull().default(2.0),
+  source: text('source').notNull().default('cwhssa')
+    .$type<'cwhssa' | 'cba' | 'state'>(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
