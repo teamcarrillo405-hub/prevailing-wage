@@ -3,10 +3,12 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import cron from 'node-cron';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRouter from './routes/auth.js';
 import projectsRouter from './routes/projects.js';
 import workersRouter from './routes/workers.js';
+import { runWageSync } from './services/wdolSync.js';
 
 const app = express();
 app.use(helmet());
@@ -20,5 +22,18 @@ app.use('/api/projects', workersRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`API running on http://localhost:${PORT}`);
+  // Register monthly wage sync — MUST be inside listen() callback so getDb() is initialized
+  // Cron: 2:00 AM on the 1st of every month
+  cron.schedule('0 2 1 * *', async () => {
+    console.log('[wage-sync] Starting monthly sync');
+    try {
+      await runWageSync();
+    } catch (err) {
+      console.error('[wage-sync] Failed:', err);
+      // Never rethrow — cron failures must not crash Express
+    }
+  }, { timezone: 'America/New_York' });
+});
 export { app };
