@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { WageLookupPage } from './pages/WageLookupPage.js';
+import { AdminStateWagePage } from './pages/AdminStateWagePage.js';
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/projects/:id" element={<ProjectDetailPage />} />
               <Route path="/wages" element={<WageLookupPage />} />
+              <Route path="/admin/wages" element={<AdminStateWagePage />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
