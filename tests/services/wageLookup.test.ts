@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import crypto from 'crypto';
 import { upsertWageDetermination, upsertClassifications } from '../../src/server/services/wageCache.js';
 import { lookupWageDetermination, FederalWdolAdapter } from '../../src/server/services/wageLookup.js';
+import { CaDirAdapter, WaLiAdapter, NyDolAdapter } from '../../src/server/services/stateWageAdapter.js';
 
 // Mock the fetcher so no live network calls are made during tests
 vi.mock('../../src/server/services/wdolFetcher.js', () => ({
@@ -75,5 +76,78 @@ describe('FederalWdolAdapter', () => {
     expect(adapter.supportsLookup('CA')).toBe(true);
     expect(adapter.supportsLookup('WA')).toBe(true);
     expect(adapter.supportsLookup('XX')).toBe(true);
+  });
+});
+
+describe('CaDirAdapter', () => {
+  it('supportsLookup returns true for CA, false for other states', () => {
+    const adapter = new CaDirAdapter();
+    expect(adapter.supportsLookup('CA')).toBe(true);
+    expect(adapter.supportsLookup('WA')).toBe(false);
+    expect(adapter.supportsLookup('NY')).toBe(false);
+    expect(adapter.supportsLookup('TX')).toBe(false);
+  });
+});
+
+describe('WaLiAdapter', () => {
+  it('supportsLookup returns true for WA only', () => {
+    const adapter = new WaLiAdapter();
+    expect(adapter.supportsLookup('WA')).toBe(true);
+    expect(adapter.supportsLookup('CA')).toBe(false);
+  });
+});
+
+describe('NyDolAdapter', () => {
+  it('supportsLookup returns true for NY only', () => {
+    const adapter = new NyDolAdapter();
+    expect(adapter.supportsLookup('NY')).toBe(true);
+    expect(adapter.supportsLookup('CA')).toBe(false);
+  });
+});
+
+describe('lookupWageDetermination — adapter dispatch', () => {
+  it('returns WD with source=ca-dir when CA row exists in DB from manual import', async () => {
+    const now = new Date();
+    const future = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const wdId = crypto.randomUUID();
+    const county = `CaDispatch${Date.now()}`;
+
+    // Seed a CA WD row as if it came from a state CSV import
+    upsertWageDetermination({
+      id: wdId,
+      source: 'ca-dir',
+      wdNumber: 'CA-DIR-TEST',
+      revisionNumber: 0,
+      state: 'CA',
+      county,
+      constructionType: 'Building',
+      publishDate: '2025-01-01',
+      rawDocument: null,
+      cachedAt: now.toISOString(),
+      cacheExpiresAt: future,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    upsertClassifications(wdId, [
+      { code: 'CARP', description: 'Carpenter', baseRate: 62.50, fringeRate: 28.75, totalRate: 91.25 },
+    ]);
+
+    const result = await lookupWageDetermination('CA', county);
+
+    // Cache hit returns immediately — source is preserved from the DB row
+    expect(result).not.toBeNull();
+    expect(result?.source).toBe('ca-dir');
+    expect(result?.state).toBe('CA');
+    expect(result?.county).toBe(county);
+    expect(result?.classifications).toHaveLength(1);
+    expect(result?.classifications?.[0].tradeCode).toBe('CARP');
+  });
+
+  it('falls through to FederalWdolAdapter for TX (no state adapter matches TX)', async () => {
+    // TX has no state adapter — FederalWdolAdapter.supportsLookup('TX') is true
+    // But fetchWdFromSamGov is mocked to return null, so the result is null
+    const result = await lookupWageDetermination('TX', `TXDispatch${Date.now()}`);
+    // null is expected because: no cache, no state adapter, mocked fetcher returns null
+    expect(result).toBeNull();
   });
 });

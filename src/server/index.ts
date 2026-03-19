@@ -9,7 +9,9 @@ import authRouter from './routes/auth.js';
 import projectsRouter from './routes/projects.js';
 import workersRouter from './routes/workers.js';
 import { wagesRouter } from './routes/wages.js';
+import { adminWagesRouter } from './routes/adminWages.js';
 import { runWageSync } from './services/wdolSync.js';
+import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 
 const app = express();
 app.use(helmet());
@@ -21,6 +23,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/projects', workersRouter);
 app.use('/api/wages', wagesRouter);
+app.use('/api/admin/wages', adminWagesRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
