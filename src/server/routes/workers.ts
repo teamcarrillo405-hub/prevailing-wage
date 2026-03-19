@@ -28,6 +28,47 @@ const CreateClassificationSchema = z.object({
   { message: 'apprenticePercent is required when laborType is apprentice', path: ['apprenticePercent'] }
 );
 
+// GET /api/projects/:projectId/workers — list workers with their classifications
+router.get('/:projectId/workers', async (req, res) => {
+  const projectId = req.params.projectId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+
+  if (project.userId !== userId) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  const workerRows = await db
+    .select()
+    .from(workers)
+    .where(eq(workers.projectId, projectId));
+
+  // Attach classifications to each worker
+  const result = await Promise.all(
+    workerRows.map(async (w) => {
+      const classifications = await db
+        .select()
+        .from(workerClassifications)
+        .where(eq(workerClassifications.workerId, w.id));
+      return { ...w, classifications };
+    }),
+  );
+
+  res.json({ data: { workers: result } });
+});
+
 // POST /api/projects/:projectId/workers — create a worker on a project
 router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res) => {
   const projectId = req.params.projectId as string;
