@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v2.0
+milestone_name: Contractor UX Overhaul + Compliance
+status: planning
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-20T08:41:16.232Z"
+last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
+progress:
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 50
+---
+
 # State
 
 ## Project Reference
@@ -14,7 +30,7 @@ Plan: — of — (not yet planned)
 Status: Ready to plan
 Last activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 
-Progress: [░░░░░░░░░░] 0% (v2.0)
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -30,6 +46,7 @@ Progress: [░░░░░░░░░░] 0% (v2.0)
 | - | - | - | - |
 
 ## Accumulated Context
+| Phase 06 P01 | 7 | 2 tasks | 2 files |
 
 ### Decisions
 
@@ -41,6 +58,8 @@ Progress: [░░░░░░░░░░] 0% (v2.0)
 - v2.0: Compliance engine must be built before WH-347 UI button is exposed — compliance booleans on Statement of Compliance must be driven by real engine output
 - v2.0: Violations computed on-demand from stored snapshots — never compared to live WD rates
 - v2.0: Phase 6 BEFORE Phase 7 — J/RA field is a hard dependency for 2025 form AND apprentice ratio check
+- [Phase 06]: Stubs must use actual assertions (not .todo) so they run and fail on missing fields
+- [Phase 06]: certApprentices contract test is green by design — documents API accepts false, not a failing stub
 
 ### Research Flags (address during planning)
 
@@ -58,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19
-Stopped at: Roadmap written, ready to plan Phase 6
+Last session: 2026-03-20T08:41:16.230Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
