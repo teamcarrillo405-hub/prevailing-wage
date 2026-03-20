@@ -106,18 +106,19 @@ async function seedProjectWithViolation(
   const wRes = await supertest(app)
     .get(`/api/projects/${projectId}/workers`)
     .set('Cookie', cookie);
-  const workerId = wRes.body.data?.workers?.[0]?.id as string;
+  const worker = wRes.body.data?.workers?.[0];
+  const workerId = worker?.id as string;
+  const classificationId = worker?.classifications?.[0]?.id as string;
 
   // Post a payroll entry with grossWages far below baseRateSnapshot × hours
   await supertest(app)
     .post('/api/payroll/entries')
     .set('Cookie', cookie)
     .send({
-      weekId,
+      payrollWeekId: weekId,
       workerId,
-      tradeCode: 'CARP',
-      straightTimeHours: 8,
-      overtimeHours: 0,
+      classificationId,
+      monSt: 8,
       grossWages: 1.00,
       baseRateSnapshot: 50.00,
       fringeRateSnapshot: 10.00,
