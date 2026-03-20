@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-03-20T22:26:01.355Z"
+stopped_at: Completed 13-02-PLAN.md
+last_updated: "2026-03-20T22:29:40Z"
 last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 | Phase 12-app-shell-global-layout P02 | 5min | 2 tasks | 2 files |
 | Phase 12-app-shell-global-layout P03 | 10min | 3 tasks | 5 files |
 | Phase 13-landing-page-routing P01 | 3min | 2 tasks | 6 files |
+| Phase 13-landing-page-routing P02 | 2min | 1 tasks | 1 files |
 
 ### Decisions
 
@@ -127,6 +128,8 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 12-app-shell-global-layout]: Card padding=none for table wrappers; padding=sm for compact item cards; ProjectCard button not wrapped in Card (Phase 14 scope)
 - [Phase 13-landing-page-routing]: PublicRoute returns null (not LoadingSpinner) during isLoading — spinner adds visual noise on fast auth checks
 - [Phase 13-landing-page-routing]: WildcardRedirect defined inline in App.tsx module — single-use component does not warrant its own file
+- [Phase 13-02]: HowItWorksSection uses plain div (not Card) for steps on dark background — Card is white/surface-card which clashes with bg-nav-dark
+- [Phase 13-02]: hero h1 packs all three required terms (WH-347, Davis-Bacon, SAM.gov) into a two-line headline above the fold
 
 ### Research Flags for v2.1
 
@@ -150,6 +153,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T22:25:08.826Z
-Stopped at: Completed 13-01-PLAN.md
+Last session: 2026-03-20T22:29:40Z
+Stopped at: Completed 13-02-PLAN.md
 Resume file: None
