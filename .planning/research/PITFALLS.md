@@ -1,200 +1,236 @@
 # Pitfalls Research
 
-**Domain:** Prevailing wage compliance — adding compliance checks and reporting to an existing Davis-Bacon payroll system
-**Researched:** 2026-03-19
-**Confidence:** HIGH (DOL official sources + direct code audit of existing system)
+**Domain:** Design polish + landing page on existing React + TailwindCSS v4 app
+**Researched:** 2026-03-20
+**Confidence:** HIGH (Tailwind v4 official docs, direct codebase audit of 33 TSX files, community discussions)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Apprentice Ratio Checked Weekly Instead of Daily
+### Pitfall 1: TailwindCSS v4 Renamed Shadow Classes Will Break Existing Components If New Code Uses v3 References
 
 **What goes wrong:**
-The compliance engine aggregates weekly payroll totals and computes apprentice-to-journeyworker ratio from the week's totals. A week where Monday had a valid ratio but Tuesday had one journeyworker leave early passes the weekly check — but is a violation for Tuesday. Back wages accrue at the full journeyworker rate for every excess apprentice-hour on the violation day.
+
+TailwindCSS v4 shifted the shadow scale by one step. `shadow-sm` in v4 produces what `shadow` produced in v3. `shadow-xs` in v4 produces what `shadow-sm` produced in v3. If any new landing page or polished component code is written against v3 documentation or tutorial examples, the shadow weights will be off. A landing page card using `shadow-sm` for a subtle lift will render heavier than intended. Existing components already in the codebase (GsaRateDisplay, LiveCalcDisplay) that use `shadow-sm` were presumably built against v4 semantics and look correct today — the danger is new code added during this milestone that copies v3 patterns.
+
+Full rename table relevant to this project:
+
+| v3 class | v4 equivalent |
+|----------|--------------|
+| `shadow-sm` | `shadow-xs` |
+| `shadow` | `shadow-sm` |
+| `shadow-md` | `shadow-md` (unchanged) |
+| `shadow-lg` | `shadow-lg` (unchanged) |
+| `shadow-xl` | `shadow-xl` (unchanged) |
 
 **Why it happens:**
-The existing `payrollEntries` table stores daily ST/OT hours per column, making it tempting to aggregate first and then check. The existing `checkApprenticeRatio()` in `calculations.ts` accepts `journeyworkerCount` and `apprenticeCount` as scalar inputs — it was not designed with a daily loop in mind. Developers wire it at the week level because that is the natural unit of `payrollWeeks`.
+
+The majority of Tailwind tutorials, component libraries, and StackOverflow answers were written for v3. When building the landing page, developers copy-paste hero sections and card components from v3-era resources without realizing the shadow scale shifted.
 
 **How to avoid:**
-For each payroll week, reconstruct per-day presence counts from the daily hour columns (`monSt + monOt > 0` = present that day). Run `checkApprenticeRatio()` once per trade per day, not once per trade per week. A worker with any non-zero hours on a given day counts as "present" for that day's ratio check. Store daily ratio results, not just a single weekly pass/fail flag. The DOL rule: "Compliance with the applicable ratio is determined on a daily, not weekly, basis."
+
+Before writing any new component, set a rule: reference the [official v4 shadow docs](https://tailwindcss.com/docs/box-shadow) directly, not any third-party tutorial. When establishing the design token system, define named shadow tokens (`--shadow-card: ...`) in `@theme` so new components reference tokens, not raw Tailwind shadow classes. This insulates all components from the scale confusion.
 
 **Warning signs:**
-Ratio check passes for a week where any single day had different headcounts. A worker has zero ST and zero OT on a day but the ratio check still counts them as present.
 
-**Phase to address:**
-Compliance engine phase (first compliance phase). This constraint must be baked into the ratio check design from the start — retrofitting a daily loop onto a weekly aggregation is expensive.
+Landing page cards look noticeably heavier or lighter than app cards using the same class. A "subtle" shadow looks like a modal shadow. Visual inconsistency between pages that should feel unified.
+
+**Phase to address:** Design Token phase — define `--shadow-card`, `--shadow-modal`, `--shadow-elevated` as explicit tokens in `@theme` before writing any new UI.
 
 ---
 
-### Pitfall 2: Unregistered Apprentice Treated as Apprentice at Reduced Rate
+### Pitfall 2: focus:outline-none Behavior Changed in v4 — Existing Form Inputs Have a Broken Focus Pattern
 
 **What goes wrong:**
-`workerClassifications.laborType` can be set to `'apprentice'` with an `apprenticePercent`, but there is no field enforcing whether the worker is enrolled in a DOL-registered or state-recognized apprenticeship program. A contractor marks a helper "apprentice" at 60% rate. The system accepts it. The compliance check does not flag it. On audit, every hour worked at the reduced rate becomes a back-wage liability at the full journeyworker rate.
+
+The existing codebase uses `focus:outline-none focus:ring-2 focus:ring-[#F5C518]` on form inputs throughout LoginForm, RegisterForm, and GsaRateForm. In TailwindCSS v4, `outline-none` was renamed to `outline-hidden`. The old `outline-none` in v4 sets `outline: 2px solid transparent` — which is visually invisible but technically creates a focus outline that can interfere with the `ring` on some browsers and accessibility tools.
+
+The `ring` bare class also changed: in v3 it generated a `3px` ring; in v4 it generates a `1px` ring. The code uses `ring-2` (explicit width), which is safe, but `ring-1` patterns elsewhere in `GsaRateForm` will produce a thinner ring than was designed.
 
 **Why it happens:**
-The schema captures `laborType` and `apprenticePercent` but has no `programRegistered` boolean or registration ID field. The compliance flag for "under-wage" compares `baseRateSnapshot` against the WD rate, but `baseRateSnapshot` was set correctly for the reduced rate — the system has no way to know the registration was invalid.
+
+These utilities were stable across v3 and looked correct in development. The v4 behavior change for `outline-none` is subtle — the ring still appears, the change only becomes apparent in browser accessibility mode, forced-colors mode, or when a downstream CSS reset applies its own outline handling.
 
 **How to avoid:**
-Add a `programName` or `registeredProgram` field (nullable) to `workerClassifications`. During compliance checking, flag any worker classified as `laborType = 'apprentice'` where `programName IS NULL` as a "registration not confirmed" warning — distinct from an under-wage error, but surfaced clearly before WH-347 is generated. This is a data validation flag, not a calculation error. The DOL rule: unregistered apprentices must be paid the full journeyworker prevailing wage rate for the work actually performed.
+
+Global search for `outline-none` in `src/client/` and replace every instance with `outline-hidden`. This is a mechanical find-and-replace with no logic risk. Do it at the start of the Typography/Input Polish phase. There are at least 5 confirmed occurrences (LoginForm: 2, RegisterForm: 2, GsaRateForm: 1).
 
 **Warning signs:**
-Multiple workers with `laborType = 'apprentice'` and `programName = null`. Under-wage flag does not trigger because snapshot was set to the reduced rate, not the journeyworker rate.
 
-**Phase to address:**
-Compliance engine phase. Schema addition is add-only (no existing table changes). The flag is a new compliance check, not a recalculation.
+Input fields show a faint duplicate focus indicator in forced-color accessibility mode. Screen reader tools report "outline: 2px transparent" as the focus style. In some browsers, tabbing to an input shows both a system outline and the gold ring simultaneously.
+
+**Phase to address:** Typography + Input Polish phase — fix all form inputs as the first task of that phase before changing any visual styling.
 
 ---
 
-### Pitfall 3: CWHSSA OT Fringe Multiplied at 1.5x Instead of 1.0x for OT Hours
+### Pitfall 3: @theme Color Token Addition Can Accidentally Wipe All Default Utility Colors
 
 **What goes wrong:**
-The developer implementing the compliance check reads "overtime hours must be paid at 1.5x" and applies the 1.5x multiplier to both base rate and fringe rate. The actual CWHSSA rule: the premium (the extra half-time) applies only to the **base rate**. Fringe benefits are paid at straight time (1.0x) for all hours worked, including OT hours. Applying 1.5x to fringe overstates the required pay and corrupts comparisons.
+
+TailwindCSS v4 uses `@theme` to define design tokens that also generate utility classes. The current `@theme` in `src/client/index.css` is minimal and correct:
+
+```css
+@theme {
+  --color-brand-gold: #F5C518;
+  --font-headline: 'Oswald', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+```
+
+The dangerous pattern emerges when a developer, wanting to "clean up" the color system and restrict available utilities to only brand-approved colors, adds `--color-*: initial` to the theme block. This clears the entire color namespace. Every `text-gray-*`, `bg-red-*`, `bg-white`, `text-black`, and `border-gray-*` class across all 33 components silently stops working. The app renders with no background colors, no text colors beyond currentColor, and no border colors — a catastrophic visual regression that no test will catch.
 
 **Why it happens:**
-The existing `calculateCwhssaOt()` in `calculations.ts` already implements this correctly: `overtimePremium = overtimeHours * 0.5 * baseRate` (half-time only, no fringe multiplier) and `totalFringePay = totalHoursWorked * fringeRate` (all hours at 1.0x). The pitfall occurs when new compliance check code independently recalculates expected pay rather than reusing this function — producing a divergent formula.
+
+The Tailwind v4 docs describe `--color-*: initial` as the way to replace the full color palette when building a custom design system. It is the correct tool for a greenfield custom design system. It is the wrong tool for adding tokens to an existing system that depends on Tailwind's default palette.
 
 **How to avoid:**
-The compliance engine must reuse `calculateCwhssaOt()` as the single source of truth for what the worker should have been paid. Do not implement OT pay math inline in a new compliance service. The check is: computed expected gross (via `calculateCwhssaOt`) vs. `grossWages` stored in `payrollEntries`. If `grossWages` is null (not yet computed), recompute from hours and snapshots.
+
+ADD tokens to `@theme`. Never use `--color-*: initial` or `--*: initial` in this project. The project already has 33 components using `text-gray-*`, `bg-red-*`, `bg-green-*`, and other default Tailwind colors for compliance badges, error states, and status indicators. All of these must remain functional. The design token strategy for this project is additive: define brand-specific tokens (`--color-brand-gold`, `--color-nav-dark`, etc.) without removing any defaults.
 
 **Warning signs:**
-OT compliance check and the existing OT scenario tool produce different dollar figures for the same inputs. Fringe appears in the OT premium calculation.
 
-**Phase to address:**
-Compliance engine phase. Document explicitly that all OT math routes through `calculateCwhssaOt()` — not a new formula.
+After a `@theme` change, the entire app renders with white backgrounds and black text only. Tables have no border colors. Compliance badges (red/green) disappear. The Vite HMR reload triggers immediate full visual collapse.
+
+**Phase to address:** Design Token phase — establish the "ADD only, never wipe" rule explicitly in a comment inside `index.css` before any token additions.
 
 ---
 
-### Pitfall 4: Multi-Classification Worker's OT Calculated Per Classification Instead of Per Week
+### Pitfall 4: Global Font Change Breaks Payroll Table Column Widths
 
 **What goes wrong:**
-A worker performs carpentry (8 hrs/day) and then operates equipment (2 hrs/day). The system creates two `payrollEntries` rows — one per `classificationId`. The compliance engine checks each classification's hours independently: 40 ST hours of carpentry, 10 ST hours of equipment work — no OT in either row. Actual total hours worked: 50. The worker is owed CWHSSA OT on the 10 hours over 40, computed at the **higher** of the two base rates.
+
+The payroll entry and week detail pages contain numeric-heavy tables with 7-day-of-week columns and dollar amount columns. These tables use HTML `table` elements with `table-auto` layout, which calculates column widths from content width. The system currently uses the browser default font (likely a system sans-serif). Switching to Inter — a well-hinted web font with specific character metrics — will change the rendered width of every text node. In `table-auto`, this directly changes column widths.
+
+Specific risk scenarios:
+- The 7-day payroll entry grid (monST, monOT, tueST... sunOT) may exceed its container on narrow viewports after Inter increases character spacing
+- Dollar amount columns with values like `$1,234.56` may gain 2-4px per cell, causing the rightmost columns to push outside the visible area
+- `WageClassificationsTable.tsx` (used on multiple pages) has a gold `<tr style={{ backgroundColor: '#F5C518' }}>` header row — confirming it was hand-styled and column widths were not explicitly constrained
+
+The 181 passing tests cover compliance logic, not layout. No test will catch these regressions.
 
 **Why it happens:**
-`payrollEntries` has a unique constraint on `(payrollWeekId, workerId, classificationId)`, which naturally produces multiple rows per worker per week when they work multiple classifications. Any per-row compliance check misses cross-classification aggregation. The DOL rule: CWHSSA OT applies to total hours worked in a week across all classifications — and the premium rate is based on the highest base rate worked during the week.
+
+Typography changes feel "safe" because they don't touch business logic. Layout is emergent — it depends on font metrics that developers do not treat as part of their mental model of what typography changes affect.
 
 **How to avoid:**
-The compliance engine must first group `payrollEntries` by `workerId` within a `payrollWeekId` to compute total hours across all classifications. If total hours > 40, compute OT premium using the highest `baseRateSnapshot` among that worker's entries for the week. Compare total expected gross (ST pay at each classification rate + OT premium at highest rate) against the sum of `grossWages` across all classification rows.
+
+Apply Inter as the global body font first, as an isolated change, and do a manual visual review of every table-heavy page before making any other design changes:
+1. PayrollEntryPage (7-day grid with ST/OT columns)
+2. PayrollWeekDetailPage (hours + dollar amounts + compliance flags)
+3. WorkersPage (classifications table with base rate, fringe rate, total rate columns)
+4. ReportsPage (fringe benefit summary, worker pay history)
+5. WageClassificationsTable component (shared, used in multiple pages)
+
+If any column overflows, add explicit `min-w-*` or `w-*` constraints to the affected `<th>` elements before proceeding with further styling. This is an additive fix that does not change any logic.
 
 **Warning signs:**
-A worker with two classification rows shows 40 ST hours in each row — no OT flag — but total hours are 80. Flag absent despite clearly >40 hours.
 
-**Phase to address:**
-Compliance engine phase. The aggregation logic must be built into the compliance query design, not bolted on later.
+After applying the font, horizontal scrollbars appear on previously non-scrollable tables. Dollar amounts wrap across two lines mid-value. Day-column headers no longer align with their data cells. The payroll entry grid pushes outside the `max-w-7xl` container.
+
+**Phase to address:** Typography phase — apply global font change as the very first step, do the visual audit immediately, fix any column overflows before moving to card/table polish.
 
 ---
 
-### Pitfall 5: Under-Wage Flag Compares Snapshot Against Live WD Rate
+### Pitfall 5: Landing Page Route Conflicts With Existing Wildcard Redirect
 
 **What goes wrong:**
-The compliance engine fetches the current `wageClassifications.baseRate` from the database and compares it to `payrollEntries.baseRateSnapshot`. If the wage determination was updated since the payroll entry was created, the check incorrectly flags old entries as violations.
+
+The current `App.tsx` has `<Route path="*" element={<Navigate to="/dashboard" replace />} />` as the catch-all. When the landing page is added at `/`, the routing table creates a conflict: an unauthenticated visitor who types any URL other than `/` or `/login` is sent to `/dashboard`, which sends them to `/login` (via ProtectedRoute), which is the correct behavior. But the problem is the landing page CTA.
+
+If the landing page CTA links to `/register` and `/register` is not added as an explicit public route, the visitor is sent to `/dashboard` by the wildcard, then to `/login` by ProtectedRoute. The registration path is dead. New users cannot sign up from the landing page — the entire purpose of the landing page is broken.
+
+A second conflict: the wildcard currently sends authenticated users with a bad URL to `/dashboard`. If the wildcard is changed to send everyone to `/` (the landing page), then authenticated users who mistype a URL see the marketing page, then get redirected to `/dashboard`, creating an unnecessary redirect hop and a flash of the landing page.
 
 **Why it happens:**
-The project correctly records rate snapshots at entry time (per the `Key Decisions` in PROJECT.md). But a new compliance developer reads the schema, sees both `baseRateSnapshot` on `payrollEntries` and `baseRate` on `wageClassifications`, and assumes the live WD rate is the correct comparator — not the locked snapshot.
+
+The existing routing was designed for a single-entry-point app where `/login` is the homepage. Adding a marketing landing page requires redesigning the entire public/protected route split, including what the wildcard does and what happens when an authenticated user visits a public route.
 
 **How to avoid:**
-The under-wage compliance check must compare `baseRateSnapshot` (what was paid) against the WD rate that was applicable **at the time of that payroll entry**, not the current WD rate. The snapshot IS the locked applicable rate. The correct under-wage flag logic: `grossWages < expectedGrossFromSnapshot`. If the snapshot itself was set incorrectly at entry time, that is a data entry error — surface it as "rate snapshot appears low" with a secondary check against current WD rate, but do not use current WD rate as the primary compliance target.
+
+Plan the full routing table as a written spec before touching `App.tsx`:
+
+| Path | Public | Authenticated user visits | Unauthenticated user visits |
+|------|--------|--------------------------|----------------------------|
+| `/` | Yes | Redirect to `/dashboard` | Show landing page |
+| `/login` | Yes | Redirect to `/dashboard` | Show login form |
+| `/register` | Yes | Redirect to `/dashboard` | Show register form |
+| `/dashboard` | No | Show dashboard | Redirect to `/login` |
+| `*` wildcard | — | Redirect to `/dashboard` | Redirect to `/` |
+
+The wildcard needs auth-state awareness: authenticated users should go to `/dashboard`, unauthenticated users should go to `/`. The current `ProtectedRoute` component can be reused but the wildcard itself needs to become an auth-aware component rather than a static `<Navigate>`.
 
 **Warning signs:**
-After any wage determination update, dozens of old payroll entries suddenly show under-wage flags that weren't there before.
 
-**Phase to address:**
-Compliance engine phase. Document the snapshot contract in code comments on the compliance service so future developers do not regress it.
+Landing page CTA click results in the login page appearing instead of the registration form. An authenticated user mistyping a URL sees the marketing page momentarily before redirecting. The back button from `/login` returns to the landing page and immediately redirects again (loop).
+
+**Phase to address:** Landing Page phase — rewrite the routing table as the first task before building any landing page UI. Verify the routing spec with 4 manual test cases (public URLs × 2 auth states).
 
 ---
 
-### Pitfall 6: WH-347 PDF Crashes or Silently Truncates When Workers > 8
+### Pitfall 6: Hardcoded Inline Style Brand Values Will Not Update With Design Tokens
 
 **What goes wrong:**
-`fillWh347()` in `wh347Generator.ts` renders exactly 8 worker rows using `Math.min(data.workers.length, 8)`. Any project week with more than 8 workers silently drops workers 9+. The PDF generates without error, the user downloads it, and the submission is incomplete.
+
+The codebase audit found 7 instances of `style={{ ... }}` using brand-specific values:
+
+- `ManualWageEntryForm.tsx`: `style={{ backgroundColor: '#F5C518' }}`
+- `WageClassificationsTable.tsx`: `<tr style={{ backgroundColor: '#F5C518' }}>` (the gold header row)
+- `AdminStateWagePage.tsx`: `style={{ backgroundColor: ... '#F5C518' ... }}` (conditional)
+- `WageLookupPage.tsx`: `style={{ backgroundColor: '#F5C518' }}`
+- `ReportsPage.tsx`: `style={{ fontFamily: 'Oswald, sans-serif' }}` (3 instances — section headers in the reports)
+
+When design tokens are applied and `--color-brand-gold` is the canonical gold value, these 7 elements will not update. If the brand gold is adjusted (even slightly, e.g., for print contrast), or if Oswald is swapped for a different headline font during a future brand refresh, these locations will silently diverge from the rest of the application.
+
+During the design polish work, if the gold is visually adjusted on most buttons but not on these 4 hardcoded elements, the app will have two visually different "golds" — detectable to a careful eye, unprofessional to a client demo audience.
 
 **Why it happens:**
-The WH-347 form page has exactly 8 worker grid rows. The generator correctly limits to 8 but provides no feedback to the caller that truncation occurred. The UI route that will call `fillWh347()` does not know it needs to paginate — it sends all workers in one payload.
+
+These were pragmatic shortcuts during earlier development passes. Conditional backgrounds and inline font families are the path of least resistance when Tailwind's arbitrary value syntax feels cumbersome or when a dynamic value is needed.
 
 **How to avoid:**
-The WH-347 generation endpoint must detect when a payroll week has more than 8 workers and generate multiple PDF documents (one per 8-worker page set), each sharing the same Page 2 Statement of Compliance header. Alternatively, generate a multi-page document where pages 1, 3, 5 (odd) are worker grid pages and pages 2, 4, 6 (even) are Statement of Compliance pages, or use the convention confirmed by the DOL: "if more than 8 rows are needed, use additional forms" numbered as Page X of Y. The UI must display the worker count and warn when pagination will occur.
+
+Migrate all 7 instances as part of the Design Token phase:
+- `style={{ backgroundColor: '#F5C518' }}` → `className="bg-brand-gold"` (after the `@theme` token is confirmed)
+- Conditional: `style={{ backgroundColor: condition ? '#F5C518' : undefined }}` → `className={condition ? 'bg-brand-gold' : ''}`
+- `style={{ fontFamily: 'Oswald, sans-serif' }}` → `className="font-headline"` (the `@theme` token already exists)
 
 **Warning signs:**
-Project has 10 workers. WH-347 PDF generates without error and user sees 8 workers. Workers 9 and 10 are absent from submission. No error shown.
 
-**Phase to address:**
-WH-347 UI hookup phase. The pagination design must be decided before connecting the UI to the existing generator — not as an afterthought.
+After a gold color token update in `@theme`, most buttons update but the WageClassificationsTable header row remains the old gold. The Reports page section headers render Oswald even after a theoretical font swap. Running `grep -rn "style={{" src/client/` after the design polish milestone should return zero brand color or font family values.
+
+**Phase to address:** Design Token phase — audit and clear all inline brand values as a prerequisite before adding new token-based styling.
 
 ---
 
-### Pitfall 7: Statement of Compliance Checkboxes Auto-Checked Without Actual Compliance Verification
+### Pitfall 7: B2B SaaS Landing Page With Generic Copy Does Not Convert Contractors
 
 **What goes wrong:**
-The `Wh347Compliance` interface requires boolean flags (`certProperPayment`, `certApprentices`, etc.). The UI or API simply defaults all flags to `true` so the PDF generates cleanly. The contractor signs a form certifying compliance that has not been verified. This is the statutory certification — filing a false Statement of Compliance is a federal crime (29 CFR 5.5(a)(3)(ii)).
+
+A landing page that says "Streamline your payroll workflow" or "Modern compliance management for your business" will not convert a general contractor who is worried about a Davis-Bacon audit. The landing page audience is a specific person: a GC or project manager who has manually looked up prevailing wage rates, printed WH-347 forms, and been told by their attorney that incomplete certified payroll can disqualify them from future bids.
+
+Generic SaaS hero language fails because:
+1. It doesn't name the problem the user actually has (the WH-347 form, the SAM.gov rate lookup, the DOL audit risk)
+2. It doesn't mention Davis-Bacon, which is the exact search term the target user types
+3. It uses abstract benefit language ("streamline", "optimize") instead of concrete action language ("generate the WH-347 form in 3 clicks, with rates auto-filled from SAM.gov")
+
+This is not a code pitfall — it is an execution risk that will result in a beautiful landing page that generates zero registrations.
 
 **Why it happens:**
-The generator has no knowledge of compliance state — it just renders whatever booleans it receives. The API endpoint must supply real compliance results, but the path of least resistance is to always pass `true` to get the PDF to generate.
+
+Developers write copy the way they describe features to each other: "it helps with payroll compliance." Product marketing copy must describe the user's problem from the user's perspective: "You lose federal contracts because your certified payroll has errors."
 
 **How to avoid:**
-The compliance checks (under-wage, OT errors, apprentice ratio, missing worker data) must run and produce a result before the WH-347 endpoint will generate the PDF. If any compliance violation exists, the PDF can still be generated but the Statement of Compliance checkboxes for the violated categories must be `false` (unchecked), and the UI must display a warning. Never default compliance booleans to `true`. The `certApprentices` flag must only be `true` if the system has verified both ratio compliance and registered program status for every apprentice in that week.
+
+The hero headline must name the form: "WH-347 Certified Payroll, Done Right." or "Stop Manually Looking Up Davis-Bacon Rates." The subheadline must state the outcome: "Generate the January 2025 WH-347 form with wage rates auto-populated from SAM.gov. No manual rate lookup. No missed compliance flags." The feature list must name specific features: "Auto-fetches federal wage determinations by state/county," "Flags under-wage payments before submission," "Generates multi-page WH-347 for large crews."
+
+Competitors to beat (LCPtracker, Elation, ADP) all have enterprise-feeling but generic copy. HCC wins by being more specific.
 
 **Warning signs:**
-WH-347 generates successfully for a payroll week that has unflagged workers with missing addresses — a known disqualifier for the `certAccuratePayroll` attestation.
 
-**Phase to address:**
-WH-347 UI hookup phase and compliance engine phase (they must be built together, not independently).
+Landing page copy could describe any construction software. The WH-347 form is not mentioned by name in the hero. "Davis-Bacon" does not appear in the first viewport. The CTA says "Get Started" instead of something specific ("Try It Free" or "Generate Your First WH-347").
 
----
-
-### Pitfall 8: Fringe Benefit Report Averages Fringe Across Weeks
-
-**What goes wrong:**
-The fringe benefit summary report computes total fringe paid as `sum(fringeRateSnapshot * totalHours)` aggregated across all weeks and divides by total hours to get an "average fringe rate." This is a reporting display shortcut that obscures weeks where fringe was underpaid relative to the WD fringe rate.
-
-**Why it happens:**
-Fringe aggregation looks natural at the project level. The developer computes project totals and derives a per-hour average for the summary row.
-
-**How to avoid:**
-The fringe report must display fringe obligations and fringe paid at the **week level per worker** — not as a project aggregate. The compliance-critical view is: for week N, worker W earned X hours; the WD required fringe rate is Y; fringe paid was `fringeRateSnapshot * X`. If fringe paid < Y * X, flag the shortfall. Aggregating first hides per-week deficiencies. The DOL rule: do not average fringe across weeks or projects.
-
-**Warning signs:**
-Report shows project-level fringe rate of $4.50/hr. Worker was paid $3.00 fringe for three weeks and $7.50 for one week. Average is $4.50. Per-week deficiencies are invisible.
-
-**Phase to address:**
-Fringe benefit report phase.
-
----
-
-### Pitfall 9: Missing Worker Data Flags Checked at PDF Generation, Not Proactively
-
-**What goes wrong:**
-`workers.address` and `workers.ssnLast4` are nullable in the schema. The WH-347 requires both. Validation only runs when the contractor clicks "Generate WH-347" — at which point they may be in deadline-day submission mode. The validation error blocks generation, and the contractor cannot retroactively collect the missing data quickly.
-
-**Why it happens:**
-Front-end forms allow creating workers without address/SSN (nullable by design for in-progress projects). Compliance validation is treated as a PDF pre-flight check rather than an ongoing workflow state.
-
-**How to avoid:**
-The dashboard compliance status should surface "workers missing required data" as a project-level warning visible before any payroll week is submitted. The workers list page should visually mark incomplete workers. The WH-347 generation route may still block on missing data, but the user should have been warned at every prior touchpoint so they can fix it in advance.
-
-**Warning signs:**
-Contractor completes full payroll entry and clicks WH-347 generation — blocked with "worker address missing" error with no clear path back to fix it.
-
-**Phase to address:**
-Dashboard compliance status phase (earliest) and WH-347 UI hookup phase (enforcement point).
-
----
-
-### Pitfall 10: Compliance Engine Joins Live Worker Records Instead of Payroll-Time Snapshots
-
-**What goes wrong:**
-The compliance engine queries `workers.name`, `workerClassifications.tradeCode`, and `workerClassifications.laborType` at the time the compliance check runs. If a worker's classification was changed after payroll was entered (e.g., reclassified from apprentice to journeyworker), the compliance check now evaluates old payroll entries against new classification data. An old payroll week appears compliant because the now-journeyworker status looks fine.
-
-**Why it happens:**
-`payrollEntries` stores `classificationId` as a foreign key but does not snapshot the `laborType` or `apprenticePercent` at entry time. The compliance engine must join to `workerClassifications` to know if a worker was an apprentice in that week — but the classification record is mutable.
-
-**How to avoid:**
-The compliance engine should read `laborType` and `apprenticePercent` from the `workerClassifications` row referenced by `payrollEntries.classificationId`, but also acknowledge that this record could have changed. For audit-quality compliance, add `laborTypeSnapshot` and `apprenticePercentSnapshot` columns to `payrollEntries` (add-only, no existing data migration) so that the compliance check at any future date reflects what was true at the time of payroll entry. Until then, document the known limitation: classification changes retroactively affect historical compliance checks.
-
-**Warning signs:**
-After reclassifying a worker, all prior payroll weeks for that worker flip compliance status without any data change to the payroll entries themselves.
-
-**Phase to address:**
-Compliance engine phase (schema addition) or flagged as a known limitation if the phase budget does not support the schema addition.
+**Phase to address:** Landing Page phase — write copy before building the UI. Verify: does the hero mention WH-347, Davis-Bacon, or SAM.gov? If not, rewrite before building.
 
 ---
 
@@ -202,25 +238,24 @@ Compliance engine phase (schema addition) or flagged as a known limitation if th
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Weekly apprentice ratio check instead of daily | Simpler query, faster to build | Silent violations every time journeyworkers fluctuate within a week; back-wage liability on audit | Never — daily is the regulatory standard |
-| Auto-check all Statement of Compliance booleans | PDF generates without requiring compliance results | False certification; potential federal liability for contractor; system appears to verify what it does not | Never |
-| Compare snapshot to current WD rate for under-wage | One query instead of two | False positives after every WD update; alert fatigue; contractors stop trusting the tool | Never |
-| Fringe report as project aggregate | Single aggregation query | Per-week deficiencies invisible; cannot identify which weeks to correct | Only for project overview rows — must also show week-level detail |
-| Single WH-347 page capped at 8 workers | Simpler PDF logic | Submissions silently incomplete for any project with >8 workers in a week | MVP only if there is a hard error + warning blocking submission |
-| Skip `laborTypeSnapshot` on payroll entries | No schema migration needed | Historical compliance checks affected by future classification changes | Acceptable for v2 if documented as known limitation; add in v3 |
+| Leave `focus:outline-none` unfixed | Saves 20 minutes | Accessibility failures; inconsistent focus rings across forms; fails WCAG 2.1 SC 2.4.7 | Never — fix during Typography phase |
+| Keep inline `style={{ backgroundColor: '#F5C518' }}` | No code change needed | Token rollout creates two sources of truth for brand gold; one-off fixes required on every brand update | Never — clear before design token rollout |
+| Load all 9 Google Font weights (100-900) for Inter | Font always available | 600-900ms extra TTFB on first load; LCP degrades | Never — load only weights actually used: 400, 500, 600 |
+| Use CSS animations from a third-party library on landing page | Visual polish faster | 30-100KB of unused animation CSS hits every app route | Never — write the 2-3 keyframes needed directly |
+| Skip routing table planning and just add `/` as a route | Landing page renders immediately | CTA points to wrong destination; auth edge cases break on first test | Never — routing spec must precede UI |
+| Apply `--color-*: initial` to "clean up" Tailwind defaults | Clean token namespace | Nukes all default Tailwind colors; all 33 components break | Never in this project |
 
 ---
 
 ## Integration Gotchas
 
-| Integration Point | Common Mistake | Correct Approach |
-|-------------------|----------------|------------------|
-| Reading `grossWages` for compliance comparison | Assuming `grossWages` is always populated — it is nullable in schema | Always recompute expected gross from hours * snapshot rate; use `grossWages` as a cross-check, not the primary value |
-| Joining `payrollEntries` to `workers` for compliance | Selecting `workers.name` and assuming one worker = one entry per week | Group by `workerId` first; a worker may have multiple entries per week (one per classification) |
-| Fetching `otThresholds` for compliance | Using default 40-hr threshold if no row exists — correct for CWHSSA, but CBA/state configs exist | Always call `getOrDefaultThreshold()` — do not hardcode 40 in compliance service code |
-| `apprenticePercent` on `workerClassifications` | Treating null as 0% (pay nothing) instead of flagging as invalid data | Null `apprenticePercent` on an apprentice classification is a data integrity warning — do not silently compute 0 |
-| `wdIdentifier` on projects | Assuming all projects have a locked WD | `wdIdentifier` is nullable; compliance engine must handle projects without a WD gracefully (skip WD-rate checks, surface "no WD locked" warning) |
-| Reading existing `payrollEntries` for reports | Fetching all entries then filtering in JS | Use Drizzle queries with project/week filter at DB level; a project could have years of weekly entries |
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Google Fonts loading | Using `@import url(...)` inside the `@theme {}` block in `index.css` | Load Google Fonts via `<link>` in `src/client/index.html` or as a top-level `@import` before `@import "tailwindcss"` in `index.css` — never inside `@theme` |
+| Google Fonts loading | Loading Oswald and Inter font families on the landing page but not in the app (or vice versa) | Both fonts are used in `@theme` for the whole app — load them once in `index.html` for all routes; Google Fonts will cache them |
+| Vite `root: 'src/client'` | Adding CSS outside `src/client/` and expecting Tailwind to process it | All CSS must live under `src/client/` — the Vite config sets `root: 'src/client'`; files outside this root are not processed by `@tailwindcss/vite` |
+| CSS custom properties on landing page | Defining landing-page-specific CSS variables in a separate file that is conditionally loaded | Use the global `@theme` in `index.css` for all tokens; never conditionally load CSS per route in this stack — it creates cascade ordering surprises |
+| `@theme inline` vs `@theme` | Using `@theme inline` by default for all tokens | Only use `@theme inline` when a token value references another CSS variable; literal string values (like `'Oswald', sans-serif`) are safe in plain `@theme` |
 
 ---
 
@@ -228,10 +263,9 @@ Compliance engine phase (schema addition) or flagged as a known limitation if th
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Running compliance check per-request on dashboard load | Dashboard takes 3–5 seconds to load when project has 52+ weeks | Pre-compute compliance status when payroll week is saved (write-time computation), cache result in a `complianceStatus` column or table | At ~20+ payroll weeks with 5+ workers each |
-| Generating all WH-347 PDFs for all weeks when user visits dashboard | Out-of-memory spike; PDF generation is synchronous in pdf-lib | Only generate PDF on explicit user action (button click); never eagerly generate | Any project with >2 payroll weeks |
-| N+1 queries in compliance engine (one DB query per worker per week) | Slow compliance check; SQLite handles it but response latency grows visibly | Batch-fetch all entries for a week in one query, then compute in memory | At 10+ workers per week |
-| Loading `rawDocument` (full WD text) in compliance queries | Slow joins; `rawDocument` can be hundreds of KB per WD | Never join `wageDeterminations.rawDocument` in compliance or report queries; only select the rate fields from `wageClassifications` | Every compliance query |
+| Hero image unoptimized (PNG, no dimensions) | LCP > 2.5s; Google penalizes landing page; first impression is blank | Use WebP, set explicit `width`/`height`, add `fetchpriority="high"` to hero `<img>` | Every visit on mobile or slow connection |
+| Loading all Google Font weights (100-900) | Fonts take 400-800ms to load; text renders with system fallback until then (FOUT) | Specify exact weights in the Google Fonts URL: `?family=Oswald:wght@400;600&family=Inter:wght@400;500;600` | First visit to any page before fonts are cached |
+| Landing page CSS bleeds into app bundle | App gets heavier with each landing section added | Keep all landing styles as Tailwind utilities (no new CSS layers); if custom styles needed, scope them to a `.landing` parent class | At scale; not a problem at current project size |
 
 ---
 
@@ -239,10 +273,8 @@ Compliance engine phase (schema addition) or flagged as a known limitation if th
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Compliance check endpoint without project ownership assertion | Any authenticated user can run compliance checks against any project's payroll data | Reuse `assertProjectOwner()` pattern from existing payroll routes on all new compliance and report endpoints |
-| WH-347 PDF endpoint without ownership check | Sensitive worker data (SSN last 4, address, wages) exposed to wrong user | Same pattern — verify project ownership before generating any PDF |
-| Returning raw SSN data in compliance API responses | SSN last 4 visible in JSON responses beyond what PDF rendering requires | Never include `ssnLast4` in compliance check API responses; only include it in the PDF generation payload that goes directly to the PDF buffer |
-| Logging compliance results with worker PII | Compliance logs contain wage amounts, SSN fragments | Sanitize server logs — log worker IDs, not names/SSN; log violation type, not full wage data |
+| `/register` not added as an explicit public route | Unauthenticated visitors following the CTA get redirected to login (dead end); no security risk but registration is unreachable | Add `/register` as a sibling of `/login` outside `ProtectedRoute` in `App.tsx` |
+| Landing page served through a component that reads from AuthContext before AuthContext has initialized | Loading spinner flashes; in worst case, a brief redirect to `/login` occurs for all visitors including unauthenticated ones | Landing page component should render immediately without waiting for `isAuthenticated` to resolve — it is a public page |
 
 ---
 
@@ -250,26 +282,24 @@ Compliance engine phase (schema addition) or flagged as a known limitation if th
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Compliance check result shown only as red/green for the whole week | Contractor cannot identify which worker has the violation without re-reading all entries | Show per-worker compliance rows in the payroll week view; each worker row gets its own status indicator |
-| WH-347 button visible even when compliance violations exist | Contractor generates and submits a form with known violations; gets it rejected or audited | Show WH-347 button as disabled with tooltip "Resolve X compliance flags before generating" — or allow generation with a confirmation warning listing violations |
-| Fringe benefit report shows hourly rates only, not week totals | Contractor cannot verify total fringe obligation for a submission period without manual math | Show both hourly rate and computed weekly fringe amount (rate * total hours) per worker per week |
-| Worker pay history report sorted by entry creation date | Recent corrections appear at the bottom; contractor cannot see latest week at a glance | Default sort: descending by `weekEndingDate`; secondary sort by worker name |
-| Dashboard compliance status shows aggregate "2 violations" with no drill-down | Contractor cannot act on the number without navigating to each project and scanning each week | Dashboard card links directly to the first week with a violation; violation count is a clickable link |
-| Statement of Compliance checkboxes shown as pre-filled | Contractor assumes these are automatic; does not review what each certification means | Display checkbox labels as read-only confirmation text when all pass; only show interactive checkboxes for items that cannot be auto-verified (e.g., certifying that work was actually performed) |
+| Landing page CTA says "Get Started" and links to `/login` | New visitors have no account — they see a login form and don't know what to do | CTA says "Start Free" and links to `/register`; secondary link below says "Already have an account? Log in" |
+| Landing page hero uses the same `bg-gray-900` dark as the app nav | Visitors feel they are already inside the app; the marketing page loses its distinct identity | Use a slightly different dark for the landing hero (e.g., `bg-gray-950` or pure black `#000`) vs. the nav's `#1a1a1a` |
+| Design polish changes the visual position or label of the "Submit Payroll" / "Generate WH-347" buttons | Users who process payroll weekly have muscle memory for the submit flow; a moved button causes errors on deadline day | During polish, change color, shadow, border-radius — never change position or label of compliance-critical action buttons |
+| Single CTA in landing page hero only | Users who read the full feature list (scrolled to the bottom) must scroll all the way back up to register | Repeat the CTA button after the features section and at the page bottom |
+| Landing page uses animated number counters ("10,000+ contractors") without real data | Skeptical B2B buyers see placeholder-looking numbers and trust the brand less | Use specific, true claims ("Generates the January 2025 WH-347 revision") rather than fabricated social proof |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Apprentice ratio compliance:** Only passes for the week total — verify that daily counts per trade are computed from individual day columns, not week aggregates
-- [ ] **WH-347 generation with >8 workers:** Generates without error but silently truncates — verify worker count is surfaced and pagination is implemented or blocked
-- [ ] **Statement of Compliance booleans:** Defaults to all `true` — verify that compliance flags drive the boolean values, not the other way around
-- [ ] **Under-wage flag:** Compares snapshot to current WD rate — verify it compares snapshot to snapshot-derived expected pay
-- [ ] **Multi-classification OT:** No flag on a worker with two 40-hour classification rows — verify total hours across all classifications are aggregated per worker per week
-- [ ] **Fringe report per week:** Shows project average — verify week-level per-worker breakdown exists, not just project totals
-- [ ] **Dashboard compliance status:** Shows static data — verify it reflects current payroll state, not a stale snapshot
-- [ ] **Missing worker data warnings:** Only shown at PDF generation — verify warnings surface at dashboard and worker list before submission day
-- [ ] **WH-347 route ownership check:** New endpoint added without copying `assertProjectOwner()` — verify all new routes have the ownership assertion
+- [ ] **Design token cleanup:** Run `grep -rn "style={{" src/client/` and confirm zero instances of `#F5C518` or `Oswald` in inline styles before considering tokens "done"
+- [ ] **focus:outline-hidden migration:** Tab through every form in the app (Login, Register, Payroll Entry, Worker Add, Project Create) — confirm gold ring appears clearly with no double-outline
+- [ ] **Table layout after font change:** Open PayrollEntryPage on a 1280px viewport — confirm the 7-day hour grid fits without horizontal scroll after Inter is applied globally
+- [ ] **Landing page routing — 4 cases:** (1) Unauthenticated visits `/` → landing page. (2) Authenticated visits `/` → redirected to `/dashboard`. (3) Unauthenticated clicks CTA → `/register` form appears. (4) Unauthenticated visits `/bad-url` → redirected to `/` not `/dashboard`
+- [ ] **Registration reachable:** New user can complete the full flow: landing page → CTA click → register form → dashboard — without ever seeing an unexpected redirect
+- [ ] **Brand consistency:** Open LoginPage, DashboardPage, WorkersPage, ReportsPage side-by-side — all headings use Oswald at the same scale, all primary buttons are the same gold, all card shadows are the same depth
+- [ ] **Google Fonts load:** Check Network tab — only `Oswald:wght@400;600` and `Inter:wght@400;500;600` are requested, not the full 9-weight family
+- [ ] **Landing page mobile:** Resize to 375px width — hero headline fits on 3 lines max, CTA button is full-width, feature list is readable, no horizontal scroll
 
 ---
 
@@ -277,12 +307,11 @@ Compliance engine phase (schema addition) or flagged as a known limitation if th
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Apprentice ratio checked weekly instead of daily | HIGH | Refactor compliance query to reconstruct daily presence from column data; re-run compliance for all affected weeks; notify users of recalculated results |
-| Statement of Compliance auto-checked | HIGH | Requires immediate fix + communication to any users who generated forms; document in audit trail |
-| Under-wage flag comparing wrong rate | MEDIUM | Change comparator in compliance service; re-run all under-wage checks; false positives disappear, real violations may surface |
-| WH-347 truncating at 8 workers | MEDIUM | Add pagination; users with >8 workers must regenerate; prior submissions may be incomplete |
-| Fringe report averaging across weeks | LOW | Refactor query to group by week; no data change required |
-| Missing data flag only at PDF generation | LOW | Add same flag logic to dashboard query; existing data unchanged |
+| `@theme` color namespace wipe with `--color-*: initial` | LOW | Revert the `@theme` block to remove `initial`; all default Tailwind colors return on next Vite HMR rebuild; no data or logic affected |
+| Table column overflow after font change | LOW | Add `min-w-[X]` to affected `<th>` elements — purely additive, no logic changes, no test risk |
+| Landing page CTA links to wrong route | LOW | Update `href` in the CTA component and add `/register` to `App.tsx` as a public route; 30-minute fix |
+| Inline style drift discovered post-launch | LOW | `grep -rn "style={{" src/client/` identifies all instances; migrate one-by-one to `className` utilities; no functional risk |
+| Generic copy on landing page doesn't convert | MEDIUM | Copy is a content change only — HTML edit, no CSS/logic risk; but requires a re-deploy and potentially re-designing the hero section around the new copy structure |
 
 ---
 
@@ -290,30 +319,28 @@ Compliance engine phase (schema addition) or flagged as a known limitation if th
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Apprentice ratio checked weekly instead of daily | Compliance engine (first compliance phase) | Test: worker with journeyworker absent Tuesday still triggers ratio flag for Tuesday only |
-| Unregistered apprentice reduced rate | Compliance engine (schema + flag) | Test: apprentice with null programName shows warning flag, not under-wage error |
-| CWHSSA OT fringe multiplied at 1.5x | Compliance engine | Test: `calculateCwhssaOt()` is the only OT formula in compliance service; no inline math |
-| Multi-classification OT missed | Compliance engine | Test: worker with 2 classification rows totaling 50 hrs triggers OT flag |
-| Under-wage flag uses live WD rate | Compliance engine | Test: updating WD rate does not flip old payroll entries to violation status |
-| WH-347 truncates at >8 workers | WH-347 UI hookup phase | Test: payroll week with 10 workers generates 2-page or blocks with clear warning |
-| Statement of Compliance auto-checked | WH-347 UI hookup phase (must integrate with compliance results) | Test: week with under-wage flag produces WH-347 with `certProperPayment = false` |
-| Fringe report averages across weeks | Fringe benefit report phase | Test: worker paid $3 fringe for 3 weeks and $7.50 for 1 week shows 3 weeks flagged |
-| Missing worker data proactive warning | Dashboard phase (early) | Test: worker with null address shows warning on dashboard and workers list |
-| Compliance engine joins live classification data | Compliance engine | Test: changing classification after payroll entry does not change historical compliance result |
+| Shadow class rename confusion | Phase 1: Design Tokens | All new components reference shadow tokens, not raw `shadow-*` classes |
+| `focus:outline-none` broken in v4 | Phase 2: Typography + Input Polish | Tab through all forms; gold ring appears without double outline |
+| `@theme` color namespace wipe | Phase 1: Design Tokens | `--color-*: initial` never appears in `index.css`; all default Tailwind colors still render on existing pages |
+| Font change breaks table columns | Phase 2: Typography (first action in phase) | PayrollEntryPage 7-day grid fits at 1280px after Inter applied |
+| Landing page routing conflicts | Phase 3: Landing Page (routing spec first) | 4-case routing test passes before any landing page UI is built |
+| Inline brand styles survive token rollout | Phase 1: Design Tokens | `grep style src/client/` returns zero hardcoded `#F5C518` or `Oswald` values |
+| Generic landing page copy | Phase 3: Landing Page (copy before UI) | Hero mentions WH-347 by name; "Davis-Bacon" appears in first viewport |
 
 ---
 
 ## Sources
 
-- [DOL Davis-Bacon Compliance Principles](https://www.dol.gov/agencies/whd/government-contracts/prevailing-wage-resource-book/db-compliance-principles) — daily ratio enforcement, fringe annualization, multi-classification OT rule
-- [DOL CWHSSA and FLSA Overtime on Government Contracts](https://www.dol.gov/sites/dolgov/files/WHD/prevailing-wage-presentations/dbra-seminars/CWHSSA-and-FLSA-Overtime-and-Government-Contracts.pdf) — CWHSSA fringe exclusion from OT premium
-- [Points North — Apprenticeship Ratios and Prevailing Wage](https://www.points-north.com/trends-and-insights/apprenticeship-ratios-prevailing-wage-requirements) — per-trade ratio calculation, mid-shift ratio violation, weekly-average error pattern
-- [LumberFi — New WH-347 Form 2025](https://www.lumberfi.com/blog/the-new-wh-347-form-what-construction-companies-need-to-know-about-2025-certified-payroll-changes) — 2025 fringe benefit reporting expansion, apprentice tracking fields
-- [SMACNA — Best Practices for Apprentices on Davis-Bacon Projects](https://www.smacna.org/news/smacnews/issue-archive/issue/articles/smacnews-july-august-2023/best-practices-for-using--apprentices--on-davis-bacon-projects) — unregistered apprentice rate rule
-- [DOL Fringe Benefit Annualization — via LCPtracker](https://lcptracker.com/uncategorized/prevailing-wages-and-fringes-under-davis-bacon/) — annualization formula using all hours worked
-- [Construction Business Forms — WH-347 Instructions](https://www.construction-business-forms.com/instructions-wh-347-348.html) — 8-worker row limit, Page X of Y pagination requirement
-- Direct code audit: `src/server/services/calculations.ts`, `wh347Generator.ts`, `otCalculator.ts`, `payrollService.ts`, `db/schema.ts` (2026-03-19)
+- [Tailwind CSS v4 Theme Variables — Official Docs](https://tailwindcss.com/docs/theme) — `@theme` vs `:root`, `inline` keyword, namespace wipe behavior
+- [Tailwind CSS v4 Upgrade Guide — Official Docs](https://tailwindcss.com/docs/upgrade-guide) — full rename table: shadows, rings, outlines
+- [Tailwind CSS v4.0 Release Notes](https://tailwindcss.com/blog/tailwindcss-v4) — default ring/border color changes, browser requirements
+- [v4 @theme vs @theme inline — GitHub Discussion #18560](https://github.com/tailwindlabs/tailwindcss/discussions/18560) — when `inline` is needed vs. default behavior
+- [Theming best practices in v4 — GitHub Discussion #18471](https://github.com/tailwindlabs/tailwindcss/discussions/18471) — additive token strategy
+- [React Router: Private Routes — Robin Wieruch](https://www.robinwieruch.de/react-router-private-routes/) — public vs. protected route pattern, auth-aware wildcard
+- [B2B SaaS Landing Page Best Practices 2026 — Genesys Growth](https://genesysgrowth.com/blog/designing-b2b-saas-landing-pages) — copy mistakes, feature-vs-benefit framing
+- [9 B2B Landing Page Lessons From 2025 — Instapage](https://instapage.com/blog/b2b-landing-page-best-practices) — CTA placement, hero structure
+- Codebase audit — `src/client/` — 33 TSX files reviewed for inline styles, v4-affected utility classes, table patterns (2026-03-20)
 
 ---
-*Pitfalls research for: Davis-Bacon prevailing wage compliance — compliance checks and reporting milestone*
-*Researched: 2026-03-19*
+*Pitfalls research for: Design polish + landing page on existing React + TailwindCSS v4 app (HCC Prevailing Wage v2.1)*
+*Researched: 2026-03-20*

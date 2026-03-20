@@ -1,463 +1,476 @@
 # Architecture Research
 
-**Domain:** Prevailing wage compliance — adding compliance engine, report generation, and dashboard UX to existing Express/React app
-**Researched:** 2026-03-19
-**Confidence:** HIGH — based on direct codebase inspection, not external research
+**Domain:** React + TailwindCSS v4 Design System Rollout (UI Polish + Landing Page) — v2.1
+**Researched:** 2026-03-20
+**Confidence:** HIGH — TailwindCSS v4 @theme verified against official docs; React patterns verified against direct codebase inspection
 
 ---
 
-## Existing Architecture (Baseline)
+## Current State Baseline
 
-Before describing what to add, the integration decisions depend on what already exists.
-
-### System Overview
+The existing client has a minimal CSS foundation and no design system:
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        React Client                               │
-│  DashboardPage  ProjectDetailPage  PayrollListPage  PayrollEntryPage │
-│  (project list) (project detail)   (week list)     (entry form)  │
-│            PayrollEntryPage → PayrollWeekForm                    │
-└──────────────────┬───────────────────────────────────────────────┘
-                   │ fetch via api.ts (proxy → :4099)
-┌──────────────────┴───────────────────────────────────────────────┐
-│                       Express Server                              │
-│  /api/auth   /api/projects  /api/projects/:id/workers            │
-│  /api/wages  /api/payroll   /api/ot-thresholds                   │
-│  /api/export /api/gsa       /api/union     /api/variance         │
-└──────────────────┬───────────────────────────────────────────────┘
-                   │
-┌──────────────────┴───────────────────────────────────────────────┐
-│                      Services Layer                               │
-│  payrollService.ts   varianceService.ts   calculations.ts (pure) │
-│  wageCache.ts        wageLookup.ts         wh347Generator.ts     │
-│  variancePdf.ts      csvExporter.ts        otCalculator.ts       │
-└──────────────────┬───────────────────────────────────────────────┘
-                   │ Drizzle ORM
-┌──────────────────┴───────────────────────────────────────────────┐
-│                         SQLite                                    │
-│  users  projects  workers  workerClassifications                  │
-│  wageDeterminations  wageClassifications  payrollWeeks            │
-│  payrollEntries  otThresholds  unionTradeConfigs  gsaRates        │
-│  projectBudgets                                                   │
-└──────────────────────────────────────────────────────────────────┘
+src/client/index.css (7 lines):
+  @import "tailwindcss";
+  @theme {
+    --color-brand-gold: #F5C518;
+    --font-headline: 'Oswald', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
 ```
 
-### Key Existing Patterns
-
-The codebase follows consistent patterns throughout — any new code must follow these exactly:
-
-1. **Router files** live in `src/server/routes/` and export a named `*Router`
-2. **Service files** live in `src/server/services/` — pure functions and db-reading functions, no HTTP concerns
-3. **Pure calculation functions** live in `src/server/services/calculations.ts` — no DB imports, no HTTP
-4. **All routes** use `requireAuth` middleware and the `validate(Schema)` middleware pattern
-5. **All PDF generation** uses pdf-lib (already installed); no new PDF libraries
-6. **All DB queries** use Drizzle ORM; never raw SQL strings
-7. **React pages** use `@tanstack/react-query` for server state — `useQuery` for reads, `useMutation` for writes
-8. **No new tables** should modify existing columns — add-only schema changes only
+**Problems this creates:**
+- No font loading (`index.html` has no Google Fonts link — fonts fall back to system sans-serif)
+- No typography scale in @theme — pages use raw `text-2xl`, `text-xl` from Tailwind defaults without associating them with Oswald
+- Raw hex values scattered across JSX: `border-[#F5C518]`, `bg-[#1a1a1a]`, `hover:border-[#F5C518]` in 10+ components
+- No shared card or table styles — each component reinvents padding, borders, shadows inline
+- No landing page — `App.tsx` wildcard `*` redirects straight to `/dashboard`, no public face
 
 ---
 
-## Integration Architecture: What to Add
-
-### System Overview After v2.0
+## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        React Client (v2.0)                           │
-│                                                                      │
-│  DashboardPage*          PayrollListPage*       PayrollWeekPage (new)│
-│  (+ compliance badges)   (+ WH-347 button)      (week view + actions)│
-│                                                                      │
-│  WorkerPayHistoryPage    FringeSummaryPage                           │
-│  (new)                   (new)                                       │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-┌──────────────────────────────┴──────────────────────────────────────┐
-│                    Express Server (v2.0)                             │
-│  (all existing routes unchanged)                                     │
-│                                                                      │
-│  /api/compliance/projects/:id    (NEW — project-level summary)       │
-│  /api/compliance/weeks/:weekId   (NEW — week-level violations)       │
-│  /api/reports/worker-history/:id (NEW — worker pay history)         │
-│  /api/reports/fringe/:projectId  (NEW — fringe benefit summary)     │
-│  /api/export/wh347/:weekId       (EXISTING — add UI entry point)    │
-│  /api/export/statement/:weekId   (NEW — Statement of Compliance PDF) │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-┌──────────────────────────────┴──────────────────────────────────────┐
-│                    Services Layer (v2.0)                             │
-│  (all existing services unchanged)                                   │
-│                                                                      │
-│  complianceEngine.ts (NEW)   statementPdf.ts (NEW)                  │
-│  workerHistoryService.ts (NEW)  fringeService.ts (NEW)              │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-┌──────────────────────────────┴──────────────────────────────────────┐
-│                         SQLite (v2.0)                                │
-│  (all existing tables unchanged)                                     │
-│  No new tables required — all compliance derived from existing data  │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    src/client/ (React + Vite)                    │
+├───────────────────────┬─────────────────────────────────────────┤
+│   Public Routes       │   Protected Routes (ProtectedRoute)      │
+│  ┌─────────────┐      │  ┌──────────┐ ┌───────────┐ ┌────────┐  │
+│  │ LandingPage │      │  │Dashboard │ │ProjectDet.│ │Workers │  │
+│  │ LoginPage   │      │  │Payroll*  │ │Reports    │ │OTScen. │  │
+│  │ RegisterPg  │      │  └──────────┘ └───────────┘ └────────┘  │
+│  └─────────────┘      │       all pages wrapped in Layout        │
+└───────────────────────┴──────────────────────────────────────────┤
+                  CSS Layer (src/client/index.css)                  │
+  ┌──────────────────────────────────────────────────────────────┐  │
+  │  @import url("Google Fonts — Oswald + Inter")               │  │
+  │  @import "tailwindcss";                                      │  │
+  │  @theme { --color-* --font-* --text-* --radius-* ... }      │  │
+  │  @layer base   { body font, h1-h4 font defaults }           │  │
+  │  @layer components { .hcc-card .hcc-table .hcc-badge }      │  │
+  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+### Component Responsibilities
+
+| Component | Responsibility | Current State |
+|-----------|----------------|---------------|
+| `index.css` | Single source of truth for all design tokens + base styles | EXISTS — minimal (3 @theme lines, no fonts, no layers) |
+| `index.html` | HTML shell, font loading | EXISTS — no Google Fonts link tags |
+| `App.tsx` | Router — public + protected route groups | EXISTS — no public landing route |
+| `Layout.tsx` | App chrome: nav + page container | EXISTS — inline hex colors |
+| `LandingPage.tsx` | Marketing homepage, public route | DOES NOT EXIST |
+| `components/ui/Badge.tsx` | Status badge primitive with variant prop | DOES NOT EXIST |
+| `components/ui/Card.tsx` | Card shell primitive | DOES NOT EXIST |
+| `components/ui/PageHeader.tsx` | h1 + subtitle + action button pattern | DOES NOT EXIST |
 
 ---
 
-## Component Responsibilities
-
-### New Server Files
-
-| File | Responsibility | Reads From |
-|------|---------------|------------|
-| `src/server/services/complianceEngine.ts` | Pure compliance checks — runs all violation rules, returns typed violations | payrollEntries, workerClassifications, wageClassifications, otThresholds |
-| `src/server/routes/compliance.ts` | HTTP layer for compliance queries — project summary and per-week detail | complianceEngine.ts |
-| `src/server/services/statementPdf.ts` | Generates standalone Statement of Compliance PDF via pdf-lib | Called by export route |
-| `src/server/services/workerHistoryService.ts` | Aggregates payrollEntries across all weeks per worker | payrollEntries, payrollWeeks |
-| `src/server/services/fringeService.ts` | Aggregates fringeRateSnapshot * hours per worker across weeks | payrollEntries |
-| `src/server/routes/reports.ts` | HTTP layer for worker history and fringe summary | workerHistoryService.ts, fringeService.ts |
-
-### Modified Server Files
-
-| File | Modification | Why |
-|------|-------------|-----|
-| `src/server/routes/export.ts` | Add `GET /api/export/statement/:weekId` route | Statement of Compliance is a new export type alongside WH-347 |
-| `src/server/index.ts` | Register `/api/compliance` and `/api/reports` routers | Wire up new routes |
-
-### New Client Files
-
-| File | Responsibility |
-|------|---------------|
-| `src/client/pages/PayrollWeekPage.tsx` | New page at `/projects/:projectId/payroll/:weekId` — shows week detail, compliance flags, WH-347 button, Statement button |
-| `src/client/pages/WorkerPayHistoryPage.tsx` | Worker pay history table at `/projects/:projectId/workers/:workerId/history` |
-| `src/client/pages/FringeSummaryPage.tsx` | Fringe benefit summary at `/projects/:projectId/fringe` |
-| `src/client/components/compliance/ComplianceBadge.tsx` | Red/yellow/green pill indicator, reused in dashboard and week view |
-| `src/client/components/compliance/ViolationsList.tsx` | List of compliance violations with severity and description |
-
-### Modified Client Files
-
-| File | Modification | Why |
-|------|-------------|-----|
-| `src/client/pages/DashboardPage.tsx` | Fetch compliance summary per project; pass to ProjectCard | Add compliance status to each card |
-| `src/client/components/projects/ProjectCard.tsx` | Accept and render `complianceStatus` prop (red/yellow/green badge) | Dashboard compliance indicator |
-| `src/client/pages/PayrollListPage.tsx` | Add "View" link to `PayrollWeekPage`; show compliance badge per week row | WH-347 one-click access |
-| `src/client/App.tsx` | Register new routes: PayrollWeekPage, WorkerPayHistoryPage, FringeSummaryPage | Make pages reachable |
-
----
-
-## Compliance Engine Design
-
-### Where It Lives: Service, Not Middleware
-
-The compliance engine belongs in `src/server/services/complianceEngine.ts` as a pure-ish service (reads DB, returns typed results). It must NOT be:
-
-- **Route middleware** — compliance is a query, not a request gate. Middleware runs on every request; compliance is an on-demand report.
-- **Computed on payroll save** — don't write violation state to the DB. The snapshot model (rate locked at entry time) already handles audit; violations can always be recomputed from existing data.
-- **Stored results** — no `complianceViolations` table. Compliance is computed on-demand from payrollEntries + wageClassifications. This keeps schema simple and means violations automatically update when payroll is corrected.
-
-**Rationale for on-demand computation:** SQLite is fast enough for a single project's payroll data (hundreds of rows at most). The variance service already does a similar multi-table aggregation with no performance issues. Compliance checks follow the same pattern.
-
-### Compliance Check Types
-
-The engine runs four independent checks. Each returns a typed array of violations:
+## Recommended Project Structure
 
 ```
-ViolationSeverity: 'error' | 'warning'
-
-ViolationType:
-  'UNDER_WAGE'         — baseRateSnapshot < wageClassification.baseRate for worker's trade
-  'OT_MISCALCULATION'  — grossWages doesn't match expected CWHSSA calculation (>= $0.01 delta)
-  'APPRENTICE_RATIO'   — apprentice count exceeds allowed ratio for a given trade on a given week
-  'MISSING_DATA'       — worker lacks address or ssnLast4 required for WH-347
-
-Violation shape: {
-  type: ViolationType
-  severity: ViolationSeverity
-  weekId?: string
-  workerId: string
-  workerName: string
-  message: string        // human-readable description
-  detail?: object        // type-specific data (e.g. actualRate, requiredRate)
-}
+src/client/
+├── index.css                     MODIFY — expand @theme, add @layer base + components
+├── index.html                    MODIFY — add Google Fonts preconnect + link tags
+├── App.tsx                       MODIFY — add "/" route for LandingPage, adjust wildcard
+│
+├── pages/
+│   ├── LandingPage.tsx           CREATE — marketing homepage (public route)
+│   ├── LoginPage.tsx             MODIFY — visual polish only
+│   ├── DashboardPage.tsx         MODIFY — token classes, <PageHeader>, <Badge>
+│   ├── ProjectDetailPage.tsx     MODIFY — token classes
+│   ├── WorkersPage.tsx           MODIFY — hcc-table, token classes
+│   ├── PayrollEntryPage.tsx      MODIFY — token classes
+│   ├── PayrollWeekDetailPage.tsx MODIFY — hcc-table, token classes
+│   └── ReportsPage.tsx           MODIFY — hcc-card, hcc-table, token classes
+│
+├── components/
+│   ├── shared/
+│   │   ├── Layout.tsx            MODIFY — token classes, HCC SVG logo
+│   │   ├── ProtectedRoute.tsx    no change
+│   │   └── LoadingSpinner.tsx    no change
+│   ├── ui/                       CREATE directory
+│   │   ├── Badge.tsx             CREATE — variant prop: gold | gray | green | red
+│   │   ├── Card.tsx              CREATE — padding prop, hover border variant
+│   │   └── PageHeader.tsx        CREATE — title + subtitle + action slot
+│   └── projects/
+│       ├── ProjectCard.tsx       MODIFY — use <Card> + <Badge> primitives
+│       └── ProjectForm.tsx       no structural change
+│
+└── contexts/                     no change
 ```
 
-Each check function is independently exported from complianceEngine.ts:
+### Structure Rationale
 
-```typescript
-checkUnderWageViolations(db, projectId): Promise<Violation[]>
-checkOtViolations(db, projectId): Promise<Violation[]>
-checkApprenticeRatioViolations(db, projectId): Promise<Violation[]>
-checkMissingDataViolations(db, projectId): Promise<Violation[]>
-
-// Aggregate: runs all four, returns combined array + rollup status
-runProjectCompliance(db, projectId): Promise<ComplianceResult>
-
-// Week-scoped: runs under-wage + OT + missing data for a single week
-runWeekCompliance(db, weekId): Promise<ComplianceResult>
-```
-
-`checkApprenticeRatio` can reuse the existing `checkApprenticeRatio()` pure function already in `calculations.ts`. The engine just handles the DB query to feed it.
-
-### Project-Level Compliance Status (Dashboard)
-
-```
-ComplianceStatus: 'green' | 'yellow' | 'red'
-
-Rollup rule:
-  red    — any violation with severity 'error'
-  yellow — any violation with severity 'warning', no errors
-  green  — no violations
-
-ComplianceResult: {
-  status: ComplianceStatus
-  errorCount: number
-  warningCount: number
-  violations: Violation[]
-}
-```
-
-The dashboard calls `GET /api/compliance/projects/:id` which calls `runProjectCompliance()`. The response is a `ComplianceResult`. The `ProjectCard` renders the badge using the `status` field only — it does not list individual violations.
-
----
-
-## Data Flow
-
-### Dashboard Compliance Flow
-
-```
-DashboardPage mounts
-    ↓
-useQuery(['projects']) → GET /api/projects
-    ↓
-useQuery(['compliance', projectId], for each project)
-    → GET /api/compliance/projects/:id
-    → complianceEngine.runProjectCompliance(db, projectId)
-    → reads payrollEntries + workerClassifications + wageClassifications
-    → returns { status, errorCount, warningCount }
-    ↓
-ProjectCard renders with ComplianceBadge (green/yellow/red pill)
-```
-
-**Performance note:** The dashboard fires N parallel compliance queries (one per project). For a typical GC with 5-20 active projects this is fine. If it becomes slow, batch into a single `GET /api/compliance/dashboard` endpoint that returns all project statuses in one query.
-
-### Payroll Week View + PDF Generation Flow
-
-```
-User navigates to /projects/:projectId/payroll/:weekId
-    ↓
-PayrollWeekPage mounts
-    ↓
-useQuery(['payroll-week', weekId]) → GET /api/payroll/weeks/:id (existing)
-useQuery(['compliance-week', weekId]) → GET /api/compliance/weeks/:weekId (new)
-    ↓
-Page renders: week summary + worker rows + violation list + action buttons
-    ↓
-User clicks "Download WH-347"
-    → window.open(`/api/export/wh347/${weekId}`) (existing route, no change)
-    → streams PDF
-    ↓
-User clicks "Download Statement of Compliance"
-    → window.open(`/api/export/statement/${weekId}`) (new route)
-    → statementPdf.ts generates PDF
-    → streams PDF
-```
-
-### Worker Pay History Flow
-
-```
-User navigates to /projects/:projectId/workers/:workerId/history
-    ↓
-WorkerPayHistoryPage mounts
-    ↓
-useQuery(['worker-history', workerId])
-    → GET /api/reports/worker-history/:workerId
-    → workerHistoryService.ts joins payrollEntries + payrollWeeks
-    → returns { worker, weeks: [{ weekEndingDate, payrollNumber, totalSt, totalOt, grossWages, netPay }] }
-    ↓
-Page renders sortable table + totals row
-```
-
-### Fringe Benefit Summary Flow
-
-```
-User navigates to /projects/:projectId/fringe
-    ↓
-FringeSummaryPage mounts
-    ↓
-useQuery(['fringe-summary', projectId])
-    → GET /api/reports/fringe/:projectId
-    → fringeService.ts aggregates fringeRateSnapshot * hours per worker
-    → returns { workers: [{ workerId, workerName, totalFringeHours, totalFringeDollars }] }
-    ↓
-Page renders summary table
-```
-
----
-
-## Recommended Project Structure (v2.0 additions)
-
-```
-src/
-├── server/
-│   ├── routes/
-│   │   ├── compliance.ts         NEW — GET /api/compliance/projects/:id, /weeks/:weekId
-│   │   ├── reports.ts            NEW — GET /api/reports/worker-history/:id, /fringe/:projectId
-│   │   └── export.ts             MODIFIED — add statement/:weekId route
-│   ├── services/
-│   │   ├── complianceEngine.ts   NEW — all violation check functions
-│   │   ├── statementPdf.ts       NEW — Statement of Compliance PDF via pdf-lib
-│   │   ├── workerHistoryService.ts NEW — cross-week aggregation per worker
-│   │   └── fringeService.ts      NEW — fringe totals per worker per project
-│   └── index.ts                  MODIFIED — register compliance and reports routers
-├── client/
-│   ├── pages/
-│   │   ├── PayrollWeekPage.tsx   NEW — /projects/:projectId/payroll/:weekId
-│   │   ├── WorkerPayHistoryPage.tsx NEW
-│   │   └── FringeSummaryPage.tsx NEW
-│   ├── components/
-│   │   ├── compliance/
-│   │   │   ├── ComplianceBadge.tsx  NEW — green/yellow/red pill
-│   │   │   └── ViolationsList.tsx   NEW — violation rows with severity
-│   │   └── projects/
-│   │       └── ProjectCard.tsx   MODIFIED — accepts complianceStatus prop
-│   └── pages/
-│       ├── DashboardPage.tsx     MODIFIED — fetch + pass compliance status
-│       └── PayrollListPage.tsx   MODIFIED — link to PayrollWeekPage, show badges
-```
+- **`index.css` as the sole @theme home:** TailwindCSS v4's `@theme` directive must live in the CSS file where `@import "tailwindcss"` resides. Splitting @theme into a separate file and importing it with `@import` causes the directive to fail silently (GitHub issue #18966 — confirmed, closed without a fix). All @theme content stays in `index.css`. If the file grows large, only `@layer components` can be safely split into a separate imported file.
+- **`components/ui/` primitives:** Extract repeated inline patterns (badge spans, card divs, page-level h1+button combos) into typed React components. Eliminates inconsistency that accumulates when the same 5-class combo is copied across 10 pages independently.
+- **`LandingPage` as a public React route:** No separate static site needed. React Router handles public routes natively — the `ProtectedRoute` wrapper only applies to the inner route group. Adding `<Route path="/" element={<LandingPage />} />` outside the protected group is all that's required. One deployment, shared CSS tokens, same Google Fonts.
 
 ---
 
 ## Architectural Patterns
 
-### Pattern 1: On-Demand Compliance Computation
+### Pattern 1: Centralized @theme Design Tokens in index.css
 
-**What:** Compliance checks are computed fresh on each API request from raw payroll data. No violation cache, no stored results.
+**What:** All design tokens live in a single `@theme` block in `index.css`, immediately after the Google Fonts `@import` and the `@import "tailwindcss"` line. No `tailwind.config.js`. No separate tokens file.
 
-**When to use:** Always, for this data scale. The compliance engine reads at most a few hundred rows per project. SQLite handles this in under 10ms.
+**When to use:** Always, for this project. TailwindCSS v4 is CSS-first — `@theme` is both the token registry and the utility generator.
 
-**Trade-offs:** Simple — no sync issues between stored violations and updated payroll. Slightly more CPU per request than cached, but negligible at this scale.
+**Trade-offs:** The single-file constraint is enforced by v4's processing pipeline. Tokens defined in `@theme` generate utility classes automatically (`--color-brand-gold` → `bg-brand-gold`, `text-brand-gold`, `border-brand-gold`). This is the primary reason to use `@theme` over `:root` — `:root` variables are accessible but do not generate utilities.
 
-**Example:**
-```typescript
-// src/server/routes/compliance.ts
-router.get('/projects/:id', async (req, res) => {
-  const db = getDb();
-  const result = await runProjectCompliance(db, req.params.id);
-  res.json(result);
-});
+**Correct order (order matters in v4):**
+```css
+/* 1. Font imports FIRST — before tailwindcss import */
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap");
+
+/* 2. Tailwind import */
+@import "tailwindcss";
+
+/* 3. @theme block — all design tokens */
+@theme {
+  /* Colors: generates bg-*, text-*, border-* utilities */
+  --color-brand-gold: #F5C518;
+  --color-brand-gold-hover: #d4a800;
+  --color-nav: #1a1a1a;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f9fafb;
+
+  /* Font families: generates font-headline, font-body utilities */
+  --font-headline: 'Oswald', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Typography scale: generates text-display, text-title, text-section utilities */
+  --text-display: 3rem;
+  --text-display--line-height: 1.1;
+  --text-display--font-weight: 700;
+  --text-title: 1.875rem;
+  --text-title--line-height: 1.2;
+  --text-title--font-weight: 600;
+  --text-section: 1.25rem;
+  --text-section--line-height: 1.4;
+  --text-section--font-weight: 600;
+
+  /* Radius: generates rounded-card, rounded-badge utilities */
+  --radius-card: 0.5rem;
+  --radius-badge: 0.25rem;
+
+  /* Shadow: generates shadow-card, shadow-modal utilities */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  --shadow-modal: 0 10px 25px -5px rgb(0 0 0 / 0.15);
+}
+
+/* 4. Base layer — element defaults (applied before utilities) */
+@layer base {
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-surface-muted);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-headline);
+  }
+}
+
+/* 5. Components layer — shared style recipes */
+@layer components {
+  /* ... see Pattern 2 */
+}
 ```
 
-### Pattern 2: Compliance Engine as Independent Service
+### Pattern 2: @layer components for Shared Style Recipes
 
-**What:** complianceEngine.ts takes `db` and `projectId`/`weekId` as parameters. It does not import from routes, does not read `req`, does not write HTTP responses.
+**What:** Repeated multi-class combos (data table rows, card shells, status badges) become named classes in `@layer components`. These classes reference `@theme` variables so they automatically reflect any token change. They can be overridden by utility classes in JSX.
 
-**When to use:** Always. Matches the existing pattern in varianceService.ts, which also takes `db` as a parameter.
+**When to use:** When the same visual pattern (4+ classes) appears across 3+ components. Not for one-offs.
 
-**Trade-offs:** Testable in isolation. Can be called from multiple routes. No coupling to Express.
+**Trade-offs:** Slightly breaks utility-first philosophy but eliminates the drift between components that must look identical. A developer adding a new payroll table can apply `hcc-table` instead of remembering 12 individual class names.
 
-**Example:**
-```typescript
-// Matches the varianceService.ts pattern exactly:
-export async function runProjectCompliance(
-  db: BetterSQLite3Database<typeof schema>,
-  projectId: string,
-): Promise<ComplianceResult>
+**Example (in index.css @layer components block):**
+```css
+@layer components {
+  /* Card container — used across ProjectCard, modal dialogs, report sections */
+  .hcc-card {
+    background-color: var(--color-surface);
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-gray-200);
+    box-shadow: var(--shadow-card);
+    padding: --spacing(6);
+  }
+
+  /* Data table — consistent cell sizing across all tables in the app */
+  .hcc-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .hcc-table th {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500);
+    padding: --spacing(3) --spacing(4);
+    border-bottom: 2px solid var(--color-gray-200);
+    text-align: left;
+  }
+  .hcc-table td {
+    font-size: var(--text-sm);
+    color: var(--color-gray-800);
+    padding: --spacing(3) --spacing(4);
+    border-bottom: 1px solid var(--color-gray-100);
+  }
+  .hcc-table tr:last-child td {
+    border-bottom: none;
+  }
+}
 ```
 
-### Pattern 3: PDF Routes in Existing export.ts
+### Pattern 3: Public Route Before ProtectedRoute in React Router
 
-**What:** The Statement of Compliance PDF route lives in `src/server/routes/export.ts` alongside the existing WH-347 route — it's another export type, not a separate concern.
+**What:** Add `<Route path="/" element={<LandingPage />} />` as a sibling route before the `<Route element={<ProtectedRoute />}>` group. Change the `*` wildcard to redirect to `/` instead of `/dashboard`. Logged-in users navigating to `/` see the landing page with a "Go to Dashboard" link rather than an automatic redirect.
 
-**When to use:** Because the Statement of Compliance is conceptually the same as WH-347 — take a payroll week, generate a PDF, stream it. Both share the ownership check pattern.
+**When to use:** When the app needs a marketing homepage that is publicly accessible, but the main app requires auth.
 
-**Trade-offs:** Keeps all PDF download routes in one file. Slightly larger file, but avoids creating a near-duplicate route structure.
+**Trade-offs:** Simple — no separate deployment, no iframe, no CORS. The `ProtectedRoute` only wraps the protected group. The `LandingPage` is not wrapped at all.
 
-### Pattern 4: Separate PayrollWeekPage from PayrollListPage
+**App.tsx change:**
+```tsx
+<Routes>
+  <Route path="/" element={<LandingPage />} />           {/* public — NEW */}
+  <Route path="/login" element={<LoginPage />} />         {/* public — unchanged */}
+  <Route element={<ProtectedRoute />}>
+    <Route path="/dashboard" element={<DashboardPage />} />
+    {/* ... all existing protected routes unchanged ... */}
+  </Route>
+  <Route path="*" element={<Navigate to="/" replace />} /> {/* was /dashboard */}
+</Routes>
+```
 
-**What:** Create a new `PayrollWeekPage` at `/projects/:projectId/payroll/:weekId` instead of expanding `PayrollListPage`.
+### Pattern 4: Primitive UI Components as Typed Wrappers
 
-**When to use:** The current `PayrollListPage` only lists weeks. A "view week" page needs substantially different data (compliance results, entry detail, action buttons). These are separate concerns.
+**What:** Create `components/ui/Badge.tsx`, `Card.tsx`, and `PageHeader.tsx` as typed React components that accept variant props and render the correct class combos. Pages import these primitives; raw inline badge spans and card divs are replaced.
 
-**Trade-offs:** Adds a new page file but keeps each page focused. The `PayrollListPage` "View" link changes from navigating directly to entry form, to navigating to the new week view page.
+**When to use:** For the 3-4 patterns repeated on every page: status badges, card containers, page-level h1+action-button headers.
+
+**Trade-offs:** Small upfront creation cost; large consistency payoff across 10+ pages. A `Button.tsx` primitive is useful. A `TableRow.tsx` primitive is overkill because the `.hcc-table` CSS class covers table consistency more efficiently.
+
+**Badge example:**
+```tsx
+// components/ui/Badge.tsx
+type BadgeVariant = 'gold' | 'gray' | 'green' | 'red';
+
+const VARIANT_CLASSES: Record<BadgeVariant, string> = {
+  gold:  'bg-brand-gold text-gray-900',
+  gray:  'bg-gray-100 text-gray-700',
+  green: 'bg-green-100 text-green-700',
+  red:   'bg-red-100 text-red-700',
+};
+
+export function Badge({ variant, children }: {
+  variant: BadgeVariant;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-badge ${VARIANT_CLASSES[variant]}`}>
+      {children}
+    </span>
+  );
+}
+```
+
+**PageHeader example:**
+```tsx
+// components/ui/PageHeader.tsx
+export function PageHeader({ title, subtitle, action }: {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between mb-8">
+      <div>
+        <h1 className="text-title text-gray-900">{title}</h1>
+        {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+      </div>
+      {action && <div>{action}</div>}
+    </div>
+  );
+}
+```
 
 ---
 
-## Anti-Patterns
+## Data Flow
 
-### Anti-Pattern 1: Storing Violation State in the Database
+### Design Token to Rendered UI
 
-**What people do:** Create a `complianceViolations` table, write violations when payroll is saved, read them for display.
+```
+@theme block in index.css
+    ↓ (Vite processes @import "tailwindcss" + @theme at build time)
+CSS custom properties on :root  +  generated utility classes (bg-brand-gold, etc.)
+    ↓
+@layer base sets body { font-family: var(--font-body) }
+    ↓
+React component uses utility class ("bg-brand-gold rounded-card shadow-card")
+    ↓
+Browser renders with resolved CSS variable values
+```
 
-**Why it's wrong:** Creates a sync problem — if payroll entries are corrected, stored violations may be stale. The existing `baseRateSnapshot`/`fringeRateSnapshot` design was specifically chosen to make compliance re-derivable at any time. Don't fight the existing design.
+### Landing Page to App Auth Flow
 
-**Do this instead:** Compute violations on-demand in `complianceEngine.ts`. The data is always current.
+```
+User visits "/"
+    ↓
+React Router matches LandingPage (no ProtectedRoute wrapping)
+    ↓
+LandingPage renders — CTA buttons link to /login and /register
+    ↓
+User clicks "Get Started" → LoginPage
+    ↓
+Successful auth → JWT httpOnly cookie set → navigate to /dashboard
+    ↓
+ProtectedRoute reads cookie → DashboardPage renders
+```
 
-### Anti-Pattern 2: Compliance as Route Middleware
+### Component Theming Flow (after rollout)
 
-**What people do:** Add a compliance-check middleware to payroll save routes that blocks the request if violations exist.
-
-**Why it's wrong:** Davis-Bacon compliance is a reporting requirement, not an entry gate. Contractors must be able to enter payroll even with under-wage workers (to correct later). Blocking entry breaks the core workflow and misrepresents how compliance works.
-
-**Do this instead:** Show compliance violations as warnings/errors in the UI. Let the user decide whether to generate the WH-347 despite violations. The compliance check informs; it does not block.
-
-### Anti-Pattern 3: Embedding WH-347 Logic in the Page Component
-
-**What people do:** Put the PDF generation trigger directly in a React component via a `useMutation` that POSTs to generate a PDF and returns binary data.
-
-**Why it's wrong:** The existing `GET /api/export/wh347/:weekId` pattern streams the PDF as a download using `window.open()`. This is simpler, avoids binary data handling in React, and matches how browsers handle file downloads naturally.
-
-**Do this instead:** Use `window.open('/api/export/wh347/${weekId}')` and `window.open('/api/export/statement/${weekId}')` in the PayrollWeekPage action buttons. No mutation needed.
-
-### Anti-Pattern 4: Dashboard Fetching Compliance Inside ProjectCard
-
-**What people do:** Put the compliance `useQuery` call inside `ProjectCard` so each card is self-contained.
-
-**Why it's wrong:** N components each with their own query = N waterfall renders, makes it hard to show a loading state for the whole dashboard, and couples a display component to a data fetch.
-
-**Do this instead:** Fetch compliance data at the `DashboardPage` level alongside the projects query. Pass `complianceStatus` as a prop to `ProjectCard`. This follows the existing pattern where `ProjectCard` is a pure display component that receives all its data from props.
+```
+@theme: --color-brand-gold defined
+    ↓
+Tailwind generates: bg-brand-gold, text-brand-gold, border-brand-gold utilities
+    ↓
+Badge.tsx uses: className="bg-brand-gold text-gray-900"
+    ↓
+ProjectCard.tsx uses: <Badge variant="gold">Federal</Badge>
+    ↓
+No raw hex values in JSX — any brand color change is a one-line edit in index.css
+```
 
 ---
 
 ## Integration Points
 
-### Existing Boundaries That Must Not Change
+### Existing Pages — Required Changes
 
-| Boundary | Rule |
-|----------|------|
-| `calculations.ts` | Pure functions only — no DB imports. The compliance engine calls these functions but lives in `complianceEngine.ts`. |
-| `payrollService.ts` | No compliance logic added here. It stays a CRUD service for payroll weeks and entries. |
-| `export.ts` WH-347 route | The existing route signature and behavior does not change. The UI adds a button that calls the existing route. |
-| DB schema existing tables | No column modifications to existing tables. |
+| Page | What Changes | Why |
+|------|-------------|-----|
+| `index.html` | Add Google Fonts preconnect + `<link>` for Oswald + Inter | Fonts currently not loading — fall back to system sans-serif |
+| `Layout.tsx` | Replace `bg-gray-900` with `bg-nav`, `border-[#F5C518]` with `border-brand-gold`, add SVG logo | Use tokens; replace text placeholder with actual logo |
+| `DashboardPage.tsx` | Use `<PageHeader>` for h2+button, use `<Badge>` for inline status spans | Token-based typography + consistent badges |
+| `ProjectCard.tsx` | Use `<Card>` primitive for shell, `<Badge>` for funding type + compliance chips, `hover:border-brand-gold` | Remove inline hex values |
+| `WorkersPage.tsx` | Apply `hcc-table` class to worker table | Shared table styles |
+| `PayrollWeekDetailPage.tsx` | Apply `hcc-table` class to payroll table | Shared table styles |
+| `WageClassificationsTable.tsx` | Apply `hcc-table` class | Shared table styles |
+| `ReportsPage.tsx` | Apply `hcc-card`, `hcc-table`, `<PageHeader>` | Token-based layout |
+| `LoginPage.tsx` | Refine form card with `hcc-card`, use token colors for inputs | Visual polish — first impression |
 
-### New Boundaries Created
+### New Files to Create
 
-| Boundary | Communication |
-|----------|---------------|
-| `complianceEngine.ts` ↔ `compliance.ts` route | Direct function call; engine takes `(db, id)` parameters |
-| `complianceEngine.ts` ↔ `calculations.ts` | Direct import; engine feeds DB data into pure calculation functions |
-| `statementPdf.ts` ↔ `export.ts` route | Direct function call; same pattern as `wh347Generator.ts` ↔ `export.ts` |
-| `DashboardPage` ↔ `ComplianceBadge` | Props — `status: 'green' | 'yellow' | 'red'` |
-| `PayrollWeekPage` ↔ `ViolationsList` | Props — `violations: Violation[]` |
+| File | Type | Purpose |
+|------|------|---------|
+| `src/client/pages/LandingPage.tsx` | React page | Marketing homepage — public route at "/" |
+| `src/client/components/ui/Badge.tsx` | Primitive component | Status badge with variant prop (gold/gray/green/red) |
+| `src/client/components/ui/Card.tsx` | Primitive component | Card shell with optional padding variant |
+| `src/client/components/ui/PageHeader.tsx` | Primitive component | Page-level title + subtitle + action slot |
+
+### Files to Modify
+
+| File | Change Type | Scope |
+|------|------------|-------|
+| `src/client/index.css` | Expand @theme + add @layer base + @layer components | Core foundation |
+| `src/client/index.html` | Add Google Fonts link tags | One-time addition |
+| `src/client/App.tsx` | Add "/" route, adjust wildcard redirect | Routing only |
+| `src/client/components/shared/Layout.tsx` | Token classes + SVG logo | Visual polish |
+| All page files (8 pages) | Apply token classes, use primitives | Polish pass |
 
 ---
 
-## Suggested Build Order
+## Build Order
 
-Build order respects dependencies: services before routes, routes before pages, shared components before pages that use them.
+Dependencies drive sequencing. Each phase must be complete and visually verified before the next.
 
-| Step | What | New vs Modified | Depends On |
-|------|------|----------------|-----------|
-| 1 | `complianceEngine.ts` (service) | NEW | Existing schema, calculations.ts |
-| 2 | `compliance.ts` (route) | NEW | complianceEngine.ts |
-| 3 | Register compliance router in `index.ts` | MODIFIED | compliance.ts |
-| 4 | `ComplianceBadge.tsx` + `ViolationsList.tsx` | NEW | None |
-| 5 | `DashboardPage.tsx` + `ProjectCard.tsx` | MODIFIED | ComplianceBadge.tsx, compliance route |
-| 6 | `PayrollWeekPage.tsx` | NEW | compliance route, existing payroll route, ComplianceBadge, ViolationsList |
-| 7 | `PayrollListPage.tsx` | MODIFIED | PayrollWeekPage (for link target) |
-| 8 | `statementPdf.ts` (service) | NEW | pdf-lib (already installed) |
-| 9 | Statement of Compliance route in `export.ts` | MODIFIED | statementPdf.ts |
-| 10 | `workerHistoryService.ts` + `fringeService.ts` | NEW | Existing schema |
-| 11 | `reports.ts` (route) + register in `index.ts` | NEW + MODIFIED | workerHistoryService.ts, fringeService.ts |
-| 12 | `WorkerPayHistoryPage.tsx` + `FringeSummaryPage.tsx` | NEW | reports route |
-| 13 | Register new pages in `App.tsx` | MODIFIED | All new pages |
+```
+Phase 1: CSS Foundation (no React changes — validates token pipeline)
+  1a. src/client/index.html
+        — add <link rel="preconnect" href="https://fonts.googleapis.com">
+        — add <link href="...Oswald:wght@400;500;600;700&family=Inter..." rel="stylesheet">
+  1b. src/client/index.css
+        — add Google Fonts @import at top (before @import "tailwindcss")
+        — expand @theme with full token set
+        — add @layer base (body font, h1-h4 font)
+        — add @layer components (hcc-card, hcc-table)
+  Verify: open app — Oswald renders in nav, Inter in body, bg-brand-gold works
+
+Phase 2: Primitive UI Components (no page changes)
+  2a. src/client/components/ui/Badge.tsx
+  2b. src/client/components/ui/Card.tsx
+  2c. src/client/components/ui/PageHeader.tsx
+  Verify: temporarily use one primitive in DashboardPage, check render
+
+Phase 3: Layout + Shared Components
+  3a. src/client/components/shared/Layout.tsx — token classes + SVG logo
+  Verify: all protected pages still render; nav looks correct
+
+Phase 4: Landing Page + Routing
+  4a. src/client/pages/LandingPage.tsx — full marketing page
+  4b. src/client/App.tsx — add "/" public route, adjust wildcard
+  Verify: "/" loads unauthenticated; "/dashboard" still requires auth
+
+Phase 5: Page Polish (each page independently verifiable)
+  5a. LoginPage.tsx — first impression; affects unauth users
+  5b. DashboardPage.tsx + ProjectCard.tsx — most-visited page
+  5c. ProjectDetailPage.tsx
+  5d. WorkersPage.tsx + WageClassificationsTable.tsx
+  5e. PayrollEntryPage.tsx + PayrollWeekDetailPage.tsx
+  5f. ReportsPage.tsx
+  5g. OtScenarioPage.tsx, WageLookupPage.tsx (lower priority)
+  Verify after each: run existing 181 tests; no regressions
+```
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Splitting @theme Into an Imported File
+
+**What people do:** Create `src/client/tokens.css` with `@theme { ... }` and add `@import "./tokens.css"` inside `index.css`.
+
+**Why it's wrong:** TailwindCSS v4 processes `@theme` only in the main CSS entry file where `@import "tailwindcss"` lives. When a file containing `@theme` is loaded via `@import`, the directive fails silently — all custom tokens are unrecognized and fall back to defaults. This is a known confirmed issue (GitHub #18966, closed but unresolved by Tailwind team — workaround is to not split the file).
+
+**Do this instead:** Keep all `@theme` content directly in `index.css`. If the file grows large (400+ lines), only `@layer components` content is safe to split into a separate `components.css` that is imported after `@import "tailwindcss"`.
+
+### Anti-Pattern 2: Raw Hex Values in JSX After Tokens Exist
+
+**What people do:** Continue writing `border-[#F5C518]` and `bg-[#1a1a1a]` after defining `--color-brand-gold` and `--color-nav` in `@theme`.
+
+**Why it's wrong:** Defeats the design system. A brand color change requires hunting through 10+ JSX files instead of editing one variable. Arbitrary value syntax (`[]`) also bypasses Tailwind's hover/focus variant generation.
+
+**Do this instead:** After Phase 1 is complete, do a one-time pass to replace all raw hex values in JSX with generated token utility classes. Use grep to find `\[#` patterns as a checklist.
+
+### Anti-Pattern 3: Landing Page as a Separate Static HTML File
+
+**What people do:** Create `public/landing.html` or a separate Vite build for the marketing page.
+
+**Why it's wrong:** Two build artifacts, two CSS systems, no shared components, routing inconsistencies. Login/register CTAs from a separate HTML file require different session handling.
+
+**Do this instead:** `LandingPage.tsx` as a public React route at `/`. Same CSS tokens. Same Google Fonts. Same `<Link>` components. One deployment.
+
+### Anti-Pattern 4: Typography Without @layer base Defaults
+
+**What people do:** Apply `font-headline` and `font-body` classes manually on every heading and paragraph across 10+ pages.
+
+**Why it's wrong:** Inconsistent application is guaranteed at scale. Any new component created without explicitly adding font classes inherits browser defaults (usually Times New Roman for headings).
+
+**Do this instead:** Set font defaults in `@layer base` on `body` (Inter) and `h1, h2, h3, h4` (Oswald). Pages then only add size, weight, and color — never the font family itself.
+
+### Anti-Pattern 5: Google Fonts via JSX Instead of HTML link Tag
+
+**What people do:** Import Google Fonts with a `<link>` inside a React component or `useEffect`.
+
+**Why it's wrong:** React components mount after initial paint. Fonts loaded via component render cause a flash of unstyled text (FOUT) — the page renders with fallback fonts, then repaints when the custom fonts load.
+
+**Do this instead:** Add the Google Fonts `<link>` tag directly in `src/client/index.html` `<head>`, with a `<link rel="preconnect">` before it. Fonts begin loading before any JavaScript executes.
 
 ---
 
@@ -465,21 +478,22 @@ Build order respects dependencies: services before routes, routes before pages, 
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 1 contractor, 1-30 projects | Current design handles this. On-demand compliance computation is fine. |
-| Multi-user SaaS (future) | Compliance queries already scope to `projectId`; adding `userId` ownership checks follows the existing `assertProjectOwner` pattern. No architecture change needed, just auth scoping. |
-| Large projects (500+ workers) | Compliance computation may slow. Batch the under-wage check to use a single JOIN query rather than N individual lookups. Not a concern for v2.0 scope. |
+| Current (single user) | Monolith + single index.css is correct. No design system tooling overhead needed. |
+| 5-50 users | No changes needed. Design system as built handles this without modification. |
+| Multi-tenant SaaS | Wrap `--color-brand-gold` overrides in `[data-theme="tenant-slug"]` selectors in `@layer base`. The primitives and `.hcc-table` / `.hcc-card` classes stay stable — only variable values change per tenant. |
 
 ---
 
 ## Sources
 
-- Direct inspection of `src/server/services/calculations.ts` — `checkApprenticeRatio()` already implemented as pure function
-- Direct inspection of `src/server/services/varianceService.ts` — establishes the on-demand aggregation pattern with `(db, projectId)` signature
-- Direct inspection of `src/server/routes/export.ts` — establishes the PDF streaming pattern via `window.open()` equivalent on client
-- Direct inspection of `src/server/services/wh347Generator.ts` — confirms pdf-lib is the PDF tool; Statement of Compliance uses same approach
-- Direct inspection of `src/client/pages/DashboardPage.tsx` + `ProjectCard.tsx` — confirms card is props-driven, correct place for compliance data
+- [TailwindCSS v4 @theme directive — official docs](https://tailwindcss.com/docs/theme) — HIGH confidence
+- [TailwindCSS v4 adding custom styles with @layer — official docs](https://tailwindcss.com/docs/adding-custom-styles) — HIGH confidence
+- [TailwindCSS v4 font-size --text-* customization — official docs](https://tailwindcss.com/docs/font-size) — HIGH confidence
+- [TailwindCSS v4 font-family --font-* customization — official docs](https://tailwindcss.com/docs/font-family) — HIGH confidence
+- [GitHub issue #18966 — @theme fails when imported via @import in v4](https://github.com/tailwindlabs/tailwindcss/issues/18966) — HIGH confidence (confirmed limitation)
+- Direct codebase inspection: `src/client/index.css`, `index.html`, `App.tsx`, `Layout.tsx`, `ProjectCard.tsx`, `DashboardPage.tsx` — HIGH confidence
 
 ---
 
-*Architecture research for: HCC Prevailing Wage v2.0 — Compliance + Reporting integration*
-*Researched: 2026-03-19*
+*Architecture research for: HCC Prevailing Wage v2.1 — Design Polish + Landing Page*
+*Researched: 2026-03-20*
