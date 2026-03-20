@@ -12,7 +12,7 @@ Requirements for milestone v2.0 — Contractor UX Overhaul + Compliance. Phases 
 - [x] **WH347-01**: User can download a January 2025-compliant WH-347 PDF (correct form version, correct field positions)
 - [x] **WH347-02**: Worker profile includes J/RA (journeyworker/registered apprentice) field — mandatory on 2025 WH-347 form
 - [x] **WH347-03**: User can download WH-347 directly from the payroll week view with one click
-- [ ] **WH347-04**: WH-347 generates multiple pages when a payroll week has more than 8 workers
+- [x] **WH347-04**: WH-347 generates multiple pages when a payroll week has more than 8 workers
 
 ### Compliance
 
@@ -66,7 +66,7 @@ Deferred to v2.1+.
 | WH347-01 | Phase 6 | Complete |
 | WH347-02 | Phase 6 | Complete |
 | WH347-03 | Phase 7 | Complete |
-| WH347-04 | Phase 7 | Pending |
+| WH347-04 | Phase 7 | Complete |
 | COMP-01 | Phase 7 | Complete |
 | COMP-02 | Phase 7 | Complete |
 | DASH-01 | Phase 8 | Pending |
