@@ -26,8 +26,8 @@ Requirements for milestone v2.0 — Contractor UX Overhaul + Compliance. Phases 
 
 ### Dashboard
 
-- [ ] **DASH-01**: Each project card shows a compliance status badge (green = clean, yellow = warnings, red = active violations)
-- [ ] **DASH-02**: Each project card shows total payroll weeks submitted and the last week number
+- [x] **DASH-01**: Each project card shows a compliance status badge (green = clean, yellow = warnings, red = active violations)
+- [x] **DASH-02**: Each project card shows total payroll weeks submitted and the last week number
 
 ### UX
 
@@ -69,8 +69,8 @@ Deferred to v2.1+.
 | WH347-04 | Phase 7 | Complete |
 | COMP-01 | Phase 7 | Complete |
 | COMP-02 | Phase 7 | Complete |
-| DASH-01 | Phase 8 | Pending |
-| DASH-02 | Phase 8 | Pending |
+| DASH-01 | Phase 8 | Complete |
+| DASH-02 | Phase 8 | Complete |
 | UX-01 | Phase 8 | Pending |
 | UX-02 | Phase 8 | Pending |
 | UX-03 | Phase 8 | Pending |

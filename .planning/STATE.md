@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Contractor UX Overhaul + Compliance
 status: planning
-stopped_at: Completed 07-04-PLAN.md — Phase 7 fully complete
-last_updated: "2026-03-20T10:12:40.227Z"
+stopped_at: Completed 08-01-PLAN.md — project-level compliance endpoint test stubs (RED state)
+last_updated: "2026-03-20T10:39:10.549Z"
 last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 12
+  completed_plans: 9
   percent: 50
 ---
 
@@ -56,6 +56,7 @@ Progress: [█████░░░░░] 50%
 | Phase 07 P03 | 4 | 1 tasks | 1 files |
 | Phase 07 P04 | 3min | 2 tasks | 3 files |
 | Phase 07 P04 | 3min | 3 tasks | 3 files |
+| Phase 08-dashboard-ux-polish P01 | 1 | 1 tasks | 1 files |
 
 ### Decisions
 
@@ -85,6 +86,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 07]: computeCompliance() called independently in export.ts route — entries fetched twice is acceptable for Phase 7; performance optimization deferred to v2.1
 - [Phase 07]: certProperPayment/certAccuratePayroll use ?? true fallback when computeCompliance returns null — no entries means no violations detected = compliant
 - [Phase 07]: Browser verification (Task 3) approved — all 6 end-to-end tests confirmed passing in browser
+- [Phase 08-dashboard-ux-polish]: seedProjectFixture is a separate helper (not a modification of seedFixture) to preserve existing test isolation
+- [Phase 08-dashboard-ux-polish]: Wave-0 assertion style: actual expect() calls so stubs fail with clear assertion error (not .todo)
 
 ### Research Flags (address during planning)
 
@@ -102,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T10:08:02.156Z
-Stopped at: Completed 07-04-PLAN.md — Phase 7 fully complete
+Last session: 2026-03-20T10:39:10.548Z
+Stopped at: Completed 08-01-PLAN.md — project-level compliance endpoint test stubs (RED state)
 Resume file: None
