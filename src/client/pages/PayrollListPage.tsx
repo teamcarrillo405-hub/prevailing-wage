@@ -90,12 +90,20 @@ export function PayrollListPage() {
                     </span>
                   )}
                 </div>
-                <Link
-                  to={`/projects/${projectId}/payroll/${week.id}`}
-                  className="text-xs text-gray-500 hover:text-gray-900 underline"
-                >
-                  View
-                </Link>
+                <div className="flex items-center gap-3">
+                  <a
+                    href={`/api/export/wh347/${week.id}`}
+                    className="px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded hover:bg-gray-800"
+                  >
+                    Download WH-347
+                  </a>
+                  <Link
+                    to={`/projects/${projectId}/payroll/${week.id}`}
+                    className="text-xs text-gray-500 hover:text-gray-900 underline"
+                  >
+                    View
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

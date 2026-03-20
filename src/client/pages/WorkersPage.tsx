@@ -329,6 +329,11 @@ export function WorkersPage() {
                           {w.ssnLast4 && <span className="mr-3">SSN: ***-**-{w.ssnLast4}</span>}
                           {w.address && <span>{w.address}</span>}
                         </p>
+                        {(!w.address || !w.ssnLast4) && (
+                          <span className="inline-block text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded mt-1">
+                            Missing data — WH-347 blocked
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <button
