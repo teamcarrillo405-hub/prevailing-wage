@@ -102,7 +102,7 @@
 | UI-04 | Phase 11 | Complete |
 | UI-05 | Phase 11 | Complete |
 | SHELL-01 | Phase 12 | Complete |
-| SHELL-02 | Phase 12 | Pending |
+| SHELL-02 | Phase 12 | Complete |
 | SHELL-03 | Phase 12 | Pending |
 | LANDING-01 | Phase 13 | Pending |
 | LANDING-02 | Phase 13 | Pending |
