@@ -18,10 +18,11 @@ decisions:
   - "Compliance query lives inside ProjectCard (not DashboardPage) — each card owns its own fetch, keeps DashboardPage unchanged"
   - "staleTime: 60_000 on compliance-summary query — prevents N re-fetches when navigating back to dashboard"
   - "No payroll badge shows when summary is undefined OR weekCount === 0 — covers both first-load and empty-project states"
+requirements-completed: [DASH-01, DASH-02, UX-01, UX-02, UX-03]
 metrics:
-  duration: "2m"
+  duration: "5m"
   completed_date: "2026-03-20"
-  tasks_completed: 1
+  tasks_completed: 2
   tasks_total: 2
   files_changed: 1
 ---
@@ -57,19 +58,32 @@ DashboardPage.tsx required no changes — it already passes `project` to `<Proje
 
 None - plan executed exactly as written.
 
-## Checkpoint Status
+## Checkpoint Verification
 
-**Task 2 (checkpoint:human-verify) is pending user verification.**
+**Task 2 (checkpoint:human-verify) — APPROVED by user.**
 
-The full Phase 8 feature set is ready for browser verification:
-- DASH-01: Compliance badge (green/red/gray) on each project card
-- DASH-02: Week count and last week number on each project card
-- UX-01: ProjectDetailPage nav with Workers, Payroll Weeks, Variance, Reports (coming soon)
-- UX-02: WH-347 download anchor per row on PayrollListPage
-- UX-03: Amber missing-data warning on worker cards when address or SSN is null
+All 5 Phase 8 requirements confirmed passing in browser:
+- DASH-01: Compliance badge (green/red/gray) on each project card — verified
+- DASH-02: Week count and last week number on each project card — verified
+- UX-01: ProjectDetailPage nav with Workers, Payroll Weeks, Variance, Reports (coming soon) — verified
+- UX-02: WH-347 download anchor per row on PayrollListPage — verified
+- UX-03: Amber missing-data warning on worker cards when address or SSN is null — verified
 
-## Self-Check
+## Task Commits
+
+Each task was committed atomically:
+
+1. **Task 1: Add compliance badge and week stats to ProjectCard** - `1d4ed29` (feat)
+2. **Task 2: Browser verification — all Phase 8 requirements** - checkpoint:human-verify, no code commit
+
+## Next Phase Readiness
+
+Phase 8 complete. All 5 requirements (DASH-01, DASH-02, UX-01, UX-02, UX-03) delivered and verified.
+Phase 9 (Reports) can begin — the Reports nav link is a span with "coming soon" placeholder ready for replacement.
+
+## Self-Check: PASSED
 
 - [x] `src/client/components/projects/ProjectCard.tsx` modified and verified
-- [x] Commit 1d4ed29 exists and confirmed
+- [x] Commit `1d4ed29` exists and confirmed
 - [x] All 175 tests pass
+- [x] Browser checkpoint approved — all 5 requirements verified

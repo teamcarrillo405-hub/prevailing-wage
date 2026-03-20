@@ -22,7 +22,7 @@ Plans are not archived here — built before GSD structure. See MILESTONES.md.
 
 - [x] **Phase 6: WH-347 2025 Compliance Foundation** - Update WH-347 to January 2025 form + add J/RA field to worker schema (completed 2026-03-20)
 - [x] **Phase 7: Compliance Engine + Payroll Week View** - Build compliance engine, payroll week detail page, and one-click WH-347 from week (completed 2026-03-20)
-- [ ] **Phase 8: Dashboard + UX Polish** - Compliance badges on project dashboard, clear navigation, missing-data warnings
+- [x] **Phase 8: Dashboard + UX Polish** - Compliance badges on project dashboard, clear navigation, missing-data warnings (completed 2026-03-20)
 - [ ] **Phase 9: Reports** - Fringe benefit summary and worker pay history reports
 
 ## Phase Details
@@ -96,5 +96,5 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 6. WH-347 2025 Compliance Foundation | 4/4 | Complete   | 2026-03-20 | - |
 | 7. Compliance Engine + Payroll Week View | 4/4 | Complete   | 2026-03-20 | - |
-| 8. Dashboard + UX Polish | 2/4 | In Progress|  | - |
+| 8. Dashboard + UX Polish | 4/4 | Complete   | 2026-03-20 | - |
 | 9. Reports | v2.0 | 0/TBD | Not started | - |
