@@ -150,3 +150,54 @@ describe('wh347Generator', () => {
     }
   });
 });
+
+// ── Multi-page stubs (Plan 03 must make these green) ──────────────────────
+
+const FIXTURE_9_WORKERS: Wh347Data = {
+  ...FIXTURE,
+  workers: Array.from({ length: 9 }, (_, i) => ({
+    entryNo: i + 1,
+    workerName: `Worker ${i + 1}, Test`,
+    laborType: 'journeyworker' as const,
+    identifyingNo: String(1000 + i),
+    classification: 'Carpenter',
+    monSt: 8, monOt: 0,
+    tueSt: 8, tueOt: 0,
+    wedSt: 8, wedOt: 0,
+    thuSt: 8, thuOt: 0,
+    friSt: 8, friOt: 0,
+    satSt: 0, satOt: 0,
+    totalSt: 40,
+    totalOt: 0,
+    baseRate: 45.00,
+    fringeCredit: 12.50,
+    grossWagesProject: 1800.00,
+    grossWagesAll: 1800.00,
+    deductions: 250.00,
+    netPay: 1550.00,
+  })),
+};
+
+describe('multi-page WH-347', () => {
+  let filledBytes9: Uint8Array;
+
+  beforeAll(async () => {
+    filledBytes9 = await fillWh347(FIXTURE_9_WORKERS, templateBytes);
+  });
+
+  it('produces 4 pages for 9 workers (2 page sets)', async () => {
+    const doc = await PDFDocument.load(filledBytes9);
+    expect(doc.getPageCount()).toBe(4);
+  });
+});
+
+// ── certApprentices contract tests (green now — documents generator contract) ──
+
+describe('certApprentices boolean', () => {
+  it('accepts certApprentices: false in compliance object', async () => {
+    const data = { ...FIXTURE, compliance: { ...FIXTURE.compliance, certApprentices: false } };
+    const bytes = await fillWh347(data, templateBytes);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(2);
+  });
+});
