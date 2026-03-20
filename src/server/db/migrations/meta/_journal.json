@@ -22,6 +22,20 @@
       "when": 1773941877470,
       "tag": "0002_safe_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1773950000000,
+      "tag": "0003_workers_address",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1774000000000,
+      "tag": "0008_program_name",
+      "breakpoints": true
     }
   ]
 }
