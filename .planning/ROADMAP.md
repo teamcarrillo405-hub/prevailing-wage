@@ -127,6 +127,6 @@ Plans:
 | 9. Reports | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 10. CSS Design Token Foundation | 3/3 | Complete    | 2026-03-20 | - |
 | 11. UI Primitives | 2/2 | Complete    | 2026-03-20 | - |
-| 12. App Shell + Global Layout | 3/3 | Complete   | 2026-03-20 | - |
+| 12. App Shell + Global Layout | 3/3 | Complete    | 2026-03-20 | - |
 | 13. Landing Page + Routing | v2.1 | 0/? | Not started | - |
 | 14. Page-by-Page Polish | v2.1 | 0/? | Not started | - |
