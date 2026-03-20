@@ -96,9 +96,9 @@
 | DESIGN-02 | Phase 10 | Complete |
 | DESIGN-03 | Phase 10 | Complete |
 | DESIGN-04 | Phase 10 | Complete |
-| UI-01 | Phase 11 | Pending |
-| UI-02 | Phase 11 | Pending |
-| UI-03 | Phase 11 | Pending |
+| UI-01 | Phase 11 | Complete |
+| UI-02 | Phase 11 | Complete |
+| UI-03 | Phase 11 | Complete |
 | UI-04 | Phase 11 | Pending |
 | UI-05 | Phase 11 | Pending |
 | SHELL-01 | Phase 12 | Pending |
