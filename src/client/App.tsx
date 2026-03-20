@@ -10,6 +10,8 @@ import { AdminStateWagePage } from './pages/AdminStateWagePage.js';
 import { PayrollEntryPage } from './pages/PayrollEntryPage.js';
 import { PayrollListPage } from './pages/PayrollListPage.js';
 import { OtScenarioPage } from './pages/OtScenarioPage.js';
+import { WorkersPage } from './pages/WorkersPage.js';
+import { PayrollWeekDetailPage } from './pages/PayrollWeekDetailPage.js';
 
 const queryClient = new QueryClient();
 
@@ -27,7 +29,9 @@ export default function App() {
               <Route path="/admin/wages" element={<AdminStateWagePage />} />
               <Route path="/projects/:projectId/payroll" element={<PayrollListPage />} />
               <Route path="/projects/:projectId/payroll/new" element={<PayrollEntryPage />} />
+              <Route path="/projects/:projectId/payroll/:weekId" element={<PayrollWeekDetailPage />} />
               <Route path="/projects/:projectId/ot-scenarios" element={<OtScenarioPage />} />
+              <Route path="/projects/:projectId/workers" element={<WorkersPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -16,6 +16,7 @@ import { exportRouter } from './routes/export.js';
 import { gsaRouter } from './routes/gsa.js';
 import { unionRouter } from './routes/union.js';
 import { varianceRouter } from './routes/variance.js';
+import { complianceRouter } from './routes/compliance.js';
 import { runWageSync } from './services/wdolSync.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 
@@ -36,6 +37,7 @@ app.use('/api/export', exportRouter);
 app.use('/api/gsa', gsaRouter);
 app.use('/api/union', unionRouter);
 app.use('/api/variance', varianceRouter);
+app.use('/api/compliance', complianceRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
