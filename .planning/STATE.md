@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
-stopped_at: Completed 10-css-design-token-foundation-01-PLAN.md
-last_updated: "2026-03-20T15:58:56.565Z"
+stopped_at: Completed 10-css-design-token-foundation-03-PLAN.md
+last_updated: "2026-03-20T16:05:04.101Z"
 last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 
 ## Accumulated Context
 | Phase 10-css-design-token-foundation P01 | 10 | 2 tasks | 2 files |
+| Phase 10-css-design-token-foundation P03 | 5min | 2 tasks | 9 files |
 
 ### Decisions
 
@@ -102,6 +103,8 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 10-css-design-token-foundation]: Google Fonts loaded via HTML link tag in index.html (not CSS @import) to prevent FOUT and ensure fonts load before JS executes
 - [Phase 10-css-design-token-foundation]: Only font weights 400-700 loaded for Oswald and Inter — full weight range adds 600-900ms TTFB
 - [Phase 10-css-design-token-foundation]: @layer base sets body (Inter) and h1-h4 (Oswald) font-family globally — no per-component font class required
+- [Phase Phase 10-css-design-token-foundation]: focus:outline-hidden is the correct TailwindCSS v4 rename — preserves accessibility tree in forced-color mode
+- [Phase Phase 10-css-design-token-foundation]: WorkersPage programName inputs use focus:border-brand-gold (not ring) as sole focus indicator — no ring companion needed for optional plain-text inputs
 
 ### Research Flags for v2.1
 
@@ -125,6 +128,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T15:58:56.562Z
-Stopped at: Completed 10-css-design-token-foundation-01-PLAN.md
+Last session: 2026-03-20T16:05:04.098Z
+Stopped at: Completed 10-css-design-token-foundation-03-PLAN.md
 Resume file: None
