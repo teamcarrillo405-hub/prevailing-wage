@@ -1,7 +1,7 @@
 # Requirements: HCC Prevailing Wage
 
 **Defined:** 2026-03-19
-**Core Value:** GC can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps.
+**Core Value:** GC can run a full project end-to-end — create project -> add workers -> enter payroll -> generate WH-347 -> submit — with no missing steps.
 
 ## v2 Requirements
 
@@ -80,8 +80,8 @@ Deferred to v2.1+.
 **Coverage:**
 - v2 requirements: 13 total
 - Mapped to phases: 13
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-03-19 — initial v2.0 definition*
+*Last updated: 2026-03-19 — traceability confirmed at roadmap creation*
