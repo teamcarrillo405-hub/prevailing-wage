@@ -48,7 +48,11 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
   2. Oswald headlines and Inter body text render correctly in all browsers — no system-font fallback visible
   3. No `style={{ backgroundColor: '#F5C518' }}` or `style={{ fontFamily: 'Oswald' }}` inline values remain anywhere in the codebase
   4. All form inputs with `focus:outline-none` have been replaced with `focus:outline-hidden` and gold focus rings display correctly in forced-color mode
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
+- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
+- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
 
 ### Phase 11: UI Primitives
 **Goal**: Five shared primitive components exist and are ready to use — Card, Button variants, Badge, PageHeader, and EmptyState — all referencing design tokens from Phase 10
@@ -60,7 +64,11 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
   3. Badge component renders green (compliant), red (violation), yellow (warning), and gray (no data) semantic variants — correct color on each variant
   4. PageHeader renders a page title with optional subtitle and a right-aligned action slot usable by any page
   5. EmptyState renders a heading and action-prompt copy — usable on no-projects, no-workers, and no-payroll-weeks screens
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
+- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
+- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
 
 ### Phase 12: App Shell + Global Layout
 **Goal**: Every protected page shares the same dark nav with gold accent, Oswald/Inter typography hierarchy, and uniform card-based spacing — without touching each page individually
@@ -70,7 +78,11 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
   1. Navigating through Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, and Login pages — every page shows the dark (#1a1a1a) nav with gold (#F5C518) accent, no white or default nav visible
   2. Page titles render in Oswald, body text and table data render in Inter — visible typographic distinction between headings and data on every page
   3. All card-based sections use the Card primitive with uniform padding — no page has ad-hoc card divs with differing padding values
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
+- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
+- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
 
 ### Phase 13: Landing Page + Routing
 **Goal**: A full marketing homepage exists at "/" that converts general contractors by naming WH-347, Davis-Bacon, and SAM.gov in the first viewport, with correct auth-aware routing so authenticated users reach the dashboard and new users reach registration
@@ -82,7 +94,11 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
   3. Visiting "/" while logged in redirects to /dashboard — authenticated users never see the marketing page
   4. Visiting an unknown URL while logged in redirects to /dashboard; while logged out redirects to "/"
   5. All six landing page sections render: hero, problem, how-it-works, feature highlights, trust signals, and CTA close with footer
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
+- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
+- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
 
 ### Phase 14: Page-by-Page Polish
 **Goal**: Every existing app page uses the Card, Badge, Button, PageHeader, and EmptyState primitives from Phase 11, with no ad-hoc inline styling, and each page is individually verifiable against its success criteria
@@ -95,7 +111,11 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
   4. Payroll Week Detail table has visible row structure (borders or alternating rows); violation badges are prominent using the Badge primitive — not unstyled inline text
   5. Reports page tables have clear column alignment and header distinction; printing the page omits nav chrome (print CSS applied)
   6. Login and Register pages use the gold primary button, display the HCC brand, and share a consistent form layout
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
+- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
+- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
 
 ## Progress
 
