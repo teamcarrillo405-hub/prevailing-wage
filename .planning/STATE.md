@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
-status: roadmap_ready
-stopped_at: Roadmap written — ready for /gsd:plan-phase 10
-last_updated: "2026-03-20T07:00:00.000Z"
-last_activity: 2026-03-20 — v2.1 roadmap created (phases 10-14)
+status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
+stopped_at: Completed 10-css-design-token-foundation-01-PLAN.md
+last_updated: "2026-03-20T15:58:56.565Z"
+last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 | - | - | - | - |
 
 ## Accumulated Context
+| Phase 10-css-design-token-foundation P01 | 10 | 2 tasks | 2 files |
 
 ### Decisions
 
@@ -98,6 +99,9 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 09-reports]: Fringe summary column shows total credits only (not effective rate) — simpler is better per plan spec
 - [Phase 09-reports]: Reports route placed adjacent to VarianceReportPageRoute in App.tsx for consistency
 - [Phase 09-reports]: Reports nav Link uses identical className pattern as all other nav links in ProjectDetailPage
+- [Phase 10-css-design-token-foundation]: Google Fonts loaded via HTML link tag in index.html (not CSS @import) to prevent FOUT and ensure fonts load before JS executes
+- [Phase 10-css-design-token-foundation]: Only font weights 400-700 loaded for Oswald and Inter — full weight range adds 600-900ms TTFB
+- [Phase 10-css-design-token-foundation]: @layer base sets body (Inter) and h1-h4 (Oswald) font-family globally — no per-component font class required
 
 ### Research Flags for v2.1
 
@@ -121,6 +125,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T07:00:00.000Z
-Stopped at: v2.1 roadmap written (phases 10-14). Run /gsd:plan-phase 10 to begin.
+Last session: 2026-03-20T15:58:56.562Z
+Stopped at: Completed 10-css-design-token-foundation-01-PLAN.md
 Resume file: None

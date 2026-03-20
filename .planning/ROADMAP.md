@@ -126,7 +126,7 @@ Plans:
 | 7. Compliance Engine + Payroll Week View | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 8. Dashboard + UX Polish | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 9. Reports | v2.0 | 4/4 | Complete | 2026-03-20 |
-| 10. CSS Design Token Foundation | v2.1 | 0/? | Not started | - |
+| 10. CSS Design Token Foundation | 1/3 | In Progress|  | - |
 | 11. UI Primitives | v2.1 | 0/? | Not started | - |
 | 12. App Shell + Global Layout | v2.1 | 0/? | Not started | - |
 | 13. Landing Page + Routing | v2.1 | 0/? | Not started | - |

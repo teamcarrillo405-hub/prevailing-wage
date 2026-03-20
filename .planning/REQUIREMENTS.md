@@ -92,8 +92,8 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| DESIGN-01 | Phase 10 | Pending |
-| DESIGN-02 | Phase 10 | Pending |
+| DESIGN-01 | Phase 10 | Complete |
+| DESIGN-02 | Phase 10 | Complete |
 | DESIGN-03 | Phase 10 | Pending |
 | DESIGN-04 | Phase 10 | Pending |
 | UI-01 | Phase 11 | Pending |
