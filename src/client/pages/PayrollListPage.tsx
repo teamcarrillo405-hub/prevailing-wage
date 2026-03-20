@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { Card } from '../components/ui/Card';
 
 interface PayrollWeek {
   id: string;
@@ -74,7 +75,7 @@ export function PayrollListPage() {
         )}
 
         {weeks.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+          <Card padding="none" className="divide-y divide-gray-100">
             {weeks.map((week) => (
               <div key={week.id} className="flex items-center justify-between px-5 py-3">
                 <div>
@@ -106,7 +107,7 @@ export function PayrollListPage() {
                 </div>
               </div>
             ))}
-          </div>
+          </Card>
         )}
       </div>
     </Layout>

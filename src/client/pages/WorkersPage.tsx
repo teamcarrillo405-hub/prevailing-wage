@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { Card } from '../components/ui/Card';
 
 interface WageClassification {
   id: string;
@@ -252,7 +253,7 @@ export function WorkersPage() {
         {workers.length > 0 && (
           <div className="mb-8 space-y-3">
             {workers.map((w) => (
-              <div key={w.id} className="bg-white rounded-lg border border-gray-200 p-5">
+              <Card key={w.id} padding="sm">
 
                 {editingId === w.id ? (
                   /* ── Inline edit form ── */
@@ -457,13 +458,13 @@ export function WorkersPage() {
                   </>
                 )}
 
-              </div>
+              </Card>
             ))}
           </div>
         )}
 
         {/* Add Worker form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <Card>
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-5">Add Worker</h2>
 
           <div className="space-y-4">
@@ -569,7 +570,7 @@ export function WorkersPage() {
           >
             {addWorker.isPending ? 'Saving...' : '+ Add Worker'}
           </button>
-        </div>
+        </Card>
 
       </div>
     </Layout>
