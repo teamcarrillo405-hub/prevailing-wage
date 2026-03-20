@@ -4,7 +4,7 @@ milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
 stopped_at: Completed 11-ui-primitives-02-PLAN.md
-last_updated: "2026-03-20T17:28:32.382Z"
+last_updated: "2026-03-20T17:40:14.896Z"
 last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
