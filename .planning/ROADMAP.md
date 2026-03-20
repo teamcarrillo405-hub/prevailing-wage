@@ -103,4 +103,4 @@ Plans:
 | 6. WH-347 2025 Compliance Foundation | 4/4 | Complete   | 2026-03-20 | - |
 | 7. Compliance Engine + Payroll Week View | 4/4 | Complete   | 2026-03-20 | - |
 | 8. Dashboard + UX Polish | 4/4 | Complete   | 2026-03-20 | - |
-| 9. Reports | 1/4 | In Progress|  | - |
+| 9. Reports | 2/4 | In Progress|  | - |

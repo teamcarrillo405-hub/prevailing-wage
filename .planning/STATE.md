@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Contractor UX Overhaul + Compliance
 status: planning
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-20T11:23:27.139Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-20T11:28:31.129Z"
 last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 50
 ---
 
@@ -61,6 +61,7 @@ Progress: [█████░░░░░] 50%
 | Phase 08-dashboard-ux-polish P03 | 2m | 2 tasks | 5 files |
 | Phase 08-dashboard-ux-polish P04 | 5m | 2 tasks | 1 files |
 | Phase 09-reports P01 | 1m 45s | 1 tasks | 1 files |
+| Phase 09-reports P02 | 8min | 2 tasks | 2 files |
 
 ### Decisions
 
@@ -99,6 +100,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 08-dashboard-ux-polish]: Compliance query lives inside ProjectCard (not DashboardPage) — each card owns its own fetch, staleTime:60_000 prevents N re-fetches on navigate-back
 - [Phase 08-dashboard-ux-polish]: Browser verification (Task 2) approved — all 5 Phase 8 requirements (DASH-01, DASH-02, UX-01, UX-02, UX-03) confirmed passing end-to-end
 - [Phase 09-reports]: Fringe-summary 404 test asserts res.body.error is string — prevents accidental pass from Express default 404 HTML
+- [Phase Phase 09-reports]: getWorkerPayHistory uses ASC SQL order then Array.reverse() to produce DESC output
+- [Phase Phase 09-reports]: Reports router left unregistered in index.ts — Plan 04 wires it to turn tests fully GREEN
 
 ### Research Flags (address during planning)
 
@@ -116,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T11:23:27.135Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-20T11:28:22.305Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
