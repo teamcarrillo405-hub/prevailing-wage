@@ -88,8 +88,33 @@
 
 ## Traceability
 
-*Filled by roadmapper — maps each REQ-ID to a phase.*
+*Maps each REQ-ID to a phase.*
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| *(roadmapper fills this)* | | |
+| DESIGN-01 | Phase 10 | Pending |
+| DESIGN-02 | Phase 10 | Pending |
+| DESIGN-03 | Phase 10 | Pending |
+| DESIGN-04 | Phase 10 | Pending |
+| UI-01 | Phase 11 | Pending |
+| UI-02 | Phase 11 | Pending |
+| UI-03 | Phase 11 | Pending |
+| UI-04 | Phase 11 | Pending |
+| UI-05 | Phase 11 | Pending |
+| SHELL-01 | Phase 12 | Pending |
+| SHELL-02 | Phase 12 | Pending |
+| SHELL-03 | Phase 12 | Pending |
+| LANDING-01 | Phase 13 | Pending |
+| LANDING-02 | Phase 13 | Pending |
+| LANDING-03 | Phase 13 | Pending |
+| LANDING-04 | Phase 13 | Pending |
+| LANDING-05 | Phase 13 | Pending |
+| LANDING-06 | Phase 13 | Pending |
+| LANDING-07 | Phase 13 | Pending |
+| PAGE-01 | Phase 14 | Pending |
+| PAGE-02 | Phase 14 | Pending |
+| PAGE-03 | Phase 14 | Pending |
+| PAGE-04 | Phase 14 | Pending |
+| PAGE-05 | Phase 14 | Pending |
+| PAGE-06 | Phase 14 | Pending |
+| PAGE-07 | Phase 14 | Pending |

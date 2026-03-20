@@ -2,39 +2,50 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
-status: defining_requirements
-stopped_at: Defining v2.1 requirements — research decision pending
-last_updated: "2026-03-20T06:00:00.000Z"
-last_activity: 2026-03-20 — v2.1 milestone started
+status: roadmap_ready
+stopped_at: Roadmap written — ready for /gsd:plan-phase 10
+last_updated: "2026-03-20T07:00:00.000Z"
+last_activity: 2026-03-20 — v2.1 roadmap created (phases 10-14)
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-19)
+See: .planning/PROJECT.md (updated 2026-03-20)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — no missing steps.
-**Current focus:** v2.1 — start with `/gsd:new-milestone`
+**Current focus:** v2.1 — Design Polish + Landing Page — Phase 10 next
 
 ## Current Position
 
 Milestone: v2.1 — Design Polish + Landing Page
-Status: Defining requirements
-Last activity: 2026-03-20 — Milestone goals confirmed, research decision pending
+Phase: 10 (next — not started)
+Status: Roadmap ready — begin with `/gsd:plan-phase 10`
+Last activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 
 Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 
+### Phase Structure
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 10 | CSS Design Token Foundation | DESIGN-01, 02, 03, 04 | Not started |
+| 11 | UI Primitives | UI-01, 02, 03, 04, 05 | Not started |
+| 12 | App Shell + Global Layout | SHELL-01, 02, 03 | Not started |
+| 13 | Landing Page + Routing | LANDING-01, 02, 03, 04, 05, 06, 07 | Not started |
+| 14 | Page-by-Page Polish | PAGE-01, 02, 03, 04, 05, 06, 07 | Not started |
+
 ## Performance Metrics
 
-**Velocity:**
-- Total plans completed: 0 (v2.0)
+**Velocity (v2.1):**
+- Total plans completed: 0
 - Average duration: —
 - Total execution time: —
 
@@ -45,24 +56,6 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 | - | - | - | - |
 
 ## Accumulated Context
-| Phase 06 P01 | 7 | 2 tasks | 2 files |
-| Phase 06 P02 | 5m | 3 tasks | 6 files |
-| Phase 06 P03 | 3 | 1 tasks | 1 files |
-| Phase 06 P04 | 5m | 2 tasks | 3 files |
-| Phase 06 P04 | 10min | 3 tasks | 3 files |
-| Phase 07 P01 | 2m | 2 tasks | 2 files |
-| Phase 07 P02 | 8m | 2 tasks | 3 files |
-| Phase 07 P03 | 4 | 1 tasks | 1 files |
-| Phase 07 P04 | 3min | 2 tasks | 3 files |
-| Phase 07 P04 | 3min | 3 tasks | 3 files |
-| Phase 08-dashboard-ux-polish P01 | 1 | 1 tasks | 1 files |
-| Phase 08-dashboard-ux-polish P02 | 3m 24s | 1 tasks | 2 files |
-| Phase 08-dashboard-ux-polish P03 | 2m | 2 tasks | 5 files |
-| Phase 08-dashboard-ux-polish P04 | 5m | 2 tasks | 1 files |
-| Phase 09-reports P01 | 1m 45s | 1 tasks | 1 files |
-| Phase 09-reports P02 | 8min | 2 tasks | 2 files |
-| Phase 09-reports P03 | 3min | 1 tasks | 1 files |
-| Phase 09-reports P04 | 5min | 2 tasks | 3 files | (checkpoint complete)
 
 ### Decisions
 
@@ -78,10 +71,8 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 06]: certApprentices contract test is green by design — documents API accepts false, not a failing stub
 - [Phase 06]: Migration journal must be updated manually when adding SQL-only migrations outside Drizzle generate workflow
 - [Phase 06]: programName is optional on all laborTypes in route — server does not restrict it to apprentices
-- [Phase 06]: Copy additional template pages before fillng any content in fillWh347() — pdf-lib copyPages() snapshots current state so pages must be blank when copied
+- [Phase 06]: Copy additional template pages before filling any content in fillWh347() — pdf-lib copyPages() snapshots current state so pages must be blank when copied
 - [Phase 06]: addPage() used (not insertPage()) in multi-page WH-347 — appending worker/statement pairs gives correct DOL page ordering automatically
-- [Phase 06]: deriveAllApprenticesRegistered() exported from export.ts for testability without route mocking
-- [Phase 06]: programName only included in POST payload when non-empty; server accepts null per Plan 02
 - [Phase 06]: deriveAllApprenticesRegistered() exported from export.ts for testability without route mocking
 - [Phase 06]: programName only included in POST payload when non-empty; server accepts null per Plan 02
 - [Phase 07]: Test stubs import from complianceService.ts (not yet created) — import error is the intentional TDD RED state
@@ -101,29 +92,35 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 08-dashboard-ux-polish]: Compliance query lives inside ProjectCard (not DashboardPage) — each card owns its own fetch, staleTime:60_000 prevents N re-fetches on navigate-back
 - [Phase 08-dashboard-ux-polish]: Browser verification (Task 2) approved — all 5 Phase 8 requirements (DASH-01, DASH-02, UX-01, UX-02, UX-03) confirmed passing end-to-end
 - [Phase 09-reports]: Fringe-summary 404 test asserts res.body.error is string — prevents accidental pass from Express default 404 HTML
-- [Phase Phase 09-reports]: getWorkerPayHistory uses ASC SQL order then Array.reverse() to produce DESC output
-- [Phase Phase 09-reports]: Reports router left unregistered in index.ts — Plan 04 wires it to turn tests fully GREEN
+- [Phase 09-reports]: getWorkerPayHistory uses ASC SQL order then Array.reverse() to produce DESC output
+- [Phase 09-reports]: Reports router left unregistered in index.ts — Plan 04 wires it to turn tests fully GREEN
 - [Phase 09-reports]: ReportsPage omits PDF export — on-screen only per ROADMAP success criteria for v2.0
 - [Phase 09-reports]: Fringe summary column shows total credits only (not effective rate) — simpler is better per plan spec
 - [Phase 09-reports]: Reports route placed adjacent to VarianceReportPageRoute in App.tsx for consistency
 - [Phase 09-reports]: Reports nav Link uses identical className pattern as all other nav links in ProjectDetailPage
 
-### Research Flags (address during planning)
+### Research Flags for v2.1
 
-- Phase 7: Verify exact column names for daily ST/OT hours in payrollEntries before designing apprentice ratio daily-loop query
-- Phase 7: Verify getOrDefaultThreshold() handles missing rows for CWHSSA 40-hour default correctly
-- Phase 9: Confirm fringeRateSnapshot exists on payrollEntries — if not, schema addition required in Phase 9
+- Phase 10: `--color-*: initial` in @theme silently wipes all default Tailwind colors — never use initial namespace wipe; add tokens only
+- Phase 10: @theme must NOT be split into imported CSS files — all @theme content stays in index.css
+- Phase 10: 7 hardcoded inline brand values confirmed in: ManualWageEntryForm, WageClassificationsTable, AdminStateWagePage, WageLookupPage, ReportsPage — must be cleared in Phase 10
+- Phase 10: 5 confirmed `focus:outline-none` instances in form inputs — first task of Phase 10
+- Phase 11: WageClassificationsTable uses `style={{ backgroundColor: '#F5C518' }}` on a `<tr>` element — verify className="bg-brand-gold" on tr before applying broadly
+- Phase 13: /register must be added as an explicit public route before landing page CTA is wired — otherwise CTA dead-ends at login for new users
+- Phase 13: Auth-aware wildcard may require extracting ProtectedRoute auth-check logic into a shared useAuth hook — evaluate scope during Phase 13 planning
+- Phase 14: Apply Inter globally as the FIRST action and immediately verify PayrollEntryPage (7-day grid) and WageClassificationsTable at 1280px — font change can cause table column overflow
+- Phase 14: Run existing 181-test suite after each page polish pass to confirm no regressions
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T05:15:00.000Z
-Stopped at: Phase 9 complete. v2.0 milestone (phases 6-9) all done. Run /gsd:complete-milestone to archive.
+Last session: 2026-03-20T07:00:00.000Z
+Stopped at: v2.1 roadmap written (phases 10-14). Run /gsd:plan-phase 10 to begin.
 Resume file: None
