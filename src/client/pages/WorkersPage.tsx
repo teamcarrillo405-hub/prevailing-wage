@@ -263,7 +263,7 @@ export function WorkersPage() {
                         <label className="block text-xs text-gray-600 mb-1">Full Name *</label>
                         <input type="text" value={editForm.name}
                           onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
                       </div>
                       <div>
@@ -271,7 +271,7 @@ export function WorkersPage() {
                         <input type="text" maxLength={4} value={editForm.ssnLast4}
                           onChange={e => setEditForm(p => ({ ...p, ssnLast4: e.target.value.replace(/\D/g, '') }))}
                           placeholder="optional"
-                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
                       </div>
                       <div>
@@ -279,7 +279,7 @@ export function WorkersPage() {
                         <input type="text" value={editForm.tradeUnion}
                           onChange={e => setEditForm(p => ({ ...p, tradeUnion: e.target.value }))}
                           placeholder="optional"
-                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
                       </div>
                       <div className="col-span-2">
@@ -287,7 +287,7 @@ export function WorkersPage() {
                         <input type="text" value={editForm.address}
                           onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))}
                           placeholder="Street, City, State ZIP"
-                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
                       </div>
                     </div>
@@ -401,7 +401,7 @@ export function WorkersPage() {
                             <select
                               value={extraClass.tradeCode}
                               onChange={(e) => setExtraClass(p => ({ ...p, tradeCode: e.target.value }))}
-                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                             >
                               <option value="">— Select a trade —</option>
                               {wageClassifications.map(wc => (
@@ -416,7 +416,7 @@ export function WorkersPage() {
                             <select
                               value={extraClass.laborType}
                               onChange={(e) => setExtraClass(p => ({ ...p, laborType: e.target.value as typeof extraClass.laborType }))}
-                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                             >
                               {LABOR_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
                             </select>
@@ -427,7 +427,7 @@ export function WorkersPage() {
                               <input type="number" min="0" max="100" value={extraClass.apprenticePercent}
                                 onChange={(e) => setExtraClass(p => ({ ...p, apprenticePercent: e.target.value }))}
                                 placeholder="e.g. 80"
-                                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                               />
                             </div>
                           )}
@@ -439,7 +439,7 @@ export function WorkersPage() {
                                 placeholder="DOL apprenticeship program name (optional)"
                                 value={extraClass.programName}
                                 onChange={e => setExtraClass(s => ({ ...s, programName: e.target.value }))}
-                                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-yellow-400 focus:outline-none"
+                                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-hidden"
                               />
                             </div>
                           )}
@@ -473,7 +473,7 @@ export function WorkersPage() {
                 <label className="block text-xs text-gray-600 mb-1">Full Name *</label>
                 <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="e.g. John Smith"
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
               </div>
               <div>
@@ -481,14 +481,14 @@ export function WorkersPage() {
                 <input type="text" maxLength={4} value={form.ssnLast4}
                   onChange={e => setForm(p => ({ ...p, ssnLast4: e.target.value.replace(/\D/g, '') }))}
                   placeholder="e.g. 4321"
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
               </div>
               <div>
                 <label className="block text-xs text-gray-600 mb-1">Trade Union (optional)</label>
                 <input type="text" value={form.tradeUnion} onChange={e => setForm(p => ({ ...p, tradeUnion: e.target.value }))}
                   placeholder="e.g. Carpenters Local 150"
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
               </div>
             </div>
@@ -496,7 +496,7 @@ export function WorkersPage() {
               <label className="block text-xs text-gray-600 mb-1">Address <span className="text-gray-400">(required for WH-347 certified payroll)</span></label>
               <input type="text" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
                 placeholder="Street, City, State ZIP"
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
               />
             </div>
 
@@ -511,7 +511,7 @@ export function WorkersPage() {
                   <div className="col-span-2">
                     <label className="block text-xs text-gray-600 mb-1">Trade</label>
                     <select value={form.tradeCode} onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value }))}
-                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     >
                       <option value="">— Select a trade —</option>
                       {wageClassifications.map(wc => (
@@ -524,7 +524,7 @@ export function WorkersPage() {
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">Labor Type</label>
                     <select value={form.laborType} onChange={e => setForm(p => ({ ...p, laborType: e.target.value as typeof form.laborType }))}
-                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     >
                       {LABOR_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
                     </select>
@@ -535,7 +535,7 @@ export function WorkersPage() {
                       <input type="number" min="0" max="100" value={form.apprenticePercent}
                         onChange={e => setForm(p => ({ ...p, apprenticePercent: e.target.value }))}
                         placeholder="e.g. 80"
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                       />
                     </div>
                   )}
@@ -547,7 +547,7 @@ export function WorkersPage() {
                         placeholder="DOL apprenticeship program name (optional)"
                         value={form.programName}
                         onChange={e => setForm(f => ({ ...f, programName: e.target.value }))}
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-yellow-400 focus:outline-none"
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-hidden"
                       />
                     </div>
                   )}
