@@ -45,7 +45,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <button
       onClick={() => navigate(`/projects/${project.id}`)}
-      className="w-full text-left bg-white border border-gray-200 rounded-lg p-5 hover:border-[#F5C518] hover:shadow-md transition-all group"
+      className="w-full text-left bg-white border border-gray-200 rounded-lg p-5 hover:border-brand-gold hover:shadow-md transition-all group"
     >
       <h3 className="font-headline text-lg text-gray-900 mb-3 group-hover:text-gray-800 truncate">
         {project.name}

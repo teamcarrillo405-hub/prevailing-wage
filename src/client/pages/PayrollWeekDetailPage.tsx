@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { Card } from '../components/ui/Card';
 
 interface PayrollWeek {
   id: string;
@@ -153,7 +154,7 @@ export function PayrollWeekDetailPage() {
 
         {/* Entries table */}
         {!isLoading && !isError && entries.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 mb-6">
+          <Card padding="none" className="mb-6">
             <div className="px-5 py-3 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Payroll Entries</h2>
             </div>
@@ -210,19 +211,19 @@ export function PayrollWeekDetailPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Empty entries state */}
         {!isLoading && !isError && entries.length === 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 mb-6 py-12 text-center">
+          <Card padding="none" className="mb-6 py-12 text-center">
             <p className="text-sm text-gray-500">No payroll entries for this week.</p>
-          </div>
+          </Card>
         )}
 
         {/* Compliance violations panel */}
         {!isLoading && !isError && (
-          <div className="bg-white rounded-lg border border-gray-200">
+          <Card padding="none">
             <div className="px-5 py-3 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Compliance Check</h2>
             </div>
@@ -247,7 +248,7 @@ export function PayrollWeekDetailPage() {
                 </p>
               </div>
             )}
-          </div>
+          </Card>
         )}
       </div>
     </Layout>

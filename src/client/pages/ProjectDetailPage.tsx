@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
 
 interface Project {
   id: string;
@@ -58,7 +59,7 @@ export function ProjectDetailPage() {
             subtitle={`${project.state} — ${project.county}`}
           />
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-lg">
+          <Card className="max-w-lg">
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-gray-500">Contract type</dt>
@@ -85,7 +86,7 @@ export function ProjectDetailPage() {
                 <dd className="text-gray-900">{new Date(project.createdAt).toLocaleDateString()}</dd>
               </div>
             </dl>
-          </div>
+          </Card>
 
           {/* Project sub-page navigation */}
           <div className="mt-8 flex flex-wrap gap-3">
