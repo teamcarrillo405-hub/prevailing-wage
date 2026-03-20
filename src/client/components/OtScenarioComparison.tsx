@@ -2,8 +2,8 @@
 // Pure client-side scenario comparison table — NO server calls.
 // Calls compareScenarios() from otCalculator.ts directly (synchronous pure function).
 import { useState } from 'react';
-import { compareScenarios } from '../../server/services/otCalculator.js';
-import type { OtScenario } from '../../server/services/otCalculator.js';
+import { compareScenarios } from '../../shared/otScenarios.js';
+import type { OtScenario } from '../../shared/otScenarios.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -118,7 +118,7 @@ export function OtScenarioComparison({
             value={baseRate || ''}
             onChange={(e) => updateRates(parseFloat(e.target.value) || 0, fringeRate)}
             placeholder="e.g. 30.00"
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
         </div>
         <div className="flex-1">
@@ -130,7 +130,7 @@ export function OtScenarioComparison({
             value={fringeRate || ''}
             onChange={(e) => updateRates(baseRate, parseFloat(e.target.value) || 0)}
             placeholder="e.g. 10.00"
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
         </div>
       </div>
@@ -224,7 +224,7 @@ export function OtScenarioComparison({
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="e.g. 5x8h + Sat 4h"
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
           </div>
           <div className="flex-1">
@@ -236,7 +236,7 @@ export function OtScenarioComparison({
               value={newHoursInput}
               onChange={(e) => setNewHoursInput(e.target.value)}
               placeholder="e.g. 8,8,8,8,8,4,0"
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
           </div>
           <button

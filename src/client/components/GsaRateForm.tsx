@@ -14,7 +14,7 @@ export interface GsaRateFormValues {
 export function GsaRateForm() {
   const { register, formState: { errors } } = useFormContext<GsaRateFormValues>();
 
-  const inputClass = 'w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#F5C518]';
+  const inputClass = 'w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-hidden focus:ring-1 focus:ring-brand-gold';
 
   return (
     <div className="grid grid-cols-2 gap-4">

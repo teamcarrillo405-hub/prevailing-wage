@@ -61,7 +61,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           id="proj-name"
           type="text"
           {...register('name')}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
         />
         {errors.name && <p className="text-red-600 text-xs mt-1">{errors.name.message}</p>}
       </div>
@@ -77,7 +77,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             maxLength={2}
             placeholder="CA"
             {...register('state')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm uppercase focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
           {errors.state && <p className="text-red-600 text-xs mt-1">{errors.state.message}</p>}
         </div>
@@ -90,7 +90,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             id="proj-county"
             type="text"
             {...register('county')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
           {errors.county && <p className="text-red-600 text-xs mt-1">{errors.county.message}</p>}
         </div>
@@ -103,7 +103,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
         <select
           id="proj-contract-type"
           {...register('contractType')}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
         >
           <option value="">Select contract type</option>
           <option value="federal-davis-bacon">Federal Davis-Bacon</option>
@@ -125,7 +125,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             id="proj-award-date"
             type="date"
             {...register('awardDate')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
           {errors.awardDate && (
             <p className="text-red-600 text-xs mt-1">{errors.awardDate.message}</p>
@@ -139,7 +139,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           <select
             id="proj-funding-type"
             {...register('fundingType')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           >
             <option value="">Select funding type</option>
             <option value="federal">Federal</option>

@@ -104,7 +104,7 @@ export function OtThresholdForm({ projectId, existingThreshold }: OtThresholdFor
             step="0.5"
             min="1"
             {...register('weeklyOtThreshold', { valueAsNumber: true })}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
           {errors.weeklyOtThreshold && (
             <p className="mt-1 text-xs text-red-600">{errors.weeklyOtThreshold.message}</p>
@@ -124,7 +124,7 @@ export function OtThresholdForm({ projectId, existingThreshold }: OtThresholdFor
             {...register('dailyOtThreshold', {
               setValueAs: (v: string) => (v === '' || v === null ? null : Number(v)),
             })}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
           {errors.dailyOtThreshold && (
             <p className="mt-1 text-xs text-red-600">{String(errors.dailyOtThreshold.message)}</p>
@@ -138,7 +138,7 @@ export function OtThresholdForm({ projectId, existingThreshold }: OtThresholdFor
           </label>
           <select
             {...register('source')}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           >
             <option value="cwhssa">CWHSSA (federal default)</option>
             <option value="cba">CBA (collective bargaining agreement)</option>

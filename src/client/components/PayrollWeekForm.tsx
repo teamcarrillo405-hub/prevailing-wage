@@ -133,7 +133,7 @@ export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormP
             <input
               type="date"
               {...register('weekEndingDate', { required: 'Required' })}
-              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#F5C518]"
+              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-hidden focus:ring-1 focus:ring-brand-gold"
             />
             {errors.weekEndingDate && (
               <p className="text-xs text-red-500 mt-0.5">{errors.weekEndingDate.message}</p>
@@ -147,7 +147,7 @@ export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormP
               type="number"
               min={1}
               {...register('payrollNumber', { required: true, valueAsNumber: true, min: 1 })}
-              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#F5C518]"
+              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-hidden focus:ring-1 focus:ring-brand-gold"
             />
           </div>
         </div>
@@ -204,7 +204,7 @@ export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormP
                             valueAsNumber: true,
                             min: 0,
                           })}
-                          className="w-14 px-1 py-1 text-center border border-gray-200 rounded text-xs focus:outline-none focus:border-gray-400"
+                          className="w-14 px-1 py-1 text-center border border-gray-200 rounded text-xs focus:outline-hidden focus:border-gray-400"
                         />
                       </td>
                     ))}
@@ -218,7 +218,7 @@ export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormP
                             valueAsNumber: true,
                             min: 0,
                           })}
-                          className="w-14 px-1 py-1 text-center border border-amber-200 rounded text-xs focus:outline-none focus:border-amber-400"
+                          className="w-14 px-1 py-1 text-center border border-amber-200 rounded text-xs focus:outline-hidden focus:border-amber-400"
                         />
                       </td>
                     ))}

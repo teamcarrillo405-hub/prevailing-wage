@@ -47,7 +47,7 @@ export function RegisterForm() {
           type="email"
           autoComplete="email"
           {...register('email')}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518] focus:border-transparent"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold focus:border-transparent"
         />
         {errors.email && (
           <p className="text-red-600 text-xs mt-1">{errors.email.message}</p>
@@ -63,7 +63,7 @@ export function RegisterForm() {
           type="password"
           autoComplete="new-password"
           {...register('password')}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5C518] focus:border-transparent"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold focus:border-transparent"
         />
         {errors.password && (
           <p className="text-red-600 text-xs mt-1">{errors.password.message}</p>
