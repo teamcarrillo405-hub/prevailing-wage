@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
-stopped_at: Completed 12-app-shell-global-layout-01-PLAN.md
-last_updated: "2026-03-20T18:20:09.688Z"
+stopped_at: Completed 12-03-PLAN.md
+last_updated: "2026-03-20T18:31:31.730Z"
 last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 0
 ---
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 | Phase 11-ui-primitives P02 | 3min | 2 tasks | 2 files |
 | Phase 12-app-shell-global-layout P01 | 2min | 1 tasks | 1 files |
 | Phase 12-app-shell-global-layout P02 | 5min | 2 tasks | 2 files |
+| Phase 12-app-shell-global-layout P03 | 10min | 3 tasks | 5 files |
 
 ### Decisions
 
@@ -122,6 +123,7 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 12-app-shell-global-layout]: ProjectDetailPage subtitle: state — county location string passed as subtitle prop to PageHeader (not left as separate p element)
 - [Phase 12-app-shell-global-layout]: DashboardPage New Project button migrated to Button primitive inside PageHeader action slot — removes last hardcoded #F5C518
 - [Phase 12-app-shell-global-layout]: PageHeader mb-6 is the correct spec value; replaces old inline mb-8 in DashboardPage
+- [Phase 12-app-shell-global-layout]: Card padding=none for table wrappers; padding=sm for compact item cards; ProjectCard button not wrapped in Card (Phase 14 scope)
 
 ### Research Flags for v2.1
 
@@ -145,6 +147,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T18:19:54.098Z
-Stopped at: Completed 12-app-shell-global-layout-01-PLAN.md
+Last session: 2026-03-20T18:31:31.728Z
+Stopped at: Completed 12-03-PLAN.md
 Resume file: None
