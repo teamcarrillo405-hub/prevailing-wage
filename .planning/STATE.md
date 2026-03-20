@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
-stopped_at: Completed 11-ui-primitives-02-PLAN.md
-last_updated: "2026-03-20T17:40:14.896Z"
+stopped_at: Completed 12-app-shell-global-layout-01-PLAN.md
+last_updated: "2026-03-20T18:20:09.688Z"
 last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 7
   percent: 0
 ---
 
@@ -61,6 +61,8 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 | Phase 10-css-design-token-foundation P02 | 20min | 3 tasks | 5 files |
 | Phase 11 P01 | 5min | 3 tasks | 4 files |
 | Phase 11-ui-primitives P02 | 3min | 2 tasks | 2 files |
+| Phase 12-app-shell-global-layout P01 | 2min | 1 tasks | 1 files |
+| Phase 12-app-shell-global-layout P02 | 5min | 2 tasks | 2 files |
 
 ### Decisions
 
@@ -116,6 +118,10 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 11-02]: PageHeader uses mb-6 (not mb-8) — spec value, not the existing DashboardPage inline pattern
 - [Phase 11-02]: EmptyState prop named 'message' (not 'body') — matches planning context interface spec
 - [Phase 11-02]: Action slot conditionally rendered — undefined action produces no empty right-side div
+- [Phase 12-01]: [Phase 12-01]: bg-gray-900 (#111827) replaced with bg-nav-dark (#1a1a1a) — nav-dark is brand-correct per HCC spec
+- [Phase 12-app-shell-global-layout]: ProjectDetailPage subtitle: state — county location string passed as subtitle prop to PageHeader (not left as separate p element)
+- [Phase 12-app-shell-global-layout]: DashboardPage New Project button migrated to Button primitive inside PageHeader action slot — removes last hardcoded #F5C518
+- [Phase 12-app-shell-global-layout]: PageHeader mb-6 is the correct spec value; replaces old inline mb-8 in DashboardPage
 
 ### Research Flags for v2.1
 
@@ -139,6 +145,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T17:28:32.380Z
-Stopped at: Completed 11-ui-primitives-02-PLAN.md
+Last session: 2026-03-20T18:19:54.098Z
+Stopped at: Completed 12-app-shell-global-layout-01-PLAN.md
 Resume file: None
