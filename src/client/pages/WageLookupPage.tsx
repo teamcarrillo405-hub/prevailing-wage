@@ -78,8 +78,7 @@ export function WageLookupPage() {
         <div className="flex items-end">
           <button
             type="submit"
-            style={{ backgroundColor: '#F5C518' }}
-            className="px-5 py-2 rounded font-semibold text-gray-900"
+            className="px-5 py-2 rounded font-semibold text-gray-900 bg-brand-gold"
           >
             Search
           </button>

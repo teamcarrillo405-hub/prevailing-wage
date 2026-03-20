@@ -20,7 +20,7 @@ export function WageClassificationsTable({ classifications }: Props) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm border-collapse">
         <thead>
-          <tr style={{ backgroundColor: '#F5C518' }}>
+          <tr className="bg-brand-gold">
             <th className="px-3 py-2 text-left font-semibold font-headline text-gray-900">Trade Code</th>
             <th className="px-3 py-2 text-left font-semibold font-headline text-gray-900">Description</th>
             <th className="px-3 py-2 text-left font-semibold font-headline text-gray-900">Labor Type</th>
