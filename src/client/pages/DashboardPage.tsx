@@ -29,7 +29,8 @@ export function DashboardPage() {
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-8">
+
+<div className="flex items-center justify-between mb-8">
         <h2 className="font-headline text-2xl text-gray-900">Projects</h2>
         <button
           onClick={() => setShowForm(true)}
