@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.1
-milestone_name: TBD — run /gsd:new-milestone
-status: complete
-stopped_at: v2.0 milestone archived — run /gsd:new-milestone to begin v2.1
-last_updated: "2026-03-20T05:30:00.000Z"
-last_activity: 2026-03-20 — v2.0 milestone complete and archived
+milestone_name: Design Polish + Landing Page
+status: defining_requirements
+stopped_at: Defining v2.1 requirements — research decision pending
+last_updated: "2026-03-20T06:00:00.000Z"
+last_activity: 2026-03-20 — v2.1 milestone started
 progress:
   total_phases: 4
   completed_phases: 4
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 
 ## Current Position
 
-Milestone: v2.0 — COMPLETE AND ARCHIVED
-Status: Ready for next milestone — run `/gsd:new-milestone` to define v2.1 scope
-Last activity: 2026-03-20 — v2.0 archived to `.planning/milestones/v2.0-ROADMAP.md`
+Milestone: v2.1 — Design Polish + Landing Page
+Status: Defining requirements
+Last activity: 2026-03-20 — Milestone goals confirmed, research decision pending
 
-Progress: [██████████] 100% (v2.0 done)
+Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 
 ## Performance Metrics
 

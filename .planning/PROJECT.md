@@ -8,6 +8,18 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, and real-time compliance flags before submission.
 
+## Current Milestone: v2.1 — Design Polish + Landing Page
+
+**Goal:** Transform the app from generic-looking to clean + professional with a full marketing landing page and consistent HCC brand polish across every page.
+
+**Target features:**
+- Full marketing landing page (HCC logo, value prop, feature list, CTA to register)
+- UI polish across all pages: Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register
+- Typography hierarchy (Oswald headlines at correct sizes, Inter body)
+- Table and data display polish (spacing, borders, cell contrast)
+- Card and layout consistency (padding, shadow, border-radius)
+- Competitor-beating design vs LCPtracker, Elation, QuickBooks, ADP
+
 ## Current State (v2.0)
 
 **Shipped:** 2026-03-20
@@ -54,9 +66,10 @@ A contractor can run a full project end-to-end — create project → add worker
 
 ### Active
 
-<!-- v2.1 — next milestone — requirements TBD -->
+<!-- v2.1 — requirements being defined -->
 
-(Define with `/gsd:new-milestone`)
+- Landing page: Full marketing homepage with HCC brand (in progress)
+- UI polish: Typography hierarchy, table/data polish, card/layout consistency across all pages (in progress)
 
 ### Out of Scope
 
