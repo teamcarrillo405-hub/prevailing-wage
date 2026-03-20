@@ -82,7 +82,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 6. WH-347 2025 Compliance Foundation | 2/4 | In Progress|  | - |
+| 6. WH-347 2025 Compliance Foundation | 3/4 | In Progress|  | - |
 | 7. Compliance Engine + Payroll Week View | v2.0 | 0/TBD | Not started | - |
 | 8. Dashboard + UX Polish | v2.0 | 0/TBD | Not started | - |
 | 9. Reports | v2.0 | 0/TBD | Not started | - |

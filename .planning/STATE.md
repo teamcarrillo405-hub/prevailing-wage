@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Contractor UX Overhaul + Compliance
 status: planning
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-03-20T08:48:28.154Z"
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-03-20T08:53:37.884Z"
 last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 50
 ---
 
@@ -48,6 +48,7 @@ Progress: [█████░░░░░] 50%
 ## Accumulated Context
 | Phase 06 P01 | 7 | 2 tasks | 2 files |
 | Phase 06 P02 | 5m | 3 tasks | 6 files |
+| Phase 06 P03 | 3 | 1 tasks | 1 files |
 
 ### Decisions
 
@@ -63,6 +64,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 06]: certApprentices contract test is green by design — documents API accepts false, not a failing stub
 - [Phase 06]: Migration journal must be updated manually when adding SQL-only migrations outside Drizzle generate workflow
 - [Phase 06]: programName is optional on all laborTypes in route — server does not restrict it to apprentices
+- [Phase 06]: Copy additional template pages before fillng any content in fillWh347() — pdf-lib copyPages() snapshots current state so pages must be blank when copied
+- [Phase 06]: addPage() used (not insertPage()) in multi-page WH-347 — appending worker/statement pairs gives correct DOL page ordering automatically
 
 ### Research Flags (address during planning)
 
@@ -80,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T08:48:28.153Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-03-20T08:53:37.881Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
