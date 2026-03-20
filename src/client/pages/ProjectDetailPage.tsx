@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface Project {
   id: string;
@@ -52,10 +53,10 @@ export function ProjectDetailPage() {
 
       {project && (
         <div>
-          <h2 className="font-headline text-3xl text-gray-900 mb-2">{project.name}</h2>
-          <p className="text-sm text-gray-500 mb-8">
-            {project.state} — {project.county}
-          </p>
+          <PageHeader
+            title={project.name}
+            subtitle={`${project.state} — ${project.county}`}
+          />
 
           <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-lg">
             <dl className="space-y-3 text-sm">
