@@ -86,7 +86,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. A contractor can view a fringe benefit summary per worker for a project, showing fringe credits per payroll week drawn from stored fringe rate snapshots — not live wage determination data
   2. A contractor can view a worker's complete pay history across all payroll weeks on a project, showing week number, hours (ST and OT), gross wages, and deductions per week in descending date order
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Wave 0: Test stubs — reports.test.ts (RPT-01 and RPT-02 route shape + auth)
+- [ ] 09-02-PLAN.md — Wave 1: reportsService.ts + reports.ts route — both endpoints (RPT-01, RPT-02)
+- [ ] 09-03-PLAN.md — Wave 1: ReportsPage.tsx — fringe summary + pay history tabs with worker selector (RPT-01, RPT-02)
+- [ ] 09-04-PLAN.md — Wave 2: Wire index.ts + App.tsx + ProjectDetailPage link + browser checkpoint
 
 ## Progress
 
@@ -97,4 +103,4 @@ Plans:
 | 6. WH-347 2025 Compliance Foundation | 4/4 | Complete   | 2026-03-20 | - |
 | 7. Compliance Engine + Payroll Week View | 4/4 | Complete   | 2026-03-20 | - |
 | 8. Dashboard + UX Polish | 4/4 | Complete   | 2026-03-20 | - |
-| 9. Reports | v2.0 | 0/TBD | Not started | - |
+| 9. Reports | v2.0 | 0/4 | Not started | - |
