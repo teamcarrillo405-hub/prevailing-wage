@@ -29,6 +29,7 @@ import {
   generateEmarsCsv,
   mapEntriesToExportRows,
 } from '../services/csvExporter.js';
+import { computeCompliance } from '../services/complianceService.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -46,7 +47,6 @@ router.use(requireAuth);
  * WH-347 checkbox (4) certifies that all apprentices are registered in an approved
  * DOL apprenticeship program — we cannot certify that if a programName is unknown.
  *
- * TODO Phase 7: replace with compliance engine output once engine is built.
  */
 export function deriveAllApprenticesRegistered(
   entries: Array<{ laborType: string; programName: string | null | undefined }>,
@@ -100,9 +100,12 @@ router.get('/wh347/:weekId', async (req, res) => {
   // 3. Load payroll entries
   const entries = await getPayrollEntries(weekId);
 
-  // Derive certApprentices: true only when no apprentices exist or all have a registered program name.
-  // TODO Phase 7: replace with compliance engine output once engine is built.
+  // certApprentices: derived from apprentice registration status (see deriveAllApprenticesRegistered)
+  // certProperPayment + certAccuratePayroll: derived from compliance engine (see complianceResult below)
   const allApprenticesRegistered = deriveAllApprenticesRegistered(entries);
+
+  // Derive compliance flags for Statement of Compliance
+  const complianceResult = await computeCompliance(db, weekId);
 
   // 4. Map entries to Wh347WorkerRow[]
   type EntryRow = (typeof entries)[number];
@@ -156,8 +159,8 @@ router.get('/wh347/:weekId', async (req, res) => {
     isPrime: true,
     workers: workerRows,
     compliance: {
-      certProperPayment: true,      // TODO Phase 7: derive from compliance engine
-      certAccuratePayroll: true,    // TODO Phase 7: derive from compliance engine
+      certProperPayment: complianceResult?.certProperPayment ?? true,
+      certAccuratePayroll: complianceResult?.certAccuratePayroll ?? true,
       certWorkPerformed: true,      // manual certification — always true
       certApprentices: allApprenticesRegistered,
       certFringeBenefits: workerRows.some(w => w.fringeCredit > 0),
