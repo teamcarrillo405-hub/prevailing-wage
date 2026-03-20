@@ -64,11 +64,10 @@ Plans:
   3. Badge component renders green (compliant), red (violation), yellow (warning), and gray (no data) semantic variants — correct color on each variant
   4. PageHeader renders a page title with optional subtitle and a right-aligned action slot usable by any page
   5. EmptyState renders a heading and action-prompt copy — usable on no-projects, no-workers, and no-payroll-weeks screens
-**Plans**: 3 plans
+**Plans**: 2 plans
 Plans:
-- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
-- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
-- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
+- [ ] 11-01-PLAN.md — Install clsx/tailwind-merge + cn() utility + Card, Button, Badge components (UI-01, UI-02, UI-03)
+- [ ] 11-02-PLAN.md — PageHeader and EmptyState components (UI-04, UI-05)
 
 ### Phase 12: App Shell + Global Layout
 **Goal**: Every protected page shares the same dark nav with gold accent, Oswald/Inter typography hierarchy, and uniform card-based spacing — without touching each page individually
@@ -127,7 +126,7 @@ Plans:
 | 8. Dashboard + UX Polish | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 9. Reports | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 10. CSS Design Token Foundation | 3/3 | Complete    | 2026-03-20 | - |
-| 11. UI Primitives | v2.1 | 0/? | Not started | - |
+| 11. UI Primitives | v2.1 | 0/2 | Not started | - |
 | 12. App Shell + Global Layout | v2.1 | 0/? | Not started | - |
 | 13. Landing Page + Routing | v2.1 | 0/? | Not started | - |
 | 14. Page-by-Page Polish | v2.1 | 0/? | Not started | - |
