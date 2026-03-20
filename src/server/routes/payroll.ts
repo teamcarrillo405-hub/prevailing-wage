@@ -123,6 +123,24 @@ router.get('/projects/:projectId/weeks', async (req, res) => {
   res.json({ weeks });
 });
 
+// POST /api/payroll/entries — create or upsert an entry (convenience for test seeders and future clients)
+router.post('/entries', validate(UpsertEntrySchema), async (req, res) => {
+  const body = req.body as z.infer<typeof UpsertEntrySchema>;
+  const userId = req.user!.userId;
+
+  const week = await getPayrollWeek(body.payrollWeekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const ok = await assertProjectOwner(week.projectId, userId, res);
+  if (!ok) return;
+
+  const entry = await upsertPayrollEntry(body);
+  res.status(201).json({ id: entry?.id ?? null });
+});
+
 // PUT /api/payroll/entries/:id — upsert daily hours for a worker
 // Note: :id is a semantic route parameter; actual upsert targets (weekId, workerId, classificationId) are in the body
 router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
