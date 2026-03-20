@@ -201,3 +201,51 @@ describe('certApprentices boolean', () => {
     expect(doc.getPageCount()).toBe(2);
   });
 });
+
+// ── certApprentices derivation logic (Plan 04 — allApprenticesRegistered) ──
+// These tests document the business rule: certApprentices is true only when
+// no apprentices exist OR all apprentices have a non-empty programName.
+
+import { deriveAllApprenticesRegistered } from '../../src/server/routes/export.js';
+
+describe('deriveAllApprenticesRegistered', () => {
+  it('returns true when no apprentice entries exist', () => {
+    const entries: Array<{ laborType: string; programName: string | null }> = [
+      { laborType: 'journeyworker', programName: null },
+    ];
+    expect(deriveAllApprenticesRegistered(entries)).toBe(true);
+  });
+
+  it('returns true when all apprentices have programName set', () => {
+    const entries = [
+      { laborType: 'apprentice', programName: 'IBEW Local 11 Apprenticeship' },
+    ];
+    expect(deriveAllApprenticesRegistered(entries)).toBe(true);
+  });
+
+  it('returns false when any apprentice has programName null', () => {
+    const entries = [
+      { laborType: 'apprentice', programName: null },
+    ];
+    expect(deriveAllApprenticesRegistered(entries)).toBe(false);
+  });
+
+  it('returns false when any apprentice has programName as empty string', () => {
+    const entries = [
+      { laborType: 'apprentice', programName: '' },
+    ];
+    expect(deriveAllApprenticesRegistered(entries)).toBe(false);
+  });
+
+  it('returns false when some apprentices have programName and others do not', () => {
+    const entries = [
+      { laborType: 'apprentice', programName: 'IBEW Local 11' },
+      { laborType: 'apprentice', programName: null },
+    ];
+    expect(deriveAllApprenticesRegistered(entries)).toBe(false);
+  });
+
+  it('returns true when entry list is empty (no workers at all)', () => {
+    expect(deriveAllApprenticesRegistered([])).toBe(true);
+  });
+});

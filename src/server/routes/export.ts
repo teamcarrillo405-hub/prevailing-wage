@@ -33,6 +33,31 @@ import {
 const router = Router();
 router.use(requireAuth);
 
+// ── Exported helpers (testable) ────────────────────────────────────────────
+
+/**
+ * Derive the certApprentices boolean for WH-347 Statement of Compliance.
+ *
+ * Returns true when:
+ *   - There are no apprentice entries (no concern — all workers are JW/foreman), OR
+ *   - Every apprentice entry has a non-empty programName (all are registered).
+ *
+ * Returns false when any apprentice entry is missing a programName, because the
+ * WH-347 checkbox (4) certifies that all apprentices are registered in an approved
+ * DOL apprenticeship program — we cannot certify that if a programName is unknown.
+ *
+ * TODO Phase 7: replace with compliance engine output once engine is built.
+ */
+export function deriveAllApprenticesRegistered(
+  entries: Array<{ laborType: string; programName: string | null | undefined }>,
+): boolean {
+  const apprenticeEntries = entries.filter(r => r.laborType === 'apprentice');
+  return (
+    apprenticeEntries.length === 0 ||
+    apprenticeEntries.every(r => r.programName != null && r.programName.trim() !== '')
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function formatDate(isoDate: string): string {
@@ -74,6 +99,10 @@ router.get('/wh347/:weekId', async (req, res) => {
 
   // 3. Load payroll entries
   const entries = await getPayrollEntries(weekId);
+
+  // Derive certApprentices: true only when no apprentices exist or all have a registered program name.
+  // TODO Phase 7: replace with compliance engine output once engine is built.
+  const allApprenticesRegistered = deriveAllApprenticesRegistered(entries);
 
   // 4. Map entries to Wh347WorkerRow[]
   type EntryRow = (typeof entries)[number];
@@ -127,10 +156,10 @@ router.get('/wh347/:weekId', async (req, res) => {
     isPrime: true,
     workers: workerRows,
     compliance: {
-      certProperPayment: true,
-      certAccuratePayroll: true,
-      certWorkPerformed: true,
-      certApprentices: workerRows.some(w => w.laborType === 'apprentice'),
+      certProperPayment: true,      // TODO Phase 7: derive from compliance engine
+      certAccuratePayroll: true,    // TODO Phase 7: derive from compliance engine
+      certWorkPerformed: true,      // manual certification — always true
+      certApprentices: allApprenticesRegistered,
       certFringeBenefits: workerRows.some(w => w.fringeCredit > 0),
       certDeductions: false,
       officialName: 'Certifying Official',
