@@ -99,8 +99,8 @@
 | UI-01 | Phase 11 | Complete |
 | UI-02 | Phase 11 | Complete |
 | UI-03 | Phase 11 | Complete |
-| UI-04 | Phase 11 | Pending |
-| UI-05 | Phase 11 | Pending |
+| UI-04 | Phase 11 | Complete |
+| UI-05 | Phase 11 | Complete |
 | SHELL-01 | Phase 12 | Pending |
 | SHELL-02 | Phase 12 | Pending |
 | SHELL-03 | Phase 12 | Pending |

@@ -32,7 +32,7 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
 ### 🔄 v2.1 Design Polish + Landing Page (Phases 10-14)
 
 - [x] **Phase 10: CSS Design Token Foundation** — HCC brand tokens in @theme, Google Fonts, inline style migration, focus utility fix (completed 2026-03-20)
-- [ ] **Phase 11: UI Primitives** — Card, Button, Badge, PageHeader, EmptyState reusable components
+- [x] **Phase 11: UI Primitives** — Card, Button, Badge, PageHeader, EmptyState reusable components (completed 2026-03-20)
 - [ ] **Phase 12: App Shell + Global Layout** — dark nav on all protected pages, typography hierarchy, consistent card spacing
 - [ ] **Phase 13: Landing Page + Routing** — full marketing homepage at public route "/", auth-aware routing
 - [ ] **Phase 14: Page-by-Page Polish** — Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register
@@ -126,7 +126,7 @@ Plans:
 | 8. Dashboard + UX Polish | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 9. Reports | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 10. CSS Design Token Foundation | 3/3 | Complete    | 2026-03-20 | - |
-| 11. UI Primitives | 1/2 | In Progress|  | - |
+| 11. UI Primitives | 2/2 | Complete   | 2026-03-20 | - |
 | 12. App Shell + Global Layout | v2.1 | 0/? | Not started | - |
 | 13. Landing Page + Routing | v2.1 | 0/? | Not started | - |
 | 14. Page-by-Page Polish | v2.1 | 0/? | Not started | - |

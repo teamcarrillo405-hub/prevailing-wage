@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
-stopped_at: Completed 11-ui-primitives-01-PLAN.md
-last_updated: "2026-03-20T17:24:22.153Z"
+stopped_at: Completed 11-ui-primitives-02-PLAN.md
+last_updated: "2026-03-20T17:28:32.382Z"
 last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 | Phase 10-css-design-token-foundation P03 | 5min | 2 tasks | 9 files |
 | Phase 10-css-design-token-foundation P02 | 20min | 3 tasks | 5 files |
 | Phase 11 P01 | 5min | 3 tasks | 4 files |
+| Phase 11-ui-primitives P02 | 3min | 2 tasks | 2 files |
 
 ### Decisions
 
@@ -112,6 +113,9 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase Phase 10-css-design-token-foundation]: ReportsPage focus:outline-none migration bundled with Plan 02 (not Plan 03) to avoid concurrent file write conflicts
 - [Phase 11]: neutral Badge uses bg-gray-100/text-gray-600/border-gray-300 — no custom token (--color-status-neutral does not exist in @theme)
 - [Phase 11]: Button uses hover:bg-brand-gold/90 (TailwindCSS v4 opacity modifier) not hover:bg-yellow-400
+- [Phase 11-02]: PageHeader uses mb-6 (not mb-8) — spec value, not the existing DashboardPage inline pattern
+- [Phase 11-02]: EmptyState prop named 'message' (not 'body') — matches planning context interface spec
+- [Phase 11-02]: Action slot conditionally rendered — undefined action produces no empty right-side div
 
 ### Research Flags for v2.1
 
@@ -135,6 +139,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T17:24:22.150Z
-Stopped at: Completed 11-ui-primitives-01-PLAN.md
+Last session: 2026-03-20T17:28:32.380Z
+Stopped at: Completed 11-ui-primitives-02-PLAN.md
 Resume file: None
