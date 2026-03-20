@@ -253,129 +253,177 @@ export async function fillWh347(
   const pdfDoc = await PDFDocument.load(templateBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const pages = pdfDoc.getPages();
-  const [page1, page2] = pages;
 
   const TEXT_SIZE = 7;
   const SMALL_SIZE = 6;
   const black = rgb(0, 0, 0);
 
-  // ── Page 1 Header ────────────────────────────────────────────────────────
+  // ── Step 1: Chunk workers into groups of 8 ──────────────────────────────
 
-  // Checkboxes: FINAL, PRIME, SUBCONTRACTOR
-  if (data.isFinal) {
-    drawCheckbox(page1 as any, WH347_FIELDS.checkboxFinal.x, WH347_FIELDS.checkboxFinal.y, true);
+  const ROWS_PER_PAGE = 8;
+  const chunks: Wh347WorkerRow[][] = [];
+  for (let i = 0; i < data.workers.length; i += ROWS_PER_PAGE) {
+    chunks.push(data.workers.slice(i, i + ROWS_PER_PAGE));
   }
-  if (data.isPrime !== false) {
-    // Default: Prime Contractor
-    drawCheckbox(page1 as any, WH347_FIELDS.checkboxPrime.x, WH347_FIELDS.checkboxPrime.y, true);
-  } else {
-    drawCheckbox(page1 as any, WH347_FIELDS.checkboxSubcontractor.x, WH347_FIELDS.checkboxSubcontractor.y, true);
+  // Always have at least 1 page set (even with 0 workers)
+  const totalPageSets = chunks.length === 0 ? 1 : chunks.length;
+
+  // ── Step 2: Copy additional template pages BEFORE filling any content ───
+  // Indices 0 and 1 are the original blank template pages.
+  // For each additional page set beyond the first, append a worker-grid page
+  // and a statement page (in that order) so the final ordering is:
+  //   [0] worker-grid set 1, [1] statement set 1,
+  //   [2] worker-grid set 2, [3] statement set 2, ...
+
+  for (let setIdx = 1; setIdx < totalPageSets; setIdx++) {
+    const [extraWorkerPage] = await pdfDoc.copyPages(pdfDoc, [0]);
+    const [extraStatementPage] = await pdfDoc.copyPages(pdfDoc, [1]);
+    pdfDoc.addPage(extraWorkerPage);
+    pdfDoc.addPage(extraStatementPage);
   }
 
-  // Header row 1
-  page1.drawText(data.projectName,      { x: WH347_FIELDS.projectName.x,      y: WH347_FIELDS.projectName.y,      size: TEXT_SIZE, font, color: black });
-  page1.drawText(data.projectContractNo,{ x: WH347_FIELDS.projectContractNo.x, y: WH347_FIELDS.projectContractNo.y, size: TEXT_SIZE, font, color: black });
-  page1.drawText(data.payrollNumber,    { x: WH347_FIELDS.payrollNumber.x,    y: WH347_FIELDS.payrollNumber.y,    size: TEXT_SIZE, font, color: black });
-  page1.drawText(data.contractorName,   { x: WH347_FIELDS.contractorName.x,   y: WH347_FIELDS.contractorName.y,   size: TEXT_SIZE, font, color: black });
+  // Capture all pages after expansion
+  const allPages = pdfDoc.getPages();
 
-  // Header row 2
-  page1.drawText(data.projectLocation ?? '',     { x: WH347_FIELDS.projectLocation.x,     y: WH347_FIELDS.projectLocation.y,     size: TEXT_SIZE, font, color: black });
-  page1.drawText(data.wageDeterminationNo,        { x: WH347_FIELDS.wageDeterminationNo.x,  y: WH347_FIELDS.wageDeterminationNo.y,  size: TEXT_SIZE, font, color: black });
-  page1.drawText(data.weekEndingDate,             { x: WH347_FIELDS.weekEndingDate.x,        y: WH347_FIELDS.weekEndingDate.y,        size: TEXT_SIZE, font, color: black });
-  page1.drawText(data.contractorAddress,          { x: WH347_FIELDS.contractorAddress.x,    y: WH347_FIELDS.contractorAddress.y,    size: TEXT_SIZE, font, color: black });
+  // ── Step 3: Fill header on each worker-grid page ─────────────────────────
 
-  // ── Page 1 Worker Rows ───────────────────────────────────────────────────
+  for (let setIdx = 0; setIdx < totalPageSets; setIdx++) {
+    const workerPage = allPages[setIdx * 2];
 
-  const maxRows = Math.min(data.workers.length, 8);
-  for (let i = 0; i < maxRows; i++) {
-    const w = data.workers[i];
-    const row = WORKER_ROW_Y[i];
-    const stY = row.st;
-    const otY = row.ot;
-
-    // Split workerName into last/first/middle if comma-separated, otherwise put all in last
-    let lastName = w.workerName;
-    let firstName = '';
-    let middle = '';
-    if (w.workerName.includes(',')) {
-      const parts = w.workerName.split(',');
-      lastName = (parts[0] ?? '').trim();
-      const rest = (parts[1] ?? '').trim().split(' ');
-      firstName = rest[0] ?? '';
-      middle = rest[1] ?? '';
+    // Checkboxes: FINAL, PRIME, SUBCONTRACTOR (page set 0 only — they appear
+    // in the main header area which is replicated per template page)
+    if (data.isFinal) {
+      drawCheckbox(workerPage as any, WH347_FIELDS.checkboxFinal.x, WH347_FIELDS.checkboxFinal.y, true);
+    }
+    if (data.isPrime !== false) {
+      drawCheckbox(workerPage as any, WH347_FIELDS.checkboxPrime.x, WH347_FIELDS.checkboxPrime.y, true);
+    } else {
+      drawCheckbox(workerPage as any, WH347_FIELDS.checkboxSubcontractor.x, WH347_FIELDS.checkboxSubcontractor.y, true);
     }
 
-    // Column (1A) Entry No
-    page1.drawText(String(w.entryNo), { x: WORKER_COLUMNS.entryNo, y: stY, size: SMALL_SIZE, font, color: black });
-    // (1B-1D) Name
-    page1.drawText(lastName,  { x: WORKER_COLUMNS.lastName,  y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 46 });
-    page1.drawText(firstName, { x: WORKER_COLUMNS.firstName, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 43 });
-    page1.drawText(middle,    { x: WORKER_COLUMNS.middleInitial, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 15 });
-    // (1E) Identifying No
-    page1.drawText(w.identifyingNo, { x: WORKER_COLUMNS.identifyingNo, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 24 });
-    // (J/RA) Labor type: print J or RA
-    const laborLabel = w.laborType === 'journeyworker' ? 'J' : 'RA';
-    page1.drawText(laborLabel, { x: WORKER_COLUMNS.laborTypeBox, y: stY, size: SMALL_SIZE, font: boldFont, color: black });
-    // (2) Classification
-    page1.drawText(w.classification, { x: WORKER_COLUMNS.classification, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 52 });
+    // Header row 1
+    workerPage.drawText(data.projectName,       { x: WH347_FIELDS.projectName.x,       y: WH347_FIELDS.projectName.y,       size: TEXT_SIZE, font, color: black });
+    workerPage.drawText(data.projectContractNo, { x: WH347_FIELDS.projectContractNo.x,  y: WH347_FIELDS.projectContractNo.y,  size: TEXT_SIZE, font, color: black });
+    workerPage.drawText(data.payrollNumber,     { x: WH347_FIELDS.payrollNumber.x,     y: WH347_FIELDS.payrollNumber.y,     size: TEXT_SIZE, font, color: black });
+    workerPage.drawText(data.contractorName,    { x: WH347_FIELDS.contractorName.x,    y: WH347_FIELDS.contractorName.y,    size: TEXT_SIZE, font, color: black });
 
-    // Hours — ST row
-    page1.drawText(fmtHours(w.monSt), { x: WORKER_COLUMNS.monHours, y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.tueSt), { x: WORKER_COLUMNS.tueHours, y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.wedSt), { x: WORKER_COLUMNS.wedHours, y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.thuSt), { x: WORKER_COLUMNS.thuHours, y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.friSt), { x: WORKER_COLUMNS.friHours, y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.satSt), { x: WORKER_COLUMNS.satHours, y: stY, size: SMALL_SIZE, font, color: black });
+    // Header row 2
+    workerPage.drawText(data.projectLocation ?? '',  { x: WH347_FIELDS.projectLocation.x,    y: WH347_FIELDS.projectLocation.y,    size: TEXT_SIZE, font, color: black });
+    workerPage.drawText(data.wageDeterminationNo,     { x: WH347_FIELDS.wageDeterminationNo.x, y: WH347_FIELDS.wageDeterminationNo.y, size: TEXT_SIZE, font, color: black });
+    workerPage.drawText(data.weekEndingDate,          { x: WH347_FIELDS.weekEndingDate.x,       y: WH347_FIELDS.weekEndingDate.y,       size: TEXT_SIZE, font, color: black });
+    workerPage.drawText(data.contractorAddress,       { x: WH347_FIELDS.contractorAddress.x,   y: WH347_FIELDS.contractorAddress.y,   size: TEXT_SIZE, font, color: black });
 
-    // Hours — OT row
-    page1.drawText(fmtHours(w.monOt), { x: WORKER_COLUMNS.monHours, y: otY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.tueOt), { x: WORKER_COLUMNS.tueHours, y: otY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.wedOt), { x: WORKER_COLUMNS.wedHours, y: otY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.thuOt), { x: WORKER_COLUMNS.thuHours, y: otY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.friOt), { x: WORKER_COLUMNS.friHours, y: otY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.satOt), { x: WORKER_COLUMNS.satHours, y: otY, size: SMALL_SIZE, font, color: black });
-
-    // Total hours (ST/OT on their respective lines)
-    page1.drawText(fmtHours(w.totalSt), { x: WORKER_COLUMNS.totalHours, y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtHours(w.totalOt), { x: WORKER_COLUMNS.totalHours, y: otY, size: SMALL_SIZE, font, color: black });
-
-    // Rates and pay (on ST row)
-    page1.drawText(fmtDollar(w.baseRate),          { x: WORKER_COLUMNS.baseRate,     y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtDollar(w.fringeCredit),      { x: WORKER_COLUMNS.fringeCredit, y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtDollar(w.grossWagesProject),  { x: WORKER_COLUMNS.grossProject, y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtDollar(w.grossWagesAll),      { x: WORKER_COLUMNS.grossAll,     y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtDollar(w.deductions),         { x: WORKER_COLUMNS.deductions,   y: stY, size: SMALL_SIZE, font, color: black });
-    page1.drawText(fmtDollar(w.netPay),             { x: WORKER_COLUMNS.netPay,       y: stY, size: SMALL_SIZE, font, color: black });
+    // ── Step 4: Page X of Y notation ──────────────────────────────────────
+    if (totalPageSets > 1) {
+      workerPage.drawText(`Page ${setIdx + 1} of ${totalPageSets}`, {
+        x: 760,
+        y: 458,
+        size: SMALL_SIZE,
+        font,
+        color: black,
+      });
+    }
   }
 
-  // ── Page 2 Header ────────────────────────────────────────────────────────
+  // ── Step 5: Fill worker rows, looping over chunks ─────────────────────────
 
-  page2.drawText(data.projectName,          { x: WH347_FIELDS.p2_projectName.x,       y: WH347_FIELDS.p2_projectName.y,       size: TEXT_SIZE, font, color: black });
-  page2.drawText(data.projectContractNo,    { x: WH347_FIELDS.p2_projectContractNo.x, y: WH347_FIELDS.p2_projectContractNo.y, size: TEXT_SIZE, font, color: black });
-  page2.drawText(data.payrollNumber,        { x: WH347_FIELDS.p2_payrollNo.x,         y: WH347_FIELDS.p2_payrollNo.y,         size: TEXT_SIZE, font, color: black });
-  page2.drawText(data.contractorName,       { x: WH347_FIELDS.p2_contractorName.x,    y: WH347_FIELDS.p2_contractorName.y,    size: TEXT_SIZE, font, color: black });
-  page2.drawText(data.projectLocation ?? '',{ x: WH347_FIELDS.p2_projectLocation.x,   y: WH347_FIELDS.p2_projectLocation.y,   size: TEXT_SIZE, font, color: black });
-  page2.drawText(data.weekEndingDate,       { x: WH347_FIELDS.p2_weekEndingDate.x,    y: WH347_FIELDS.p2_weekEndingDate.y,    size: TEXT_SIZE, font, color: black });
+  for (let setIdx = 0; setIdx < totalPageSets; setIdx++) {
+    const workerPage = allPages[setIdx * 2];
+    const chunk = chunks[setIdx] ?? [];
 
-  // Certifying official name and title combined
+    for (let i = 0; i < chunk.length; i++) {
+      const w = chunk[i];
+      const row = WORKER_ROW_Y[i];
+      const stY = row.st;
+      const otY = row.ot;
+
+      // Split workerName into last/first/middle if comma-separated, otherwise put all in last
+      let lastName = w.workerName;
+      let firstName = '';
+      let middle = '';
+      if (w.workerName.includes(',')) {
+        const parts = w.workerName.split(',');
+        lastName = (parts[0] ?? '').trim();
+        const rest = (parts[1] ?? '').trim().split(' ');
+        firstName = rest[0] ?? '';
+        middle = rest[1] ?? '';
+      }
+
+      // Column (1A) Entry No
+      workerPage.drawText(String(w.entryNo), { x: WORKER_COLUMNS.entryNo, y: stY, size: SMALL_SIZE, font, color: black });
+      // (1B-1D) Name
+      workerPage.drawText(lastName,  { x: WORKER_COLUMNS.lastName,  y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 46 });
+      workerPage.drawText(firstName, { x: WORKER_COLUMNS.firstName, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 43 });
+      workerPage.drawText(middle,    { x: WORKER_COLUMNS.middleInitial, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 15 });
+      // (1E) Identifying No
+      workerPage.drawText(w.identifyingNo, { x: WORKER_COLUMNS.identifyingNo, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 24 });
+      // (J/RA) Labor type: print J or RA
+      const laborLabel = w.laborType === 'journeyworker' ? 'J' : 'RA';
+      workerPage.drawText(laborLabel, { x: WORKER_COLUMNS.laborTypeBox, y: stY, size: SMALL_SIZE, font: boldFont, color: black });
+      // (2) Classification
+      workerPage.drawText(w.classification, { x: WORKER_COLUMNS.classification, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 52 });
+
+      // Hours — ST row
+      workerPage.drawText(fmtHours(w.monSt), { x: WORKER_COLUMNS.monHours, y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.tueSt), { x: WORKER_COLUMNS.tueHours, y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.wedSt), { x: WORKER_COLUMNS.wedHours, y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.thuSt), { x: WORKER_COLUMNS.thuHours, y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.friSt), { x: WORKER_COLUMNS.friHours, y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.satSt), { x: WORKER_COLUMNS.satHours, y: stY, size: SMALL_SIZE, font, color: black });
+
+      // Hours — OT row
+      workerPage.drawText(fmtHours(w.monOt), { x: WORKER_COLUMNS.monHours, y: otY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.tueOt), { x: WORKER_COLUMNS.tueHours, y: otY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.wedOt), { x: WORKER_COLUMNS.wedHours, y: otY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.thuOt), { x: WORKER_COLUMNS.thuHours, y: otY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.friOt), { x: WORKER_COLUMNS.friHours, y: otY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.satOt), { x: WORKER_COLUMNS.satHours, y: otY, size: SMALL_SIZE, font, color: black });
+
+      // Total hours (ST/OT on their respective lines)
+      workerPage.drawText(fmtHours(w.totalSt), { x: WORKER_COLUMNS.totalHours, y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtHours(w.totalOt), { x: WORKER_COLUMNS.totalHours, y: otY, size: SMALL_SIZE, font, color: black });
+
+      // Rates and pay (on ST row)
+      workerPage.drawText(fmtDollar(w.baseRate),         { x: WORKER_COLUMNS.baseRate,     y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtDollar(w.fringeCredit),     { x: WORKER_COLUMNS.fringeCredit, y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtDollar(w.grossWagesProject), { x: WORKER_COLUMNS.grossProject, y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtDollar(w.grossWagesAll),    { x: WORKER_COLUMNS.grossAll,     y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtDollar(w.deductions),       { x: WORKER_COLUMNS.deductions,   y: stY, size: SMALL_SIZE, font, color: black });
+      workerPage.drawText(fmtDollar(w.netPay),           { x: WORKER_COLUMNS.netPay,       y: stY, size: SMALL_SIZE, font, color: black });
+    }
+  }
+
+  // ── Step 6: Fill Statement of Compliance on each statement page ───────────
+
   const officialLine = `${data.compliance.officialName}, ${data.compliance.officialTitle}`;
-  page2.drawText(officialLine, { x: WH347_FIELDS.p2_certifyingOfficial.x, y: WH347_FIELDS.p2_certifyingOfficial.y, size: TEXT_SIZE, font, color: black, maxWidth: 130 });
 
-  // ── Page 2 Compliance Checkboxes ─────────────────────────────────────────
+  for (let setIdx = 0; setIdx < totalPageSets; setIdx++) {
+    const statementPage = allPages[setIdx * 2 + 1];
 
-  drawCheckbox(page2 as any, WH347_FIELDS.certProperPayment.x,    WH347_FIELDS.certProperPayment.y,    data.compliance.certProperPayment);
-  drawCheckbox(page2 as any, WH347_FIELDS.certAccuratePayroll.x,  WH347_FIELDS.certAccuratePayroll.y,  data.compliance.certAccuratePayroll);
-  drawCheckbox(page2 as any, WH347_FIELDS.certWorkPerformed.x,    WH347_FIELDS.certWorkPerformed.y,    data.compliance.certWorkPerformed);
-  drawCheckbox(page2 as any, WH347_FIELDS.certApprentices.x,      WH347_FIELDS.certApprentices.y,      data.compliance.certApprentices);
-  drawCheckbox(page2 as any, WH347_FIELDS.certFringeBenefits.x,   WH347_FIELDS.certFringeBenefits.y,   data.compliance.certFringeBenefits);
+    // Page 2 Header
+    statementPage.drawText(data.projectName,          { x: WH347_FIELDS.p2_projectName.x,       y: WH347_FIELDS.p2_projectName.y,       size: TEXT_SIZE, font, color: black });
+    statementPage.drawText(data.projectContractNo,    { x: WH347_FIELDS.p2_projectContractNo.x, y: WH347_FIELDS.p2_projectContractNo.y, size: TEXT_SIZE, font, color: black });
+    statementPage.drawText(data.payrollNumber,        { x: WH347_FIELDS.p2_payrollNo.x,         y: WH347_FIELDS.p2_payrollNo.y,         size: TEXT_SIZE, font, color: black });
+    statementPage.drawText(data.contractorName,       { x: WH347_FIELDS.p2_contractorName.x,    y: WH347_FIELDS.p2_contractorName.y,    size: TEXT_SIZE, font, color: black });
+    statementPage.drawText(data.projectLocation ?? '', { x: WH347_FIELDS.p2_projectLocation.x,  y: WH347_FIELDS.p2_projectLocation.y,   size: TEXT_SIZE, font, color: black });
+    statementPage.drawText(data.weekEndingDate,       { x: WH347_FIELDS.p2_weekEndingDate.x,    y: WH347_FIELDS.p2_weekEndingDate.y,    size: TEXT_SIZE, font, color: black });
 
-  // ── Page 2 Signature Block ────────────────────────────────────────────────
+    // Certifying official name and title combined
+    statementPage.drawText(officialLine, { x: WH347_FIELDS.p2_certifyingOfficial.x, y: WH347_FIELDS.p2_certifyingOfficial.y, size: TEXT_SIZE, font, color: black, maxWidth: 130 });
 
-  page2.drawText(data.compliance.signatureDate, { x: WH347_FIELDS.signatureDate.x, y: WH347_FIELDS.signatureDate.y, size: TEXT_SIZE, font, color: black });
-  page2.drawText(data.compliance.phoneNumber,   { x: WH347_FIELDS.phoneNumber.x,   y: WH347_FIELDS.phoneNumber.y,   size: TEXT_SIZE, font, color: black });
-  // Certifying official name also appears in the signature area
-  page2.drawText(data.compliance.officialName,  { x: 39,  y: WH347_FIELDS.signatureDate.y, size: TEXT_SIZE, font, color: black });
+    // Compliance Checkboxes
+    drawCheckbox(statementPage as any, WH347_FIELDS.certProperPayment.x,   WH347_FIELDS.certProperPayment.y,   data.compliance.certProperPayment);
+    drawCheckbox(statementPage as any, WH347_FIELDS.certAccuratePayroll.x, WH347_FIELDS.certAccuratePayroll.y, data.compliance.certAccuratePayroll);
+    drawCheckbox(statementPage as any, WH347_FIELDS.certWorkPerformed.x,   WH347_FIELDS.certWorkPerformed.y,   data.compliance.certWorkPerformed);
+    drawCheckbox(statementPage as any, WH347_FIELDS.certApprentices.x,     WH347_FIELDS.certApprentices.y,     data.compliance.certApprentices);
+    drawCheckbox(statementPage as any, WH347_FIELDS.certFringeBenefits.x,  WH347_FIELDS.certFringeBenefits.y,  data.compliance.certFringeBenefits);
+
+    // Signature Block
+    statementPage.drawText(data.compliance.signatureDate, { x: WH347_FIELDS.signatureDate.x, y: WH347_FIELDS.signatureDate.y, size: TEXT_SIZE, font, color: black });
+    statementPage.drawText(data.compliance.phoneNumber,   { x: WH347_FIELDS.phoneNumber.x,   y: WH347_FIELDS.phoneNumber.y,   size: TEXT_SIZE, font, color: black });
+    // Certifying official name also appears in the signature area
+    statementPage.drawText(data.compliance.officialName,  { x: 39, y: WH347_FIELDS.signatureDate.y, size: TEXT_SIZE, font, color: black });
+  }
 
   return pdfDoc.save();
 }
