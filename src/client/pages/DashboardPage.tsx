@@ -5,6 +5,8 @@ import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { ProjectCard } from '../components/projects/ProjectCard';
 import { ProjectForm } from '../components/projects/ProjectForm';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Button } from '../components/ui/Button';
 
 interface Project {
   id: string;
@@ -30,15 +32,14 @@ export function DashboardPage() {
   return (
     <Layout>
 
-<div className="flex items-center justify-between mb-8">
-        <h2 className="font-headline text-2xl text-gray-900">Projects</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-[#F5C518] text-gray-900 font-semibold text-sm px-4 py-2 rounded hover:bg-yellow-400 transition-colors"
-        >
-          New Project
-        </button>
-      </div>
+<PageHeader
+        title="Projects"
+        action={
+          <Button onClick={() => setShowForm(true)}>
+            New Project
+          </Button>
+        }
+      />
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
