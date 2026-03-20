@@ -31,7 +31,7 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
 
 ### 🔄 v2.1 Design Polish + Landing Page (Phases 10-14)
 
-- [ ] **Phase 10: CSS Design Token Foundation** — HCC brand tokens in @theme, Google Fonts, inline style migration, focus utility fix
+- [x] **Phase 10: CSS Design Token Foundation** — HCC brand tokens in @theme, Google Fonts, inline style migration, focus utility fix (completed 2026-03-20)
 - [ ] **Phase 11: UI Primitives** — Card, Button, Badge, PageHeader, EmptyState reusable components
 - [ ] **Phase 12: App Shell + Global Layout** — dark nav on all protected pages, typography hierarchy, consistent card spacing
 - [ ] **Phase 13: Landing Page + Routing** — full marketing homepage at public route "/", auth-aware routing
@@ -126,7 +126,7 @@ Plans:
 | 7. Compliance Engine + Payroll Week View | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 8. Dashboard + UX Polish | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 9. Reports | v2.0 | 4/4 | Complete | 2026-03-20 |
-| 10. CSS Design Token Foundation | 2/3 | In Progress|  | - |
+| 10. CSS Design Token Foundation | 3/3 | Complete   | 2026-03-20 | - |
 | 11. UI Primitives | v2.1 | 0/? | Not started | - |
 | 12. App Shell + Global Layout | v2.1 | 0/? | Not started | - |
 | 13. Landing Page + Routing | v2.1 | 0/? | Not started | - |

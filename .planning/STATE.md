@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
-stopped_at: Completed 10-css-design-token-foundation-03-PLAN.md
-last_updated: "2026-03-20T16:05:04.101Z"
+stopped_at: Completed 10-css-design-token-foundation-02-PLAN.md
+last_updated: "2026-03-20T16:22:57.443Z"
 last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 ## Accumulated Context
 | Phase 10-css-design-token-foundation P01 | 10 | 2 tasks | 2 files |
 | Phase 10-css-design-token-foundation P03 | 5min | 2 tasks | 9 files |
+| Phase 10-css-design-token-foundation P02 | 20min | 3 tasks | 5 files |
 
 ### Decisions
 
@@ -105,6 +106,9 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 10-css-design-token-foundation]: @layer base sets body (Inter) and h1-h4 (Oswald) font-family globally — no per-component font class required
 - [Phase Phase 10-css-design-token-foundation]: focus:outline-hidden is the correct TailwindCSS v4 rename — preserves accessibility tree in forced-color mode
 - [Phase Phase 10-css-design-token-foundation]: WorkersPage programName inputs use focus:border-brand-gold (not ring) as sole focus indicator — no ring companion needed for optional plain-text inputs
+- [Phase Phase 10-css-design-token-foundation]: bg-brand-gold works correctly on tr elements in browser — no CSS variable fallback needed for WageClassificationsTable
+- [Phase Phase 10-css-design-token-foundation]: font-headline applied explicitly even on h1-h4 heading elements covered by @layer base — preserves explicit token usage intent
+- [Phase Phase 10-css-design-token-foundation]: ReportsPage focus:outline-none migration bundled with Plan 02 (not Plan 03) to avoid concurrent file write conflicts
 
 ### Research Flags for v2.1
 
@@ -128,6 +132,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T16:05:04.098Z
-Stopped at: Completed 10-css-design-token-foundation-03-PLAN.md
+Last session: 2026-03-20T16:22:57.441Z
+Stopped at: Completed 10-css-design-token-foundation-02-PLAN.md
 Resume file: None
