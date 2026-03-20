@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 interface Project {
   id: string;
@@ -31,6 +32,16 @@ const FUNDING_TYPE_LABELS: Record<string, string> = {
 export function ProjectCard({ project }: ProjectCardProps) {
   const navigate = useNavigate();
 
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ['compliance-summary', project.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/compliance/project/${project.id}`);
+      if (!res.ok) throw new Error('Failed to fetch compliance summary');
+      return res.json() as Promise<{ badge: string; weekCount: number; lastWeekNumber: number | null }>;
+    },
+    staleTime: 60_000,
+  });
+
   return (
     <button
       onClick={() => navigate(`/projects/${project.id}`)}
@@ -52,6 +63,33 @@ export function ProjectCard({ project }: ProjectCardProps) {
           {FUNDING_TYPE_LABELS[project.fundingType] ?? project.fundingType}
         </span>
       </div>
+
+      {/* Compliance badge + week stats — DASH-01 / DASH-02 */}
+      {!summaryLoading && (
+        <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
+          {summary?.badge === 'violations' && (
+            <span className="inline-block text-xs font-medium px-2 py-0.5 bg-red-100 text-red-700 rounded">
+              Violations
+            </span>
+          )}
+          {summary?.badge === 'clean' && summary.weekCount > 0 && (
+            <span className="inline-block text-xs font-medium px-2 py-0.5 bg-green-100 text-green-700 rounded">
+              Clean
+            </span>
+          )}
+          {(!summary || summary.weekCount === 0) && (
+            <span className="inline-block text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-500 rounded">
+              No payroll
+            </span>
+          )}
+          {summary && summary.weekCount > 0 && (
+            <span className="text-xs text-gray-500">
+              {summary.weekCount} week{summary.weekCount !== 1 ? 's' : ''}
+              {summary.lastWeekNumber != null ? `, Week ${summary.lastWeekNumber}` : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       <p className="text-xs text-gray-500">
         Award date: {project.awardDate}
