@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-03-20T18:35:06.735Z"
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-20T22:26:01.355Z"
 last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 11
+  completed_plans: 9
   percent: 0
 ---
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 | Phase 12-app-shell-global-layout P01 | 2min | 1 tasks | 1 files |
 | Phase 12-app-shell-global-layout P02 | 5min | 2 tasks | 2 files |
 | Phase 12-app-shell-global-layout P03 | 10min | 3 tasks | 5 files |
+| Phase 13-landing-page-routing P01 | 3min | 2 tasks | 6 files |
 
 ### Decisions
 
@@ -124,6 +125,8 @@ Progress: [░░░░░░░░░░] 0% (v2.1 not started)
 - [Phase 12-app-shell-global-layout]: DashboardPage New Project button migrated to Button primitive inside PageHeader action slot — removes last hardcoded #F5C518
 - [Phase 12-app-shell-global-layout]: PageHeader mb-6 is the correct spec value; replaces old inline mb-8 in DashboardPage
 - [Phase 12-app-shell-global-layout]: Card padding=none for table wrappers; padding=sm for compact item cards; ProjectCard button not wrapped in Card (Phase 14 scope)
+- [Phase 13-landing-page-routing]: PublicRoute returns null (not LoadingSpinner) during isLoading — spinner adds visual noise on fast auth checks
+- [Phase 13-landing-page-routing]: WildcardRedirect defined inline in App.tsx module — single-use component does not warrant its own file
 
 ### Research Flags for v2.1
 
@@ -147,6 +150,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T18:31:31.728Z
-Stopped at: Completed 12-03-PLAN.md
+Last session: 2026-03-20T22:25:08.826Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None
