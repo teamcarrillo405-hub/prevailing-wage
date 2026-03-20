@@ -38,6 +38,7 @@ export const workers = sqliteTable('workers', {
   name: text('name').notNull(),
   ssnLast4: text('ssn_last4'),
   tradeUnion: text('trade_union'),
+  address: text('address'),   // street, city, state zip — required for WH-347
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -52,6 +53,7 @@ export const workerClassifications = sqliteTable('worker_classifications', {
   laborType: text('labor_type').notNull()
     .$type<'journeyworker' | 'apprentice' | 'foreman'>(),
   apprenticePercent: integer('apprentice_percent'),
+  programName: text('program_name'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
 });
