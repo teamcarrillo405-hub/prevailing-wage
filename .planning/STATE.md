@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Contractor UX Overhaul + Compliance
 status: planning
-stopped_at: Completed 07-01 Compliance engine TDD red phase stubs
-last_updated: "2026-03-20T09:44:01.114Z"
+stopped_at: Completed 07-02 Compliance engine service and route
+last_updated: "2026-03-20T09:51:32.307Z"
 last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
   percent: 50
 ---
 
@@ -52,6 +52,7 @@ Progress: [█████░░░░░] 50%
 | Phase 06 P04 | 5m | 2 tasks | 3 files |
 | Phase 06 P04 | 10min | 3 tasks | 3 files |
 | Phase 07 P01 | 2m | 2 tasks | 2 files |
+| Phase 07 P02 | 8m | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -75,6 +76,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 06]: programName only included in POST payload when non-empty; server accepts null per Plan 02
 - [Phase 07]: Test stubs import from complianceService.ts (not yet created) — import error is the intentional TDD RED state
 - [Phase 07]: CWHSSA fringe NOT multiplied for OT: expected = totalHours*base + otHours*0.5*base + totalHours*fringe
+- [Phase 07]: cwhssa-ot fires when totalOt > 0 AND |delta| > 0.01 (before under-wage check); under-wage fires only for straight-time underpayment
+- [Phase 07]: POST /api/payroll/entries added as convenience endpoint mirroring PUT — required by compliance test seeders
 
 ### Research Flags (address during planning)
 
@@ -92,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T09:43:54.179Z
-Stopped at: Completed 07-01 Compliance engine TDD red phase stubs
+Last session: 2026-03-20T09:51:24.336Z
+Stopped at: Completed 07-02 Compliance engine service and route
 Resume file: None
