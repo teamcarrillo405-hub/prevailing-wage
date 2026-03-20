@@ -176,6 +176,7 @@ export async function getPayrollEntries(weekId: string) {
       workerName: workers.name,
       tradeDescription: workerClassifications.tradeDescription,
       laborType: workerClassifications.laborType,
+      programName: workerClassifications.programName,
     })
     .from(payrollEntries)
     .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
