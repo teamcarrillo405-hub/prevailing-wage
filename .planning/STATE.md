@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Contractor UX Overhaul + Compliance
-status: planning
-stopped_at: 09-04-PLAN.md Task 1 complete — awaiting checkpoint:human-verify (Task 2)
-last_updated: "2026-03-20T04:38:00.000Z"
-last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
+milestone: v2.1
+milestone_name: TBD — run /gsd:new-milestone
+status: complete
+stopped_at: v2.0 milestone archived — run /gsd:new-milestone to begin v2.1
+last_updated: "2026-03-20T05:30:00.000Z"
+last_activity: 2026-03-20 — v2.0 milestone complete and archived
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 16
-  completed_plans: 15
-  percent: 50
+  completed_plans: 16
+  percent: 100
 ---
 
 # State
@@ -21,16 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — no missing steps.
-**Current focus:** Phase 6 — WH-347 2025 Compliance Foundation
+**Current focus:** v2.1 — start with `/gsd:new-milestone`
 
 ## Current Position
 
-Phase: 6 of 9 (WH-347 2025 Compliance Foundation)
-Plan: — of — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
+Milestone: v2.0 — COMPLETE AND ARCHIVED
+Status: Ready for next milestone — run `/gsd:new-milestone` to define v2.1 scope
+Last activity: 2026-03-20 — v2.0 archived to `.planning/milestones/v2.0-ROADMAP.md`
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100% (v2.0 done)
 
 ## Performance Metrics
 
@@ -63,7 +62,7 @@ Progress: [█████░░░░░] 50%
 | Phase 09-reports P01 | 1m 45s | 1 tasks | 1 files |
 | Phase 09-reports P02 | 8min | 2 tasks | 2 files |
 | Phase 09-reports P03 | 3min | 1 tasks | 1 files |
-| Phase 09-reports P04 | 5min | 1 tasks | 3 files | (checkpoint pending)
+| Phase 09-reports P04 | 5min | 2 tasks | 3 files | (checkpoint complete)
 
 ### Decisions
 
@@ -125,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T04:38:00.000Z
-Stopped at: 09-04-PLAN.md Task 1 complete — checkpoint:human-verify (Task 2) awaiting user
+Last session: 2026-03-20T05:15:00.000Z
+Stopped at: Phase 9 complete. v2.0 milestone (phases 6-9) all done. Run /gsd:complete-milestone to archive.
 Resume file: None
