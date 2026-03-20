@@ -91,6 +91,15 @@ None - plan executed exactly as written.
 - Plan 03 (multi-page PDF chunking) has explicit verify target: `npx vitest run tests/services/wh347.test.ts` — 4-page stub must turn green
 - All 8 existing wh347Generator tests remain green after appending new describe blocks
 
+## Self-Check: PASSED
+
+- FOUND: tests/routes/workers.test.ts
+- FOUND: tests/services/wh347.test.ts
+- FOUND: .planning/phases/06-wh-347-2025-compliance-foundation/06-01-SUMMARY.md
+- FOUND: d9fbc60 (Task 1 commit)
+- FOUND: 86a5601 (Task 2 commit)
+- FOUND: 020835c (docs/metadata commit)
+
 ---
 *Phase: 06-wh-347-2025-compliance-foundation*
 *Completed: 2026-03-20*
