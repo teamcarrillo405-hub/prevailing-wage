@@ -79,9 +79,9 @@ Plans:
   3. All card-based sections use the Card primitive with uniform padding — no page has ad-hoc card divs with differing padding values
 **Plans**: 3 plans
 Plans:
-- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
-- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
-- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
+- [ ] 12-01-PLAN.md — Migrate Layout.tsx nav to design tokens (bg-nav-dark, border-brand-gold, hover:text-brand-gold)
+- [ ] 12-02-PLAN.md — Adopt PageHeader in DashboardPage and ProjectDetailPage for typography hierarchy
+- [ ] 12-03-PLAN.md — Adopt Card primitive across ProjectDetailPage, PayrollWeekDetailPage, WorkersPage, PayrollListPage, ProjectCard
 
 ### Phase 13: Landing Page + Routing
 **Goal**: A full marketing homepage exists at "/" that converts general contractors by naming WH-347, Davis-Bacon, and SAM.gov in the first viewport, with correct auth-aware routing so authenticated users reach the dashboard and new users reach registration
@@ -95,9 +95,9 @@ Plans:
   5. All six landing page sections render: hero, problem, how-it-works, feature highlights, trust signals, and CTA close with footer
 **Plans**: 3 plans
 Plans:
-- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
-- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
-- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
+- [ ] 13-01-PLAN.md — [To be planned]
+- [ ] 13-02-PLAN.md — [To be planned]
+- [ ] 13-03-PLAN.md — [To be planned]
 
 ### Phase 14: Page-by-Page Polish
 **Goal**: Every existing app page uses the Card, Badge, Button, PageHeader, and EmptyState primitives from Phase 11, with no ad-hoc inline styling, and each page is individually verifiable against its success criteria
@@ -112,9 +112,9 @@ Plans:
   6. Login and Register pages use the gold primary button, display the HCC brand, and share a consistent form layout
 **Plans**: 3 plans
 Plans:
-- [ ] 10-01-PLAN.md — Google Fonts load + full @theme token expansion + @layer base font defaults
-- [ ] 10-02-PLAN.md — Migrate 7 inline brand style instances to className token utilities
-- [ ] 10-03-PLAN.md — Migrate all 44 focus:outline-none instances to focus:outline-hidden
+- [ ] 14-01-PLAN.md — [To be planned]
+- [ ] 14-02-PLAN.md — [To be planned]
+- [ ] 14-03-PLAN.md — [To be planned]
 
 ## Progress
 
@@ -127,6 +127,6 @@ Plans:
 | 9. Reports | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 10. CSS Design Token Foundation | 3/3 | Complete    | 2026-03-20 | - |
 | 11. UI Primitives | 2/2 | Complete    | 2026-03-20 | - |
-| 12. App Shell + Global Layout | v2.1 | 0/? | Not started | - |
+| 12. App Shell + Global Layout | v2.1 | 0/3 | Not started | - |
 | 13. Landing Page + Routing | v2.1 | 0/? | Not started | - |
 | 14. Page-by-Page Polish | v2.1 | 0/? | Not started | - |
