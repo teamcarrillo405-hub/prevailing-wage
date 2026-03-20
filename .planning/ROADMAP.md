@@ -20,7 +20,7 @@ Plans are not archived here — built before GSD structure. See MILESTONES.md.
 
 **Milestone Goal:** GC can run a complete project end-to-end with no missing workflow steps, full compliance checks, and one-click report generation for federal submission. Every generated WH-347 conforms to the January 2025 DOL form revision.
 
-- [ ] **Phase 6: WH-347 2025 Compliance Foundation** - Update WH-347 to January 2025 form + add J/RA field to worker schema
+- [x] **Phase 6: WH-347 2025 Compliance Foundation** - Update WH-347 to January 2025 form + add J/RA field to worker schema (completed 2026-03-20)
 - [ ] **Phase 7: Compliance Engine + Payroll Week View** - Build compliance engine, payroll week detail page, and one-click WH-347 from week
 - [ ] **Phase 8: Dashboard + UX Polish** - Compliance badges on project dashboard, clear navigation, missing-data warnings
 - [ ] **Phase 9: Reports** - Fringe benefit summary and worker pay history reports
@@ -82,7 +82,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 6. WH-347 2025 Compliance Foundation | 3/4 | In Progress|  | - |
+| 6. WH-347 2025 Compliance Foundation | 4/4 | Complete   | 2026-03-20 | - |
 | 7. Compliance Engine + Payroll Week View | v2.0 | 0/TBD | Not started | - |
 | 8. Dashboard + UX Polish | v2.0 | 0/TBD | Not started | - |
 | 9. Reports | v2.0 | 0/TBD | Not started | - |

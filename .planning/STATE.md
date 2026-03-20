@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Contractor UX Overhaul + Compliance
 status: planning
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-03-20T08:53:37.884Z"
+stopped_at: Completed 06-04 Tasks 1-2, awaiting human-verify checkpoint for Phase 6 end-to-end verification
+last_updated: "2026-03-20T09:01:05.570Z"
 last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 50
 ---
 
@@ -49,6 +49,7 @@ Progress: [█████░░░░░] 50%
 | Phase 06 P01 | 7 | 2 tasks | 2 files |
 | Phase 06 P02 | 5m | 3 tasks | 6 files |
 | Phase 06 P03 | 3 | 1 tasks | 1 files |
+| Phase 06 P04 | 5m | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -66,6 +67,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 06]: programName is optional on all laborTypes in route — server does not restrict it to apprentices
 - [Phase 06]: Copy additional template pages before fillng any content in fillWh347() — pdf-lib copyPages() snapshots current state so pages must be blank when copied
 - [Phase 06]: addPage() used (not insertPage()) in multi-page WH-347 — appending worker/statement pairs gives correct DOL page ordering automatically
+- [Phase 06]: deriveAllApprenticesRegistered() exported from export.ts for testability without route mocking
+- [Phase 06]: programName only included in POST payload when non-empty; server accepts null per Plan 02
 
 ### Research Flags (address during planning)
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T08:53:37.881Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-03-20T09:01:05.568Z
+Stopped at: Completed 06-04 Tasks 1-2, awaiting human-verify checkpoint for Phase 6 end-to-end verification
 Resume file: None
