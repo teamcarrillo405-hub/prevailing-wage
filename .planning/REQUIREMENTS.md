@@ -31,9 +31,9 @@ Requirements for milestone v2.0 — Contractor UX Overhaul + Compliance. Phases 
 
 ### UX
 
-- [ ] **UX-01**: Project detail page shows clear navigation to Workers, Payroll Weeks, Reports, and Variance
-- [ ] **UX-02**: Payroll weeks list shows all weeks with week number, status, and WH-347 download button per row
-- [ ] **UX-03**: Worker cards show missing-data warnings (address, SSN) that block WH-347 submission
+- [x] **UX-01**: Project detail page shows clear navigation to Workers, Payroll Weeks, Reports, and Variance
+- [x] **UX-02**: Payroll weeks list shows all weeks with week number, status, and WH-347 download button per row
+- [x] **UX-03**: Worker cards show missing-data warnings (address, SSN) that block WH-347 submission
 
 ## Future Requirements
 
@@ -71,9 +71,9 @@ Deferred to v2.1+.
 | COMP-02 | Phase 7 | Complete |
 | DASH-01 | Phase 8 | Complete |
 | DASH-02 | Phase 8 | Complete |
-| UX-01 | Phase 8 | Pending |
-| UX-02 | Phase 8 | Pending |
-| UX-03 | Phase 8 | Pending |
+| UX-01 | Phase 8 | Complete |
+| UX-02 | Phase 8 | Complete |
+| UX-03 | Phase 8 | Complete |
 | RPT-01 | Phase 9 | Pending |
 | RPT-02 | Phase 9 | Pending |
 
