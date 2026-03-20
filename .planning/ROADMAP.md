@@ -66,12 +66,18 @@ Plans:
 **Depends on**: Phase 7 (compliance engine must exist to drive badge state)
 **Requirements**: DASH-01, DASH-02, UX-01, UX-02, UX-03
 **Success Criteria** (what must be TRUE):
-  1. Each project card on the dashboard shows a compliance status badge (green = no violations, yellow = warnings, red = active violations) reflecting real compliance engine output
+  1. Each project card on the dashboard shows a compliance status badge (green = no violations, red = active violations) reflecting real compliance engine output
   2. Each project card shows the count of submitted payroll weeks and the most recent week number
   3. The project detail page has explicit navigation links to Workers, Payroll Weeks, Reports, and Variance — no feature requires guessing a URL
   4. The payroll weeks list shows week number, status, and a WH-347 download button per row
   5. Worker cards show inline warnings for missing address or SSN that block a legally valid WH-347 submission
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Wave 0: Test stubs for GET /api/compliance/project/:projectId (DASH-01, DASH-02)
+- [ ] 08-02-PLAN.md — Wave 1: compliance.ts new project-level aggregation route (DASH-01, DASH-02)
+- [ ] 08-03-PLAN.md — Wave 1: UX polish — PayrollListPage WH-347 anchor, WorkersPage warning, ProjectDetailPage nav, VarianceReportPageRoute (UX-01, UX-02, UX-03)
+- [ ] 08-04-PLAN.md — Wave 2: ProjectCard badge + stats + browser checkpoint (DASH-01, DASH-02, UX-01, UX-02, UX-03)
 
 ### Phase 9: Reports
 **Goal**: Contractors can generate a fringe benefit summary and a worker pay history report directly from the application, providing the standard documents requested in DOL audits.
@@ -90,5 +96,5 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 6. WH-347 2025 Compliance Foundation | 4/4 | Complete   | 2026-03-20 | - |
 | 7. Compliance Engine + Payroll Week View | 4/4 | Complete   | 2026-03-20 | - |
-| 8. Dashboard + UX Polish | v2.0 | 0/TBD | Not started | - |
+| 8. Dashboard + UX Polish | v2.0 | 0/4 | Not started | - |
 | 9. Reports | v2.0 | 0/TBD | Not started | - |
