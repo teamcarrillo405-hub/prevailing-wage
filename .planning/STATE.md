@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Contractor UX Overhaul + Compliance
 status: planning
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-20T08:41:16.232Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-20T08:48:28.154Z"
 last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 50
 ---
 
@@ -47,6 +47,7 @@ Progress: [█████░░░░░] 50%
 
 ## Accumulated Context
 | Phase 06 P01 | 7 | 2 tasks | 2 files |
+| Phase 06 P02 | 5m | 3 tasks | 6 files |
 
 ### Decisions
 
@@ -60,6 +61,8 @@ Progress: [█████░░░░░] 50%
 - v2.0: Phase 6 BEFORE Phase 7 — J/RA field is a hard dependency for 2025 form AND apprentice ratio check
 - [Phase 06]: Stubs must use actual assertions (not .todo) so they run and fail on missing fields
 - [Phase 06]: certApprentices contract test is green by design — documents API accepts false, not a failing stub
+- [Phase 06]: Migration journal must be updated manually when adding SQL-only migrations outside Drizzle generate workflow
+- [Phase 06]: programName is optional on all laborTypes in route — server does not restrict it to apprentices
 
 ### Research Flags (address during planning)
 
@@ -77,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T08:41:16.230Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-20T08:48:28.153Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
