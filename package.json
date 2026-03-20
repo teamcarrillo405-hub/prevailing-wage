@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev:server": "ts-node --esm src/server/index.ts",
+    "dev:server": "tsx src/server/index.ts",
     "dev:client": "vite",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "build": "tsc && vite build",
@@ -22,6 +22,7 @@
     "@tanstack/react-query": "^5.91.0",
     "argon2": "^0.44.0",
     "better-sqlite3": "^12.8.0",
+    "clsx": "^2.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "csv-parse": "^6.2.0",
@@ -39,6 +40,7 @@
     "react-hook-form": "^7.71.2",
     "react-router-dom": "^7.13.1",
     "recharts": "^3.8.0",
+    "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
