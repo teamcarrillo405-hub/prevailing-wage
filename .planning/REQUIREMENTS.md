@@ -21,8 +21,8 @@ Requirements for milestone v2.0 — Contractor UX Overhaul + Compliance. Phases 
 
 ### Reports
 
-- [ ] **RPT-01**: User can view a fringe benefit summary showing fringe credits per worker for a project
-- [ ] **RPT-02**: User can view worker pay history — all payroll weeks, hours, gross wages, and deductions — for a worker on a project
+- [x] **RPT-01**: User can view a fringe benefit summary showing fringe credits per worker for a project
+- [x] **RPT-02**: User can view worker pay history — all payroll weeks, hours, gross wages, and deductions — for a worker on a project
 
 ### Dashboard
 
@@ -74,8 +74,8 @@ Deferred to v2.1+.
 | UX-01 | Phase 8 | Complete |
 | UX-02 | Phase 8 | Complete |
 | UX-03 | Phase 8 | Complete |
-| RPT-01 | Phase 9 | Pending |
-| RPT-02 | Phase 9 | Pending |
+| RPT-01 | Phase 9 | Complete |
+| RPT-02 | Phase 9 | Complete |
 
 **Coverage:**
 - v2 requirements: 13 total
