@@ -95,9 +95,9 @@ Plans:
   5. All six landing page sections render: hero, problem, how-it-works, feature highlights, trust signals, and CTA close with footer
 **Plans**: 3 plans
 Plans:
-- [ ] 13-01-PLAN.md — [To be planned]
-- [ ] 13-02-PLAN.md — [To be planned]
-- [ ] 13-03-PLAN.md — [To be planned]
+- [ ] 13-01-PLAN.md — Install lucide-react + PublicRoute guard + RegisterPage + App.tsx routing surgery (LANDING-07)
+- [ ] 13-02-PLAN.md — LandingPage top half: nav, hero, problem, how-it-works (LANDING-01, LANDING-02, LANDING-03)
+- [ ] 13-03-PLAN.md — LandingPage bottom half: feature highlights, trust signals, CTA close, footer + human checkpoint (LANDING-04, LANDING-05, LANDING-06)
 
 ### Phase 14: Page-by-Page Polish
 **Goal**: Every existing app page uses the Card, Badge, Button, PageHeader, and EmptyState primitives from Phase 11, with no ad-hoc inline styling, and each page is individually verifiable against its success criteria
@@ -128,5 +128,5 @@ Plans:
 | 10. CSS Design Token Foundation | 3/3 | Complete    | 2026-03-20 | - |
 | 11. UI Primitives | 2/2 | Complete    | 2026-03-20 | - |
 | 12. App Shell + Global Layout | 3/3 | Complete    | 2026-03-20 | - |
-| 13. Landing Page + Routing | v2.1 | 0/? | Not started | - |
+| 13. Landing Page + Routing | v2.1 | 0/3 | Not started | - |
 | 14. Page-by-Page Polish | v2.1 | 0/? | Not started | - |
