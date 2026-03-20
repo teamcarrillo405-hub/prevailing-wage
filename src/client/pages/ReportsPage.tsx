@@ -136,8 +136,7 @@ export function ReportsPage() {
             &larr; Project
           </Link>
           <h1
-            className="text-3xl font-semibold text-gray-900"
-            style={{ fontFamily: 'Oswald, sans-serif' }}
+            className="text-3xl font-semibold text-gray-900 font-headline"
           >
             Reports
           </h1>
@@ -165,8 +164,7 @@ export function ReportsPage() {
         {activeTab === 'fringe' && (
           <div>
             <h2
-              className="text-lg font-semibold text-gray-800 mb-4"
-              style={{ fontFamily: 'Oswald, sans-serif' }}
+              className="text-lg font-semibold text-gray-800 mb-4 font-headline"
             >
               Fringe Benefit Summary
             </h2>
@@ -238,8 +236,7 @@ export function ReportsPage() {
           <div>
             <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
               <h2
-                className="text-lg font-semibold text-gray-800"
-                style={{ fontFamily: 'Oswald, sans-serif' }}
+                className="text-lg font-semibold text-gray-800 font-headline"
               >
                 Pay History
               </h2>
@@ -254,7 +251,7 @@ export function ReportsPage() {
                     id="worker-select"
                     value={selectedWorkerId}
                     onChange={(e) => setSelectedWorkerId(e.target.value)}
-                    className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F5C518]"
+                    className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-[#F5C518]"
                   >
                     {workers.map((w) => (
                       <option key={w.id} value={w.id}>
