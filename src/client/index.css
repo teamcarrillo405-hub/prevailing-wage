@@ -1,7 +1,46 @@
+/* NEVER add --color-*: initial — wipes all 33 component default Tailwind colors */
 @import "tailwindcss";
 
 @theme {
+  /* Existing tokens — do not remove */
   --color-brand-gold: #F5C518;
   --font-headline: 'Oswald', sans-serif;
   --font-body: 'Inter', sans-serif;
+
+  /* Brand identity */
+  --color-nav-dark: #1a1a1a;
+
+  /* Surface tokens */
+  --color-surface-card: #ffffff;
+  --color-surface-page: #f8f8f8;
+  --color-surface-muted: #f9fafb;
+
+  /* Border */
+  --color-border-default: #e5e7eb;
+
+  /* Text */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+
+  /* Status colors */
+  --color-status-compliant: #16a34a;
+  --color-status-violation: #dc2626;
+  --color-status-warning: #d97706;
+
+  /* Radius */
+  --radius-card: 0.5rem;
+  --radius-sm: 0.25rem;
+
+  /* Shadow */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-surface-page);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-headline);
+  }
 }
