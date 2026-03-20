@@ -13,6 +13,7 @@ import { OtScenarioPage } from './pages/OtScenarioPage.js';
 import { WorkersPage } from './pages/WorkersPage.js';
 import { PayrollWeekDetailPage } from './pages/PayrollWeekDetailPage.js';
 import { VarianceReportPageRoute } from './pages/VarianceReportPageRoute';
+import { ReportsPage } from './pages/ReportsPage';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/projects/:projectId/ot-scenarios" element={<OtScenarioPage />} />
               <Route path="/projects/:projectId/workers" element={<WorkersPage />} />
               <Route path="/projects/:projectId/variance" element={<VarianceReportPageRoute />} />
+              <Route path="/projects/:projectId/reports" element={<ReportsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
