@@ -251,7 +251,7 @@ export function ReportsPage() {
                     id="worker-select"
                     value={selectedWorkerId}
                     onChange={(e) => setSelectedWorkerId(e.target.value)}
-                    className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-[#F5C518]"
+                    className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                   >
                     {workers.map((w) => (
                       <option key={w.id} value={w.id}>
