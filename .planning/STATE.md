@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Contractor UX Overhaul + Compliance
 status: planning
-stopped_at: Completed 08-03-PLAN.md — UX navigation links, WH-347 anchor, worker missing-data warnings
-last_updated: "2026-03-20T10:49:42.511Z"
+stopped_at: 08-04 Task 1 complete — awaiting human-verify checkpoint (Task 2)
+last_updated: "2026-03-20T10:52:50.067Z"
 last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 50
 ---
 
@@ -94,6 +94,7 @@ Progress: [█████░░░░░] 50%
 - [Phase 08-dashboard-ux-polish]: seedProjectWithViolation fixture corrected to use payrollWeekId, classificationId, and daily hour fields
 - [Phase 08-dashboard-ux-polish]: VarianceReportPageRoute is a thin wrapper — preserves VarianceReportPage as reusable component with explicit Props
 - [Phase 08-dashboard-ux-polish]: Reports nav link is a span (not Link) with cursor-not-allowed to signal Phase 9 pending without a broken route
+- [Phase 08-dashboard-ux-polish]: Compliance query lives inside ProjectCard (not DashboardPage) — each card owns its own fetch, staleTime:60_000 prevents N re-fetches on navigate-back
 
 ### Research Flags (address during planning)
 
@@ -111,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T10:49:42.509Z
-Stopped at: Completed 08-03-PLAN.md — UX navigation links, WH-347 anchor, worker missing-data warnings
+Last session: 2026-03-20T10:52:43.092Z
+Stopped at: 08-04 Task 1 complete — awaiting human-verify checkpoint (Task 2)
 Resume file: None
