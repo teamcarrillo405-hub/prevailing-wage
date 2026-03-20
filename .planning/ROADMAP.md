@@ -53,7 +53,13 @@ Plans:
   2. A payroll week where gross wages do not match the CWHSSA formula (base rate x OT hours x 0.5 premium, fringe excluded from multiplier) is flagged as an OT calculation error
   3. A contractor viewing a payroll week sees a list of compliance violations for that week, each identifying the worker and the nature of the violation
   4. A contractor can click one button on the payroll week view and receive the WH-347 PDF for that week without navigating away
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Wave 0: Test stubs for complianceService (COMP-01, COMP-02) and compliance route (WH347-03)
+- [ ] 07-02-PLAN.md — Wave 1: complianceService.ts + compliance.ts route (COMP-01, COMP-02, WH347-03)
+- [ ] 07-03-PLAN.md — Wave 1: PayrollWeekDetailPage.tsx — entries table, violations panel, WH-347 anchor (WH347-03, WH347-04)
+- [ ] 07-04-PLAN.md — Wave 2: Wire index.ts + App.tsx + export.ts TODO fix + browser checkpoint
 
 ### Phase 8: Dashboard + UX Polish
 **Goal**: The dashboard surfaces compliance status across all projects at a glance, and every page in the project workflow has clear navigation — no dead ends, no missing data surprises at PDF generation time.
@@ -83,6 +89,6 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 6. WH-347 2025 Compliance Foundation | 4/4 | Complete   | 2026-03-20 | - |
-| 7. Compliance Engine + Payroll Week View | v2.0 | 0/TBD | Not started | - |
+| 7. Compliance Engine + Payroll Week View | v2.0 | 0/4 | Not started | - |
 | 8. Dashboard + UX Polish | v2.0 | 0/TBD | Not started | - |
 | 9. Reports | v2.0 | 0/TBD | Not started | - |
