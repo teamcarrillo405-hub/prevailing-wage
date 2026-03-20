@@ -36,7 +36,13 @@ Plans are not archived here — built before GSD structure. See MILESTONES.md.
   2. Each worker row on the WH-347 shows the J/RA (journeyworker/registered apprentice) checkbox populated from the worker's profile
   3. Worker profile includes a J/RA field that can be set and saved
   4. A payroll week with more than 8 workers produces a multi-page WH-347 with correct Page X of Y notation rather than silently truncating to 8 workers
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Test stubs: workers.test.ts (programName) + wh347.test.ts (multi-page, certApprentices)
+- [ ] 06-02-PLAN.md — programName backend: schema migration + workers route + payrollService query
+- [ ] 06-03-PLAN.md — Multi-page fillWh347(): chunk workers into groups of 8, Page X of Y notation
+- [ ] 06-04-PLAN.md — Wire: export.ts certApprentices boolean fix + WorkersPage.tsx programName UI + checkpoint
 
 ### Phase 7: Compliance Engine + Payroll Week View
 **Goal**: The system detects under-wage and CWHSSA OT violations on stored payroll data, and contractors can view a payroll week in detail — including compliance flags — and download the WH-347 with one click from that view.
@@ -76,7 +82,7 @@ Plans are not archived here — built before GSD structure. See MILESTONES.md.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 6. WH-347 2025 Compliance Foundation | v2.0 | 0/TBD | Not started | - |
+| 6. WH-347 2025 Compliance Foundation | v2.0 | 0/4 | Not started | - |
 | 7. Compliance Engine + Payroll Week View | v2.0 | 0/TBD | Not started | - |
 | 8. Dashboard + UX Polish | v2.0 | 0/TBD | Not started | - |
 | 9. Reports | v2.0 | 0/TBD | Not started | - |
