@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Contractor UX Overhaul + Compliance
 status: planning
-stopped_at: Completed 07-03 PayrollWeekDetailPage component
-last_updated: "2026-03-20T09:56:28.860Z"
+stopped_at: "Checkpoint 07-04 Task 3: awaiting browser verification"
+last_updated: "2026-03-20T10:01:57.448Z"
 last_activity: 2026-03-19 — v2.0 roadmap created, phases 6-9 defined
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 50
 ---
 
@@ -54,6 +54,7 @@ Progress: [█████░░░░░] 50%
 | Phase 07 P01 | 2m | 2 tasks | 2 files |
 | Phase 07 P02 | 8m | 2 tasks | 3 files |
 | Phase 07 P03 | 4 | 1 tasks | 1 files |
+| Phase 07 P04 | 3min | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -80,6 +81,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 07]: cwhssa-ot fires when totalOt > 0 AND |delta| > 0.01 (before under-wage check); under-wage fires only for straight-time underpayment
 - [Phase 07]: POST /api/payroll/entries added as convenience endpoint mirroring PUT — required by compliance test seeders
 - [Phase 07]: WH-347 download is a plain <a href> anchor — browser handles Content-Disposition attachment natively
+- [Phase 07]: computeCompliance() called independently in export.ts route — entries fetched twice is acceptable for Phase 7; performance optimization deferred to v2.1
+- [Phase 07]: certProperPayment/certAccuratePayroll use ?? true fallback when computeCompliance returns null — no entries means no violations detected = compliant
 
 ### Research Flags (address during planning)
 
@@ -97,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T09:56:28.858Z
-Stopped at: Completed 07-03 PayrollWeekDetailPage component
+Last session: 2026-03-20T10:01:57.445Z
+Stopped at: Checkpoint 07-04 Task 3: awaiting browser verification
 Resume file: None
