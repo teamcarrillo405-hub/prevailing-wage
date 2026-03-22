@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
-status: "Roadmap ready — begin with `/gsd:plan-phase 10`"
-stopped_at: Completed 13-03-PLAN.md — Phase 13 verified and closed
-last_updated: "2026-03-20T22:35:00Z"
-last_activity: 2026-03-20 — Roadmap written, 5 phases defined, 26 requirements mapped
+status: completed
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-03-22T18:53:45.819Z"
+last_activity: 2026-03-20 — Phase 13 landing page + routing verified and closed (181/181 tests green)
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
-  percent: 0
+  completed_phases: 4
+  total_plans: 14
+  completed_plans: 12
+  percent: 80
 ---
 
 # State
@@ -67,6 +67,7 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 | Phase 13-landing-page-routing P01 | 3min | 2 tasks | 6 files |
 | Phase 13-landing-page-routing P02 | 2min | 1 tasks | 1 files |
 | Phase 13-landing-page-routing P03 | 2min | 2 tasks | 1 files |
+| Phase 14 P01 | 5min | 3 tasks | 3 files |
 
 ### Decisions
 
@@ -131,6 +132,8 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 - [Phase 13-landing-page-routing]: WildcardRedirect defined inline in App.tsx module — single-use component does not warrant its own file
 - [Phase 13-02]: HowItWorksSection uses plain div (not Card) for steps on dark background — Card is white/surface-card which clashes with bg-nav-dark
 - [Phase 13-02]: hero h1 packs all three required terms (WH-347, Davis-Bacon, SAM.gov) into a two-line headline above the fold
+- [Phase 14]: LoginPage is now login-only — RegisterForm removed, Link to /register replaces mode toggle
+- [Phase 14]: Badge variant mapping in ProjectCard: violations->violation, clean->compliant, no payroll->neutral
 
 ### Research Flags for v2.1
 
@@ -154,6 +157,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T22:35:00Z
-Stopped at: Completed 13-03-PLAN.md — Phase 13 verified and closed
+Last session: 2026-03-22T18:53:45.816Z
+Stopped at: Completed 14-01-PLAN.md
 Resume file: None

@@ -111,10 +111,10 @@
 | LANDING-05 | Phase 13 | Pending |
 | LANDING-06 | Phase 13 | Pending |
 | LANDING-07 | Phase 13 | Complete |
-| PAGE-01 | Phase 14 | Pending |
+| PAGE-01 | Phase 14 | Complete |
 | PAGE-02 | Phase 14 | Pending |
 | PAGE-03 | Phase 14 | Pending |
 | PAGE-04 | Phase 14 | Pending |
 | PAGE-05 | Phase 14 | Pending |
 | PAGE-06 | Phase 14 | Pending |
-| PAGE-07 | Phase 14 | Pending |
+| PAGE-07 | Phase 14 | Complete |

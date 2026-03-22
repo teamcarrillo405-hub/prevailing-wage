@@ -129,4 +129,4 @@ Plans:
 | 11. UI Primitives | 2/2 | Complete    | 2026-03-20 | - |
 | 12. App Shell + Global Layout | 3/3 | Complete    | 2026-03-20 | - |
 | 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
-| 14. Page-by-Page Polish | v2.1 | 0/3 | Not started | - |
+| 14. Page-by-Page Polish | 1/3 | In Progress|  | - |
