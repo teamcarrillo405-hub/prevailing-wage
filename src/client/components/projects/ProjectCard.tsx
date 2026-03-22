@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Badge } from '../ui/Badge';
 
 interface Project {
   id: string;
@@ -59,28 +60,22 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <span className="inline-block text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-700 rounded">
           {CONTRACT_TYPE_LABELS[project.contractType] ?? project.contractType}
         </span>
-        <span className="inline-block text-xs font-medium px-2 py-0.5 bg-[#F5C518] text-gray-900 rounded">
+        <Badge variant="neutral">
           {FUNDING_TYPE_LABELS[project.fundingType] ?? project.fundingType}
-        </span>
+        </Badge>
       </div>
 
       {/* Compliance badge + week stats — DASH-01 / DASH-02 */}
       {!summaryLoading && (
         <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
           {summary?.badge === 'violations' && (
-            <span className="inline-block text-xs font-medium px-2 py-0.5 bg-red-100 text-red-700 rounded">
-              Violations
-            </span>
+            <Badge variant="violation">Violations</Badge>
           )}
           {summary?.badge === 'clean' && summary.weekCount > 0 && (
-            <span className="inline-block text-xs font-medium px-2 py-0.5 bg-green-100 text-green-700 rounded">
-              Clean
-            </span>
+            <Badge variant="compliant">Clean</Badge>
           )}
           {(!summary || summary.weekCount === 0) && (
-            <span className="inline-block text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-500 rounded">
-              No payroll
-            </span>
+            <Badge variant="neutral">No payroll</Badge>
           )}
           {summary && summary.weekCount > 0 && (
             <span className="text-xs text-gray-500">
