@@ -1,5 +1,6 @@
 // src/client/pages/PayrollWeekDetailPage.tsx
 // Route: /projects/:projectId/payroll/:weekId
+import { useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -90,6 +91,11 @@ export function PayrollWeekDetailPage() {
   const { projectId, weekId } = useParams<{ projectId: string; weekId: string }>();
   const navigate = useNavigate();
 
+  const [generating, setGenerating] = useState(false);
+  const [showPreflight, setShowPreflight] = useState(false);
+  const generatingRef = useRef(false);
+  const hiddenAnchorRef = useRef<HTMLAnchorElement>(null);
+
   const {
     data: weekData,
     isLoading: weekLoading,
@@ -124,9 +130,40 @@ export function PayrollWeekDetailPage() {
     }
   }
 
+  function handleDownloadClick() {
+    if (complianceData?.hasViolations) {
+      setShowPreflight(true);
+    } else {
+      handleConfirmedDownload();
+    }
+  }
+
+  async function handleConfirmedDownload() {
+    if (generatingRef.current) return;
+    generatingRef.current = true;
+    setGenerating(true);
+    setShowPreflight(false);
+    try {
+      const res = await fetch(`/api/export/wh347/${weekId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      hiddenAnchorRef.current!.href = url;
+      hiddenAnchorRef.current!.download = `wh347-${weekId}.pdf`;
+      hiddenAnchorRef.current!.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } finally {
+      generatingRef.current = false;
+      setGenerating(false);
+    }
+  }
+
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
+        {/* Hidden anchor for Blob download — must be outside modal so it persists when modal unmounts */}
+        <a ref={hiddenAnchorRef} className="hidden" />
+
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -146,12 +183,14 @@ export function PayrollWeekDetailPage() {
             )}
           </div>
           {weekId && (
-            <a
-              href={`/api/export/wh347/${weekId}`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={generating}
+              onClick={handleDownloadClick}
             >
-              Download WH-347
-            </a>
+              {generating ? 'Generating...' : 'Download WH-347'}
+            </Button>
           )}
         </div>
 
@@ -268,6 +307,64 @@ export function PayrollWeekDetailPage() {
               </div>
             )}
           </Card>
+        )}
+
+        {/* Preflight compliance modal */}
+        {showPreflight && (
+          <div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowPreflight(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setShowPreflight(false);
+            }}
+            tabIndex={-1}
+          >
+            <Card className="max-w-lg w-full mx-4">
+              <h2 className="text-base font-headline text-gray-900 mb-3">
+                Compliance Violations Detected
+              </h2>
+              <p className="text-sm text-gray-600 mb-4">
+                This payroll week has the following violations. You may still download the WH-347,
+                but these issues will be reflected in the certification checkboxes.
+              </p>
+              <ul className="space-y-2 mb-6">
+                {complianceData!.violations.map((v, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                    <Badge variant="violation" className="mt-0.5 shrink-0">
+                      {violationLabel(v.violationType)}
+                    </Badge>
+                    <span>
+                      <span className="font-medium">{v.workerName}</span>
+                      {': delta $'}{v.delta.toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+                {complianceData!.weekViolations?.map((wv, i) => (
+                  <li key={`week-${i}`} className="flex items-start gap-2 text-sm text-gray-700">
+                    <Badge variant="violation" className="mt-0.5 shrink-0">
+                      Apprentice Ratio
+                    </Badge>
+                    <span>{wv.detail}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  autoFocus
+                  onClick={() => setShowPreflight(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="secondary" size="sm" onClick={handleConfirmedDownload}>
+                  Download Anyway
+                </Button>
+              </div>
+            </Card>
+          </div>
         )}
       </div>
     </Layout>
