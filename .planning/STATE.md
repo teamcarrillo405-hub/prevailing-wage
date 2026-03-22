@@ -4,7 +4,7 @@ milestone: v2.2
 milestone_name: UX Completion + Compliance Hardening
 status: planning
 stopped_at: Completed 15-03-PLAN.md — print-ready reports with @media print CSS and tfoot totals
-last_updated: "2026-03-22T21:31:06.841Z"
+last_updated: "2026-03-22T21:34:45.301Z"
 last_activity: 2026-03-22
 progress:
   total_phases: 2
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Milestone: v2.2 — UX Completion + Compliance Hardening
-Phase: Phase 15 — Compliance Engine Hardening + Independent Frontend (not started)
+Phase: 16
 Status: Roadmap created — ready for Phase 15 planning
 Last activity: 2026-03-22
 

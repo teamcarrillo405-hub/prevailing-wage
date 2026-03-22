@@ -92,5 +92,5 @@ Plans:
 | 12. App Shell + Global Layout | v2.1 | 3/3 | Complete | 2026-03-20 |
 | 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
 | 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
-| 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete   | 2026-03-22 |
+| 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete    | 2026-03-22 |
 | 16. WH-347 Submission UX | v2.2 | 0/TBD | Not started | - |
