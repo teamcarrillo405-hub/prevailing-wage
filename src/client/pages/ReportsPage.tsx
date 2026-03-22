@@ -248,6 +248,26 @@ export function ReportsPage() {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                    <tr>
+                      <td className="px-4 py-3 text-gray-900">Totals</td>
+                      <td className="px-4 py-3 text-gray-900 text-right">
+                        {fringeRows.reduce((sum, r) => sum + r.totalSt, 0).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-900 text-right">
+                        {fringeRows.reduce((sum, r) => sum + r.totalOt, 0).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-900 text-right">
+                        {fringeRows.reduce((sum, r) => sum + r.totalSt + r.totalOt, 0).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-900 text-right">
+                        {formatCurrency(fringeRows.reduce((sum, r) => sum + r.totalFringeCredits, 0))}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-right">
+                        {fringeRows.reduce((sum, r) => sum + r.weekCount, 0)}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}
