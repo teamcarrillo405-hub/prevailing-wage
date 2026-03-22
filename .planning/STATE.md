@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: UX Completion + Compliance Hardening
 status: in_progress
-stopped_at: Defining requirements
+stopped_at: Roadmap created — ready for Phase 15 planning
 last_updated: "2026-03-22"
 last_activity: 2026-03-22
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,30 +21,27 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** v2.2 — UX Completion + Compliance Hardening — defining requirements
+**Current focus:** v2.2 — UX Completion + Compliance Hardening — roadmap defined, Phase 15 not started
 
 ## Current Position
 
 Milestone: v2.2 — UX Completion + Compliance Hardening
-Phase: Not started (defining requirements)
-Status: Defining requirements
+Phase: Phase 15 — Compliance Engine Hardening + Independent Frontend (not started)
+Status: Roadmap created — ready for Phase 15 planning
 Last activity: 2026-03-22
 
-Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
+Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
 
 ### Phase Structure
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 10 | CSS Design Token Foundation | DESIGN-01, 02, 03, 04 | Complete |
-| 11 | UI Primitives | UI-01, 02, 03, 04, 05 | Complete |
-| 12 | App Shell + Global Layout | SHELL-01, 02, 03 | Complete |
-| 13 | Landing Page + Routing | LANDING-01, 02, 03, 04, 05, 06, 07 | Complete |
-| 14 | Page-by-Page Polish | PAGE-01, 02, 03, 04, 05, 06, 07 | Not started |
+| 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | Not started |
+| 16 | WH-347 Submission UX | WH-01, WH-02 | Not started |
 
 ## Performance Metrics
 
-**Velocity (v2.1):**
+**Velocity (v2.2):**
 
 - Total plans completed: 0
 - Average duration: —
@@ -143,17 +140,12 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 - [Phase 14-page-by-page-polish]: WH-347 download uses secondary button classes directly on <a> tag — Button renders <button> making nesting invalid HTML
 - [Phase 14-page-by-page-polish]: Print CSS added via inline style block before Layout — avoids touching Layout.tsx
 
-### Research Flags for v2.1
+### Research Flags for v2.2
 
-- Phase 10: `--color-*: initial` in @theme silently wipes all default Tailwind colors — never use initial namespace wipe; add tokens only
-- Phase 10: @theme must NOT be split into imported CSS files — all @theme content stays in index.css
-- Phase 10: 7 hardcoded inline brand values confirmed in: ManualWageEntryForm, WageClassificationsTable, AdminStateWagePage, WageLookupPage, ReportsPage — must be cleared in Phase 10
-- Phase 10: 5 confirmed `focus:outline-none` instances in form inputs — first task of Phase 10
-- Phase 11: WageClassificationsTable uses `style={{ backgroundColor: '#F5C518' }}` on a `<tr>` element — verify className="bg-brand-gold" on tr before applying broadly
-- Phase 13: /register must be added as an explicit public route before landing page CTA is wired — otherwise CTA dead-ends at login for new users
-- Phase 13: Auth-aware wildcard may require extracting ProtectedRoute auth-check logic into a shared useAuth hook — evaluate scope during Phase 13 planning
-- Phase 14: Apply Inter globally as the FIRST action and immediately verify PayrollEntryPage (7-day grid) and WageClassificationsTable at 1280px — font change can cause table column overflow
-- Phase 14: Run existing 181-test suite after each page polish pass to confirm no regressions
+- Phase 15: computeCompliance() currently returns per-entry violation objects — apprentice ratio is per-week aggregate; confirm return type supports a new week-level violation shape before implementing
+- Phase 15: Workflow progress step "Download WH-347" requires tracking whether a WH-347 has been generated — confirm if this is recorded in the DB or must be derived from payrollWeeks data
+- Phase 16: WH-347 download anchor is a plain <a href> — adding "Generating..." state requires converting to a button-driven fetch with manual Blob URL creation (not a trivial change to the anchor pattern)
+- Phase 16: Preflight modal must query compliance results for the specific week before allowing the download — ensure computeCompliance() is callable client-side or exposed via a dedicated endpoint
 
 ### Pending Todos
 
@@ -166,5 +158,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-22T19:06:17.019Z
-Stopped at: Completed 14-03-PLAN.md
+Stopped at: Roadmap created for v2.2 (Phases 15-16)
 Resume file: None

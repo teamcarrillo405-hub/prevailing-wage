@@ -1,7 +1,7 @@
 # Requirements: v2.2 — UX Completion + Compliance Hardening
 
 **Milestone:** v2.2
-**Status:** Draft — pending roadmap
+**Status:** Draft — roadmap created
 **Last updated:** 2026-03-22
 
 ---
@@ -58,13 +58,11 @@
 
 ## Traceability
 
-*Filled by roadmapper.*
-
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| WH-01 | — | Pending |
-| WH-02 | — | Pending |
-| COMP-03 | — | Pending |
-| UX-04 | — | Pending |
-| RPT-01 | — | Pending |
-| RPT-02 | — | Pending |
+| WH-01 | Phase 16 | Pending |
+| WH-02 | Phase 16 | Pending |
+| COMP-03 | Phase 15 | Pending |
+| UX-04 | Phase 15 | Pending |
+| RPT-01 | Phase 15 | Pending |
+| RPT-02 | Phase 15 | Pending |
