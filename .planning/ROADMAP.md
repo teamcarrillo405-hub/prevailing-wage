@@ -48,7 +48,7 @@ Archive: `.planning/milestones/v2.1-ROADMAP.md`
 **Milestone Goal:** Close every known UX gap and compliance gap deferred from v2.0/v2.1 — apprentice ratio enforcement, workflow progress visibility, print-ready reports, and WH-347 preflight with generating feedback.
 
 - [x] **Phase 15: Compliance Engine Hardening + Independent Frontend** - Apprentice ratio check in computeCompliance(), workflow progress indicator on Project Detail, and print CSS for both reports (completed 2026-03-22)
-- [ ] **Phase 16: WH-347 Submission UX** - Preflight modal with violation summary + confirmation, and generating/ready state feedback on download
+- [x] **Phase 16: WH-347 Submission UX** - Preflight modal with violation summary + confirmation, and generating/ready state feedback on download (completed 2026-03-22)
 
 ## Phase Details
 
@@ -76,9 +76,9 @@ Plans:
   2. Contractor can click "Download Anyway" to proceed or cancel — either action dismisses the modal correctly
   3. WH-347 download anchor shows "Generating..." while the PDF request is in-flight and returns to its normal label after the download begins
   4. Double-clicking the download anchor during generation does not trigger a second PDF request
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 16-01-PLAN.md — Preflight compliance modal + fetch-driven download with generating state and double-click guard
+- [x] 16-01-PLAN.md — Preflight compliance modal + fetch-driven download with generating state and double-click guard
 
 ## Progress
 
@@ -95,4 +95,4 @@ Plans:
 | 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
 | 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
 | 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete    | 2026-03-22 |
-| 16. WH-347 Submission UX | v2.2 | 0/1 | Not started | - |
+| 16. WH-347 Submission UX | v2.2 | 1/1 | Complete   | 2026-03-22 |

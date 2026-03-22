@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: UX Completion + Compliance Hardening
 status: planning
-stopped_at: Completed 15-03-PLAN.md — print-ready reports with @media print CSS and tfoot totals
-last_updated: "2026-03-22T21:34:45.301Z"
+stopped_at: "Checkpoint 16-01 Task 2: human-verify browser validation of preflight modal and generating state"
+last_updated: "2026-03-22T22:29:16.938Z"
 last_activity: 2026-03-22
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
   percent: 0
 ---
 
@@ -149,6 +149,9 @@ Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
 - [Phase 15]: apprenticeHours > maxAllowed uses strict greater-than — exactly at 1:3 ratio is compliant
 - [Phase 15-compliance-engine-hardening-independent-frontend]: print-hidden CSS class used (not Tailwind print:hidden variant) — consistent with inline style approach in ReportsPage
 - [Phase 15-compliance-engine-hardening-independent-frontend]: tfoot totals row uses reduce() inline — no derived state needed for accumulation in JSX
+- [Phase 16]: generatingRef (useRef) used as synchronous double-click guard — useState is async/batched and cannot prevent rapid duplicate download requests
+- [Phase 16]: hiddenAnchorRef placed outside modal JSX so anchor persists when modal unmounts during download initiation
+- [Phase 16]: Blob URL revoked after 100ms setTimeout to give browser time to initiate download before freeing object URL
 
 ### Research Flags for v2.2
 
@@ -167,6 +170,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T21:31:06.836Z
-Stopped at: Completed 15-03-PLAN.md — print-ready reports with @media print CSS and tfoot totals
+Last session: 2026-03-22T22:29:06.983Z
+Stopped at: Checkpoint 16-01 Task 2: human-verify browser validation of preflight modal and generating state
 Resume file: None
