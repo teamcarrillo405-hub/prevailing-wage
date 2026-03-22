@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../components/shared/Layout.js';
+import { PageHeader } from '../components/ui/PageHeader';
 
 // ---- Interfaces from Plan 02 shapes ----
 
@@ -119,28 +120,25 @@ export function ReportsPage() {
   // ---- Tab button styles ----
   function tabClass(tab: 'fringe' | 'payHistory') {
     return activeTab === tab
-      ? 'px-5 py-2 text-sm font-semibold rounded-t border-b-2 border-[#F5C518] bg-[#F5C518] text-black'
+      ? 'px-5 py-2 text-sm font-semibold rounded-t border-b-2 border-brand-gold bg-brand-gold text-nav-dark'
       : 'px-5 py-2 text-sm font-medium rounded-t border-b-2 border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200';
   }
 
   return (
-    <Layout>
+    <>
+      <style>{`@media print { nav { display: none !important; } }`}</style>
+      <Layout>
       <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
 
         {/* Page header */}
-        <div>
-          <Link
-            to={`/projects/${projectId}`}
-            className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block"
-          >
-            &larr; Project
-          </Link>
-          <h1
-            className="text-3xl font-semibold text-gray-900 font-headline"
-          >
-            Reports
-          </h1>
-        </div>
+        <PageHeader
+          title="Reports"
+          action={
+            <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700">
+              &larr; Project
+            </Link>
+          }
+        />
 
         {/* Tabs */}
         <div className="border-b border-gray-200">
@@ -341,5 +339,6 @@ export function ReportsPage() {
 
       </div>
     </Layout>
+    </>
   );
 }
