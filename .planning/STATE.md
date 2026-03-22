@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: UX Completion + Compliance Hardening
 status: planning
-stopped_at: "Checkpoint 16-01 Task 2: human-verify browser validation of preflight modal and generating state"
-last_updated: "2026-03-22T22:29:16.938Z"
+stopped_at: Completed Phase 16 Plan 01 — WH-347 Submission UX
+last_updated: "2026-03-22T22:34:58.154Z"
 last_activity: 2026-03-22
 progress:
   total_phases: 2
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
 | Phase 15-compliance-engine-hardening-independent-frontend P02 | 5 | 1 tasks | 1 files |
 | Phase 15 P01 | 7min | 2 tasks | 3 files |
 | Phase 15-compliance-engine-hardening-independent-frontend P03 | 3 | 2 tasks | 1 files |
+| Phase 16-wh-347-submission-ux P01 | 2min | 2 tasks | 1 files |
 
 ### Decisions
 
@@ -152,6 +153,9 @@ Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
 - [Phase 16]: generatingRef (useRef) used as synchronous double-click guard — useState is async/batched and cannot prevent rapid duplicate download requests
 - [Phase 16]: hiddenAnchorRef placed outside modal JSX so anchor persists when modal unmounts during download initiation
 - [Phase 16]: Blob URL revoked after 100ms setTimeout to give browser time to initiate download before freeing object URL
+- [Phase 16]: generatingRef (useRef) used as synchronous double-click guard — useState cannot prevent rapid duplicate download requests
+- [Phase 16]: hiddenAnchorRef placed outside modal JSX so anchor persists when modal unmounts during download initiation
+- [Phase 16]: Blob URL revoked after 100ms setTimeout to give browser time to initiate download before freeing object URL
 
 ### Research Flags for v2.2
 
@@ -170,6 +174,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T22:29:06.983Z
-Stopped at: Checkpoint 16-01 Task 2: human-verify browser validation of preflight modal and generating state
+Last session: 2026-03-22T22:34:58.148Z
+Stopped at: Completed Phase 16 Plan 01 — WH-347 Submission UX
 Resume file: None

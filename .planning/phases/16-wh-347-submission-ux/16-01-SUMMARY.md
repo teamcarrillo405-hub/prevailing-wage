@@ -55,8 +55,8 @@ completed: 2026-03-22
 
 - **Duration:** 2 min
 - **Started:** 2026-03-22T22:26:16Z
-- **Completed:** 2026-03-22T22:28:07Z
-- **Tasks:** 1 of 2 (Task 2 is human browser verification — checkpoint returned)
+- **Completed:** 2026-03-22T22:29:16Z
+- **Tasks:** 2 of 2
 - **Files modified:** 1
 
 ## Accomplishments
@@ -72,9 +72,9 @@ completed: 2026-03-22
 Each task was committed atomically:
 
 1. **Task 1: Replace anchor with fetch-driven download + preflight modal** - `9d76ada` (feat)
-2. **Task 2: Browser verification** — checkpoint (human-verify) — not yet complete
+2. **Task 2: Browser verification of preflight modal and generating state** - human-verify passed (user approved all WH-01 and WH-02 checks)
 
-**Plan metadata:** pending final commit after human verification
+**Plan metadata:** see final docs commit
 
 ## Files Created/Modified
 - `src/client/pages/PayrollWeekDetailPage.tsx` - Added useRef/useState, handleDownloadClick, handleConfirmedDownload, preflight modal JSX, hidden anchor ref; replaced `<a href>` with `<Button>`
@@ -99,9 +99,9 @@ None.
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Code changes complete and committed
-- Task 2 (human browser verification) required: start dev server, navigate to a week with violations, verify modal flow, generating state, and double-click prevention
-- After Task 2 passes: WH-01 and WH-02 requirements fully satisfied, Phase 16 complete
+- Phase 16 complete. Both WH-01 and WH-02 requirements satisfied and browser-verified.
+- Preflight modal, fetch-driven download, generating state, and double-click guard are production-ready.
+- No blockers. v2.2 milestone Phase 16 is done.
 
 ---
 *Phase: 16-wh-347-submission-ux*

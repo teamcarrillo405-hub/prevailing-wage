@@ -60,8 +60,8 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| WH-01 | Phase 16 | Pending |
-| WH-02 | Phase 16 | Pending |
+| WH-01 | Phase 16 | Complete |
+| WH-02 | Phase 16 | Complete |
 | COMP-03 | Phase 15 | Complete |
 | UX-04 | Phase 15 | Complete |
 | RPT-01 | Phase 15 | Complete |
