@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Design Polish + Landing Page
-status: completed
-stopped_at: Completed 14-03-PLAN.md
-last_updated: "2026-03-22T20:00:20.580Z"
+milestone: v2.2
+milestone_name: UX Completion + Compliance Hardening
+status: in_progress
+stopped_at: Defining requirements
+last_updated: "2026-03-22"
 last_activity: 2026-03-22
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
-  percent: 80
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-20)
+See: .planning/PROJECT.md (updated 2026-03-22)
 
-**Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — no missing steps.
-**Current focus:** v2.1 — Design Polish + Landing Page — Phase 10 next
+**Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
+**Current focus:** v2.2 — UX Completion + Compliance Hardening — defining requirements
 
 ## Current Position
 
-Milestone: v2.1 — Design Polish + Landing Page
-Phase: 14
-Status: Phase 13 complete — begin with `/gsd:plan-phase 14`
+Milestone: v2.2 — UX Completion + Compliance Hardening
+Phase: Not started (defining requirements)
+Status: Defining requirements
 Last activity: 2026-03-22
 
 Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)

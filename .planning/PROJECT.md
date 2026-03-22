@@ -8,6 +8,17 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
+## Current Milestone: v2.2 — UX Completion + Compliance Hardening
+
+**Goal:** Close every known UX gap and compliance gap deferred from v2.0/v2.1 — making the app submission-ready with clear feedback loops and tighter compliance enforcement.
+
+**Target features:**
+- WH-347 preflight: violation summary on download click, confirmation before generating (warn, not block)
+- WH-347 download feedback: "Generating..." → "Download ready" state
+- Workflow progress indicator on Project Detail (Create → Workers → Payroll → WH-347)
+- Apprentice ratio check (COMP-03): per-week flag when apprentice hours exceed allowed ratio
+- Print-to-PDF for reports: optimize print CSS on fringe summary and pay history (browser print, no server PDF)
+
 ## Current State (v2.1)
 
 **Shipped:** 2026-03-22
@@ -75,13 +86,13 @@ A contractor can run a full project end-to-end — create project → add worker
 
 ### Active
 
-<!-- v2.2 candidates -->
+<!-- v2.2 — in progress -->
 
-- WH-347 download with explicit "Generating..." → "Download ready" state feedback
+- WH-347 download with "Generating..." → "Download ready" state feedback
+- WH-347 preflight: show violation summary, require confirmation before generating
 - Workflow progress indicator on Project Detail (Create → Workers → Payroll → WH-347)
-- Compliance preflight summary before WH-347 download
-- Apprentice ratio daily check (COMP-03) — complex compliance rule
-- PDF reports (fringe benefit summary, worker pay history) — on-screen works, PDF deferred
+- Apprentice ratio per-week check (COMP-03) — extends compliance engine
+- Print-to-PDF for reports (browser print optimization on fringe summary + pay history)
 
 ### Out of Scope
 
@@ -137,4 +148,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Single user per account | Simplicity for v1/v2; multi-user is a future milestone | — Pending |
 
 ---
-*Last updated: 2026-03-22 after v2.1 milestone*
+*Last updated: 2026-03-22 — v2.2 milestone started*
