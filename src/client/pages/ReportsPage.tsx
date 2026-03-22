@@ -126,7 +126,32 @@ export function ReportsPage() {
 
   return (
     <>
-      <style>{`@media print { nav { display: none !important; } }`}</style>
+      <style>{`
+        @media print {
+          /* Hide navigation, tab chrome, and interactive controls */
+          nav { display: none !important; }
+          .print-hidden { display: none !important; }
+
+          /* Allow tables to break across pages with header repeat */
+          .overflow-x-auto { overflow: visible !important; }
+          table { width: 100% !important; }
+          thead { display: table-header-group !important; }
+          tfoot { display: table-footer-group !important; }
+          tbody tr { page-break-inside: avoid; }
+
+          /* Remove ink-wasting alternating row backgrounds */
+          .bg-gray-50 { background-color: white !important; }
+
+          /* Consistent column widths */
+          th, td { white-space: nowrap; padding: 6px 12px !important; }
+
+          /* Remove rounded borders that clip on print */
+          .rounded-lg { border-radius: 0 !important; }
+
+          /* Reduce page margins for more content area */
+          @page { margin: 0.5in; }
+        }
+      `}</style>
       <Layout>
       <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
 
@@ -134,14 +159,14 @@ export function ReportsPage() {
         <PageHeader
           title="Reports"
           action={
-            <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700">
+            <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 print-hidden">
               &larr; Project
             </Link>
           }
         />
 
         {/* Tabs */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 print-hidden">
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab('fringe')}
@@ -241,7 +266,7 @@ export function ReportsPage() {
 
               {/* Worker selector */}
               {workers.length > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 print-hidden">
                   <label className="text-sm text-gray-600 font-medium" htmlFor="worker-select">
                     Worker:
                   </label>
