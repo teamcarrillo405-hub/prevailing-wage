@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: completed
-stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-03-22T18:53:45.819Z"
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-03-22T18:54:37.194Z"
 last_activity: 2026-03-20 — Phase 13 landing page + routing verified and closed (181/181 tests green)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 80
 ---
 
@@ -68,6 +68,7 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 | Phase 13-landing-page-routing P02 | 2min | 1 tasks | 1 files |
 | Phase 13-landing-page-routing P03 | 2min | 2 tasks | 1 files |
 | Phase 14 P01 | 5min | 3 tasks | 3 files |
+| Phase 14 P02 | 4min | 3 tasks | 3 files |
 
 ### Decisions
 
@@ -134,6 +135,8 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 - [Phase 13-02]: hero h1 packs all three required terms (WH-347, Davis-Bacon, SAM.gov) into a two-line headline above the fold
 - [Phase 14]: LoginPage is now login-only — RegisterForm removed, Link to /register replaces mode toggle
 - [Phase 14]: Badge variant mapping in ProjectCard: violations->violation, clean->compliant, no payroll->neutral
+- [Phase 14-page-by-page-polish]: WorkersPage back button kept as standalone raw button above PageHeader — preserves navigation clarity without nesting inside header
+- [Phase 14-page-by-page-polish]: ProjectDetailPage nav links use secondary button className directly on Link (not Button wrapping) — avoids asChild dependency since Button renders button and Link renders a
 
 ### Research Flags for v2.1
 
@@ -157,6 +160,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T18:53:45.816Z
-Stopped at: Completed 14-01-PLAN.md
+Last session: 2026-03-22T18:54:37.192Z
+Stopped at: Completed 14-02-PLAN.md
 Resume file: None
