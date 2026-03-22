@@ -6,6 +6,8 @@ import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
 
 interface PayrollWeek {
   id: string;
@@ -137,7 +139,7 @@ export function PayrollWeekDetailPage() {
           {weekId && (
             <a
               href={`/api/export/wh347/${weekId}`}
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800"
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
             >
               Download WH-347
             </a>
@@ -198,11 +200,9 @@ export function PayrollWeekDetailPage() {
                         </td>
                         <td className="px-5 py-3">
                           {violation ? (
-                            <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
-                              {violationLabel(violation.violationType)}
-                            </span>
+                            <Badge variant="violation">{violationLabel(violation.violationType)}</Badge>
                           ) : (
-                            <span className="text-xs text-gray-400">OK</span>
+                            <Badge variant="compliant">OK</Badge>
                           )}
                         </td>
                       </tr>
@@ -232,20 +232,22 @@ export function PayrollWeekDetailPage() {
                 <p className="text-sm font-semibold text-red-700 mb-3">Compliance Violations</p>
                 <ul className="space-y-2">
                   {complianceData.violations.map((v, i) => (
-                    <li key={i} className="text-sm text-gray-700">
-                      <span className="font-medium">{v.workerName}</span>
-                      {' — '}
-                      {violationLabel(v.violationType)}: expected ${v.expected.toFixed(2)}, paid $
-                      {v.actual.toFixed(2)} (delta ${v.delta.toFixed(2)})
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                      <Badge variant="violation" className="mt-0.5 shrink-0">
+                        {violationLabel(v.violationType)}
+                      </Badge>
+                      <span>
+                        <span className="font-medium">{v.workerName}</span>
+                        {': expected $'}{v.expected.toFixed(2)}{', paid $'}{v.actual.toFixed(2)}{' (delta $'}{v.delta.toFixed(2)}{')'}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </div>
             ) : (
-              <div className="px-5 py-4">
-                <p className="text-sm text-green-700 font-medium">
-                  No compliance violations for this week.
-                </p>
+              <div className="px-5 py-4 flex items-center gap-2">
+                <Badge variant="compliant">Compliant</Badge>
+                <span className="text-sm text-gray-700">No violations for this payroll week.</span>
               </div>
             )}
           </Card>
