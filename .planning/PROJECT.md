@@ -2,36 +2,31 @@
 
 ## What This Is
 
-A web application that helps general contractors manage Davis-Bacon prevailing wage compliance. Contractors create projects, add workers with trade classifications, enter weekly certified payroll, generate the federally-required WH-347 form (January 2025 revision), and view compliance status and reports — all from one application with no manual rate lookup.
+A web application that helps general contractors manage Davis-Bacon prevailing wage compliance. Contractors create projects, add workers with trade classifications, enter weekly certified payroll, generate the federally-required WH-347 form (January 2025 revision), and view compliance status and reports — all from one branded application with no manual rate lookup and a clean, professional interface.
 
 ## Core Value
 
-A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, and real-time compliance flags before submission.
+A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v2.1 — Design Polish + Landing Page
+## Current State (v2.1)
 
-**Goal:** Transform the app from generic-looking to clean + professional with a full marketing landing page and consistent HCC brand polish across every page.
-
-**Target features:**
-- Full marketing landing page (HCC logo, value prop, feature list, CTA to register)
-- UI polish across all pages: Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register
-- Typography hierarchy (Oswald headlines at correct sizes, Inter body)
-- Table and data display polish (spacing, borders, cell contrast)
-- Card and layout consistency (padding, shadow, border-radius)
-- Competitor-beating design vs LCPtracker, Elation, QuickBooks, ADP
-
-## Current State (v2.0)
-
-**Shipped:** 2026-03-20
+**Shipped:** 2026-03-22
 **Tests:** 181 passing
 **Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation
+**LOC:** ~10,375 TypeScript (src/)
 
 **What works end-to-end:**
-- Project creation → workers/classifications → weekly payroll entry → WH-347 PDF (January 2025 form)
-- Compliance engine flags under-wage and CWHSSA OT violations before WH-347 submission
-- Dashboard shows compliance badge + week count per project
-- Reports: fringe benefit summary and worker pay history
-- Navigation: every page has explicit links to adjacent workflow steps
+- Full marketing landing page at "/" (HCC brand, WH-347/Davis-Bacon/SAM.gov above fold, CTA to /register)
+- Auth-aware routing: authenticated → /dashboard, unauthenticated → /, wildcard handled
+- Separate RegisterPage at /register — no embedded form toggle in LoginPage
+- All pages use design token classes (no hardcoded hex), Oswald/Inter typography, Card/Badge/Button/PageHeader/EmptyState primitives
+- Dashboard empty state via EmptyState component; compliance badges use Badge variants
+- Workers: missing-data Badge, Button primary for form actions, PageHeader
+- Payroll Entry: EmptyState for no-workers branch
+- Project Detail: Badge for funding type, secondary button styling for nav links
+- Payroll Week Detail: Badge for violation/compliant status, WH-347 gold-outlined anchor
+- Reports: token-clean tab active state, print CSS hides nav chrome
+- Login: login-only with bg-surface-page, border-brand-gold, Link to /register
 
 ## Requirements
 
@@ -64,12 +59,29 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ Fringe benefit summary report per worker (using frozen rate snapshots) — v2.0
 - ✓ Worker pay history report across all payroll weeks in descending date order — v2.0
 
+<!-- Shipped in v2.1 (phases 10–14) -->
+
+- ✓ HCC brand colors applied via named CSS tokens — @theme in index.css, no hardcoded hex — v2.1
+- ✓ Oswald (headlines) and Inter (body) loaded via Google Fonts — v2.1
+- ✓ All 7 hardcoded inline brand values replaced with design token classes — v2.1
+- ✓ All 43 focus:outline-none instances migrated to focus:outline-hidden — v2.1
+- ✓ Card, Button (primary/secondary/ghost), Badge (compliant/violation/warning/neutral), PageHeader, EmptyState primitives — v2.1
+- ✓ Dark nav (#1a1a1a) with gold accent on every protected page — v2.1
+- ✓ Typography hierarchy enforced globally (Oswald/Inter) — v2.1
+- ✓ Consistent Card-based layout with uniform spacing across all pages — v2.1
+- ✓ Full marketing landing page at "/" with WH-347/Davis-Bacon/SAM.gov hero, 6 sections, HCC brand — v2.1
+- ✓ Auth-aware routing: PublicRoute, WildcardRedirect, separate RegisterPage — v2.1
+- ✓ All 7 app pages use design primitives — no ad-hoc inline styling — v2.1
+
 ### Active
 
-<!-- v2.1 — requirements being defined -->
+<!-- v2.2 candidates -->
 
-- Landing page: Full marketing homepage with HCC brand (in progress)
-- UI polish: Typography hierarchy, table/data polish, card/layout consistency across all pages (in progress)
+- WH-347 download with explicit "Generating..." → "Download ready" state feedback
+- Workflow progress indicator on Project Detail (Create → Workers → Payroll → WH-347)
+- Compliance preflight summary before WH-347 download
+- Apprentice ratio daily check (COMP-03) — complex compliance rule
+- PDF reports (fringe benefit summary, worker pay history) — on-screen works, PDF deferred
 
 ### Out of Scope
 
@@ -77,19 +89,23 @@ A contractor can run a full project end-to-end — create project → add worker
 - Multi-user / team accounts — single contractor user per account
 - Payroll provider integrations (QuickBooks, ADP) — manual entry is intentional for compliance audit trail
 - State-specific prevailing wage forms (CA DIR, WA L&I) — federal WH-347 only
-- Apprentice ratio daily check (COMP-03) — complex daily loop; deferred to v2.1
-- Missing-data hard block on WH-347 submission (COMP-04) — warning only (UX-03); hard block deferred
+- Missing-data hard block on WH-347 submission — warning only (UX-03); hard block deferred
+- Dark mode toggle — CSS complexity, compliance software is often printed or screen-shared; not needed
+- Customizable dashboard widgets — fixed well-designed layout preferred
+- Feature tour/onboarding overlay — empty states with action prompts are more effective
+- Inline editing in payroll tables — audit trail risk; dedicated edit views are correct
 
 ## Context
 
 - **Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation
-- **Port:** Server on 4099 (moved from 3001 to avoid conflicts); Vite dev proxy to 4099
-- **Brand:** HCC — dark nav (#1a1a1a), gold accent (#F5C518), Oswald headlines, Inter body
+- **Port:** Server on 4099; Vite dev proxy to 4099
+- **Brand:** HCC — dark nav (#1a1a1a via bg-nav-dark), gold accent (#F5C518 via brand-gold), Oswald headlines, Inter body — all via @theme tokens
 - **WD Source:** SAM.gov WDOL v1 API (federal only); 50-state seed list hardcoded in wdolSync.ts
 - **WH-347:** Coordinate overlay on official 2025 form via pdf-lib; `fillWh347()` with multi-page chunking (8 workers/page)
 - **Compliance:** Rate snapshots frozen on `payrollEntries.fringeRateSnapshot` / `baseRateSnapshot` — never re-read from live WD
 - **Pre-existing TS errors:** workers.ts lines 108/115 implicit any — known, non-fatal
 - **Migration workflow:** SQL-only migrations must be manually registered in `meta/_journal.json`
+- **Button/asChild:** Button component has no `asChild` prop — use secondary button classes on `<a>` directly for download links
 
 ## Constraints
 
@@ -98,6 +114,7 @@ A contractor can run a full project end-to-end — create project → add worker
 - **DB:** SQLite via Drizzle — add-only migrations, never drop columns
 - **Auth:** JWT in httpOnly cookie — do not change auth model
 - **Compliance rates:** Always use snapshot values from payrollEntries, never re-read live wage determinations
+- **Design tokens:** All brand values via @theme tokens — never hardcode #F5C518 or #1a1a1a in JSX
 
 ## Key Decisions
 
@@ -112,8 +129,12 @@ A contractor can run a full project end-to-end — create project → add worker
 | CWHSSA fringe not multiplied for OT | DOL formula: `totalHours×fringe` is flat; fringe is per-hour regardless of premium | ✓ Good |
 | Compliance query in `ProjectCard` not `DashboardPage` | Each card owns its fetch; staleTime:60_000 prevents N re-fetches on navigate-back | ✓ Good |
 | Static route before parameterized route | `/project/:projectId` must precede `/:weekId` to prevent wildcard capture | ✓ Good |
-| Reports on-screen only for v2.0 | PDF reports deferred — on-screen covers DOL audit requests | — Pending v2.1 |
+| @theme CSS tokens over inline styles | Single-source brand values propagate everywhere; no per-component hex values | ✓ Good — v2.1 |
+| Button has no asChild prop | Simpler component; copy secondary classes to `<a>` directly for link-buttons | ✓ Good — v2.1 |
+| PublicRoute + WildcardRedirect pattern | Mirrors ProtectedRoute pattern; auth-aware without duplicating logic | ✓ Good — v2.1 |
+| LoginPage login-only (no embedded RegisterForm) | Simpler component, cleaner routing, dedicated RegisterPage at /register | ✓ Good — v2.1 |
+| Reports PDF deferred to v2.2 | On-screen covers DOL audit requests; PDF complexity not needed for v2.1 scope | — Pending v2.2 |
 | Single user per account | Simplicity for v1/v2; multi-user is a future milestone | — Pending |
 
 ---
-*Last updated: 2026-03-20 after v2.0 milestone*
+*Last updated: 2026-03-22 after v2.1 milestone*

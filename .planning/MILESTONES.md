@@ -1,5 +1,27 @@
 # Milestones
 
+## v2.1 Design Polish + Landing Page (Shipped: 2026-03-22)
+
+**Phases completed:** 5 phases, 14 plans, 23 tasks
+
+**Key accomplishments:**
+
+- 14-token HCC brand @theme in index.css with Oswald/Inter Google Fonts loaded via HTML preconnect tags and @layer base global font defaults
+- Removed all 7 hardcoded brand inline styles across 5 TSX files, replacing backgroundColor and fontFamily props with bg-brand-gold and font-headline utility classes, browser-verified on WageClassificationsTable tr element.
+- Migrated all 43 focus:outline-none instances across 9 TSX files to focus:outline-hidden + focus:ring-brand-gold, eliminating arbitrary color values and fixing forced-color mode compliance
+- One-liner:
+- PageHeader (title/subtitle/action) and EmptyState (heading/message/action) using design tokens, completing all five Phase 11 UI primitives
+- Layout.tsx nav migrated from hardcoded hex (#F5C518, bg-gray-900) to design tokens (bg-nav-dark, border-brand-gold, hover:text-brand-gold), propagating brand-correct dark nav and gold accent to all 8 protected pages
+- DashboardPage and ProjectDetailPage migrated from raw h2 elements to PageHeader primitive, establishing h1 semantic hierarchy and design-system typography pattern for all pages.
+- 8 inline card div patterns replaced with Card primitive across 5 files, completing SHELL-03 and eliminating all hardcoded card styling in the protected app shell.
+- PublicRoute guard + RegisterPage + auth-aware App.tsx route tree enabling '/' and '/register' as guarded public routes with WildcardRedirect for unknown URLs
+- LandingPage.tsx top half: sticky dark nav, above-the-fold hero naming WH-347/Davis-Bacon/SAM.gov, 3 pain-point Card grid, 3-step How It Works with gold lucide icons and scroll anchor
+- LandingPage.tsx complete: 6-card feature highlights grid, January-2025-specific trust signals, gold-bg CTA close, and branded footer — all eight section renders wired
+- One-liner:
+- PayrollWeekDetailPage Badge violations + WH-347 anchor button and ReportsPage token-clean tabs + print CSS — final Phase 14 gate passed with human approval of all 7 pages.
+
+---
+
 ## v1.0 — Foundation + Wage Engine + Payroll + Differentiators
 
 **Shipped:** 2026-03-19
