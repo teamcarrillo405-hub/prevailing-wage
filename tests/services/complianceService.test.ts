@@ -27,6 +27,7 @@ async function seedApprenticeWorker(
       tradeCode: 'ELEC',
       tradeDescription: 'Electrician Apprentice',
       laborType: 'apprentice',
+      apprenticePercent: 80,
     });
   const classificationId = cRes.body.data?.classification?.id as string;
 
