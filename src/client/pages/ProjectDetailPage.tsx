@@ -5,6 +5,7 @@ import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 
 interface Project {
   id: string;
@@ -69,8 +70,10 @@ export function ProjectDetailPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Funding type</dt>
-                <dd className="inline-block text-xs font-medium px-2 py-0.5 bg-[#F5C518] text-gray-900 rounded">
-                  {FUNDING_TYPE_LABELS[project.fundingType] ?? project.fundingType}
+                <dd>
+                  <Badge variant="neutral">
+                    {FUNDING_TYPE_LABELS[project.fundingType] ?? project.fundingType}
+                  </Badge>
                 </dd>
               </div>
               <div className="flex justify-between">
@@ -92,31 +95,31 @@ export function ProjectDetailPage() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               to={`/projects/${project.id}/workers`}
-              className="inline-block rounded border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
             >
               Workers
             </Link>
             <Link
               to={`/projects/${project.id}/payroll`}
-              className="inline-block rounded border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
             >
               Payroll Weeks
             </Link>
             <Link
               to={`/projects/${project.id}/ot-scenarios`}
-              className="inline-block rounded border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
             >
               OT Scenario Planner
             </Link>
             <Link
               to={`/projects/${project.id}/variance`}
-              className="inline-block rounded border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
             >
               Variance
             </Link>
             <Link
               to={`/projects/${project.id}/reports`}
-              className="inline-block rounded border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
             >
               Reports
             </Link>
