@@ -53,14 +53,65 @@
 
 ---
 
+## Milestone: v2.1 — Design Polish + Landing Page
+
+**Shipped:** 2026-03-22
+**Phases:** 5 (10-14) | **Plans:** 14 | **Tests:** 181 (no regressions)
+
+### What Was Built
+
+- **CSS token pipeline**: 14-token `@theme` in index.css — gold, dark, surface, status colors — propagating to all components via utility classes
+- **Oswald/Inter typography**: Google Fonts via HTML preconnect, `@layer base` defaults, `font-headline` / `font-body` utilities
+- **5 UI primitives**: Card, Button (primary/secondary/ghost), Badge (compliant/violation/warning/neutral), PageHeader, EmptyState — fully token-referenced
+- **Dark nav shell**: Layout.tsx using `bg-nav-dark`/`border-brand-gold`/`hover:text-brand-gold` tokens applied globally to all 8 protected pages
+- **Full marketing landing page**: 8 sections (nav, hero, problem, how-it-works, feature highlights, trust signals, CTA close, footer) — WH-347/Davis-Bacon/SAM.gov above fold
+- **Auth-aware routing**: PublicRoute guard, WildcardRedirect, separate RegisterPage at /register, LoginPage simplified to login-only
+- **Page-by-page polish**: All 7 app pages migrated to primitives — zero `bg-[#F5C518]` hardcoded hex remaining anywhere
+
+### What Worked
+
+- **Plan-checker blockers before execution**: Catching the `<Button as="span">` inside `<a>` (invalid HTML), the truth/implementation contradiction in 14-02, and the missing ProjectCard task before execution saved significant rework. Plan verification gates paid off.
+- **Wave-1 parallelization on independent pages**: Plans 14-01 and 14-02 each modified different files — parallel execution cut wave time in half with zero merge conflicts.
+- **Token-first approach**: Defining `@theme` tokens in Phase 10 before any component work meant Phase 11–14 never needed to invent colors — they just referenced existing tokens. Single-source propagation worked exactly as intended.
+- **`<details>` milestone collapse**: Prior milestone details sections in ROADMAP.md maintained constant context cost — only the active milestone was in working context at any time.
+
+### What Was Inefficient
+
+- **Stale traceability in REQUIREMENTS.md**: LANDING-01 through LANDING-06 showed "Pending" even after Phase 13 shipped. The gsd-tools `milestone complete` doesn't auto-update traceability rows based on phase completion — this required a manual note during archival. A post-phase hook to update traceability would eliminate this.
+- **`must_haves.truths` occasionally drifted from implementation**: Plan 14-02 had a truth saying "Button variant='secondary'" but the task used copied CSS classes directly. Plan-checker caught it, but the root issue is that truths were written before the interface investigation revealed the `asChild` gap. Truths should be written after reading the actual component interfaces.
+- **Page-by-page plans required prior context to write**: The plan-checker needed all 3 Phase 14 plans re-read after previous context was lost. Next time, phase plans should be written and verified in the same session as execution if possible.
+
+### Patterns Established
+
+- `import { Badge } from '../ui/Badge'` — semantic status display, not inline `<span className="bg-red-100">` shortcuts
+- `<a href={url} className={buttonSecondaryClasses}>` — correct pattern for link-buttons when Button has no `asChild` prop
+- Plan `must_haves.truths` as grep-verifiable assertions — every truth should have a matching `pattern:` field for automated verification
+- LoginPage as login-only with `<Link to="/register">` — embed-toggle pattern creates routing complexity and is the wrong abstraction
+
+### Key Lessons
+
+1. **Catch HTML validity in plan review**: `<button>` inside `<a>` is invalid HTML — the interactive content model rule. Any plan that nests a Button component inside an `<a>` needs `asChild` support or a different approach.
+2. **Truths must match implementation**: If a plan truth says "uses Button primitive" but the task copies Button's CSS classes instead, the grep verification will fail. Write truths after deciding the implementation approach, not before.
+3. **Token migration is the right foundation investment**: Phases 10–12 felt like infrastructure work with no user-visible output. But Phase 14 ran smoothly specifically because every primitive already referenced tokens — no color decisions needed at polish time.
+4. **PublicRoute mirrors ProtectedRoute**: The symmetry (both read `useAuth()`, both redirect on mismatch) made the auth routing trivial to reason about and test.
+
+### Cost Observations
+
+- Sessions: 3 (Phase 13 + plan writing / Phase 14 execution / milestone completion)
+- 53 commits across phases 10–14
+- All work on master branch
+- 2 days total (2026-03-20 planning → 2026-03-22 completion)
+
+---
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v2.0 |
-|--------|------|------|
-| Phases | 5 | 4 |
-| Plans | — | 16 |
-| Tests | — | 181 |
-| Files changed | — | 70 |
-| LOC (net) | — | +10,774 |
-| Days | — | 1 |
-| Regressions | — | 0 |
+| Metric | v1.0 | v2.0 | v2.1 |
+|--------|------|------|------|
+| Phases | 5 | 4 | 5 |
+| Plans | — | 16 | 14 |
+| Tests | — | 181 | 181 |
+| Files changed | — | 70 | ~45 |
+| LOC (src/) | — | ~10,774 | ~10,375 |
+| Days | — | 1 | 2 |
+| Regressions | — | 0 | 0 |
