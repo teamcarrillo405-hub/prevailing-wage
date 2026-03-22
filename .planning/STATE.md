@@ -4,8 +4,8 @@ milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: completed
 stopped_at: Completed 14-03-PLAN.md
-last_updated: "2026-03-22T19:06:17.024Z"
-last_activity: 2026-03-20 — Phase 13 landing page + routing verified and closed (181/181 tests green)
+last_updated: "2026-03-22T19:11:15.974Z"
+last_activity: 2026-03-22
 progress:
   total_phases: 5
   completed_phases: 5
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-20)
 ## Current Position
 
 Milestone: v2.1 — Design Polish + Landing Page
-Phase: 14 (next — not started)
+Phase: 14
 Status: Phase 13 complete — begin with `/gsd:plan-phase 14`
-Last activity: 2026-03-20 — Phase 13 landing page + routing verified and closed (181/181 tests green)
+Last activity: 2026-03-22
 
 Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 
