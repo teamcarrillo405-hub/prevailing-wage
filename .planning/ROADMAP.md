@@ -35,7 +35,7 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
 - [x] **Phase 11: UI Primitives** — Card, Button, Badge, PageHeader, EmptyState reusable components (completed 2026-03-20)
 - [x] **Phase 12: App Shell + Global Layout** — dark nav on all protected pages, typography hierarchy, consistent card spacing (completed 2026-03-20)
 - [x] **Phase 13: Landing Page + Routing** — full marketing homepage at public route "/", auth-aware routing (completed 2026-03-20)
-- [ ] **Phase 14: Page-by-Page Polish** — Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register
+- [x] **Phase 14: Page-by-Page Polish** — Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register (completed 2026-03-22)
 
 ## Phase Details
 
@@ -112,9 +112,9 @@ Plans:
   6. Login and Register pages use the gold primary button, display the HCC brand, and share a consistent form layout
 **Plans**: 3 plans
 Plans:
-- [ ] 14-01-PLAN.md — DashboardPage EmptyState adoption (PAGE-01) + LoginPage token cleanup and login-only simplification (PAGE-07 partial)
-- [ ] 14-02-PLAN.md — WorkersPage Badge+Button+PageHeader (PAGE-03), PayrollEntryPage EmptyState+Button+PageHeader (PAGE-04), ProjectDetailPage Badge+nav links (PAGE-02)
-- [ ] 14-03-PLAN.md — PayrollWeekDetailPage Badge for violations (PAGE-05), ReportsPage token tabs + print CSS (PAGE-06), human visual checkpoint (PAGE-07 remainder)
+- [x] 14-01-PLAN.md — DashboardPage EmptyState adoption (PAGE-01) + LoginPage token cleanup and login-only simplification (PAGE-07 partial)
+- [x] 14-02-PLAN.md — WorkersPage Badge+Button+PageHeader (PAGE-03), PayrollEntryPage EmptyState+Button+PageHeader (PAGE-04), ProjectDetailPage Badge+nav links (PAGE-02)
+- [x] 14-03-PLAN.md — PayrollWeekDetailPage Badge for violations (PAGE-05), ReportsPage token tabs + print CSS (PAGE-06), human visual checkpoint (PAGE-07 remainder)
 
 ## Progress
 
@@ -129,4 +129,4 @@ Plans:
 | 11. UI Primitives | 2/2 | Complete    | 2026-03-20 | - |
 | 12. App Shell + Global Layout | 3/3 | Complete    | 2026-03-20 | - |
 | 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
-| 14. Page-by-Page Polish | 2/3 | In Progress|  | - |
+| 14. Page-by-Page Polish | 2/3 | 3/3 | Complete   | 2026-03-22 |

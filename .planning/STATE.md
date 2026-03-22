@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Design Polish + Landing Page
 status: completed
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-03-22T18:54:37.194Z"
+stopped_at: Completed 14-03-PLAN.md
+last_updated: "2026-03-22T19:06:17.024Z"
 last_activity: 2026-03-20 — Phase 13 landing page + routing verified and closed (181/181 tests green)
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 80
 ---
 
@@ -45,6 +45,7 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 ## Performance Metrics
 
 **Velocity (v2.1):**
+
 - Total plans completed: 0
 - Average duration: —
 - Total execution time: —
@@ -56,6 +57,7 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 | - | - | - | - |
 
 ## Accumulated Context
+
 | Phase 10-css-design-token-foundation P01 | 10 | 2 tasks | 2 files |
 | Phase 10-css-design-token-foundation P03 | 5min | 2 tasks | 9 files |
 | Phase 10-css-design-token-foundation P02 | 20min | 3 tasks | 5 files |
@@ -69,6 +71,7 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 | Phase 13-landing-page-routing P03 | 2min | 2 tasks | 1 files |
 | Phase 14 P01 | 5min | 3 tasks | 3 files |
 | Phase 14 P02 | 4min | 3 tasks | 3 files |
+| Phase 14-page-by-page-polish P03 | 15 | 3 tasks | 2 files |
 
 ### Decisions
 
@@ -137,6 +140,8 @@ Progress: [████████░░] 80% (4 of 5 v2.1 phases complete)
 - [Phase 14]: Badge variant mapping in ProjectCard: violations->violation, clean->compliant, no payroll->neutral
 - [Phase 14-page-by-page-polish]: WorkersPage back button kept as standalone raw button above PageHeader — preserves navigation clarity without nesting inside header
 - [Phase 14-page-by-page-polish]: ProjectDetailPage nav links use secondary button className directly on Link (not Button wrapping) — avoids asChild dependency since Button renders button and Link renders a
+- [Phase 14-page-by-page-polish]: WH-347 download uses secondary button classes directly on <a> tag — Button renders <button> making nesting invalid HTML
+- [Phase 14-page-by-page-polish]: Print CSS added via inline style block before Layout — avoids touching Layout.tsx
 
 ### Research Flags for v2.1
 
@@ -160,6 +165,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T18:54:37.192Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-03-22T19:06:17.019Z
+Stopped at: Completed 14-03-PLAN.md
 Resume file: None

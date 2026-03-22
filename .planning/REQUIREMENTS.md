@@ -115,6 +115,6 @@
 | PAGE-02 | Phase 14 | Complete |
 | PAGE-03 | Phase 14 | Complete |
 | PAGE-04 | Phase 14 | Complete |
-| PAGE-05 | Phase 14 | Pending |
-| PAGE-06 | Phase 14 | Pending |
+| PAGE-05 | Phase 14 | Complete |
+| PAGE-06 | Phase 14 | Complete |
 | PAGE-07 | Phase 14 | Complete |
