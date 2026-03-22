@@ -7,6 +7,7 @@ import { ProjectCard } from '../components/projects/ProjectCard';
 import { ProjectForm } from '../components/projects/ProjectForm';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
 
 interface Project {
   id: string;
@@ -62,12 +63,13 @@ export function DashboardPage() {
       )}
 
       {!isLoading && !isError && projects.length === 0 && (
-        <div className="text-center py-16 text-gray-500">
-          <p className="text-lg font-medium mb-2">No projects yet</p>
-          <p className="text-sm">
-            Click "New Project" to create your first prevailing wage project.
-          </p>
-        </div>
+        <EmptyState
+          heading="No projects yet"
+          message='Click "New Project" to create your first prevailing wage project.'
+          action={
+            <Button onClick={() => setShowForm(true)}>New Project</Button>
+          }
+        />
       )}
 
       {!isLoading && !isError && projects.length > 0 && (
