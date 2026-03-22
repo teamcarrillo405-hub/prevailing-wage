@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: UX Completion + Compliance Hardening
-status: in_progress
-stopped_at: Roadmap created — ready for Phase 15 planning
-last_updated: "2026-03-22"
+status: planning
+stopped_at: Completed 15-02-PLAN.md
+last_updated: "2026-03-22T21:20:56.154Z"
 last_activity: 2026-03-22
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
 | Phase 14 P01 | 5min | 3 tasks | 3 files |
 | Phase 14 P02 | 4min | 3 tasks | 3 files |
 | Phase 14-page-by-page-polish P03 | 15 | 3 tasks | 2 files |
+| Phase 15-compliance-engine-hardening-independent-frontend P02 | 5 | 1 tasks | 1 files |
 
 ### Decisions
 
@@ -139,6 +140,8 @@ Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
 - [Phase 14-page-by-page-polish]: ProjectDetailPage nav links use secondary button className directly on Link (not Button wrapping) — avoids asChild dependency since Button renders button and Link renders a
 - [Phase 14-page-by-page-polish]: WH-347 download uses secondary button classes directly on <a> tag — Button renders <button> making nesting invalid HTML
 - [Phase 14-page-by-page-polish]: Print CSS added via inline style block before Layout — avoids touching Layout.tsx
+- [Phase 15-compliance-engine-hardening-independent-frontend]: WorkflowProgress defined inline in ProjectDetailPage (not a separate file) — single-use component
+- [Phase 15-compliance-engine-hardening-independent-frontend]: isFinal used as WH-347 download proxy for step 4 — Phase 16 may add proper download tracking
 
 ### Research Flags for v2.2
 
@@ -157,6 +160,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T19:06:17.019Z
-Stopped at: Roadmap created for v2.2 (Phases 15-16)
+Last session: 2026-03-22T21:20:56.148Z
+Stopped at: Completed 15-02-PLAN.md
 Resume file: None
