@@ -112,9 +112,9 @@ Plans:
   6. Login and Register pages use the gold primary button, display the HCC brand, and share a consistent form layout
 **Plans**: 3 plans
 Plans:
-- [ ] 14-01-PLAN.md — [To be planned]
-- [ ] 14-02-PLAN.md — [To be planned]
-- [ ] 14-03-PLAN.md — [To be planned]
+- [ ] 14-01-PLAN.md — DashboardPage EmptyState adoption (PAGE-01) + LoginPage token cleanup and login-only simplification (PAGE-07 partial)
+- [ ] 14-02-PLAN.md — WorkersPage Badge+Button+PageHeader (PAGE-03), PayrollEntryPage EmptyState+Button+PageHeader (PAGE-04), ProjectDetailPage Badge+nav links (PAGE-02)
+- [ ] 14-03-PLAN.md — PayrollWeekDetailPage Badge for violations (PAGE-05), ReportsPage token tabs + print CSS (PAGE-06), human visual checkpoint (PAGE-07 remainder)
 
 ## Progress
 
@@ -129,4 +129,4 @@ Plans:
 | 11. UI Primitives | 2/2 | Complete    | 2026-03-20 | - |
 | 12. App Shell + Global Layout | 3/3 | Complete    | 2026-03-20 | - |
 | 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
-| 14. Page-by-Page Polish | v2.1 | 0/? | Not started | - |
+| 14. Page-by-Page Polish | v2.1 | 0/3 | Not started | - |
