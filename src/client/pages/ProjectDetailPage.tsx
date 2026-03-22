@@ -32,6 +32,40 @@ const FUNDING_TYPE_LABELS: Record<string, string> = {
   mixed: 'Mixed',
 };
 
+function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean }[] }) {
+  return (
+    <div className="flex items-center gap-0 mb-6 flex-wrap">
+      {steps.map((step, i) => (
+        <div key={step.label} className="flex items-center">
+          <div className="flex items-center gap-2">
+            <div className={
+              step.complete
+                ? 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold bg-status-compliant text-white'
+                : 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold border-2 border-gray-300 text-gray-400 bg-white'
+            }>
+              {step.complete ? '\u2713' : i + 1}
+            </div>
+            <span className={
+              step.complete
+                ? 'text-sm font-medium text-status-compliant'
+                : 'text-sm font-medium text-gray-400'
+            }>
+              {step.label}
+            </span>
+          </div>
+          {i < steps.length - 1 && (
+            <div className={
+              step.complete
+                ? 'mx-3 h-0.5 w-10 bg-status-compliant shrink-0'
+                : 'mx-3 h-0.5 w-10 bg-gray-200 shrink-0'
+            } />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -41,7 +75,33 @@ export function ProjectDetailPage() {
     enabled: !!id,
   });
 
+  const { data: workersData } = useQuery({
+    queryKey: ['workers', id],
+    queryFn: () => api.get<{ data: { workers: { id: string }[] } }>(`/projects/${id}/workers`),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+
+  const { data: weeksData } = useQuery({
+    queryKey: ['payroll-weeks', id],
+    queryFn: () => api.get<{ weeks: { id: string; isFinal: boolean }[] }>(`/payroll/projects/${id}/weeks`),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+
   const project = data?.data?.project;
+
+  const workers = workersData?.data?.workers ?? [];
+  const weeks = weeksData?.weeks ?? [];
+
+  const steps = [
+    { label: 'Create Project', complete: true },
+    { label: 'Add Workers', complete: workers.length > 0 },
+    { label: 'Enter Payroll', complete: weeks.length > 0 },
+    // Step 4 uses isFinal as proxy for WH-347 download — accurate when users mark weeks final.
+    // Phase 16 may add proper download tracking when WH-347 UX is reworked.
+    { label: 'Download WH-347', complete: weeks.some(w => w.isFinal) },
+  ];
 
   return (
     <Layout>
@@ -59,6 +119,8 @@ export function ProjectDetailPage() {
             title={project.name}
             subtitle={`${project.state} — ${project.county}`}
           />
+
+          <WorkflowProgress steps={steps} />
 
           <Card className="max-w-lg">
             <dl className="space-y-3 text-sm">
