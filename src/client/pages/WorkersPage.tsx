@@ -7,6 +7,9 @@ import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface WageClassification {
   id: string;
@@ -221,12 +224,10 @@ export function WorkersPage() {
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
-          <button onClick={() => navigate(`/projects/${projectId}`)} className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-            &larr; Back to Project
-          </button>
-          <h1 className="text-2xl font-headline text-gray-900">Workers</h1>
-        </div>
+        <button onClick={() => navigate(`/projects/${projectId}`)} className="text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4 inline-block">
+          &larr; Back to Project
+        </button>
+        <PageHeader title="Workers" />
 
         {/* WD status */}
         {wdLoading && (
@@ -294,14 +295,10 @@ export function WorkersPage() {
                     </div>
                     {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
                     <div className="flex gap-2">
-                      <button onClick={() => handleEditSave(w.id)} disabled={updateWorker.isPending}
-                        className="px-4 py-2 bg-[#F5C518] text-gray-900 text-sm font-medium rounded hover:bg-yellow-400 disabled:opacity-50 transition-colors">
+                      <Button onClick={() => handleEditSave(w.id)} disabled={updateWorker.isPending}>
                         {updateWorker.isPending ? 'Saving...' : 'Save Changes'}
-                      </button>
-                      <button onClick={() => { setEditingId(null); setEditError(''); }}
-                        className="px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
-                        Cancel
-                      </button>
+                      </Button>
+                      <Button variant="ghost" onClick={() => { setEditingId(null); setEditError(''); }}>Cancel</Button>
                     </div>
                   </div>
                 ) : confirmDeleteId === w.id ? (
@@ -331,9 +328,7 @@ export function WorkersPage() {
                           {w.address && <span>{w.address}</span>}
                         </p>
                         {(!w.address || !w.ssnLast4) && (
-                          <span className="inline-block text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded mt-1">
-                            Missing data — WH-347 blocked
-                          </span>
+                          <Badge variant="warning" className="mt-1">Missing data — WH-347 blocked</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -565,11 +560,9 @@ export function WorkersPage() {
 
           {formError && <p className="mt-3 text-xs text-red-600">{formError}</p>}
 
-          <button onClick={handleSubmit} disabled={addWorker.isPending}
-            className="mt-5 px-5 py-2 bg-[#F5C518] text-gray-900 text-sm font-medium rounded hover:bg-yellow-400 disabled:opacity-50 transition-colors"
-          >
+          <Button onClick={handleSubmit} disabled={addWorker.isPending} className="mt-5">
             {addWorker.isPending ? 'Saving...' : '+ Add Worker'}
-          </button>
+          </Button>
         </Card>
 
       </div>
