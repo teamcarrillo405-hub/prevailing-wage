@@ -76,7 +76,9 @@ Plans:
   2. Contractor can click "Download Anyway" to proceed or cancel — either action dismisses the modal correctly
   3. WH-347 download anchor shows "Generating..." while the PDF request is in-flight and returns to its normal label after the download begins
   4. Double-clicking the download anchor during generation does not trigger a second PDF request
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 16-01-PLAN.md — Preflight compliance modal + fetch-driven download with generating state and double-click guard
 
 ## Progress
 
@@ -93,4 +95,4 @@ Plans:
 | 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
 | 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
 | 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete    | 2026-03-22 |
-| 16. WH-347 Submission UX | v2.2 | 0/TBD | Not started | - |
+| 16. WH-347 Submission UX | v2.2 | 0/1 | Not started | - |
