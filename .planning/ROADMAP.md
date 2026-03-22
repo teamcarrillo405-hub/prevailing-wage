@@ -47,7 +47,7 @@ Archive: `.planning/milestones/v2.1-ROADMAP.md`
 
 **Milestone Goal:** Close every known UX gap and compliance gap deferred from v2.0/v2.1 — apprentice ratio enforcement, workflow progress visibility, print-ready reports, and WH-347 preflight with generating feedback.
 
-- [ ] **Phase 15: Compliance Engine Hardening + Independent Frontend** - Apprentice ratio check in computeCompliance(), workflow progress indicator on Project Detail, and print CSS for both reports
+- [x] **Phase 15: Compliance Engine Hardening + Independent Frontend** - Apprentice ratio check in computeCompliance(), workflow progress indicator on Project Detail, and print CSS for both reports (completed 2026-03-22)
 - [ ] **Phase 16: WH-347 Submission UX** - Preflight modal with violation summary + confirmation, and generating/ready state feedback on download
 
 ## Phase Details
@@ -61,11 +61,11 @@ Archive: `.planning/milestones/v2.1-ROADMAP.md`
   2. Project Detail page shows a 4-step progress indicator (Create Project, Add Workers, Enter Payroll, Download WH-347) with each step marked complete based on actual data
   3. Fringe benefit summary report prints cleanly via Ctrl+P — table headers repeat per page, totals row visible, no nav chrome or tab UI printed
   4. Worker pay history report prints cleanly via Ctrl+P — worker selector hidden on print, full history table visible, consistent column alignment across pages
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 15-01-PLAN.md — Apprentice ratio violation in computeCompliance() + PayrollWeekDetailPage badge
 - [x] 15-02-PLAN.md — 4-step workflow progress indicator on ProjectDetailPage
-- [ ] 15-03-PLAN.md — Print CSS for fringe summary and pay history reports + totals row
+- [x] 15-03-PLAN.md — Print CSS for fringe summary and pay history reports + totals row
 
 ### Phase 16: WH-347 Submission UX
 **Goal**: Contractors see all violation types before generating a WH-347 and get clear feedback while the PDF is being built
@@ -92,5 +92,5 @@ Plans:
 | 12. App Shell + Global Layout | v2.1 | 3/3 | Complete | 2026-03-20 |
 | 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
 | 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
-| 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 2/3 | In Progress|  |
+| 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete   | 2026-03-22 |
 | 16. WH-347 Submission UX | v2.2 | 0/TBD | Not started | - |

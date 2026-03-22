@@ -64,5 +64,5 @@
 | WH-02 | Phase 16 | Pending |
 | COMP-03 | Phase 15 | Complete |
 | UX-04 | Phase 15 | Complete |
-| RPT-01 | Phase 15 | Pending |
-| RPT-02 | Phase 15 | Pending |
+| RPT-01 | Phase 15 | Complete |
+| RPT-02 | Phase 15 | Complete |

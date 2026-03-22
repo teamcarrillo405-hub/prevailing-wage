@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: UX Completion + Compliance Hardening
 status: planning
-stopped_at: Completed 15-01-PLAN.md — COMP-03 apprentice ratio violation detection
-last_updated: "2026-03-22T21:26:06.222Z"
+stopped_at: Completed 15-03-PLAN.md — print-ready reports with @media print CSS and tfoot totals
+last_updated: "2026-03-22T21:31:06.841Z"
 last_activity: 2026-03-22
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -71,6 +71,7 @@ Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
 | Phase 14-page-by-page-polish P03 | 15 | 3 tasks | 2 files |
 | Phase 15-compliance-engine-hardening-independent-frontend P02 | 5 | 1 tasks | 1 files |
 | Phase 15 P01 | 7min | 2 tasks | 3 files |
+| Phase 15-compliance-engine-hardening-independent-frontend P03 | 3 | 2 tasks | 1 files |
 
 ### Decisions
 
@@ -146,6 +147,8 @@ Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
 - [Phase 15]: apprenticePercent required by workers API schema when laborType=apprentice — seedApprenticeWorker must include it
 - [Phase 15]: weekViolations rendered inside same violations ul — consistent visual treatment with entry-level violations
 - [Phase 15]: apprenticeHours > maxAllowed uses strict greater-than — exactly at 1:3 ratio is compliant
+- [Phase 15-compliance-engine-hardening-independent-frontend]: print-hidden CSS class used (not Tailwind print:hidden variant) — consistent with inline style approach in ReportsPage
+- [Phase 15-compliance-engine-hardening-independent-frontend]: tfoot totals row uses reduce() inline — no derived state needed for accumulation in JSX
 
 ### Research Flags for v2.2
 
@@ -164,6 +167,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T21:26:06.217Z
-Stopped at: Completed 15-01-PLAN.md — COMP-03 apprentice ratio violation detection
+Last session: 2026-03-22T21:31:06.836Z
+Stopped at: Completed 15-03-PLAN.md — print-ready reports with @media print CSS and tfoot totals
 Resume file: None
