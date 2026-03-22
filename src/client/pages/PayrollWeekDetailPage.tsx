@@ -58,10 +58,19 @@ interface ComplianceViolation {
   entryId: string;
 }
 
+interface WeekViolation {
+  violationType: 'apprentice-ratio';
+  detail: string;
+  apprenticeHours: number;
+  journeyworkerHours: number;
+  maxAllowedApprenticeHours: number;
+}
+
 interface ComplianceResult {
   weekId: string;
   projectId: string;
   violations: ComplianceViolation[];
+  weekViolations: WeekViolation[];
   hasViolations: boolean;
   certProperPayment: boolean;
   certAccuratePayroll: boolean;
@@ -240,6 +249,14 @@ export function PayrollWeekDetailPage() {
                         <span className="font-medium">{v.workerName}</span>
                         {': expected $'}{v.expected.toFixed(2)}{', paid $'}{v.actual.toFixed(2)}{' (delta $'}{v.delta.toFixed(2)}{')'}
                       </span>
+                    </li>
+                  ))}
+                  {complianceData.weekViolations?.map((wv, i) => (
+                    <li key={`week-${i}`} className="flex items-start gap-2 text-sm text-gray-700">
+                      <Badge variant="violation" className="mt-0.5 shrink-0">
+                        Apprentice Ratio
+                      </Badge>
+                      <span>{wv.detail}</span>
                     </li>
                   ))}
                 </ul>
