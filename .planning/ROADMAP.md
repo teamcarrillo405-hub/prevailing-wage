@@ -89,7 +89,9 @@ Plans:
   2. User can select a funding type from a dropdown and the list shows only projects of that type
   3. Search and filter state survive back-navigation (browser back button returns to the same filtered view)
   4. When no projects match the active filters, a clear empty state message is shown (not a blank list)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 18-01-PLAN.md — Search input + funding dropdown + useMemo filtered list + URL-persisted params + empty state (DashboardPage.tsx only)
 
 ### Phase 19: WH-347 Submission Tracking
 **Goal**: Contractors can formally record when a WH-347 has been submitted and to whom, and the system enforces that submitted weeks are read-only
@@ -152,7 +154,7 @@ Plans:
 | 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete | 2026-03-22 |
 | 16. WH-347 Submission UX | v2.2 | 1/1 | Complete | 2026-03-22 |
 | 17. DB Migration + Project Archive | v2.3 | 1/2 | In Progress|  |
-| 18. Dashboard Search + Filter | v2.3 | 0/? | Not started | - |
+| 18. Dashboard Search + Filter | v2.3 | 0/1 | Not started | - |
 | 19. WH-347 Submission Tracking | v2.3 | 0/? | Not started | - |
 | 20. Copy Previous Payroll Week | v2.3 | 0/? | Not started | - |
 | 21. Payroll Amendment Workflow | v2.3 | 0/? | Not started | - |
