@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
 status: planning
-stopped_at: Completed 18-01-PLAN.md (Phase 18 complete)
+stopped_at: Completed 19-01-PLAN.md
 last_updated: "2026-03-23"
 last_activity: 2026-03-23
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 12
-  completed_plans: 5
-  percent: 42
+  completed_plans: 6
+  percent: 50
 ---
 
 # State
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
 Phase: 19 — WH-347 Submission Tracking (next)
 Status: Planning
-Last activity: 2026-03-23 — Phase 18 complete (dashboard name search + funding filter, DASH-03 + DASH-04 shipped, browser checkpoint approved)
+Last activity: 2026-03-23 — Phase 19 Plan 01 complete (PATCH/DELETE submit routes + server-side 409 edit lock, SUB-01 + SUB-02 + SUB-03 shipped)
 
-Progress: [███░░░░░░░] 42% (5/12 plans complete)
+Progress: [█████░░░░░] 50% (6/12 plans complete)
 
 ### Phase Structure
 
@@ -40,7 +40,7 @@ Progress: [███░░░░░░░] 42% (5/12 plans complete)
 | 16 | WH-347 Submission UX | WH-01, WH-02 | ✅ Complete |
 | 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | ✅ Complete |
 | 18 | Dashboard Search + Filter | DASH-03, DASH-04 | ✅ Complete |
-| 19 | WH-347 Submission Tracking | SUB-01, SUB-02, SUB-03 | Not started |
+| 19 | WH-347 Submission Tracking | SUB-01, SUB-02, SUB-03 | ✅ Complete |
 | 20 | Copy Previous Payroll Week | PAY-01, PAY-02 | Not started |
 | 21 | Payroll Amendment Workflow | AMD-01, AMD-02, AMD-03 | Not started |
 | 22 | Per-Worker Compliance History | AUD-01, AUD-02 | Not started |
@@ -175,6 +175,9 @@ Progress: [███░░░░░░░] 42% (5/12 plans complete)
 - [Phase 18-01]: Functional setSearchParams(prev => next) used exclusively — direct object form wipes co-existing params (showArchived, funding, etc.)
 - [Phase 18-01]: filteredProjects derived via useMemo client-side — no server changes needed, filtering against already-fetched array
 - [Phase 18-01]: FUNDING_OPTIONS/FUNDING_LABELS defined as module-level constants — funding type is a closed set, no API call needed
+- [Phase 19-01]: assertWeekNotSubmitted returns { locked, submittedAt } (not throw) — routes own HTTP response, service stays pure
+- [Phase 19-01]: clearWeekSubmission uses unconditional UPDATE (idempotent) — no pre-check avoids TOCTOU race
+- [Phase 19-01]: Lock guard placed after assertProjectOwner, before upsertPayrollEntry in both POST /entries and PUT /entries/:id
 
 ### Research Flags for v2.3
 
@@ -193,5 +196,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Completed Phase 18 — Dashboard Search + Filter (DASH-03 + DASH-04 shipped, all 6 browser tests approved)
+Stopped at: Completed 19-01-PLAN.md — SUB-01, SUB-02, SUB-03 server API complete, 198 tests passing
 Resume file: None

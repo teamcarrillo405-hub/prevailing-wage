@@ -15,9 +15,9 @@
 
 ### Submission Tracking (SUB)
 
-- [ ] **SUB-01**: User can mark a payroll week as submitted with a date and agency name
-- [ ] **SUB-02**: System prevents editing payroll entries on a submitted week (server-side lock)
-- [ ] **SUB-03**: User can un-submit a week to clear its submission status
+- [x] **SUB-01**: User can mark a payroll week as submitted with a date and agency name
+- [x] **SUB-02**: System prevents editing payroll entries on a submitted week (server-side lock)
+- [x] **SUB-03**: User can un-submit a week to clear its submission status
 
 ### Amendment Workflow (AMD)
 
@@ -71,9 +71,9 @@
 | PRJ-03 | Phase 17 | Complete |
 | DASH-03 | Phase 18 | Complete |
 | DASH-04 | Phase 18 | Complete |
-| SUB-01 | Phase 19 | Pending |
-| SUB-02 | Phase 19 | Pending |
-| SUB-03 | Phase 19 | Pending |
+| SUB-01 | Phase 19 | Complete |
+| SUB-02 | Phase 19 | Complete |
+| SUB-03 | Phase 19 | Complete |
 | PAY-01 | Phase 20 | Pending |
 | PAY-02 | Phase 20 | Pending |
 | AMD-01 | Phase 21 | Pending |
