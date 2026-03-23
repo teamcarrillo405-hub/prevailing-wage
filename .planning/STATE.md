@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: UX Completion + Compliance Hardening
-status: planning
-stopped_at: Completed Phase 16 Plan 01 — WH-347 Submission UX
-last_updated: "2026-03-22T22:38:39.011Z"
-last_activity: 2026-03-22
+milestone: v2.3
+milestone_name: TBD
+status: idle
+stopped_at: v2.2 milestone archived — ready for new milestone
+last_updated: "2026-03-23"
+last_activity: 2026-03-23
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -18,40 +18,41 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-22)
+See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** v2.2 — UX Completion + Compliance Hardening — roadmap defined, Phase 15 not started
+**Current focus:** v2.2 shipped. Run `/gsd:new-milestone` to start next milestone.
 
 ## Current Position
 
-Milestone: v2.2 — UX Completion + Compliance Hardening
-Phase: 16
-Status: Roadmap created — ready for Phase 15 planning
-Last activity: 2026-03-22
+Milestone: v2.2 — SHIPPED 2026-03-23
+Phase: —
+Status: Idle — ready for `/gsd:new-milestone`
+Last activity: 2026-03-23
 
-Progress: [░░░░░░░░░░] 0% (0 of 2 v2.2 phases complete)
+Progress: [██████████] 100% (2 of 2 v2.2 phases complete)
 
 ### Phase Structure
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | Not started |
-| 16 | WH-347 Submission UX | WH-01, WH-02 | Not started |
+| 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | ✅ Complete |
+| 16 | WH-347 Submission UX | WH-01, WH-02 | ✅ Complete |
 
 ## Performance Metrics
 
 **Velocity (v2.2):**
 
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 4
+- Total phases: 2
+- Shipped: 2026-03-23
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 15 | 3/3 | ✅ Complete |
+| 16 | 1/1 | ✅ Complete |
 
 ## Accumulated Context
 

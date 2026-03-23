@@ -1,5 +1,18 @@
 # Milestones
 
+## v2.2 UX Completion + Compliance Hardening (Shipped: 2026-03-23)
+
+**Phases completed:** 2 phases, 4 plans, 5 tasks
+
+**Key accomplishments:**
+
+- 1. [Rule 1 - Bug] Fixed missing apprenticePercent in seedApprenticeWorker helper
+- 4-step workflow progress indicator (Create Project, Add Workers, Enter Payroll, Download WH-347) added to ProjectDetailPage, driven by real workers and payroll-weeks API data
+- @media print CSS expansion plus tfoot totals row on fringe summary — both reports now print cleanly via Ctrl+P with repeating headers, no UI chrome, and a visible totals row
+- Fetch-driven WH-347 download with preflight compliance modal (violations list + Download Anyway), generating state label, and synchronous double-click guard via useRef
+
+---
+
 ## v2.1 Design Polish + Landing Page (Shipped: 2026-03-22)
 
 **Phases completed:** 5 phases, 14 plans, 23 tasks

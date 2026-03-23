@@ -8,23 +8,12 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v2.2 — UX Completion + Compliance Hardening
+## Current State (v2.2)
 
-**Goal:** Close every known UX gap and compliance gap deferred from v2.0/v2.1 — making the app submission-ready with clear feedback loops and tighter compliance enforcement.
-
-**Target features:**
-- WH-347 preflight: violation summary on download click, confirmation before generating (warn, not block)
-- WH-347 download feedback: "Generating..." → "Download ready" state
-- Workflow progress indicator on Project Detail (Create → Workers → Payroll → WH-347)
-- Apprentice ratio check (COMP-03): per-week flag when apprentice hours exceed allowed ratio
-- Print-to-PDF for reports: optimize print CSS on fringe summary and pay history (browser print, no server PDF)
-
-## Current State (v2.1)
-
-**Shipped:** 2026-03-22
-**Tests:** 181 passing
+**Shipped:** 2026-03-23
+**Tests:** 188 passing
 **Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation
-**LOC:** ~10,375 TypeScript (src/)
+**LOC:** ~10,600 TypeScript (src/)
 
 **What works end-to-end:**
 - Full marketing landing page at "/" (HCC brand, WH-347/Davis-Bacon/SAM.gov above fold, CTA to /register)
@@ -34,9 +23,9 @@ A contractor can run a full project end-to-end — create project → add worker
 - Dashboard empty state via EmptyState component; compliance badges use Badge variants
 - Workers: missing-data Badge, Button primary for form actions, PageHeader
 - Payroll Entry: EmptyState for no-workers branch
-- Project Detail: Badge for funding type, secondary button styling for nav links
-- Payroll Week Detail: Badge for violation/compliant status, WH-347 gold-outlined anchor
-- Reports: token-clean tab active state, print CSS hides nav chrome
+- Project Detail: Badge for funding type, secondary button styling for nav links; 4-step workflow progress indicator driven by live data
+- Payroll Week Detail: Badge for violation/compliant status (entry-level + per-week apprentice ratio), WH-347 fetch-driven download with preflight modal + generating state + double-click guard
+- Reports: token-clean tab active state, print CSS with repeating table headers, totals row, no UI chrome
 - Login: login-only with bg-surface-page, border-brand-gold, Link to /register
 
 ## Requirements
@@ -84,15 +73,17 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ Auth-aware routing: PublicRoute, WildcardRedirect, separate RegisterPage — v2.1
 - ✓ All 7 app pages use design primitives — no ad-hoc inline styling — v2.1
 
+<!-- Shipped in v2.2 (phases 15-16) -->
+
+- ✓ Apprentice ratio per-week violation check (COMP-03) — extends compliance engine, fires when apprentice hours > 1:3 JW ratio — v2.2
+- ✓ 4-step workflow progress indicator on Project Detail (Create → Workers → Payroll → WH-347) — v2.2
+- ✓ Print-to-PDF for reports — browser print optimization (repeating headers, totals row, no UI chrome) — v2.2
+- ✓ WH-347 preflight: compliance violation summary before generating, Download Anyway / Cancel — v2.2
+- ✓ WH-347 download feedback: "Generating..." label during fetch, double-click guard via useRef — v2.2
+
 ### Active
 
-<!-- v2.2 — in progress -->
-
-- WH-347 download with "Generating..." → "Download ready" state feedback
-- WH-347 preflight: show violation summary, require confirmation before generating
-- Workflow progress indicator on Project Detail (Create → Workers → Payroll → WH-347)
-- Apprentice ratio per-week check (COMP-03) — extends compliance engine
-- Print-to-PDF for reports (browser print optimization on fringe summary + pay history)
+<!-- v2.3 — not started -->
 
 ### Out of Scope
 
@@ -144,8 +135,10 @@ A contractor can run a full project end-to-end — create project → add worker
 | Button has no asChild prop | Simpler component; copy secondary classes to `<a>` directly for link-buttons | ✓ Good — v2.1 |
 | PublicRoute + WildcardRedirect pattern | Mirrors ProtectedRoute pattern; auth-aware without duplicating logic | ✓ Good — v2.1 |
 | LoginPage login-only (no embedded RegisterForm) | Simpler component, cleaner routing, dedicated RegisterPage at /register | ✓ Good — v2.1 |
-| Reports PDF deferred to v2.2 | On-screen covers DOL audit requests; PDF complexity not needed for v2.1 scope | — Pending v2.2 |
+| Browser print CSS for reports | `overflow: visible !important` on `.overflow-x-auto` required for `thead { display: table-header-group }` to work in print | ✓ Good — v2.2 |
+| useRef for double-click guard | `useState` setter is async/batched — second click fires before re-render; `useRef.current` is synchronous | ✓ Good — v2.2 |
+| weekViolations[] separate from violations[] | COMP-03 is per-week aggregate; existing per-entry violations consumers would break if shape changed | ✓ Good — v2.2 |
 | Single user per account | Simplicity for v1/v2; multi-user is a future milestone | — Pending |
 
 ---
-*Last updated: 2026-03-22 — v2.2 milestone started*
+*Last updated: 2026-03-23 — v2.2 shipped*
