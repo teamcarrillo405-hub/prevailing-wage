@@ -600,3 +600,253 @@ describe('server-side edit lock on submitted weeks — SUB-02', () => {
     expect(res.body.error).toMatch(/submitted/i);
   });
 });
+
+describe('POST /api/payroll/weeks/amend — AMD-01 + AMD-03', () => {
+  // Seed helper: create worker, classification, payroll week, entry, then submit the week
+  async function seedSubmittedWeek(cookie: string, projectId: string) {
+    // Create worker
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'Amend Worker' });
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    // Create classification
+    const cRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+      .set('Cookie', cookie)
+      .send({ tradeCode: 'CARP', tradeDescription: 'Carpenter', laborType: 'journeyworker' });
+    const classificationId = cRes.body.data?.classification?.id as string;
+
+    // Create payroll week
+    const wkRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-03-01', payrollNumber: 200 });
+    const weekId = wkRes.body.id as string;
+
+    // Create entry with hours and snapshots
+    await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
+        baseRateSnapshot: 55.00,
+        fringeRateSnapshot: 22.00,
+      });
+
+    // Submit the week
+    await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/submit`)
+      .set('Cookie', cookie)
+      .send({ submittedAt: '2026-03-01', submittedTo: 'DOL Region 9' });
+
+    return { weekId, workerId, classificationId };
+  }
+
+  it('Test 1: POST /weeks/amend with valid submitted week returns 201 + { weekId, amendmentNumber: 1, copiedCount }', async () => {
+    const cookie = await registerAndLogin('amend-basic');
+    const projectId = await createProject(cookie);
+    const { weekId } = await seedSubmittedWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+
+    expect(res.status).toBe(201);
+    expect(typeof res.body.weekId).toBe('string');
+    expect(res.body.amendmentNumber).toBe(1);
+    expect(typeof res.body.copiedCount).toBe('number');
+  });
+
+  it('Test 2: POST /weeks/amend on unsubmitted week returns 409', async () => {
+    const cookie = await registerAndLogin('amend-unsubmitted');
+    const projectId = await createProject(cookie);
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+
+    const wkRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-03-08', payrollNumber: 201 });
+    const weekId = wkRes.body.id as string;
+
+    await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        baseRateSnapshot: 45.00,
+        fringeRateSnapshot: 18.00,
+      });
+
+    // Do NOT submit — amend an unsubmitted week
+    const res = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/submitted/i);
+  });
+
+  it('Test 3: POST /weeks/amend on non-existent week returns 404', async () => {
+    const cookie = await registerAndLogin('amend-404');
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: 'non-existent-week-uuid' });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('Test 4: Second amendment to same root week returns amendmentNumber: 2', async () => {
+    const cookie = await registerAndLogin('amend-second');
+    const projectId = await createProject(cookie);
+    const { weekId } = await seedSubmittedWeek(cookie, projectId);
+
+    // First amendment
+    const res1 = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+    expect(res1.status).toBe(201);
+    expect(res1.body.amendmentNumber).toBe(1);
+
+    // Second amendment (amending the original again)
+    const res2 = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+    expect(res2.status).toBe(201);
+    expect(res2.body.amendmentNumber).toBe(2);
+  });
+
+  it('Test 5: Amendment of amendment links to root week (originalWeekId = root)', async () => {
+    const cookie = await registerAndLogin('amend-chain');
+    const projectId = await createProject(cookie);
+    const { weekId: rootWeekId } = await seedSubmittedWeek(cookie, projectId);
+
+    // First amendment of root
+    const res1 = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: rootWeekId });
+    expect(res1.status).toBe(201);
+    const amendWeekId1 = res1.body.weekId as string;
+
+    // Submit amendment 1 so it can be amended
+    await supertest(app)
+      .patch(`/api/payroll/weeks/${amendWeekId1}/submit`)
+      .set('Cookie', cookie)
+      .send({ submittedAt: '2026-03-02', submittedTo: 'DOL Region 9' });
+
+    // Amendment of amendment 1
+    const res2 = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: amendWeekId1 });
+    expect(res2.status).toBe(201);
+
+    // Verify the second amendment points to the root, not the intermediate amendment
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${res2.body.weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.week.originalWeekId).toBe(rootWeekId);
+  });
+
+  it('Test 6: Amendment entries have same baseRateSnapshot/fringeRateSnapshot as source (cloned, not re-fetched)', async () => {
+    const cookie = await registerAndLogin('amend-snapshots');
+    const projectId = await createProject(cookie);
+    const { weekId } = await seedSubmittedWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+    expect(res.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${res.body.weekId}`)
+      .set('Cookie', cookie);
+
+    expect(getRes.body.entries.length).toBeGreaterThanOrEqual(1);
+    const entry = getRes.body.entries[0].entry;
+    expect(entry.baseRateSnapshot).toBe(55.00);
+    expect(entry.fringeRateSnapshot).toBe(22.00);
+  });
+
+  it('Test 7: Amendment entries have same daily hour fields as source', async () => {
+    const cookie = await registerAndLogin('amend-hours');
+    const projectId = await createProject(cookie);
+    const { weekId } = await seedSubmittedWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+    expect(res.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${res.body.weekId}`)
+      .set('Cookie', cookie);
+
+    expect(getRes.body.entries.length).toBeGreaterThanOrEqual(1);
+    const entry = getRes.body.entries[0].entry;
+    // seedSubmittedWeek sets monSt..friSt = 8
+    expect(entry.monSt).toBe(8);
+    expect(entry.friSt).toBe(8);
+    expect(entry.satSt).toBe(0);
+    expect(entry.sunSt).toBe(0);
+  });
+
+  it('Test 8: Amendment week has submittedAt: null (editable)', async () => {
+    const cookie = await registerAndLogin('amend-editable');
+    const projectId = await createProject(cookie);
+    const { weekId } = await seedSubmittedWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+    expect(res.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${res.body.weekId}`)
+      .set('Cookie', cookie);
+
+    expect(getRes.body.week.submittedAt).toBeNull();
+  });
+
+  it('Test 9: Amendment week has same weekEndingDate and payrollNumber as original', async () => {
+    const cookie = await registerAndLogin('amend-dates');
+    const projectId = await createProject(cookie);
+    const { weekId } = await seedSubmittedWeek(cookie, projectId);
+
+    // Get original week details
+    const origRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    const origWeek = origRes.body.week;
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+    expect(res.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${res.body.weekId}`)
+      .set('Cookie', cookie);
+
+    expect(getRes.body.week.weekEndingDate).toBe(origWeek.weekEndingDate);
+    expect(getRes.body.week.payrollNumber).toBe(origWeek.payrollNumber);
+  });
+});
