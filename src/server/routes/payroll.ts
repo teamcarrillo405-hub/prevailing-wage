@@ -12,6 +12,9 @@ import {
   listPayrollWeeks,
   upsertPayrollEntry,
   getPayrollEntries,
+  assertWeekNotSubmitted,
+  updateWeekSubmission,
+  clearWeekSubmission,
 } from '../services/payrollService.js';
 
 const router = Router();
@@ -52,6 +55,13 @@ const UpsertEntrySchema = z.object({
   grossWages: z.number().nullable().optional(),
   deductions: z.number().min(0).optional(),
   netPay: z.number().nullable().optional(),
+});
+
+const SubmitWeekSchema = z.object({
+  submittedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'submittedAt must be YYYY-MM-DD',
+  }),
+  submittedTo: z.string().min(1).max(200),
 });
 
 // ── Helper: verify project ownership ──────────────────────────────────────
@@ -137,6 +147,12 @@ router.post('/entries', validate(UpsertEntrySchema), async (req, res) => {
   const ok = await assertProjectOwner(week.projectId, userId, res);
   if (!ok) return;
 
+  const { locked } = await assertWeekNotSubmitted(body.payrollWeekId);
+  if (locked) {
+    res.status(409).json({ error: 'Payroll week is submitted and cannot be edited' });
+    return;
+  }
+
   const entry = await upsertPayrollEntry(body);
   res.status(201).json({ id: entry?.id ?? null });
 });
@@ -157,6 +173,12 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
   const ok = await assertProjectOwner(week.projectId, userId, res);
   if (!ok) return;
 
+  const { locked } = await assertWeekNotSubmitted(body.payrollWeekId);
+  if (locked) {
+    res.status(409).json({ error: 'Payroll week is submitted and cannot be edited' });
+    return;
+  }
+
   const entry = await upsertPayrollEntry(body);
 
   if (!entry) {
@@ -172,6 +194,43 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
   }
 
   res.json({ id: entry.id });
+});
+
+// PATCH /api/payroll/weeks/:id/submit — mark week as submitted (SUB-01)
+router.patch('/weeks/:id/submit', validate(SubmitWeekSchema), async (req, res) => {
+  const weekId = req.params.id as string;
+  const userId = req.user!.userId;
+  const body = req.body as z.infer<typeof SubmitWeekSchema>;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const ok = await assertProjectOwner(week.projectId, userId, res);
+  if (!ok) return;
+
+  await updateWeekSubmission(weekId, body.submittedAt, body.submittedTo);
+  res.status(200).json({ message: 'Week marked as submitted' });
+});
+
+// DELETE /api/payroll/weeks/:id/submit — clear submission status (SUB-03)
+router.delete('/weeks/:id/submit', async (req, res) => {
+  const weekId = req.params.id as string;
+  const userId = req.user!.userId;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const ok = await assertProjectOwner(week.projectId, userId, res);
+  if (!ok) return;
+
+  await clearWeekSubmission(weekId);
+  res.status(200).json({ message: 'Week submission cleared' });
 });
 
 export { router as payrollRouter };
