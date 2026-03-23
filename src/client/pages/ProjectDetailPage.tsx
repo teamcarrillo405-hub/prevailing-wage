@@ -1,11 +1,13 @@
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
 
 interface Project {
   id: string;
@@ -89,6 +91,42 @@ export function ProjectDetailPage() {
     staleTime: 60_000,
   });
 
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [complianceWarning, setComplianceWarning] = useState(false);
+
+  const archiveMutation = useMutation({
+    mutationFn: () => api.delete(`/projects/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      navigate('/');
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: () => api.patch(`/projects/${id}`, { status: 'active' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', id] });
+    },
+  });
+
+  async function handleArchiveClick() {
+    const summary = await queryClient.fetchQuery({
+      queryKey: ['compliance-summary', id],
+      queryFn: async () => {
+        const res = await fetch(`/api/compliance/project/${id}`);
+        if (!res.ok) return null;
+        return res.json() as Promise<{ badge: string; weekCount: number; lastWeekNumber: number | null }>;
+      },
+      staleTime: 60_000,
+    });
+    setComplianceWarning(summary?.badge === 'violations');
+    setArchiveModalOpen(true);
+  }
+
   const project = data?.data?.project;
 
   const workers = workersData?.data?.workers ?? [];
@@ -152,6 +190,53 @@ export function ProjectDetailPage() {
               </div>
             </dl>
           </Card>
+
+          <div className="mt-4 flex gap-3">
+            {project.status === 'active' ? (
+              <Button variant="secondary" onClick={handleArchiveClick}>
+                Archive Project
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={() => restoreMutation.mutate()}
+                disabled={restoreMutation.isPending}
+              >
+                {restoreMutation.isPending ? 'Restoring...' : 'Restore Project'}
+              </Button>
+            )}
+          </div>
+
+          {archiveModalOpen && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                <h3 className="font-headline text-lg text-gray-900 mb-3">
+                  Archive Project
+                </h3>
+                {complianceWarning && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                    This project has open compliance violations. Archiving will not resolve them. You can restore the project later if needed.
+                  </div>
+                )}
+                <p className="text-sm text-gray-600 mb-5">
+                  {complianceWarning
+                    ? 'Are you sure you want to archive this project despite open violations?'
+                    : 'Are you sure you want to archive this project? It will be hidden from your active dashboard.'}
+                </p>
+                <div className="flex justify-end gap-3">
+                  <Button variant="secondary" onClick={() => setArchiveModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => archiveMutation.mutate()}
+                    disabled={archiveMutation.isPending}
+                  >
+                    {archiveMutation.isPending ? 'Archiving...' : (complianceWarning ? 'Archive Anyway' : 'Archive')}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Project sub-page navigation */}
           <div className="mt-8 flex flex-wrap gap-3">
