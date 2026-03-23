@@ -10,8 +10,8 @@ progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 12
-  completed_plans: 1
-  percent: 8
+  completed_plans: 2
+  percent: 17
 ---
 
 # State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
-Phase: 17 — DB Migration + Project Archive (Plan 1 of 2 complete)
+Phase: 17 — DB Migration + Project Archive (Plan 2 of 2 complete — awaiting browser checkpoint)
 Status: In Progress
-Last activity: 2026-03-23 — Phase 17 Plan 01 complete (migration + status filter)
+Last activity: 2026-03-23 — Phase 17 Plan 02 complete (archive/restore UI + compliance modal)
 
-Progress: [░░░░░░░░░░] 8% (1/12 plans complete)
+Progress: [░░░░░░░░░░] 17% (2/12 plans complete)
 
 ### Phase Structure
 
@@ -38,7 +38,7 @@ Progress: [░░░░░░░░░░] 8% (1/12 plans complete)
 |-------|------|--------------|--------|
 | 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | ✅ Complete |
 | 16 | WH-347 Submission UX | WH-01, WH-02 | ✅ Complete |
-| 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | In Progress (1/2 plans) |
+| 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | In Progress (2/2 plans — checkpoint) |
 | 18 | Dashboard Search + Filter | DASH-03, DASH-04 | Not started |
 | 19 | WH-347 Submission Tracking | SUB-01, SUB-02, SUB-03 | Not started |
 | 20 | Copy Previous Payroll Week | PAY-01, PAY-02 | Not started |
@@ -166,6 +166,9 @@ Progress: [░░░░░░░░░░] 8% (1/12 plans complete)
 - [Phase 17-01]: Multi-statement SQL migrations require --> statement-breakpoint between each ALTER TABLE (Drizzle breakpoints:true mode)
 - [Phase 17-01]: originalWeekId has no .references() in schema.ts — self-referencing FK is SQL-only to avoid AnySQLiteColumn import complexity
 - [Phase 17-01]: GET /api/projects defaults to active-only; ?status=all returns both active and closed projects
+- [Phase 17-02]: Compliance check uses queryClient.fetchQuery (imperative) — fires only on Archive button click, not on page load
+- [Phase 17-02]: Archive advisory is non-blocking — "Archive Anyway" CTA always present when violations exist (PRJ-03 requirement)
+- [Phase 17-02]: TanStack Query key includes filter state ['projects', 'all'|'active'] — separate cache buckets prevent stale data when toggling
 
 ### Research Flags for v2.3
 
@@ -184,5 +187,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Completed 17-01-PLAN.md — DB migration + status filter
+Stopped at: Completed 17-02-PLAN.md (Tasks 1-2) — awaiting browser checkpoint for Task 3
 Resume file: None
