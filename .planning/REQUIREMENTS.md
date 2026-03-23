@@ -10,8 +10,8 @@
 
 ### Payroll Efficiency (PAY)
 
-- [ ] **PAY-01**: User can copy a previous payroll week to pre-fill a new week with worker/hour data and live rate re-fetch per classification
-- [ ] **PAY-02**: System shows which entries were skipped during copy (worker no longer active, rate lookup failed) before confirming
+- [x] **PAY-01**: User can copy a previous payroll week to pre-fill a new week with worker/hour data and live rate re-fetch per classification
+- [x] **PAY-02**: System shows which entries were skipped during copy (worker no longer active, rate lookup failed) before confirming
 
 ### Submission Tracking (SUB)
 
@@ -74,8 +74,8 @@
 | SUB-01 | Phase 19 | Complete |
 | SUB-02 | Phase 19 | Complete |
 | SUB-03 | Phase 19 | Complete |
-| PAY-01 | Phase 20 | Pending |
-| PAY-02 | Phase 20 | Pending |
+| PAY-01 | Phase 20 | Complete |
+| PAY-02 | Phase 20 | Complete |
 | AMD-01 | Phase 21 | Pending |
 | AMD-02 | Phase 21 | Pending |
 | AMD-03 | Phase 21 | Pending |

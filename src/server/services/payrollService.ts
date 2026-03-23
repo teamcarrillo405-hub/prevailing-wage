@@ -7,9 +7,43 @@ import {
   payrollEntries,
   workers,
   workerClassifications,
+  projects,
 } from '../db/schema.js';
+import { getCachedWd, getCachedClassifications } from './wageCache.js';
+import { lookupWageDetermination } from './wageLookup.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
+
+export interface CopyWeekInput {
+  projectId: string;
+  sourceWeekId: string;
+  weekEndingDate: string;
+  payrollNumber: number;
+  preview: boolean;
+}
+
+export interface CopiedEntry {
+  workerId: string;
+  workerName: string;
+  classificationId: string;
+  tradeDescription: string;
+  baseRate: number;
+  fringeRate: number;
+}
+
+export interface SkippedEntry {
+  workerId: string;
+  workerName: string;
+  classificationId: string;
+  tradeDescription: string;
+  reason: 'worker-inactive' | 'rate-lookup-failed' | 'no-wd-found';
+}
+
+export interface CopyWeekResult {
+  weekId: string | null;
+  copied: CopiedEntry[];
+  skipped: SkippedEntry[];
+}
 
 export interface CreatePayrollWeekInput {
   projectId: string;
@@ -235,4 +269,143 @@ export async function clearWeekSubmission(weekId: string): Promise<void> {
     .update(payrollWeeks)
     .set({ submittedAt: null, submittedTo: null, updatedAt: now })
     .where(eq(payrollWeeks.id, weekId));
+}
+
+// ── Copy Payroll Week ──────────────────────────────────────────────────────
+
+/**
+ * Copies a payroll week with fresh live rate re-fetch.
+ * In preview mode (preview=true): returns copied/skipped arrays without DB writes.
+ * In commit mode (preview=false): creates a new payroll week and inserts entries.
+ *
+ * COMPLIANCE: Never clones baseRateSnapshot/fringeRateSnapshot from source entries.
+ *             Always uses fresh rates from WD cache.
+ *             New week has null submittedAt/submittedTo/amendmentNumber/originalWeekId.
+ */
+export async function copyPayrollWeek(input: CopyWeekInput): Promise<CopyWeekResult> {
+  const db = getDb();
+
+  // 1. Fetch project to get state + county for WD lookup
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, input.projectId))
+    .limit(1);
+
+  if (!project) {
+    throw new Error(`Project not found: ${input.projectId}`);
+  }
+
+  // 2. Build rate map using cache-first lookup (matching workers.ts pattern)
+  const wd =
+    getCachedWd(project.state, project.county) ??
+    (await lookupWageDetermination(project.state, project.county));
+
+  const rateMap = new Map<string, { baseRate: number; fringeRate: number }>();
+  if (wd) {
+    for (const wc of getCachedClassifications(wd.id)) {
+      rateMap.set(wc.tradeCode, { baseRate: wc.baseRate, fringeRate: wc.fringeRate });
+    }
+  }
+
+  // 3. Fetch source entries joined with workers + workerClassifications
+  const sourceRows = await db
+    .select({
+      entry: payrollEntries,
+      workerName: workers.name,
+      workerIsActive: workers.isActive,
+      tradeCode: workerClassifications.tradeCode,
+      tradeDescription: workerClassifications.tradeDescription,
+    })
+    .from(payrollEntries)
+    .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
+    .innerJoin(workerClassifications, eq(payrollEntries.classificationId, workerClassifications.id))
+    .where(eq(payrollEntries.payrollWeekId, input.sourceWeekId));
+
+  // 4. Classify each source entry into copied or skipped
+  const copied: CopiedEntry[] = [];
+  const skipped: SkippedEntry[] = [];
+
+  for (const row of sourceRows) {
+    const baseSkipped = {
+      workerId: row.entry.workerId,
+      workerName: row.workerName,
+      classificationId: row.entry.classificationId,
+      tradeDescription: row.tradeDescription,
+    };
+
+    if (!wd) {
+      skipped.push({ ...baseSkipped, reason: 'no-wd-found' });
+      continue;
+    }
+
+    if (!row.workerIsActive) {
+      skipped.push({ ...baseSkipped, reason: 'worker-inactive' });
+      continue;
+    }
+
+    const rates = rateMap.get(row.tradeCode);
+    if (!rates) {
+      skipped.push({ ...baseSkipped, reason: 'rate-lookup-failed' });
+      continue;
+    }
+
+    copied.push({
+      workerId: row.entry.workerId,
+      workerName: row.workerName,
+      classificationId: row.entry.classificationId,
+      tradeDescription: row.tradeDescription,
+      baseRate: rates.baseRate,
+      fringeRate: rates.fringeRate,
+    });
+  }
+
+  // 5. Preview mode — return without DB writes
+  if (input.preview) {
+    return { weekId: null, copied, skipped };
+  }
+
+  // 6. Commit mode — create new week and insert entries with fresh rates
+  const newWeek = await createPayrollWeek({
+    projectId: input.projectId,
+    weekEndingDate: input.weekEndingDate,
+    payrollNumber: input.payrollNumber,
+  });
+
+  for (const row of sourceRows) {
+    // Only insert entries for workers that were successfully copied
+    const isCopied = copied.some(
+      (c) => c.workerId === row.entry.workerId && c.classificationId === row.entry.classificationId,
+    );
+    if (!isCopied) continue;
+
+    const rates = rateMap.get(row.tradeCode)!;
+
+    await upsertPayrollEntry({
+      payrollWeekId: newWeek.id,
+      workerId: row.entry.workerId,
+      classificationId: row.entry.classificationId,
+      monSt: row.entry.monSt ?? 0,
+      tueSt: row.entry.tueSt ?? 0,
+      wedSt: row.entry.wedSt ?? 0,
+      thuSt: row.entry.thuSt ?? 0,
+      friSt: row.entry.friSt ?? 0,
+      satSt: row.entry.satSt ?? 0,
+      sunSt: row.entry.sunSt ?? 0,
+      monOt: row.entry.monOt ?? 0,
+      tueOt: row.entry.tueOt ?? 0,
+      wedOt: row.entry.wedOt ?? 0,
+      thuOt: row.entry.thuOt ?? 0,
+      friOt: row.entry.friOt ?? 0,
+      satOt: row.entry.satOt ?? 0,
+      sunOt: row.entry.sunOt ?? 0,
+      baseRateSnapshot: rates.baseRate,
+      fringeRateSnapshot: rates.fringeRate,
+      grossWages: null,
+      deductions: 0,
+      netPay: null,
+    });
+  }
+
+  return { weekId: newWeek.id, copied, skipped };
 }
