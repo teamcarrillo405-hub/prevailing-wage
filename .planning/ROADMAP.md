@@ -59,7 +59,7 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 - [x] **Phase 17: DB Migration + Project Archive** — 4-column payrollWeeks migration, project archive/restore, archived badge, compliance pre-check before archive
 - [x] **Phase 18: Dashboard Search + Filter** — name search, funding type filter, URL-persisted filter state, zero-results empty state
 - [ ] **Phase 19: WH-347 Submission Tracking** — mark weeks submitted with date/agency, server-side edit lock, un-submit, submitted badges on payroll list
-- [ ] **Phase 20: Copy Previous Payroll Week** — copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning
+- [x] **Phase 20: Copy Previous Payroll Week** — copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning (completed 2026-03-23)
 - [ ] **Phase 21: Payroll Amendment Workflow** — amend submitted week as new row, "N (AMENDED M)" WH-347 label, pre-filled entries from original
 - [ ] **Phase 22: Per-Worker Compliance History** — cross-project violation history page, compliance history link per worker row
 
@@ -118,8 +118,8 @@ Plans:
   4. A successfully copied week can be edited normally before submission
 **Plans**: 2 plans
 Plans:
-- [ ] 20-01-PLAN.md — copyPayrollWeek() service + POST /api/payroll/weeks/copy route (preview + commit modes) + integration tests
-- [ ] 20-02-PLAN.md — Copy modal UI on PayrollListPage (source week selector, preview warning, confirm/cancel) + browser verification
+- [x] 20-01-PLAN.md — copyPayrollWeek() service + POST /api/payroll/weeks/copy route (preview + commit modes) + integration tests
+- [x] 20-02-PLAN.md — Copy modal UI on PayrollListPage (source week selector, preview warning, confirm/cancel) + browser verification
 
 ### Phase 21: Payroll Amendment Workflow
 **Goal**: Contractors can correct a submitted payroll week by creating a formal amendment that generates an amended WH-347 while preserving the original record
@@ -162,6 +162,6 @@ Plans:
 | 17. DB Migration + Project Archive | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 18. Dashboard Search + Filter | v2.3 | 1/1 | Complete | 2026-03-23 |
 | 19. WH-347 Submission Tracking | v2.3 | 1/2 | In Progress|  |
-| 20. Copy Previous Payroll Week | v2.3 | 0/2 | Planned    |  |
+| 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete   | 2026-03-23 |
 | 21. Payroll Amendment Workflow | v2.3 | 0/? | Not started | - |
 | 22. Per-Worker Compliance History | v2.3 | 0/? | Not started | - |
