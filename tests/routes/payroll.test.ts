@@ -147,3 +147,123 @@ describe('payroll routes', () => {
     expect(res.body.weeks[0].weekEndingDate >= res.body.weeks[1].weekEndingDate).toBe(true);
   });
 });
+
+describe('PATCH /api/payroll/weeks/:id/submit — SUB-01', () => {
+  it('marks a week as submitted with date and agency', async () => {
+    const cookie = await registerAndLogin('sub-01-submit');
+    const projectId = await createProject(cookie);
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-03-23', payrollNumber: 10 });
+    const weekId = weekRes.body.id as string;
+
+    const res = await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/submit`)
+      .set('Cookie', cookie)
+      .send({ submittedAt: '2026-03-23', submittedTo: 'DOL Region 9' });
+
+    expect(res.status).toBe(200);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.week.submittedAt).toBe('2026-03-23');
+    expect(getRes.body.week.submittedTo).toBe('DOL Region 9');
+  });
+});
+
+describe('DELETE /api/payroll/weeks/:id/submit — SUB-03', () => {
+  it('clears submission status and is idempotent', async () => {
+    const cookie = await registerAndLogin('sub-03-unsubmit');
+    const projectId = await createProject(cookie);
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-03-23', payrollNumber: 11 });
+    const weekId = weekRes.body.id as string;
+
+    // Submit first
+    await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/submit`)
+      .set('Cookie', cookie)
+      .send({ submittedAt: '2026-03-23', submittedTo: 'DOL Region 9' });
+
+    // Un-submit
+    const res = await supertest(app)
+      .delete(`/api/payroll/weeks/${weekId}/submit`)
+      .set('Cookie', cookie);
+    expect(res.status).toBeLessThan(300);
+
+    // Confirm cleared
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.week.submittedAt).toBeNull();
+    expect(getRes.body.week.submittedTo).toBeNull();
+  });
+
+  it('is idempotent — un-submitting an already-unsubmitted week returns success', async () => {
+    const cookie = await registerAndLogin('sub-03-idempotent');
+    const projectId = await createProject(cookie);
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-03-24', payrollNumber: 12 });
+    const weekId = weekRes.body.id as string;
+
+    const res = await supertest(app)
+      .delete(`/api/payroll/weeks/${weekId}/submit`)
+      .set('Cookie', cookie);
+    expect(res.status).toBeLessThan(300);
+  });
+});
+
+describe('server-side edit lock on submitted weeks — SUB-02', () => {
+  async function setupSubmittedWeek(suffix: string) {
+    const cookie = await registerAndLogin(`lock-${suffix}`);
+    const projectId = await createProject(cookie);
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-03-25', payrollNumber: 20 });
+    const weekId = weekRes.body.id as string;
+
+    await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/submit`)
+      .set('Cookie', cookie)
+      .send({ submittedAt: '2026-03-25', submittedTo: 'DOL Region 9' });
+
+    return { cookie, weekId, workerId, classificationId };
+  }
+
+  const entryPayload = (weekId: string, workerId: string, classificationId: string) => ({
+    payrollWeekId: weekId,
+    workerId,
+    classificationId,
+    monSt: 8,
+    baseRateSnapshot: 45.00,
+    fringeRateSnapshot: 20.00,
+  });
+
+  it('POST /api/payroll/entries returns 409 on a submitted week', async () => {
+    const { cookie, weekId, workerId, classificationId } = await setupSubmittedWeek('post');
+    const res = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send(entryPayload(weekId, workerId, classificationId));
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/submitted/i);
+  });
+
+  it('PUT /api/payroll/entries/:id returns 409 on a submitted week', async () => {
+    const { cookie, weekId, workerId, classificationId } = await setupSubmittedWeek('put');
+    const res = await supertest(app)
+      .put(`/api/payroll/entries/${weekId}`)
+      .set('Cookie', cookie)
+      .send(entryPayload(weekId, workerId, classificationId));
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/submitted/i);
+  });
+});
