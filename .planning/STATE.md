@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
 status: planning
-stopped_at: Completed 17-01-PLAN.md
+stopped_at: Completed 17-02-PLAN.md (Phase 17 complete)
 last_updated: "2026-03-23"
 last_activity: 2026-03-23
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 12
-  completed_plans: 2
-  percent: 17
+  completed_plans: 4
+  percent: 33
 ---
 
 # State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
-Phase: 17 — DB Migration + Project Archive (Plan 2 of 2 complete — awaiting browser checkpoint)
-Status: In Progress
-Last activity: 2026-03-23 — Phase 17 Plan 02 complete (archive/restore UI + compliance modal)
+Phase: 18 — Dashboard Search + Filter (next)
+Status: Planning
+Last activity: 2026-03-23 — Phase 17 complete (DB migration + project archive UI, all 3 PRJ requirements shipped)
 
-Progress: [░░░░░░░░░░] 17% (2/12 plans complete)
+Progress: [██░░░░░░░░] 33% (4/12 plans complete)
 
 ### Phase Structure
 
@@ -38,7 +38,7 @@ Progress: [░░░░░░░░░░] 17% (2/12 plans complete)
 |-------|------|--------------|--------|
 | 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | ✅ Complete |
 | 16 | WH-347 Submission UX | WH-01, WH-02 | ✅ Complete |
-| 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | In Progress (2/2 plans — checkpoint) |
+| 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | ✅ Complete |
 | 18 | Dashboard Search + Filter | DASH-03, DASH-04 | Not started |
 | 19 | WH-347 Submission Tracking | SUB-01, SUB-02, SUB-03 | Not started |
 | 20 | Copy Previous Payroll Week | PAY-01, PAY-02 | Not started |
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 17% (2/12 plans complete)
 |-------|-------|--------|
 | 15 | 3/3 | ✅ Complete |
 | 16 | 1/1 | ✅ Complete |
+| 17 | 2/2 | ✅ Complete |
 
 ## Accumulated Context
 
@@ -187,5 +188,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Completed 17-02-PLAN.md (Tasks 1-2) — awaiting browser checkpoint for Task 3
+Stopped at: Completed Phase 17 — DB Migration + Project Archive (all 3 PRJ requirements shipped, browser checkpoint approved)
 Resume file: None
