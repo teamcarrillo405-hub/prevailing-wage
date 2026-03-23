@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
-status: planning
-stopped_at: Completed 19-01-PLAN.md
-last_updated: "2026-03-23"
-last_activity: 2026-03-23
+status: Ready to execute
+stopped_at: Completed 20-01-PLAN.md
+last_updated: "2026-03-23T22:01:28.304Z"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 12
-  completed_plans: 6
-  percent: 50
+  total_plans: 7
+  completed_plans: 4
 ---
 
 # State
@@ -21,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** v2.3 — Contractor Workflow Efficiency + Audit Readiness — roadmap created, ready to plan Phase 17
+**Current focus:** Phase 20 — copy-previous-payroll-week
 
 ## Current Position
 
-Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
-Phase: 19 — WH-347 Submission Tracking (next)
-Status: Planning
-Last activity: 2026-03-23 — Phase 19 Plan 01 complete (PATCH/DELETE submit routes + server-side 409 edit lock, SUB-01 + SUB-02 + SUB-03 shipped)
-
-Progress: [█████░░░░░] 50% (6/12 plans complete)
+Phase: 20 (copy-previous-payroll-week) — EXECUTING
+Plan: 2 of 2
 
 ### Phase Structure
 
@@ -61,6 +55,7 @@ Progress: [█████░░░░░] 50% (6/12 plans complete)
 | 16 | 1/1 | ✅ Complete |
 | 17 | 2/2 | ✅ Complete |
 | 18 | 1/1 | ✅ Complete |
+| Phase 20 P01 | 4 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -178,6 +173,8 @@ Progress: [█████░░░░░] 50% (6/12 plans complete)
 - [Phase 19-01]: assertWeekNotSubmitted returns { locked, submittedAt } (not throw) — routes own HTTP response, service stays pure
 - [Phase 19-01]: clearWeekSubmission uses unconditional UPDATE (idempotent) — no pre-check avoids TOCTOU race
 - [Phase 19-01]: Lock guard placed after assertProjectOwner, before upsertPayrollEntry in both POST /entries and PUT /entries/:id
+- [Phase 20]: Use getCachedWd ?? lookupWageDetermination for cache-first WD lookup in copyPayrollWeek (matching workers.ts pattern)
+- [Phase 20]: POST /weeks/copy placed before GET /weeks/:id to prevent wildcard route capture
 
 ### Research Flags for v2.3
 
@@ -195,6 +192,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23
-Stopped at: Completed 19-01-PLAN.md — SUB-01, SUB-02, SUB-03 server API complete, 198 tests passing
+Last session: 2026-03-23T22:01:28.298Z
+Stopped at: Completed 20-01-PLAN.md
 Resume file: None
