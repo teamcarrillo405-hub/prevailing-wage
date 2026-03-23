@@ -850,3 +850,70 @@ describe('POST /api/payroll/weeks/amend — AMD-01 + AMD-03', () => {
     expect(getRes.body.week.payrollNumber).toBe(origWeek.payrollNumber);
   });
 });
+
+describe('GET /api/export/wh347 — AMD-02', () => {
+  async function seedAndSubmitWeek(cookie: string, projectId: string) {
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+
+    const wkRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-04-01', payrollNumber: 300 });
+    const weekId = wkRes.body.id as string;
+
+    await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        baseRateSnapshot: 55.00,
+        fringeRateSnapshot: 22.00,
+      });
+
+    await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/submit`)
+      .set('Cookie', cookie)
+      .send({ submittedAt: '2026-04-01', submittedTo: 'DOL Region 9' });
+
+    return { weekId };
+  }
+
+  it('AMD-02: Normal week WH-347 filename does not contain "amended"', async () => {
+    const cookie = await registerAndLogin('export-normal');
+    const projectId = await createProject(cookie);
+    const { weekId } = await seedAndSubmitWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .get(`/api/export/wh347/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/pdf/);
+    expect(res.headers['content-disposition']).not.toMatch(/amended/i);
+  });
+
+  it('AMD-02: Amendment week WH-347 Content-Disposition filename contains "amended"', async () => {
+    const cookie = await registerAndLogin('export-amended');
+    const projectId = await createProject(cookie);
+    const { weekId } = await seedAndSubmitWeek(cookie, projectId);
+
+    // Create amendment
+    const amendRes = await supertest(app)
+      .post('/api/payroll/weeks/amend')
+      .set('Cookie', cookie)
+      .send({ originalWeekId: weekId });
+    expect(amendRes.status).toBe(201);
+    const amendWeekId = amendRes.body.weekId as string;
+
+    const res = await supertest(app)
+      .get(`/api/export/wh347/${amendWeekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/pdf/);
+    expect(res.headers['content-disposition']).toMatch(/amended/i);
+  });
+});
