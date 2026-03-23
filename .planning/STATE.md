@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
 status: planning
-stopped_at: Roadmap created — ready to plan Phase 17
+stopped_at: Completed 17-01-PLAN.md
 last_updated: "2026-03-23"
 last_activity: 2026-03-23
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 12
+  completed_plans: 1
+  percent: 8
 ---
 
 # State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
-Phase: Not started (roadmap approved, planning Phase 17 next)
-Status: Roadmap created
-Last activity: 2026-03-23 — v2.3 roadmap created (6 phases, 15 requirements)
+Phase: 17 — DB Migration + Project Archive (Plan 1 of 2 complete)
+Status: In Progress
+Last activity: 2026-03-23 — Phase 17 Plan 01 complete (migration + status filter)
 
-Progress: [░░░░░░░░░░] 0% (0/6 phases complete)
+Progress: [░░░░░░░░░░] 8% (1/12 plans complete)
 
 ### Phase Structure
 
@@ -38,7 +38,7 @@ Progress: [░░░░░░░░░░] 0% (0/6 phases complete)
 |-------|------|--------------|--------|
 | 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | ✅ Complete |
 | 16 | WH-347 Submission UX | WH-01, WH-02 | ✅ Complete |
-| 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | Not started |
+| 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | In Progress (1/2 plans) |
 | 18 | Dashboard Search + Filter | DASH-03, DASH-04 | Not started |
 | 19 | WH-347 Submission Tracking | SUB-01, SUB-02, SUB-03 | Not started |
 | 20 | Copy Previous Payroll Week | PAY-01, PAY-02 | Not started |
@@ -163,6 +163,9 @@ Progress: [░░░░░░░░░░] 0% (0/6 phases complete)
 - [Phase 16]: generatingRef (useRef) used as synchronous double-click guard — useState cannot prevent rapid duplicate download requests
 - [Phase 16]: hiddenAnchorRef placed outside modal JSX so anchor persists when modal unmounts during download initiation
 - [Phase 16]: Blob URL revoked after 100ms setTimeout to give browser time to initiate download before freeing object URL
+- [Phase 17-01]: Multi-statement SQL migrations require --> statement-breakpoint between each ALTER TABLE (Drizzle breakpoints:true mode)
+- [Phase 17-01]: originalWeekId has no .references() in schema.ts — self-referencing FK is SQL-only to avoid AnySQLiteColumn import complexity
+- [Phase 17-01]: GET /api/projects defaults to active-only; ?status=all returns both active and closed projects
 
 ### Research Flags for v2.3
 
@@ -181,5 +184,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: v2.3 roadmap created — 6 phases (17-22), 15 requirements mapped
+Stopped at: Completed 17-01-PLAN.md — DB migration + status filter
 Resume file: None

@@ -27,9 +27,9 @@
 
 ### Project Lifecycle (PRJ)
 
-- [ ] **PRJ-01**: User can archive a project, removing it from the active dashboard view
-- [ ] **PRJ-02**: User can toggle display of archived projects on the dashboard
-- [ ] **PRJ-03**: System warns if a project has open compliance violations before archiving (advisory, not a hard block)
+- [x] **PRJ-01**: User can archive a project, removing it from the active dashboard view
+- [x] **PRJ-02**: User can toggle display of archived projects on the dashboard
+- [x] **PRJ-03**: System warns if a project has open compliance violations before archiving (advisory, not a hard block)
 
 ### Dashboard UX (DASH)
 
@@ -66,9 +66,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRJ-01 | Phase 17 | Pending |
-| PRJ-02 | Phase 17 | Pending |
-| PRJ-03 | Phase 17 | Pending |
+| PRJ-01 | Phase 17 | Complete |
+| PRJ-02 | Phase 17 | Complete |
+| PRJ-03 | Phase 17 | Complete |
 | DASH-03 | Phase 18 | Pending |
 | DASH-04 | Phase 18 | Pending |
 | SUB-01 | Phase 19 | Pending |
