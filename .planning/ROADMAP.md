@@ -102,7 +102,10 @@ Plans:
   2. Attempting to edit payroll entries on a submitted week is rejected — both in the UI and at the API level
   3. User can un-submit a week to clear its submission status and re-enable editing
   4. PayrollListPage shows submitted/not-submitted status for each week at a glance
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 19-01-PLAN.md — Wave 0 tests + PATCH/DELETE submit routes + assertWeekNotSubmitted lock guard in both entry write routes
+- [ ] 19-02-PLAN.md — PayrollListPage submission badges + PayrollWeekDetailPage submit form + lock UI + WorkflowProgress step 4 fix
 
 ### Phase 20: Copy Previous Payroll Week
 **Goal**: Contractors can pre-fill a new payroll week from the prior week's worker and hour data, with compliance-safe live rate re-fetch
@@ -153,9 +156,9 @@ Plans:
 | 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
 | 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete | 2026-03-22 |
 | 16. WH-347 Submission UX | v2.2 | 1/1 | Complete | 2026-03-22 |
-| 17. DB Migration + Project Archive | v2.3 | 1/2 | In Progress|  |
-| 18. Dashboard Search + Filter | v2.3 | 0/1 | Not started | - |
-| 19. WH-347 Submission Tracking | v2.3 | 0/? | Not started | - |
+| 17. DB Migration + Project Archive | v2.3 | 2/2 | Complete | 2026-03-23 |
+| 18. Dashboard Search + Filter | v2.3 | 1/1 | Complete | 2026-03-23 |
+| 19. WH-347 Submission Tracking | v2.3 | 0/2 | Not started | - |
 | 20. Copy Previous Payroll Week | v2.3 | 0/? | Not started | - |
 | 21. Payroll Amendment Workflow | v2.3 | 0/? | Not started | - |
 | 22. Per-Worker Compliance History | v2.3 | 0/? | Not started | - |
