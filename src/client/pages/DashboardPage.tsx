@@ -22,10 +22,13 @@ interface Project {
 
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => api.get<{ data: { projects: Project[] } }>('/projects'),
+    queryKey: ['projects', showArchived ? 'all' : 'active'],
+    queryFn: () => api.get<{ data: { projects: Project[] } }>(
+      showArchived ? '/projects?status=all' : '/projects'
+    ),
   });
 
   const projects = data?.data?.projects ?? [];
@@ -41,6 +44,18 @@ export function DashboardPage() {
           </Button>
         }
       />
+
+      <div className="flex items-center gap-2 mb-4">
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+            className="rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+          />
+          Show Archived
+        </label>
+      </div>
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
