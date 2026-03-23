@@ -1,68 +1,83 @@
-# Requirements: v2.2 — UX Completion + Compliance Hardening
+# Requirements: HCC Prevailing Wage v2.3
 
-**Milestone:** v2.2
-**Status:** Draft — roadmap created
-**Last updated:** 2026-03-22
+**Milestone:** v2.3 — Contractor Workflow Efficiency + Audit Readiness
+**Created:** 2026-03-23
+**Status:** Active
 
 ---
 
 ## v1 Requirements
 
-### Category: WH-347 Submission (WH)
+### Payroll Efficiency (PAY)
 
-*Closes the submission feedback loop — contractor knows what they're submitting and that it's being generated.*
+- [ ] **PAY-01**: User can copy a previous payroll week to pre-fill a new week with worker/hour data and live rate re-fetch per classification
+- [ ] **PAY-02**: System shows which entries were skipped during copy (worker no longer active, rate lookup failed) before confirming
 
-- [ ] **WH-01:** When contractor clicks "Download WH-347" and violations exist for that payroll week, system shows a preflight modal listing each violation (worker name, type, delta amount) with a "Download Anyway" confirmation — contractor can acknowledge and proceed, or cancel
-- [ ] **WH-02:** WH-347 download shows "Generating..." state on the anchor/button while the PDF request is in-flight, then returns to normal after download begins — prevents double-clicks and signals the PDF is being built
+### Submission Tracking (SUB)
 
-### Category: Compliance Engine (COMP)
+- [ ] **SUB-01**: User can mark a payroll week as submitted with a date and agency name
+- [ ] **SUB-02**: System prevents editing payroll entries on a submitted week (server-side lock)
+- [ ] **SUB-03**: User can un-submit a week to clear its submission status
 
-*Extends computeCompliance() with the third Davis-Bacon violation type — apprentice ratio.*
+### Amendment Workflow (AMD)
 
-- [ ] **COMP-03:** System flags a violation per payroll week when total apprentice labor hours exceed the allowable ratio (1 apprentice hour per 3 journeyworker hours) — violation appears in the compliance panel and PayrollWeekDetailPage alongside under-wage and CWHSSA violations
+- [ ] **AMD-01**: User can amend a submitted payroll week — creates a new week row with amendment number; original week preserved and read-only
+- [ ] **AMD-02**: Amended WH-347 PDF shows payroll number in "N (AMENDED M)" format identifying the amendment sequence
+- [ ] **AMD-03**: Amendment week entries are pre-filled from the original week's worker hours for editing
 
-### Category: UX (UX)
+### Project Lifecycle (PRJ)
 
-*Surfaces workflow completion state so contractors know exactly where they are in the process.*
+- [ ] **PRJ-01**: User can archive a project, removing it from the active dashboard view
+- [ ] **PRJ-02**: User can toggle display of archived projects on the dashboard
+- [ ] **PRJ-03**: System warns if a project has open compliance violations before archiving (advisory, not a hard block)
 
-- [ ] **UX-04:** Project Detail page shows a workflow progress indicator with 4 steps — Create Project, Add Workers, Enter Payroll, Download WH-347 — each step marked complete based on actual data (project exists, workers exist, payroll entries exist, at least one WH-347 downloaded)
+### Dashboard UX (DASH)
 
-### Category: Reports (RPT)
+- [ ] **DASH-03**: User can search projects by name on the dashboard with URL-persisted filter state
+- [ ] **DASH-04**: User can filter projects by funding type on the dashboard
 
-*Makes reports submission-ready by optimizing for browser print-to-PDF.*
+### Audit / Compliance History (AUD)
 
-- [ ] **RPT-01:** Fringe benefit summary report prints cleanly via browser Ctrl+P — table headers repeat on each page, totals row visible, no nav chrome or tab UI printed, column widths preserve on paper
-- [ ] **RPT-02:** Worker pay history report prints cleanly via browser Ctrl+P — worker selector hidden on print, selected worker's full history table visible, consistent column alignment across pages
+- [ ] **AUD-01**: User can view a per-worker compliance history page showing all violations across all projects and weeks
+- [ ] **AUD-02**: WorkersPage shows a "Compliance History" link per worker row
 
 ---
 
 ## Future Requirements
 
-*Deferred from this milestone scope.*
-
-- Hard block on WH-347 if violations exist (v2.2 chose warn+confirm, not block — escalate if DOL audit risk increases)
-- Server-generated PDF for reports via pdf-lib (browser print is sufficient for v2.2)
-- WH-347 generation history / audit log per week (track when WH-347 was last generated)
-- State-specific prevailing wage forms (CA DIR, WA L&I) — federal WH-347 only
-- Multi-user / team accounts
+- Dashboard compliance status filter — requires `GET /api/compliance/projects/summary` batch endpoint (deferred to v2.4)
+- CSV export from per-worker compliance history page
+- State-specific prevailing wage forms (CA DIR, WA L&I)
+- Auto-submit to agency portal
+- Payroll provider integrations (QuickBooks, ADP)
 
 ---
 
 ## Out of Scope
 
-- Hard block on WH-347 submission — warn + confirm is the right UX for compliance software; contractors may have legitimate reasons to submit with known deviations
-- Server-generated report PDFs — browser Ctrl+P produces equivalent output without a new dependency
-- Daily apprentice ratio check — per-week is the Davis-Bacon enforcement granularity
+- Hard-delete of projects or payroll weeks — 29 CFR Part 3 requires 3-year records retention; archive (status-only) is the only permitted removal
+- Compliance filter on dashboard in v2.3 — batch compliance summary endpoint adds scope complexity; deferred to v2.4
+- Mobile native app — web-first; browser on tablet is sufficient
+- Multi-user / team accounts — single contractor user per account
 
 ---
 
 ## Traceability
 
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| WH-01 | Phase 16 | Complete |
-| WH-02 | Phase 16 | Complete |
-| COMP-03 | Phase 15 | Complete |
-| UX-04 | Phase 15 | Complete |
-| RPT-01 | Phase 15 | Complete |
-| RPT-02 | Phase 15 | Complete |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PAY-01 | TBD | Pending |
+| PAY-02 | TBD | Pending |
+| SUB-01 | TBD | Pending |
+| SUB-02 | TBD | Pending |
+| SUB-03 | TBD | Pending |
+| AMD-01 | TBD | Pending |
+| AMD-02 | TBD | Pending |
+| AMD-03 | TBD | Pending |
+| PRJ-01 | TBD | Pending |
+| PRJ-02 | TBD | Pending |
+| PRJ-03 | TBD | Pending |
+| DASH-03 | TBD | Pending |
+| DASH-04 | TBD | Pending |
+| AUD-01 | TBD | Pending |
+| AUD-02 | TBD | Pending |
