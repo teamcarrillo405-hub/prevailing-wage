@@ -8,6 +8,18 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
+## Current Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
+
+**Goal:** Make daily payroll entry faster, give contractors visibility into submission status and project lifecycle, and surface worker-level compliance history for audit responses.
+
+**Target features:**
+- Copy Previous Week — pre-fill new payroll week from prior week's hours
+- WH-347 Submission Tracking — mark weeks submitted with date/agency, visible on Payroll Week Detail and payroll list
+- Payroll Amendment Workflow — correct a submitted week and generate an amended WH-347 (resubmission)
+- Project Completion / Archive — mark projects complete, filter archived projects off the active dashboard
+- Dashboard Search + Filter — search by name, filter by compliance status and funding type
+- Per-Worker Compliance History — worker-centric view of all violations across all projects and weeks
+
 ## Current State (v2.2)
 
 **Shipped:** 2026-03-23
@@ -83,7 +95,14 @@ A contractor can run a full project end-to-end — create project → add worker
 
 ### Active
 
-<!-- v2.3 — not started -->
+<!-- v2.3 — in progress -->
+
+- Copy previous payroll week to pre-fill new week entry
+- WH-347 submission tracking (mark submitted with date/agency)
+- Payroll amendment workflow (corrected WH-347 resubmission)
+- Project completion / archive status
+- Dashboard search and filter (name, compliance status, funding type)
+- Per-worker compliance history across all projects and weeks
 
 ### Out of Scope
 
@@ -141,4 +160,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Single user per account | Simplicity for v1/v2; multi-user is a future milestone | — Pending |
 
 ---
-*Last updated: 2026-03-23 — v2.2 shipped*
+*Last updated: 2026-03-23 — v2.3 milestone started*

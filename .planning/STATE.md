@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.3
-milestone_name: TBD
-status: idle
-stopped_at: v2.2 milestone archived — ready for new milestone
+milestone_name: Contractor Workflow Efficiency + Audit Readiness
+status: planning
+stopped_at: Defining requirements for v2.3
 last_updated: "2026-03-23"
 last_activity: 2026-03-23
 progress:
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** v2.2 shipped. Run `/gsd:new-milestone` to start next milestone.
+**Current focus:** v2.3 — Contractor Workflow Efficiency + Audit Readiness — defining requirements
 
 ## Current Position
 
-Milestone: v2.2 — SHIPPED 2026-03-23
-Phase: —
-Status: Idle — ready for `/gsd:new-milestone`
-Last activity: 2026-03-23
+Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
+Phase: Not started (defining requirements)
+Status: Defining requirements
+Last activity: 2026-03-23 — Milestone v2.3 started
 
-Progress: [██████████] 100% (2 of 2 v2.2 phases complete)
+Progress: [░░░░░░░░░░] 0% (0 phases complete)
 
 ### Phase Structure
 
