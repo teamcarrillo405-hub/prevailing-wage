@@ -116,7 +116,10 @@ Plans:
   2. Copied entries use freshly fetched wage rates (not cloned snapshots from the source week)
   3. If any workers or classifications cannot be copied (worker inactive, rate lookup failed), the user sees a warning listing the skipped entries before confirming
   4. A successfully copied week can be edited normally before submission
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — copyPayrollWeek() service + POST /api/payroll/weeks/copy route (preview + commit modes) + integration tests
+- [ ] 20-02-PLAN.md — Copy modal UI on PayrollListPage (source week selector, preview warning, confirm/cancel) + browser verification
 
 ### Phase 21: Payroll Amendment Workflow
 **Goal**: Contractors can correct a submitted payroll week by creating a formal amendment that generates an amended WH-347 while preserving the original record
@@ -159,6 +162,6 @@ Plans:
 | 17. DB Migration + Project Archive | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 18. Dashboard Search + Filter | v2.3 | 1/1 | Complete | 2026-03-23 |
 | 19. WH-347 Submission Tracking | v2.3 | 1/2 | In Progress|  |
-| 20. Copy Previous Payroll Week | v2.3 | 0/? | Not started | - |
+| 20. Copy Previous Payroll Week | v2.3 | 0/2 | Not started | - |
 | 21. Payroll Amendment Workflow | v2.3 | 0/? | Not started | - |
 | 22. Per-Worker Compliance History | v2.3 | 0/? | Not started | - |
