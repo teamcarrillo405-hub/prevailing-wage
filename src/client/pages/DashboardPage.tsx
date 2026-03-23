@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
@@ -20,9 +21,31 @@ interface Project {
   status: string;
 }
 
+const FUNDING_OPTIONS = [
+  { value: '', label: 'All Funding Types' },
+  { value: 'federal', label: 'Federal' },
+  { value: 'state', label: 'State' },
+  { value: 'mixed', label: 'Mixed' },
+];
+
+const FUNDING_LABELS: Record<string, string> = {
+  federal: 'Federal',
+  state: 'State',
+  mixed: 'Mixed',
+};
+
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // URL-persisted filter state — back button restores these automatically
+  const searchQuery = searchParams.get('q') ?? '';
+  const fundingFilter = searchParams.get('funding') ?? '';
+
+  // Local controlled-input state initialized from URL (avoids useSearchParams lag on keystroke)
+  const [inputValue, setInputValue] = useState(() => searchParams.get('q') ?? '');
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['projects', showArchived ? 'all' : 'active'],
@@ -32,6 +55,45 @@ export function DashboardPage() {
   });
 
   const projects = data?.data?.projects ?? [];
+
+  const filteredProjects = useMemo(() => {
+    let result = projects;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(p => p.name.toLowerCase().includes(q));
+    }
+    if (fundingFilter) {
+      result = result.filter(p => p.fundingType === fundingFilter);
+    }
+    return result;
+  }, [projects, searchQuery, fundingFilter]);
+
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setInputValue(val);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val.trim()) {
+        next.set('q', val);
+      } else {
+        next.delete('q');
+      }
+      return next;
+    });
+  }
+
+  function handleFundingChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val) {
+        next.set('funding', val);
+      } else {
+        next.delete('funding');
+      }
+      return next;
+    });
+  }
 
   return (
     <Layout>
@@ -55,6 +117,26 @@ export function DashboardPage() {
           />
           Show Archived
         </label>
+      </div>
+
+      {/* Search + funding filter bar — DASH-03 / DASH-04 */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleSearchChange}
+          placeholder="Search projects..."
+          className="text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary placeholder:text-text-secondary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold w-56"
+        />
+        <select
+          value={fundingFilter}
+          onChange={handleFundingChange}
+          className="text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
+        >
+          {FUNDING_OPTIONS.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       {showForm && (
@@ -87,9 +169,22 @@ export function DashboardPage() {
         />
       )}
 
-      {!isLoading && !isError && projects.length > 0 && (
+      {!isLoading && !isError && projects.length > 0 && filteredProjects.length === 0 && (
+        <EmptyState
+          heading="No matching projects"
+          message={
+            searchQuery && fundingFilter
+              ? `No projects match "${searchQuery}" with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}".`
+              : searchQuery
+              ? `No projects match "${searchQuery}".`
+              : `No projects with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}".`
+          }
+        />
+      )}
+
+      {!isLoading && !isError && filteredProjects.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((project) => (
+          {filteredProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
