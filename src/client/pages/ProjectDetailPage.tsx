@@ -86,7 +86,7 @@ export function ProjectDetailPage() {
 
   const { data: weeksData } = useQuery({
     queryKey: ['payroll-weeks', id],
-    queryFn: () => api.get<{ weeks: { id: string; isFinal: boolean }[] }>(`/payroll/projects/${id}/weeks`),
+    queryFn: () => api.get<{ weeks: { id: string; submittedAt: string | null }[] }>(`/payroll/projects/${id}/weeks`),
     enabled: !!id,
     staleTime: 60_000,
   });
@@ -136,9 +136,7 @@ export function ProjectDetailPage() {
     { label: 'Create Project', complete: true },
     { label: 'Add Workers', complete: workers.length > 0 },
     { label: 'Enter Payroll', complete: weeks.length > 0 },
-    // Step 4 uses isFinal as proxy for WH-347 download — accurate when users mark weeks final.
-    // Phase 16 may add proper download tracking when WH-347 UX is reworked.
-    { label: 'Download WH-347', complete: weeks.some(w => w.isFinal) },
+    { label: 'Download WH-347', complete: weeks.some(w => w.submittedAt !== null) },
   ];
 
   return (

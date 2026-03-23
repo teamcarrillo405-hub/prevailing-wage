@@ -2,7 +2,7 @@
 // Route: /projects/:projectId/payroll/:weekId
 import { useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -16,6 +16,8 @@ interface PayrollWeek {
   weekEndingDate: string;
   payrollNumber: number;
   isFinal: boolean;
+  submittedAt: string | null;
+  submittedTo: string | null;
   createdAt: string;
 }
 
@@ -95,6 +97,32 @@ export function PayrollWeekDetailPage() {
   const [showPreflight, setShowPreflight] = useState(false);
   const generatingRef = useRef(false);
   const hiddenAnchorRef = useRef<HTMLAnchorElement>(null);
+
+  const queryClient = useQueryClient();
+  const [showSubmitForm, setShowSubmitForm] = useState(false);
+  const [submitDate, setSubmitDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [submitAgency, setSubmitAgency] = useState('');
+
+  const submitMutation = useMutation({
+    mutationFn: () =>
+      api.patch(`/payroll/weeks/${weekId}/submit`, {
+        submittedAt: submitDate,
+        submittedTo: submitAgency,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+      queryClient.invalidateQueries({ queryKey: ['payroll-weeks', projectId] });
+      setShowSubmitForm(false);
+    },
+  });
+
+  const unsubmitMutation = useMutation({
+    mutationFn: () => api.delete(`/payroll/weeks/${weekId}/submit`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+      queryClient.invalidateQueries({ queryKey: ['payroll-weeks', projectId] });
+    },
+  });
 
   const {
     data: weekData,
@@ -202,6 +230,16 @@ export function PayrollWeekDetailPage() {
           <p className="text-sm text-red-600">Failed to load payroll week details.</p>
         )}
 
+        {/* Lock notice — shown when week is submitted */}
+        {!isLoading && !isError && week?.submittedAt && (
+          <Card padding="sm" className="mb-6 flex items-center gap-3 border-amber-200 bg-amber-50">
+            <Badge variant="warning">Read-Only</Badge>
+            <span className="text-sm text-gray-700">
+              This payroll week is submitted and cannot be edited. Un-submit to make changes.
+            </span>
+          </Card>
+        )}
+
         {/* Entries table */}
         {!isLoading && !isError && entries.length > 0 && (
           <Card padding="none" className="mb-6">
@@ -304,6 +342,84 @@ export function PayrollWeekDetailPage() {
               <div className="px-5 py-4 flex items-center gap-2">
                 <Badge variant="compliant">Compliant</Badge>
                 <span className="text-sm text-gray-700">No violations for this payroll week.</span>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Submission status panel */}
+        {!isLoading && !isError && week && (
+          <Card padding="none" className="mt-6">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Submission Status</h2>
+            </div>
+            {week.submittedAt ? (
+              <div className="px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Badge variant="compliant">Submitted</Badge>
+                  <span className="text-sm text-gray-700">
+                    {week.submittedAt} — {week.submittedTo}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={unsubmitMutation.isPending}
+                  onClick={() => unsubmitMutation.mutate()}
+                >
+                  {unsubmitMutation.isPending ? 'Clearing...' : 'Un-submit'}
+                </Button>
+              </div>
+            ) : showSubmitForm ? (
+              <div className="px-5 py-4 space-y-3">
+                <p className="text-sm text-gray-600">Record the submission date and agency name.</p>
+                <div className="flex gap-3 items-end">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Submission Date</label>
+                    <input
+                      type="date"
+                      value={submitDate}
+                      onChange={(e) => setSubmitDate(e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">Agency / Recipient</label>
+                    <input
+                      type="text"
+                      value={submitAgency}
+                      onChange={(e) => setSubmitAgency(e.target.value)}
+                      placeholder="e.g. DOL Wage and Hour Division, Region 9"
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="ghost" size="sm" onClick={() => setShowSubmitForm(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!submitDate || !submitAgency.trim() || submitMutation.isPending}
+                    onClick={() => submitMutation.mutate()}
+                  >
+                    {submitMutation.isPending ? 'Saving...' : 'Mark as Submitted'}
+                  </Button>
+                </div>
+                {submitMutation.isError && (
+                  <p className="text-xs text-red-600">Failed to submit. Please try again.</p>
+                )}
+              </div>
+            ) : (
+              <div className="px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="neutral">Not Submitted</Badge>
+                  <span className="text-sm text-gray-500">WH-347 not yet submitted to agency.</span>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => setShowSubmitForm(true)}>
+                  Mark as Submitted
+                </Button>
               </div>
             )}
           </Card>
