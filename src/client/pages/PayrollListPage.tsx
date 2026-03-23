@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 
 interface PayrollWeek {
   id: string;
@@ -13,6 +14,8 @@ interface PayrollWeek {
   weekEndingDate: string;
   payrollNumber: number;
   isFinal: boolean;
+  submittedAt: string | null;
+  submittedTo: string | null;
   createdAt: string;
 }
 
@@ -85,10 +88,10 @@ export function PayrollListPage() {
                   <span className="ml-3 text-xs text-gray-500">
                     Payroll #{week.payrollNumber}
                   </span>
-                  {week.isFinal && (
-                    <span className="ml-2 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                      Final
-                    </span>
+                  {week.submittedAt ? (
+                    <Badge variant="compliant" className="ml-2">Submitted</Badge>
+                  ) : (
+                    <Badge variant="neutral" className="ml-2">Not Submitted</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
