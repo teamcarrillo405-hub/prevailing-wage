@@ -149,7 +149,9 @@ router.get('/wh347/:weekId', async (req, res) => {
   const wh347Data: Wh347Data = {
     contractorName: project.name,
     contractorAddress: `${project.county}, ${project.state}`,
-    payrollNumber: String(week.payrollNumber),
+    payrollNumber: week.amendmentNumber != null && week.originalWeekId != null
+      ? `${week.payrollNumber} (AMENDED ${week.amendmentNumber})`
+      : String(week.payrollNumber),
     weekEndingDate: formatDate(week.weekEndingDate),
     projectName: project.name,
     projectLocation: `${project.county}, ${project.state}`,
@@ -178,7 +180,9 @@ router.get('/wh347/:weekId', async (req, res) => {
   const filledPdf = await fillWh347(wh347Data, templateBytes);
 
   // 7. Stream as PDF download
-  const filename = `wh347-${week.payrollNumber}.pdf`;
+  const filename = week.amendmentNumber != null
+    ? `wh347-${week.payrollNumber}-amended-${week.amendmentNumber}.pdf`
+    : `wh347-${week.payrollNumber}.pdf`;
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Length', filledPdf.length);

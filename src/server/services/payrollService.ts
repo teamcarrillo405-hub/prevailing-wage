@@ -1,6 +1,6 @@
 // src/server/services/payrollService.ts
 import { randomUUID } from 'crypto';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, max } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import {
   payrollWeeks,
@@ -408,4 +408,108 @@ export async function copyPayrollWeek(input: CopyWeekInput): Promise<CopyWeekRes
   }
 
   return { weekId: newWeek.id, copied, skipped };
+}
+
+// ── Amendment Workflow ─────────────────────────────────────────────────────
+
+export interface AmendWeekInput {
+  originalWeekId: string;
+  projectId: string;
+}
+
+export interface AmendWeekResult {
+  weekId: string;
+  amendmentNumber: number;
+  copiedCount: number;
+}
+
+/**
+ * Creates an amendment of a submitted payroll week.
+ *
+ * COMPLIANCE: Clones baseRateSnapshot/fringeRateSnapshot from source entries.
+ *             Never re-fetches live rates — snapshots must reflect the rate
+ *             in force at the time of original submission (29 CFR Part 3).
+ *             Creates a new payrollWeeks row; never updates in place.
+ */
+export async function amendPayrollWeek(input: AmendWeekInput): Promise<AmendWeekResult> {
+  const db = getDb();
+
+  // 1. Fetch and verify original week exists and is submitted
+  const originalWeek = await getPayrollWeek(input.originalWeekId);
+  if (!originalWeek) {
+    throw new Error(`Payroll week not found: ${input.originalWeekId}`);
+  }
+  if (!originalWeek.submittedAt) {
+    throw new Error('Only submitted weeks can be amended');
+  }
+
+  // 2. Resolve root week: if the original is itself an amendment, use its root
+  const rootWeekId = originalWeek.originalWeekId ?? originalWeek.id;
+
+  // 3. Determine next amendment number: MAX(amendmentNumber) across all amendments of this root
+  const [maxResult] = await db
+    .select({ maxAmendment: max(payrollWeeks.amendmentNumber) })
+    .from(payrollWeeks)
+    .where(eq(payrollWeeks.originalWeekId, rootWeekId));
+
+  const currentMax = maxResult?.maxAmendment ?? 0;
+  const amendmentNumber = (currentMax ?? 0) + 1;
+
+  // 4. Insert new amendment week row
+  const now = new Date().toISOString();
+  const newWeekId = randomUUID();
+
+  await db.insert(payrollWeeks).values({
+    id: newWeekId,
+    projectId: input.projectId,
+    weekEndingDate: originalWeek.weekEndingDate,
+    payrollNumber: originalWeek.payrollNumber,
+    isFinal: originalWeek.isFinal,
+    originalWeekId: rootWeekId,
+    amendmentNumber,
+    submittedAt: null,
+    submittedTo: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // 5. Copy entries from the original week — clone ALL fields including snapshots
+  //    Do NOT call getCachedWd or lookupWageDetermination (federal compliance requirement)
+  const sourceEntries = await db
+    .select()
+    .from(payrollEntries)
+    .where(eq(payrollEntries.payrollWeekId, input.originalWeekId));
+
+  for (const entry of sourceEntries) {
+    const entryId = randomUUID();
+    await db.insert(payrollEntries).values({
+      id: entryId,
+      payrollWeekId: newWeekId,
+      workerId: entry.workerId,
+      classificationId: entry.classificationId,
+      monSt: entry.monSt ?? 0,
+      tueSt: entry.tueSt ?? 0,
+      wedSt: entry.wedSt ?? 0,
+      thuSt: entry.thuSt ?? 0,
+      friSt: entry.friSt ?? 0,
+      satSt: entry.satSt ?? 0,
+      sunSt: entry.sunSt ?? 0,
+      monOt: entry.monOt ?? 0,
+      tueOt: entry.tueOt ?? 0,
+      wedOt: entry.wedOt ?? 0,
+      thuOt: entry.thuOt ?? 0,
+      friOt: entry.friOt ?? 0,
+      satOt: entry.satOt ?? 0,
+      sunOt: entry.sunOt ?? 0,
+      baseRateSnapshot: entry.baseRateSnapshot,
+      fringeRateSnapshot: entry.fringeRateSnapshot,
+      grossWages: null,
+      deductions: 0,
+      netPay: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  return { weekId: newWeekId, amendmentNumber, copiedCount: sourceEntries.length };
 }
