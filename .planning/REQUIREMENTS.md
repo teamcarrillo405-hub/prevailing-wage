@@ -66,18 +66,18 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PAY-01 | TBD | Pending |
-| PAY-02 | TBD | Pending |
-| SUB-01 | TBD | Pending |
-| SUB-02 | TBD | Pending |
-| SUB-03 | TBD | Pending |
-| AMD-01 | TBD | Pending |
-| AMD-02 | TBD | Pending |
-| AMD-03 | TBD | Pending |
-| PRJ-01 | TBD | Pending |
-| PRJ-02 | TBD | Pending |
-| PRJ-03 | TBD | Pending |
-| DASH-03 | TBD | Pending |
-| DASH-04 | TBD | Pending |
-| AUD-01 | TBD | Pending |
-| AUD-02 | TBD | Pending |
+| PRJ-01 | Phase 17 | Pending |
+| PRJ-02 | Phase 17 | Pending |
+| PRJ-03 | Phase 17 | Pending |
+| DASH-03 | Phase 18 | Pending |
+| DASH-04 | Phase 18 | Pending |
+| SUB-01 | Phase 19 | Pending |
+| SUB-02 | Phase 19 | Pending |
+| SUB-03 | Phase 19 | Pending |
+| PAY-01 | Phase 20 | Pending |
+| PAY-02 | Phase 20 | Pending |
+| AMD-01 | Phase 21 | Pending |
+| AMD-02 | Phase 21 | Pending |
+| AMD-03 | Phase 21 | Pending |
+| AUD-01 | Phase 22 | Pending |
+| AUD-02 | Phase 22 | Pending |

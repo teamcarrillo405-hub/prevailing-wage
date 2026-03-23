@@ -6,6 +6,7 @@
 - ✅ **v2.0** Contractor UX Overhaul + Compliance — Phases 6-9 (shipped 2026-03-20)
 - ✅ **v2.1** Design Polish + Landing Page — Phases 10-14 (shipped 2026-03-22)
 - ✅ **v2.2** UX Completion + Compliance Hardening — Phases 15-16 (shipped 2026-03-23)
+- 🔄 **v2.3** Contractor Workflow Efficiency + Audit Readiness — Phases 17-22 (active)
 
 ## Phases
 
@@ -53,6 +54,84 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 
 </details>
 
+### v2.3 Contractor Workflow Efficiency + Audit Readiness (Phases 17-22)
+
+- [ ] **Phase 17: DB Migration + Project Archive** — 4-column payrollWeeks migration, project archive/restore, archived badge, compliance pre-check before archive
+- [ ] **Phase 18: Dashboard Search + Filter** — name search, funding type filter, URL-persisted filter state, zero-results empty state
+- [ ] **Phase 19: WH-347 Submission Tracking** — mark weeks submitted with date/agency, server-side edit lock, un-submit, submitted badges on payroll list
+- [ ] **Phase 20: Copy Previous Payroll Week** — copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning
+- [ ] **Phase 21: Payroll Amendment Workflow** — amend submitted week as new row, "N (AMENDED M)" WH-347 label, pre-filled entries from original
+- [ ] **Phase 22: Per-Worker Compliance History** — cross-project violation history page, compliance history link per worker row
+
+## Phase Details
+
+### Phase 17: DB Migration + Project Archive
+**Goal**: The database is extended for submission and amendment features, and contractors can mark projects complete and hide them from the active dashboard
+**Depends on**: Phase 16 (last shipped phase)
+**Requirements**: PRJ-01, PRJ-02, PRJ-03
+**Success Criteria** (what must be TRUE):
+  1. User can click Archive on a project and it disappears from the main dashboard view
+  2. User can toggle "Show Archived" on the dashboard and archived projects reappear with a visual badge
+  3. System warns the user (advisory, not a block) if the project has open compliance violations before archiving
+  4. User can restore an archived project back to active status
+  5. The payrollWeeks table has submitted_at, submitted_to, amendment_number, and original_week_id columns available for subsequent phases
+**Plans**: TBD
+
+### Phase 18: Dashboard Search + Filter
+**Goal**: Contractors can find specific projects instantly by name or funding type without scrolling through the full list
+**Depends on**: Phase 17 (shares DashboardPage.tsx; archive toggle already added)
+**Requirements**: DASH-03, DASH-04
+**Success Criteria** (what must be TRUE):
+  1. User can type in a search box on the dashboard and the project list filters to matching project names in real time
+  2. User can select a funding type from a dropdown and the list shows only projects of that type
+  3. Search and filter state survive back-navigation (browser back button returns to the same filtered view)
+  4. When no projects match the active filters, a clear empty state message is shown (not a blank list)
+**Plans**: TBD
+
+### Phase 19: WH-347 Submission Tracking
+**Goal**: Contractors can formally record when a WH-347 has been submitted and to whom, and the system enforces that submitted weeks are read-only
+**Depends on**: Phase 17 (submitted_at, submitted_to columns from migration)
+**Requirements**: SUB-01, SUB-02, SUB-03
+**Success Criteria** (what must be TRUE):
+  1. User can mark a payroll week as submitted by entering a submission date and agency name, and the week shows a submitted badge
+  2. Attempting to edit payroll entries on a submitted week is rejected — both in the UI and at the API level
+  3. User can un-submit a week to clear its submission status and re-enable editing
+  4. PayrollListPage shows submitted/not-submitted status for each week at a glance
+**Plans**: TBD
+
+### Phase 20: Copy Previous Payroll Week
+**Goal**: Contractors can pre-fill a new payroll week from the prior week's worker and hour data, with compliance-safe live rate re-fetch
+**Depends on**: Phase 17 (migration complete; copy route must not carry submission flags from source week)
+**Requirements**: PAY-01, PAY-02
+**Success Criteria** (what must be TRUE):
+  1. When creating a new payroll week, user can choose to copy from a previous week and the new week is pre-filled with the prior week's worker hours
+  2. Copied entries use freshly fetched wage rates (not cloned snapshots from the source week)
+  3. If any workers or classifications cannot be copied (worker inactive, rate lookup failed), the user sees a warning listing the skipped entries before confirming
+  4. A successfully copied week can be edited normally before submission
+**Plans**: TBD
+
+### Phase 21: Payroll Amendment Workflow
+**Goal**: Contractors can correct a submitted payroll week by creating a formal amendment that generates an amended WH-347 while preserving the original record
+**Depends on**: Phase 17 (amendment_number, original_week_id columns), Phase 19 (Amend button only surfaces when week is submitted), Phase 20 (bulk entry copy pattern reused for amendment pre-fill)
+**Requirements**: AMD-01, AMD-02, AMD-03
+**Success Criteria** (what must be TRUE):
+  1. User can click "Amend This Week" on a submitted payroll week, which creates a new amendment week pre-filled with the original week's hours
+  2. The original submitted week remains visible and read-only after an amendment is created
+  3. Downloading the WH-347 for an amendment week shows the payroll number in "N (AMENDED M)" format identifying the amendment sequence
+  4. Multiple amendments to the same week are numbered sequentially (amendment 1, amendment 2, etc.)
+**Plans**: TBD
+
+### Phase 22: Per-Worker Compliance History
+**Goal**: Contractors can see a single page showing all compliance violations for a specific worker across every project and payroll week — ready for audit response
+**Depends on**: Nothing (read-only reporting; fully independent of Phases 17-21)
+**Requirements**: AUD-01, AUD-02
+**Success Criteria** (what must be TRUE):
+  1. User can click "Compliance History" next to any worker on the Workers page and land on a page showing all that worker's violations across all projects
+  2. The violation list shows project name, payroll week, violation type, and the amounts involved for each entry
+  3. A worker with no violations across any project shows a clear "no violations found" state
+  4. Worker identity is correctly matched across projects using name and SSN last 4 (not project-scoped worker ID)
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -67,5 +146,11 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 | 12. App Shell + Global Layout | v2.1 | 3/3 | Complete | 2026-03-20 |
 | 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
 | 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
-| 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete    | 2026-03-22 |
-| 16. WH-347 Submission UX | v2.2 | 1/1 | Complete    | 2026-03-22 |
+| 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete | 2026-03-22 |
+| 16. WH-347 Submission UX | v2.2 | 1/1 | Complete | 2026-03-22 |
+| 17. DB Migration + Project Archive | v2.3 | 0/? | Not started | - |
+| 18. Dashboard Search + Filter | v2.3 | 0/? | Not started | - |
+| 19. WH-347 Submission Tracking | v2.3 | 0/? | Not started | - |
+| 20. Copy Previous Payroll Week | v2.3 | 0/? | Not started | - |
+| 21. Payroll Amendment Workflow | v2.3 | 0/? | Not started | - |
+| 22. Per-Worker Compliance History | v2.3 | 0/? | Not started | - |

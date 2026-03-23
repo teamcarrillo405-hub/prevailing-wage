@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
 status: planning
-stopped_at: Defining requirements for v2.3
+stopped_at: Roadmap created — ready to plan Phase 17
 last_updated: "2026-03-23"
 last_activity: 2026-03-23
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** v2.3 — Contractor Workflow Efficiency + Audit Readiness — defining requirements
+**Current focus:** v2.3 — Contractor Workflow Efficiency + Audit Readiness — roadmap created, ready to plan Phase 17
 
 ## Current Position
 
 Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
-Phase: Not started (defining requirements)
-Status: Defining requirements
-Last activity: 2026-03-23 — Milestone v2.3 started
+Phase: Not started (roadmap approved, planning Phase 17 next)
+Status: Roadmap created
+Last activity: 2026-03-23 — v2.3 roadmap created (6 phases, 15 requirements)
 
-Progress: [░░░░░░░░░░] 0% (0 phases complete)
+Progress: [░░░░░░░░░░] 0% (0/6 phases complete)
 
 ### Phase Structure
 
@@ -38,6 +38,12 @@ Progress: [░░░░░░░░░░] 0% (0 phases complete)
 |-------|------|--------------|--------|
 | 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | ✅ Complete |
 | 16 | WH-347 Submission UX | WH-01, WH-02 | ✅ Complete |
+| 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | Not started |
+| 18 | Dashboard Search + Filter | DASH-03, DASH-04 | Not started |
+| 19 | WH-347 Submission Tracking | SUB-01, SUB-02, SUB-03 | Not started |
+| 20 | Copy Previous Payroll Week | PAY-01, PAY-02 | Not started |
+| 21 | Payroll Amendment Workflow | AMD-01, AMD-02, AMD-03 | Not started |
+| 22 | Per-Worker Compliance History | AUD-01, AUD-02 | Not started |
 
 ## Performance Metrics
 
@@ -158,12 +164,11 @@ Progress: [░░░░░░░░░░] 0% (0 phases complete)
 - [Phase 16]: hiddenAnchorRef placed outside modal JSX so anchor persists when modal unmounts during download initiation
 - [Phase 16]: Blob URL revoked after 100ms setTimeout to give browser time to initiate download before freeing object URL
 
-### Research Flags for v2.2
+### Research Flags for v2.3
 
-- Phase 15: computeCompliance() currently returns per-entry violation objects — apprentice ratio is per-week aggregate; confirm return type supports a new week-level violation shape before implementing
-- Phase 15: Workflow progress step "Download WH-347" requires tracking whether a WH-347 has been generated — confirm if this is recorded in the DB or must be derived from payrollWeeks data
-- Phase 16: WH-347 download anchor is a plain <a href> — adding "Generating..." state requires converting to a button-driven fetch with manual Blob URL creation (not a trivial change to the anchor pattern)
-- Phase 16: Preflight modal must query compliance results for the specific week before allowing the download — ensure computeCompliance() is callable client-side or exposed via a dedicated endpoint
+- Phase 20: Review wageLookup.ts before building the copy route — confirm per-classification lookup supports graceful per-entry failure (omit vs. default to zero). Highest-risk implementation decision in v2.3.
+- Phase 21: Verify wh347Data.payrollNumber type in wh347Generator.ts accepts string values before writing any route code. Confirm export.ts string assembly approach for "N (AMENDED M)" label does not require fillWh347() coordinate changes.
+- Phase 22: Review complianceService.computeCompliance() input contract before designing the batch query. Write a 20-week test fixture before any implementation to catch N+1 regressions.
 
 ### Pending Todos
 
@@ -175,6 +180,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T22:34:58.148Z
-Stopped at: Completed Phase 16 Plan 01 — WH-347 Submission UX
+Last session: 2026-03-23
+Stopped at: v2.3 roadmap created — 6 phases (17-22), 15 requirements mapped
 Resume file: None
