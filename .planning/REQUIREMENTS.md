@@ -33,8 +33,8 @@
 
 ### Dashboard UX (DASH)
 
-- [ ] **DASH-03**: User can search projects by name on the dashboard with URL-persisted filter state
-- [ ] **DASH-04**: User can filter projects by funding type on the dashboard
+- [x] **DASH-03**: User can search projects by name on the dashboard with URL-persisted filter state
+- [x] **DASH-04**: User can filter projects by funding type on the dashboard
 
 ### Audit / Compliance History (AUD)
 
@@ -69,8 +69,8 @@
 | PRJ-01 | Phase 17 | Complete |
 | PRJ-02 | Phase 17 | Complete |
 | PRJ-03 | Phase 17 | Complete |
-| DASH-03 | Phase 18 | Pending |
-| DASH-04 | Phase 18 | Pending |
+| DASH-03 | Phase 18 | Complete |
+| DASH-04 | Phase 18 | Complete |
 | SUB-01 | Phase 19 | Pending |
 | SUB-02 | Phase 19 | Pending |
 | SUB-03 | Phase 19 | Pending |

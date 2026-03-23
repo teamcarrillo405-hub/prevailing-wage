@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
 status: planning
-stopped_at: Completed 17-02-PLAN.md (Phase 17 complete)
+stopped_at: Completed 18-01-PLAN.md (Phase 18 complete)
 last_updated: "2026-03-23"
 last_activity: 2026-03-23
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 4
-  percent: 33
+  completed_plans: 5
+  percent: 42
 ---
 
 # State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
-Phase: 18 — Dashboard Search + Filter (next)
+Phase: 19 — WH-347 Submission Tracking (next)
 Status: Planning
-Last activity: 2026-03-23 — Phase 17 complete (DB migration + project archive UI, all 3 PRJ requirements shipped)
+Last activity: 2026-03-23 — Phase 18 complete (dashboard name search + funding filter, DASH-03 + DASH-04 shipped, browser checkpoint approved)
 
-Progress: [██░░░░░░░░] 33% (4/12 plans complete)
+Progress: [███░░░░░░░] 42% (5/12 plans complete)
 
 ### Phase Structure
 
@@ -39,7 +39,7 @@ Progress: [██░░░░░░░░] 33% (4/12 plans complete)
 | 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | ✅ Complete |
 | 16 | WH-347 Submission UX | WH-01, WH-02 | ✅ Complete |
 | 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | ✅ Complete |
-| 18 | Dashboard Search + Filter | DASH-03, DASH-04 | Not started |
+| 18 | Dashboard Search + Filter | DASH-03, DASH-04 | ✅ Complete |
 | 19 | WH-347 Submission Tracking | SUB-01, SUB-02, SUB-03 | Not started |
 | 20 | Copy Previous Payroll Week | PAY-01, PAY-02 | Not started |
 | 21 | Payroll Amendment Workflow | AMD-01, AMD-02, AMD-03 | Not started |
@@ -60,6 +60,7 @@ Progress: [██░░░░░░░░] 33% (4/12 plans complete)
 | 15 | 3/3 | ✅ Complete |
 | 16 | 1/1 | ✅ Complete |
 | 17 | 2/2 | ✅ Complete |
+| 18 | 1/1 | ✅ Complete |
 
 ## Accumulated Context
 
@@ -170,6 +171,10 @@ Progress: [██░░░░░░░░] 33% (4/12 plans complete)
 - [Phase 17-02]: Compliance check uses queryClient.fetchQuery (imperative) — fires only on Archive button click, not on page load
 - [Phase 17-02]: Archive advisory is non-blocking — "Archive Anyway" CTA always present when violations exist (PRJ-03 requirement)
 - [Phase 17-02]: TanStack Query key includes filter state ['projects', 'all'|'active'] — separate cache buckets prevent stale data when toggling
+- [Phase 18-01]: inputValue useState initialized from searchParams.get('q') — avoids useSearchParams keystroke lag while keeping URL in sync on every change
+- [Phase 18-01]: Functional setSearchParams(prev => next) used exclusively — direct object form wipes co-existing params (showArchived, funding, etc.)
+- [Phase 18-01]: filteredProjects derived via useMemo client-side — no server changes needed, filtering against already-fetched array
+- [Phase 18-01]: FUNDING_OPTIONS/FUNDING_LABELS defined as module-level constants — funding type is a closed set, no API call needed
 
 ### Research Flags for v2.3
 
@@ -188,5 +193,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Completed Phase 17 — DB Migration + Project Archive (all 3 PRJ requirements shipped, browser checkpoint approved)
+Stopped at: Completed Phase 18 — Dashboard Search + Filter (DASH-03 + DASH-04 shipped, all 6 browser tests approved)
 Resume file: None

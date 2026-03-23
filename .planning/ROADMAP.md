@@ -56,8 +56,8 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 
 ### v2.3 Contractor Workflow Efficiency + Audit Readiness (Phases 17-22)
 
-- [ ] **Phase 17: DB Migration + Project Archive** — 4-column payrollWeeks migration, project archive/restore, archived badge, compliance pre-check before archive
-- [ ] **Phase 18: Dashboard Search + Filter** — name search, funding type filter, URL-persisted filter state, zero-results empty state
+- [x] **Phase 17: DB Migration + Project Archive** — 4-column payrollWeeks migration, project archive/restore, archived badge, compliance pre-check before archive
+- [x] **Phase 18: Dashboard Search + Filter** — name search, funding type filter, URL-persisted filter state, zero-results empty state
 - [ ] **Phase 19: WH-347 Submission Tracking** — mark weeks submitted with date/agency, server-side edit lock, un-submit, submitted badges on payroll list
 - [ ] **Phase 20: Copy Previous Payroll Week** — copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning
 - [ ] **Phase 21: Payroll Amendment Workflow** — amend submitted week as new row, "N (AMENDED M)" WH-347 label, pre-filled entries from original
@@ -78,7 +78,7 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 **Plans**: 2 plans
 Plans:
 - [x] 17-01-PLAN.md — DB migration (4 payrollWeeks columns) + status-filtered GET /api/projects route + tests
-- [ ] 17-02-PLAN.md — Archive/Restore UI (ProjectDetailPage buttons, compliance advisory modal, ProjectCard badge, DashboardPage toggle)
+- [x] 17-02-PLAN.md — Archive/Restore UI (ProjectDetailPage buttons, compliance advisory modal, ProjectCard badge, DashboardPage toggle)
 
 ### Phase 18: Dashboard Search + Filter
 **Goal**: Contractors can find specific projects instantly by name or funding type without scrolling through the full list
@@ -91,7 +91,7 @@ Plans:
   4. When no projects match the active filters, a clear empty state message is shown (not a blank list)
 **Plans**: 1 plan
 Plans:
-- [ ] 18-01-PLAN.md — Search input + funding dropdown + useMemo filtered list + URL-persisted params + empty state (DashboardPage.tsx only)
+- [x] 18-01-PLAN.md — Search input + funding dropdown + useMemo filtered list + URL-persisted params + empty state (DashboardPage.tsx only)
 
 ### Phase 19: WH-347 Submission Tracking
 **Goal**: Contractors can formally record when a WH-347 has been submitted and to whom, and the system enforces that submitted weeks are read-only
