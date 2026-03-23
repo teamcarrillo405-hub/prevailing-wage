@@ -116,3 +116,12 @@ None - no external service configuration required.
 ---
 *Phase: 13-landing-page-routing*
 *Completed: 2026-03-20*
+
+## Self-Check: PASSED
+
+- FOUND: src/client/components/shared/PublicRoute.tsx
+- FOUND: src/client/pages/RegisterPage.tsx
+- FOUND: src/client/pages/LandingPage.tsx
+- FOUND commit: dd26fe5 (feat(13-01): install lucide-react, create PublicRoute and RegisterPage)
+- FOUND commit: eccbf10 (feat(13-01): restructure App.tsx with public routes and auth-aware wildcard)
+- 181 tests green after both tasks
