@@ -16,6 +16,7 @@ import {
   updateWeekSubmission,
   clearWeekSubmission,
   copyPayrollWeek,
+  amendPayrollWeek,
 } from '../services/payrollService.js';
 
 const router = Router();
@@ -72,6 +73,10 @@ const CopyWeekSchema = z.object({
   }),
   payrollNumber: z.number().int().min(1),
   preview: z.boolean().default(false),
+});
+
+const AmendWeekSchema = z.object({
+  originalWeekId: z.string().min(1),
 });
 
 // ── Helper: verify project ownership ──────────────────────────────────────
@@ -137,6 +142,29 @@ router.post('/weeks/copy', validate(CopyWeekSchema), async (req, res) => {
   });
 
   res.status(body.preview ? 200 : 201).json(result);
+});
+
+// POST /api/payroll/weeks/amend — create an amendment of a submitted week (AMD-01 + AMD-03)
+router.post('/weeks/amend', validate(AmendWeekSchema), async (req, res) => {
+  const { originalWeekId } = req.body as z.infer<typeof AmendWeekSchema>;
+  const userId = req.user!.userId;
+
+  const originalWeek = await getPayrollWeek(originalWeekId);
+  if (!originalWeek) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const ok = await assertProjectOwner(originalWeek.projectId, userId, res);
+  if (!ok) return;
+
+  if (!originalWeek.submittedAt) {
+    res.status(409).json({ error: 'Only submitted weeks can be amended' });
+    return;
+  }
+
+  const result = await amendPayrollWeek({ originalWeekId, projectId: originalWeek.projectId });
+  res.status(201).json(result);
 });
 
 // GET /api/payroll/weeks/:id — get a week with its entries
