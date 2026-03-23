@@ -15,6 +15,7 @@ import {
   assertWeekNotSubmitted,
   updateWeekSubmission,
   clearWeekSubmission,
+  copyPayrollWeek,
 } from '../services/payrollService.js';
 
 const router = Router();
@@ -64,6 +65,15 @@ const SubmitWeekSchema = z.object({
   submittedTo: z.string().min(1).max(200),
 });
 
+const CopyWeekSchema = z.object({
+  sourceWeekId: z.string().min(1),
+  weekEndingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'weekEndingDate must be YYYY-MM-DD',
+  }),
+  payrollNumber: z.number().int().min(1),
+  preview: z.boolean().default(false),
+});
+
 // ── Helper: verify project ownership ──────────────────────────────────────
 
 async function assertProjectOwner(
@@ -101,6 +111,32 @@ router.post('/weeks', validate(CreateWeekSchema), async (req, res) => {
 
   const result = await createPayrollWeek(body);
   res.status(201).json(result);
+});
+
+// POST /api/payroll/weeks/copy — copy a previous week with live rate re-fetch (PAY-01 + PAY-02)
+router.post('/weeks/copy', validate(CopyWeekSchema), async (req, res) => {
+  const body = req.body as z.infer<typeof CopyWeekSchema>;
+  const userId = req.user!.userId;
+
+  // Verify the source week exists and get its projectId
+  const sourceWeek = await getPayrollWeek(body.sourceWeekId);
+  if (!sourceWeek) {
+    res.status(404).json({ error: 'Source payroll week not found' });
+    return;
+  }
+
+  const ok = await assertProjectOwner(sourceWeek.projectId, userId, res);
+  if (!ok) return;
+
+  const result = await copyPayrollWeek({
+    projectId: sourceWeek.projectId,
+    sourceWeekId: body.sourceWeekId,
+    weekEndingDate: body.weekEndingDate,
+    payrollNumber: body.payrollNumber,
+    preview: body.preview,
+  });
+
+  res.status(body.preview ? 200 : 201).json(result);
 });
 
 // GET /api/payroll/weeks/:id — get a week with its entries

@@ -286,7 +286,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
     db.insert(wageDeterminations).values({
       id: wdId,
       source: 'federal-dol',
-      wdNumber: 'TEST-WD-001',
+      wdNumber: `TEST-WD-${wdId}`,
       revisionNumber: 0,
       state: project.state,
       county: project.county,
@@ -404,23 +404,35 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
 
   it('Test 5: Entry with unresolvable tradeCode appears in skipped[] with reason rate-lookup-failed', async () => {
     const cookie = await registerAndLogin('copy-no-rate');
-    const projectId = await createProject(cookie);
-    // Seed WD with no CARP classification
+    // Use a unique state/county so prior test WDs don't interfere
+    const uniqueState = 'WY';
+    const uniqueCounty = `copy-no-rate-county-${Date.now()}`;
+    const projRes = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'No Rate Test Project',
+        state: uniqueState,
+        county: uniqueCounty,
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-01-01',
+        fundingType: 'federal',
+      });
+    const projectId = projRes.body.data?.project?.id as string;
+
+    // Seed a WD for this state/county with only PLUM (no CARP)
     const { getDb } = await import('../../src/server/db/index.js');
     const { wageDeterminations, wageClassifications } = await import('../../src/server/db/schema.js');
-    const { eq } = await import('drizzle-orm');
-    const { projects: projectsTable } = await import('../../src/server/db/schema.js');
     const db = getDb();
-    const [project] = db.select().from(projectsTable).where(eq(projectsTable.id, projectId)).all();
     const wdId = `test-wd-nocar-${Date.now()}`;
     const now = new Date().toISOString();
     const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     db.insert(wageDeterminations).values({
-      id: wdId, source: 'federal-dol', wdNumber: `WD-NOCAR-${Date.now()}`, revisionNumber: 0,
-      state: project.state, county: project.county, isActive: true,
+      id: wdId, source: 'federal-dol', wdNumber: `WD-NOCAR-${wdId}`, revisionNumber: 0,
+      state: uniqueState, county: uniqueCounty, isActive: true,
       cachedAt: now, cacheExpiresAt: expires, createdAt: now, updatedAt: now,
     }).run();
-    // Insert a PLUM classification (not CARP)
+    // Insert a PLUM classification (not CARP) so the rate map has no CARP entry
     db.insert(wageClassifications).values({
       id: `test-wc-plum-${Date.now()}`, wageDeterminationId: wdId,
       tradeCode: 'PLUM', tradeDescription: 'Plumber', laborType: 'journeyworker',
