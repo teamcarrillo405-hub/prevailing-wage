@@ -258,6 +258,90 @@ describe('DELETE /api/projects/:id', () => {
   });
 });
 
+describe('GET /api/projects status filter', () => {
+  it('returns only active projects by default (no ?status param)', async () => {
+    const cookie = await registerUser(`filter-default-${Date.now()}@test.com`);
+    await createProject(cookie, { name: 'Active Project' });
+    // Archive one project
+    const archiveRes = await createProject(cookie, { name: 'Archived Project' });
+    const archivedId = archiveRes.body.data?.project?.id;
+    await supertest(app).delete(`/api/projects/${archivedId}`).set('Cookie', cookie);
+
+    const res = await supertest(app).get('/api/projects').set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    const names = res.body.data.projects.map((p: any) => p.name);
+    expect(names).toContain('Active Project');
+    expect(names).not.toContain('Archived Project');
+  });
+
+  it('returns all projects when ?status=all', async () => {
+    const cookie = await registerUser(`filter-all-${Date.now()}@test.com`);
+    await createProject(cookie, { name: 'Active Project 2' });
+    const archiveRes = await createProject(cookie, { name: 'Archived Project 2' });
+    const archivedId = archiveRes.body.data?.project?.id;
+    await supertest(app).delete(`/api/projects/${archivedId}`).set('Cookie', cookie);
+
+    const res = await supertest(app).get('/api/projects?status=all').set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    const names = res.body.data.projects.map((p: any) => p.name);
+    expect(names).toContain('Active Project 2');
+    expect(names).toContain('Archived Project 2');
+  });
+
+  it('returns only active projects when ?status=active', async () => {
+    const cookie = await registerUser(`filter-active-${Date.now()}@test.com`);
+    await createProject(cookie, { name: 'Active Explicit' });
+    const archiveRes = await createProject(cookie, { name: 'Closed Explicit' });
+    const archivedId = archiveRes.body.data?.project?.id;
+    await supertest(app).delete(`/api/projects/${archivedId}`).set('Cookie', cookie);
+
+    const res = await supertest(app).get('/api/projects?status=active').set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    const names = res.body.data.projects.map((p: any) => p.name);
+    expect(names).toContain('Active Explicit');
+    expect(names).not.toContain('Closed Explicit');
+  });
+});
+
+describe('DELETE /api/projects/:id advisory behavior', () => {
+  it('archives project without compliance check (no 409)', async () => {
+    const cookie = await registerUser(`advisory-${Date.now()}@test.com`);
+    const createRes = await createProject(cookie, { name: 'Advisory Test' });
+    const projectId = createRes.body.data?.project?.id;
+
+    // DELETE should succeed regardless of compliance state
+    const res = await supertest(app)
+      .delete(`/api/projects/${projectId}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data?.message).toBe('Project closed');
+  });
+});
+
+describe('PATCH /api/projects/:id restore', () => {
+  it('restores a closed project to active status', async () => {
+    const cookie = await registerUser(`restore-${Date.now()}@test.com`);
+    const createRes = await createProject(cookie, { name: 'Restore Test' });
+    const projectId = createRes.body.data?.project?.id;
+
+    // Archive it
+    await supertest(app).delete(`/api/projects/${projectId}`).set('Cookie', cookie);
+
+    // Restore it
+    const res = await supertest(app)
+      .patch(`/api/projects/${projectId}`)
+      .set('Cookie', cookie)
+      .send({ status: 'active' });
+    expect(res.status).toBe(200);
+    expect(res.body.data?.project?.status).toBe('active');
+
+    // Verify it appears in default list again
+    const listRes = await supertest(app).get('/api/projects').set('Cookie', cookie);
+    const names = listRes.body.data.projects.map((p: any) => p.name);
+    expect(names).toContain('Restore Test');
+  });
+});
+
 describe('POST /api/projects/:id/workers', () => {
   it('creates worker record and returns 201', async () => {
     const cookie = await registerUser(`worker-create-${Date.now()}@test.com`);

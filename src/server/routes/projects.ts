@@ -55,15 +55,24 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
   res.status(201).json({ data: { project } });
 });
 
-// GET /api/projects — list all projects for authenticated user
+// GET /api/projects — list projects for authenticated user
+// Default: active-only. Pass ?status=all to include closed projects.
 router.get('/', async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
+  const statusFilter = req.query.status as string | undefined;
+
+  // Default to active-only; pass 'all' to include closed projects
+  const conditions = [eq(projects.userId, userId)];
+  if (!statusFilter || statusFilter === 'active') {
+    conditions.push(eq(projects.status, 'active'));
+  }
+  // statusFilter === 'all' => no additional status condition
 
   const userProjects = await db
     .select()
     .from(projects)
-    .where(eq(projects.userId, userId));
+    .where(and(...conditions));
 
   res.json({ data: { projects: userProjects } });
 });
