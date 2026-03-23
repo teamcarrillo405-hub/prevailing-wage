@@ -188,3 +188,51 @@ export async function getPayrollEntries(weekId: string) {
 
   return rows;
 }
+
+// ── Submission Lifecycle ───────────────────────────────────────────────────
+
+/**
+ * Checks whether a payroll week is submitted.
+ * Returns { locked: true } if submitted_at is non-null.
+ * Exported for testability without route mocking.
+ */
+export async function assertWeekNotSubmitted(
+  weekId: string,
+): Promise<{ locked: boolean; submittedAt: string | null }> {
+  const db = getDb();
+  const [week] = await db
+    .select({ submittedAt: payrollWeeks.submittedAt })
+    .from(payrollWeeks)
+    .where(eq(payrollWeeks.id, weekId))
+    .limit(1);
+  return { locked: !!week?.submittedAt, submittedAt: week?.submittedAt ?? null };
+}
+
+/**
+ * Records submission date and agency on a payroll week.
+ * submittedAt must be YYYY-MM-DD (validated by route schema).
+ */
+export async function updateWeekSubmission(
+  weekId: string,
+  submittedAt: string,
+  submittedTo: string,
+): Promise<void> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  await db
+    .update(payrollWeeks)
+    .set({ submittedAt, submittedTo, updatedAt: now })
+    .where(eq(payrollWeeks.id, weekId));
+}
+
+/**
+ * Clears submission status. Idempotent — safe to call even if week was never submitted.
+ */
+export async function clearWeekSubmission(weekId: string): Promise<void> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  await db
+    .update(payrollWeeks)
+    .set({ submittedAt: null, submittedTo: null, updatedAt: now })
+    .where(eq(payrollWeeks.id, weekId));
+}
