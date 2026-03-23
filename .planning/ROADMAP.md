@@ -75,7 +75,10 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
   3. System warns the user (advisory, not a block) if the project has open compliance violations before archiving
   4. User can restore an archived project back to active status
   5. The payrollWeeks table has submitted_at, submitted_to, amendment_number, and original_week_id columns available for subsequent phases
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 17-01-PLAN.md — DB migration (4 payrollWeeks columns) + status-filtered GET /api/projects route + tests
+- [ ] 17-02-PLAN.md — Archive/Restore UI (ProjectDetailPage buttons, compliance advisory modal, ProjectCard badge, DashboardPage toggle)
 
 ### Phase 18: Dashboard Search + Filter
 **Goal**: Contractors can find specific projects instantly by name or funding type without scrolling through the full list
@@ -148,7 +151,7 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 | 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
 | 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete | 2026-03-22 |
 | 16. WH-347 Submission UX | v2.2 | 1/1 | Complete | 2026-03-22 |
-| 17. DB Migration + Project Archive | v2.3 | 0/? | Not started | - |
+| 17. DB Migration + Project Archive | v2.3 | 0/2 | Planned | - |
 | 18. Dashboard Search + Filter | v2.3 | 0/? | Not started | - |
 | 19. WH-347 Submission Tracking | v2.3 | 0/? | Not started | - |
 | 20. Copy Previous Payroll Week | v2.3 | 0/? | Not started | - |
