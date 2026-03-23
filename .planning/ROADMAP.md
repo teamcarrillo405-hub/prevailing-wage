@@ -162,6 +162,6 @@ Plans:
 | 17. DB Migration + Project Archive | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 18. Dashboard Search + Filter | v2.3 | 1/1 | Complete | 2026-03-23 |
 | 19. WH-347 Submission Tracking | v2.3 | 1/2 | In Progress|  |
-| 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete   | 2026-03-23 |
+| 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete    | 2026-03-23 |
 | 21. Payroll Amendment Workflow | v2.3 | 0/? | Not started | - |
 | 22. Per-Worker Compliance History | v2.3 | 0/? | Not started | - |
