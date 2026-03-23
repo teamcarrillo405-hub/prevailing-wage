@@ -1,7 +1,7 @@
 # Feature Research
 
 **Domain:** Prevailing wage compliance management — contractor-facing certified payroll submission tooling
-**Researched:** 2026-03-19 (functional features) / 2026-03-20 (UI design + landing page)
+**Researched:** 2026-03-19 (functional features) / 2026-03-20 (UI design + landing page) / 2026-03-23 (v2.3 workflow efficiency + audit readiness)
 **Confidence:** HIGH (regulatory requirements); MEDIUM-HIGH (design patterns via live competitor research)
 
 ---
@@ -302,3 +302,336 @@ Landing Page
 ---
 
 *Feature research for: HCC Prevailing Wage — v2.0 compliance features (2026-03-19) + v2.1 UI design polish and landing page (2026-03-20)*
+
+---
+---
+
+## Part 3: v2.3 Contractor Workflow Efficiency + Audit Readiness (2026-03-23)
+
+*This section covers the 6 new features for v2.3. All v2.2 features are shipped. Focus is on expected behavior, edge cases, UX patterns, DOL-specific requirements, and dependencies.*
+
+**Confidence:** HIGH for DOL requirements (verified against official DOL instructions, CA DIR FAQ, LCPtracker CODOT guides); MEDIUM-HIGH for UX patterns (verified against eMars, LCPtracker industry standard behavior).
+
+---
+
+### Table Stakes — All 6 Features
+
+All 6 v2.3 features are table stakes for contractors doing regular federal work. They are not differentiators — they are the absence of friction that makes the tool usable past the first few projects. Contractors evaluating prevailing wage software expect every one of these.
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Copy previous payroll week | Every certified payroll platform (eMars, LCPtracker, Miter) offers this. Re-entering the same 8 workers every week is the #1 daily time cost. | MEDIUM | Worker set + hours copy; dates and submission status never copy. Must handle no-prior-week gracefully. |
+| WH-347 submission tracking | DOL mandates sequential payroll numbering starting at #1 per project. Without tracking submitted status, contractors lose audit trail. | MEDIUM | Fields: submitted_at, agency name, submitted_by, payroll_number. Status states: draft / submitted / amended. |
+| Payroll amendment workflow | DOL/contracting agencies require corrected payrolls when hours, rates, or missing deductions are wrong. Industry-standard amendment suffix: original #15-0, corrected #15-1 (LCPtracker/CA DIR pattern). | HIGH | Hardest of the 6. New payroll week record linked to original. Does not overwrite original. Mandatory remarks field. |
+| Project completion / archive | Contractors run 5–20 projects. Completed projects clog the active dashboard. "Complete" is a status, not a deletion — auditors may request records years later. | LOW | Soft status change. Archived hidden from dashboard by default. Must be reversible. |
+| Dashboard search + filter | Contractors with multiple concurrent projects need to find a specific project fast. Name search and status filter are a baseline expectation. | LOW | Filter by: name text, compliance status, funding type, archive toggle. Empty-state distinguishes "no results" from "no projects." |
+| Per-worker compliance history | When WHD investigates, they ask for all records for a specific worker across all projects and weeks. This is the audit-response feature. | MEDIUM | Violation type, week, project, dollar delta. Paginate at 50 rows. CSV export. |
+
+---
+
+### Feature 1: Copy Previous Payroll Week
+
+**What gets copied:**
+- Worker set from the prior week (all workers who had payroll entries that week)
+- Hours per day per worker (ST and OT) as a starting point — contractor edits from there
+- Trade classification assignments (rarely change week-to-week)
+
+**What never gets copied:**
+- Week ending date — always blank, user selects the new week
+- Submission status — new week always starts as `draft`
+- Fringe rate snapshots — re-fetched from the worker's current classification at entry save time (existing app behavior; do not break this)
+- Deductions — deductions vary week to week (garnishments, health, union dues); copying them causes incorrect net pay and compliance errors
+
+**Edge cases:**
+- No prior week exists: Show "No previous week to copy from" inline message; do not disable the payroll entry form, just omit the copy action
+- Prior week was for a different subset of workers: Copy only workers who appeared in that week; do not auto-add workers added to the project after that week
+- Prior week had zero hours for a worker: Include that worker with zero hours — contractor may want them on the list
+- Worker was removed from the project since the prior week: Skip that worker silently (they no longer belong to the project)
+- First week of a project: No prior week exists — treat identically to "no prior week" edge case above
+
+**UX pattern:**
+- "Copy from prior week" button on the new payroll week creation screen or payroll week detail header, labeled with the prior week's ending date: "Copy from week ending Mar 14, 2026"
+- After copy, display pre-filled entry form with prior hours populated and editable
+- Do not auto-save — contractor must explicitly save each entry (preserves the existing deliberate-save pattern)
+- No confirmation modal needed — this is non-destructive; user always reviews before saving
+
+**DOL note:** No-work weeks are still required submissions under 29 CFR 5.5(a)(3)(ii)(A). The prior-week selector must not skip no-work weeks — those are valid priors to copy from (they produce a zero-hours pre-fill, which is correct).
+
+---
+
+### Feature 2: WH-347 Submission Tracking
+
+**Fields to track (new columns on `payroll_weeks` or a `payroll_week_submissions` child table):**
+- `submission_status` — enum: `draft` | `submitted` | `amended`
+- `submitted_at` — timestamp, nullable (null = draft)
+- `submitted_to_agency` — free text string, e.g. "HUD Chicago Field Office"
+- `submitted_by` — user display name or ID at time of marking submitted (audit trail; single-user app, but record it)
+- `payroll_number` — string, sequential per project starting at "1" (integer-compatible until amendments exist, then supports "15-1" format — see Feature 3)
+
+**DOL requirement on payroll numbering:** Each weekly payroll for a project must be numbered sequentially starting at 1 (29 CFR 5.5(a)(3)(ii); WH-347 Box 2). The payroll number is printed on the WH-347. Auto-assign `payroll_number` when the week is created, not when it is submitted — the number is a sequence position, not a submission confirmation.
+
+**Status states in detail:**
+- `draft` — created, payroll entered, WH-347 may have been downloaded for review but not marked submitted to the agency
+- `submitted` — contractor has marked it submitted to an agency; `submitted_at` and `submitted_to_agency` are set
+- `amended` — a correction was filed after submission; the original week record remains in `submitted` state; a new week record (the amendment) carries `amended` status and is linked via `parent_week_id`
+
+**Re-submission (same data, administrative re-send):** Allow "update submission" on a `submitted` week to overwrite `submitted_at` and `submitted_to_agency` in place. This is not an amendment — payroll data did not change. Use case: contractor submitted to wrong agency, needs to re-send.
+
+**Amendment (payroll data changed):** Creates a new record — see Feature 3. Do not conflate re-send with amendment.
+
+**UX pattern:**
+- "Mark Submitted" button on Payroll Week Detail — opens a small modal with one field: agency name (pre-filled with the most recent agency used on this project, if available) + confirm button
+- Submitted weeks show a "Submitted" badge with `submitted_at` date and agency name on the payroll list
+- Draft weeks show a "Draft" badge
+- Amended weeks show an "Amended" badge linking to the amendment record
+- Payroll list column order: payroll number, week ending, status badge, submitted date, agency
+
+---
+
+### Feature 3: Payroll Amendment Workflow
+
+**DOL/Davis-Bacon rules:**
+- A contractor must submit a corrected payroll when hours of work, rate of pay, or missing deductions contain errors (29 CFR 5.5; CA DIR FAQ)
+- The WH-347 "Additional Remarks" section must explain the reason for the correction — this field is mandatory if resubmitting
+- No formal federal DOL "amendment number" standard exists, but the industry-standard pattern (LCPtracker, CA DIR, CODOT guides) is suffix notation: original payroll #15 becomes #15-0 on first submission; first amendment is #15-1; second amendment would be #15-2
+
+**What an amended WH-347 looks like:**
+- Payroll number printed as "15-1"
+- Additional Remarks field contains the amendment reason ("Correcting OT hours for J. Smith, week ending 2026-03-14")
+- All other fields are identical to a normal WH-347 for that week
+- The `fillWh347()` function must write the amendment payroll number and the remarks field
+
+**Data model:**
+- Create a new `payroll_weeks` record with `submission_status = 'amended'` and a `parent_week_id` foreign key pointing to the original week
+- Original week record is immutable once submitted — `submission_status` stays `submitted`; do not overwrite it
+- Amendment week gets `payroll_number` = "15-1" (string)
+- Amendment numbering logic: find the original's `payroll_number` (e.g., "15" or "15-0"), determine the next suffix, assign "15-1". If "15-1" already exists, assign "15-2"
+- Pre-fill the amendment week with entries copied from the original week (reuse Copy Previous Week logic — same copy function, different source record)
+- Compliance engine runs fresh on the amendment's entries — the amendment may introduce or clear violations
+
+**`payroll_number` column type:** Must be `text` (not `integer`) to support amendment suffixes. If currently stored as integer, this requires a migration. The suffix convention means "15" and "15-0" are both acceptable for the original; pick one and be consistent — "15" for the original, "15-1" for the first amendment is the cleanest pattern.
+
+**Amendment pre-fill:** User only needs to fix the affected entries. Present all entries from the original week pre-filled; user edits only what changed. Unchanged workers carry through correctly.
+
+**Link to original week:** Amendment detail view shows "Amendment of Payroll #15 (week ending 2026-03-14)" with a link to the original week detail.
+
+**UX pattern:**
+- "File Amendment" button on a `submitted` week's detail page — only visible on submitted weeks, not drafts
+- Opens modal: "You are creating an amendment to Payroll #15. Describe the correction (required)." — text area for remarks, required
+- Creates new payroll week record; navigates user directly to the amendment's payroll entry view
+- Amendment appears in payroll list as a distinct row with "Amended" badge and "Amendment of #15" secondary label
+- Amendment week generates its own WH-347 with the amendment payroll number in Box 2 and the remarks populated
+
+**What an amendment is vs. a re-send:** Amendment = payroll data changed. Re-send = same data, administrative re-submission (update in place on the original record). Build both. They are separate actions.
+
+---
+
+### Feature 4: Project Completion / Archive
+
+**What "complete" means:**
+- No hard DOL definition — the WH-347 "Final Certified Payroll" checkbox on the last week's form is the DOL signal, not a project-level status
+- For app purposes: contractor explicitly marks the project complete; this is a voluntary, deliberate action
+- Do NOT auto-complete based on "all weeks submitted" — contractors have gaps, multi-phase work, and incomplete submissions that don't reflect actual project status
+- Project completion is a workflow lifecycle status, not a compliance state
+
+**Archive vs. delete:**
+- Never delete — Davis-Bacon records must be preserved for 3 years minimum after project completion (29 CFR 3.9). Delete is an anti-feature in this regulatory domain.
+- "Complete" and "archive" are effectively the same action: marking complete moves the project off the active dashboard
+- Archived/completed projects remain fully accessible — contractor can click in, view all payroll weeks, generate WH-347s for historical weeks
+
+**Reversibility:** Always allow unarchive. Scope changes, stop-work orders, or data corrections may require reactivating a project. Unarchive must be a one-click action from the project detail page.
+
+**Final WH-347 "Final Certified Payroll" checkbox:**
+- The WH-347 form has a "Final Certified Payroll" checkbox (Box 1, Submission Type). This is separate from project archive status.
+- When the contractor marks a project complete AND generates a WH-347, prompt: "Is this the final payroll submission for this project?" If yes, check the Final box in the WH-347 PDF.
+- Do not auto-check it — final payroll determination is the contractor's call.
+
+**Dashboard behavior:**
+- Default view: active projects only (`archive_status = 'active'`)
+- Toggle or filter: "Show Archived" reveals archived/completed projects
+- Archived project cards use a visually subdued treatment (muted border, grey status badge, reduced opacity or secondary color) but remain fully clickable
+
+**Audit trail fields:** Add `archived_at` timestamp and `archived_by` (user ID) to project record.
+
+**Edge case — archiving a project with unsubmitted weeks:** Do not block archiving. Show a warning: "2 payroll weeks have not been marked submitted. Archive anyway?" The contractor may have legitimate reasons (project cancelled, data correction pending). Warning only, not a hard block.
+
+---
+
+### Feature 5: Dashboard Search + Filter
+
+**Filter dimensions:**
+- **Name search** — text input, partial match, case-insensitive. Most common action.
+- **Compliance status** — dropdown: All / Compliant / Has Violations / No Payroll. Aligns with existing Badge variants.
+- **Funding type** — dropdown: All / Federal / State / Local. Already a field on projects.
+- **Archive status** — toggle: Active (default) / All (active + archived) / Archived Only.
+
+**Filter logic:** All filters are additive (AND). A contractor filtering for "federal + has-violations + active" sees only active federal projects with at least one violation.
+
+**What is NOT worth filtering at this scale:**
+- Date range — over-engineered for a contractor with fewer than 50 projects
+- State/county — too granular; the search vector for finding a project is almost always name or compliance status
+- Contract value — not stored in the current model
+
+**Empty state when no results:**
+- "No projects match your filters." with a "Clear filters" link
+- Visually distinct from the "no projects at all" empty state — do not reuse the same EmptyState component copy; distinguish "no results" from "no projects created yet"
+
+**UX pattern:**
+- Search input + filter dropdowns in a filter bar above the project card grid
+- Filter state reflected in URL query params (e.g., `?status=has-violations&funding=federal`) so the contractor can bookmark a filtered view
+- Filter state does NOT persist in localStorage — compliance software sessions should feel fresh on each visit
+- Active filter badges below the filter bar showing what's applied, each with an "x" to remove individually
+- "Clear all filters" link when any filter is active
+
+**Performance note:** Filtering should happen client-side on already-fetched project list data (not a new server request per filter change) — project counts are small enough that the full list is always fetched.
+
+---
+
+### Feature 6: Per-Worker Compliance History
+
+**Data to surface per row:**
+- Worker name
+- Project name (linked to project detail)
+- Payroll week ending date
+- Violation type: `under-wage` | `cwhssa-ot` | `apprentice-ratio`
+- Dollar delta — actual gross vs. required gross (already calculated by compliance engine for `under-wage` and `cwhssa-ot` violations; display "N/A" for `apprentice-ratio` which has no dollar delta)
+- Week submission status: draft / submitted / amended (new in v2.3)
+
+**Why this view matters for audits:** WHD investigators ask for all payroll records for a specific worker across all projects and weeks. This view answers that in one screen instead of requiring the contractor to navigate into each week of each project. At FY2025 enforcement levels ($259M recovered for 177,000 employees), having this ready is the difference between a 1-hour response and a 2-day paper search.
+
+**Pagination:** Paginate at 50 rows per page. A contractor with 5 projects × 20 weeks × 8 workers can have up to 800 entries in the compliance engine; rendering all without pagination is a performance problem. Show total result count above the table.
+
+**Sort order:** Default descending by week ending date (most recent violations first — audits typically focus on the most recent work period first).
+
+**Filtering within the view:**
+- Worker name text search
+- Violation type filter (All / Under-Wage / CWHSSA OT / Apprentice Ratio)
+- Project filter (dropdown of user's projects)
+- Date range filter (from / to week ending date) — justified here because DOL investigations are time-bounded and auditors specify the investigation window
+
+**CSV export:** Export the full filtered result set, not just the current page. Columns: Worker Name, SSN Last 4, Trade Classification, Project Name, Week Ending, Violation Type, Dollar Delta, Week Status.
+
+**Access points:**
+- From a worker's profile page as a "Compliance History" tab or section
+- From a top-level "Compliance" nav item showing all violations across all workers and projects (the audit-response entry point)
+
+**Data source:** Queries existing `compliance_flags` table (or equivalent) joined to `payroll_entries`, `payroll_weeks`, `workers`, `projects`. No new compliance logic — this is a reporting view over already-computed data.
+
+---
+
+### Feature Dependencies (v2.3)
+
+```
+WH-347 Submission Tracking
+    └──required by──> Payroll Amendment Workflow
+                          (amendment links to parent_week_id; parent must have submission_status field
+                           and must be in 'submitted' state for "File Amendment" to be available)
+
+    └──enhances──> Per-Worker Compliance History
+                          (week submission status column in the history view depends on submission_status)
+
+Copy Previous Payroll Week
+    └──enhances──> Payroll Amendment Workflow
+                          (amendment pre-fill reuses the same copy-entries-from-week logic;
+                           build Copy first, call the same function from the amendment flow)
+
+Project Completion / Archive
+    └──enhances──> Dashboard Search + Filter
+                          (archive status is one of the filter dimensions;
+                           build Archive first so Filter includes it from day one)
+
+Dashboard Search + Filter
+    ──independent of──> Copy Previous Payroll Week
+    ──independent of──> Per-Worker Compliance History
+
+Per-Worker Compliance History
+    ──independent of──> Copy Previous Payroll Week
+    ──independent of──> Project Completion / Archive
+    ──benefits from──> WH-347 Submission Tracking (week status column)
+```
+
+### Dependency Notes
+
+- **Submission Tracking must be built before Amendments.** The amendment creates a new `payroll_weeks` record with `parent_week_id` pointing to the original. The "File Amendment" button only appears on weeks in `submitted` state — which only exists after Submission Tracking is built.
+- **`payroll_number` column type must be resolved before both features are built.** Currently `payroll_number` is likely an integer. Submission Tracking assigns it sequentially as an integer. Amendment Workflow requires string format ("15-1"). Decide at migration time: store as `text`, format consistently as "1", "2", "15-1". Do not change the type mid-milestone.
+- **Copy Previous Week enhances Amendments at zero extra cost.** If Copy is built first, the amendment pre-fill is a single call to the copy function with the original week as the source. If built after, it requires duplicating the copy logic. Build Copy first.
+- **Archive status is a filter dimension.** If Dashboard Filter is built before Archive, the filter must have a placeholder for archive status or be updated after Archive ships. Build Archive first to avoid two passes.
+
+---
+
+### Build Order Recommendation for v2.3
+
+Given the dependencies above, the correct phase ordering for the roadmap is:
+
+1. **WH-347 Submission Tracking** — creates `submission_status`, `payroll_number`, `submitted_at`, `submitted_to_agency` on `payroll_weeks`. Everything else depends on this data model. Also establishes the `payroll_number` column type decision.
+2. **Copy Previous Payroll Week** — independent of #1, but building it before amendments means the amendment pre-fill reuses this logic at no extra cost.
+3. **Payroll Amendment Workflow** — depends on #1 (submission status, parent_week_id) and benefits from #2 (copy logic). Highest complexity — deserves its own phase.
+4. **Project Completion / Archive** — independent, low complexity. Build before Filter.
+5. **Dashboard Search + Filter** — independent, low complexity. Benefits from Archive being in the model.
+6. **Per-Worker Compliance History** — independent data view. Goes last because it consumes existing compliance data and benefits from submission status being in the model.
+
+---
+
+### Anti-Features (v2.3)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Auto-complete project when all weeks submitted | Seems logical — if everything's submitted, it's done | "All weeks submitted" is unknowable — contractors don't always submit no-work weeks; final week may not be the last entered; project scope may expand | Explicit "Mark Complete" button; contractor decides |
+| Delete project or payroll week | Cleanup feels good | Davis-Bacon records must be kept 3+ years (29 CFR 3.9); deletion destroys audit trail; a DOL investigation 18 months after project close would find missing records | Archive (soft status) only; never delete |
+| Overwrite original payroll week on amendment | Simpler model, fewer records | Auditors and DOL investigators need both original and corrected submissions; overwriting is evidence destruction | New linked record; original is immutable once submitted |
+| Auto-number amendments globally across projects | Seems systematic | Payroll numbers are per-project; cross-project amendment numbering doesn't match DOL conventions or contractor mental model | Sequential per-project; amendment suffix per-original-payroll-number |
+| Copy all fields including deductions | Maximum pre-fill, less typing | Deductions vary weekly (garnishments, union dues, health contributions); copying them produces incorrect net pay and flags false compliance violations | Copy worker set + hours only; leave deductions blank for deliberate re-entry |
+| Inline editing in compliance history table | Convenient, reduces click count | Breaks audit trail; payroll entry edit views exist for deliberate correction; same rationale as existing v2.x constraint | Link from compliance history rows to the payroll week detail for edits |
+| Permanent delete of amendment record | "I filed an amendment by mistake" | Amendment records are legal submissions once generated; allow voiding/cancelling an unsent amendment, but not deletion of a sent one | Cancel/void state on amendment before it is sent; no delete after marking submitted |
+
+---
+
+### DOL/Davis-Bacon Specific Requirements (v2.3)
+
+| Requirement | Source | Impact on Feature |
+|-------------|--------|-------------------|
+| Sequential payroll numbering starting at #1 per project | 29 CFR 5.5(a)(3)(ii); WH-347 Box 2 | Submission Tracking auto-assigns `payroll_number` at week creation, not at submission |
+| No-work weeks still require submission | DOL WH-347 instructions | Copy Previous Week must not skip no-work weeks in the prior-week selector |
+| Records retained 3 years post-completion | 29 CFR 3.9 | Archive only (soft status); never delete |
+| Corrected payrolls must explain error in Additional Remarks | CA DIR FAQ; LCPtracker CODOT guide | Amendment workflow requires a mandatory reason/remarks field before the amendment is created |
+| Amendment suffix notation (e.g., #15-1) | LCPtracker industry standard; CA DIR; CODOT guide | `payroll_number` must be stored as text to support suffixes |
+| Final Certified Payroll checkbox on last week | WH-347 form Box 1, Submission Type field | Project completion flow should prompt to regenerate WH-347 with the Final box checked |
+| Statement of Compliance required on every submission | DOL WH-347 instructions | Submission Tracking records who marked it submitted (audit trail) |
+| Back wages, no cap, civil penalties up to $10K+ per violation | DOL FY2025 enforcement data | Per-worker compliance history must surface dollar delta — auditors use this to calculate back pay owed |
+
+---
+
+### Feature Prioritization Matrix (v2.3)
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| WH-347 Submission Tracking | HIGH — foundation for audit trail | MEDIUM | P1 |
+| Copy Previous Payroll Week | HIGH — daily time savings | MEDIUM | P1 |
+| Payroll Amendment Workflow | HIGH — compliance correction path | HIGH | P1 |
+| Per-Worker Compliance History | HIGH — audit-response capability | MEDIUM | P1 |
+| Project Completion / Archive | MEDIUM — dashboard hygiene | LOW | P2 |
+| Dashboard Search + Filter | MEDIUM — grows with project count | LOW | P2 |
+
+**Priority key:**
+- P1: Must ship in v2.3
+- P2: Should ship in v2.3; defer only if P1 runs over
+
+---
+
+## v2.3 Sources
+
+- [DOL WH-347 Form Instructions](https://www.dol.gov/agencies/whd/forms/wh347) — payroll numbering, final payroll checkbox, statement of compliance
+- [CODOT LCPtracker Prime Payroll Guide](https://www.codot.gov/business/civilrights/assets/design-bid-build-process-guides-1/4a-3-certify-payroll-in-lcptracker-prime.pdf) — amendment suffix notation (#15-0, #15-1), remarks requirement
+- [CA DIR FAQ — Certified Payroll Reporting](https://www.dir.ca.gov/Public-Works/FAQ-certified-payroll-reporting.html) — corrected payroll rules, amendment workflow, remarks mandatory on resubmission
+- [LCPtracker FAQ — How to Complete the Revised WH-347](https://lcptracker.com/blog-post/faq-how-to-complete-the-revised-wh-347-form/) — amendment workflow industry standard
+- [eMars Certified Payroll System](https://emarsinc.com) — copy-from-previous-week feature confirmation
+- [Points North — WH-347 Updates 2025](https://www.points-north.com/trends-and-insights/wh-347-updates-2025) — 2025 form tracking requirements
+- [Points North — True Cost of Davis-Bacon Violations](https://www.points-north.com/trends-and-insights/the-real-cost-of-davis-bacon-violations) — penalty scale, back wage calculation
+- [DOL Davis-Bacon Final Rule 2023](https://www.dol.gov/agencies/whd/government-contracts/construction/rulemaking-davis-bacon) — current regulatory framework
+- [29 CFR 3.9 — Records Retention](https://www.ecfr.gov/current/title-29/subtitle-A/part-3/section-3.9) — 3-year retention requirement
+- [DOL FY2025 Enforcement Data](https://www.workwisecompliance.com/blog/dol-complaint-audit-investigation-guide.html) — $259M recovered, 177,000 employees; audit trigger patterns
+
+---
+
+*Feature research for: HCC Prevailing Wage — v2.3 contractor workflow efficiency + audit readiness*
+*Researched: 2026-03-23*

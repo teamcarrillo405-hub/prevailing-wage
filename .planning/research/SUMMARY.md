@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** HCC Prevailing Wage — v2.1 Design Polish + Landing Page
-**Domain:** B2B SaaS compliance tooling — certified payroll and Davis-Bacon compliance for general contractors
-**Researched:** 2026-03-20
+**Project:** HCC Prevailing Wage — v2.3 Contractor Workflow Efficiency + Audit Readiness
+**Domain:** Davis-Bacon certified payroll compliance tooling — contractor-facing SaaS
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ## Executive Summary
 
-HCC Prevailing Wage v2.0 is a functionally complete React 19 + TailwindCSS v4 app covering Davis-Bacon compliance, WH-347 PDF generation, and SAM.gov wage determination lookup. The v2.1 milestone is a visual and marketing layer on top of a working product — not a new feature build. The gap between what the app does and how it looks is the entire problem to solve: the functional core is solid, but the current UI uses inconsistent typography, raw hex color values scattered across 33 components, no shared UI primitives, a missing Google Fonts load, and no public-facing landing page. The recommended approach is foundation-first, outside-in: establish the CSS design token system first, then create primitive components, then polish the app shell, then build the landing page.
+This is a v2.3 increment to an existing, fully-functional prevailing wage compliance application. The core features already shipped: WH-347 PDF generation (January 2025 revision), compliance checking against frozen rate snapshots, worker management, and a project dashboard. Version 2.3 adds six workflow efficiency and audit readiness features — copy previous payroll week, WH-347 submission tracking, payroll amendment workflow, project archiving, dashboard search/filter, and per-worker compliance history. All six are extensions of existing data shapes and patterns; no new libraries are required.
 
-The technology additions are minimal: `motion` (scroll-triggered entry animations), `react-intersection-observer` (inView triggers), and `lucide-react` (SVG icons). All three are tree-shakeable and React 19-compatible. The architecture is a single React Router SPA — no separate static site, no second deployment. All design tokens live in `index.css` via TailwindCSS v4's `@theme` block, which auto-generates utility classes from every defined variable. The HCC brand palette (dark `#1a1a1a` nav, gold `#F5C518` accent, Oswald headlines, Inter body) is already specified — v2.1 is enforcement and extension, not invention.
+The recommended implementation approach is additive and constraint-respecting: a single add-only DB migration (4 columns on `payrollWeeks`), new routes and service functions following established patterns, and UI additions to existing pages plus one new page for per-worker compliance history. The existing stack — React 19, Express, Drizzle/SQLite, TanStack Query, pdf-lib — covers every technical need. The `projects.status` column (`'active' | 'closed'`) already exists in `schema.ts`, meaning project archiving requires zero schema work. The amendment workflow's key architecture decision — extending `payrollWeeks` with `amendment_number` and `original_week_id` rather than creating a `payroll_amendments` table — is correct and protects all downstream consumers (compliance, export, reports) from join complexity.
 
-The primary risks are technical and content-related. On the technical side: TailwindCSS v4 has a confirmed behavior where `--color-*: initial` in `@theme` silently wipes all default Tailwind colors and breaks all 33 existing components; `@theme` cannot be split into separate imported CSS files without tokens silently failing; and the `focus:outline-none` class was renamed in v4 to `outline-hidden`, with 5+ instances of the old name in existing form inputs. On the content side: landing page copy that does not name "Davis-Bacon," "WH-347," or "SAM.gov" in the hero viewport will not convert the specific GC and project-manager audience this product targets. Both risk categories have clear, low-cost prevention steps.
+The primary risks are compliance and audit-trail risks, not technical risks. Three implementation patterns are non-negotiable and must not be deferred to later phases: (1) the copy route must re-fetch live wage rates per classification rather than cloning source snapshots, (2) submission tracking must include a server-side edit lock on submitted weeks — a UI disable alone is not a security boundary, and (3) amendments must create a new `payrollWeeks` row rather than updating entries in place. Violating any of these three compromises the certified payroll audit trail, which is a federal records falsification exposure under 29 CFR Part 3. All other pitfalls have lower stakes and clear, well-documented prevention strategies.
 
 ---
 
@@ -19,172 +19,185 @@ The primary risks are technical and content-related. On the technical side: Tail
 
 ### Recommended Stack
 
-The v2.1 stack is the existing React 19 + Vite + TailwindCSS v4 foundation, with three new production dependencies. The token system is CSS-first: all design variables belong in the `@theme` block in `src/client/index.css`, which generates Tailwind utility classes automatically — `--color-brand-gold` becomes `bg-brand-gold`, `text-brand-gold`, and `border-brand-gold`. No `tailwind.config.js` is needed or appropriate for v4. All existing v2.0 libraries (Recharts, TanStack Query, react-hook-form, zod, tailwind-merge) are already installed and unchanged.
+No new dependencies are needed. All 6 features in v2.3 are CRUD operations, SQL aggregations, and client-side filtering on existing data shapes. The existing stack provides every capability required.
 
-**Core technologies (new for v2.1):**
-- `motion@^12.38.0`: Scroll-triggered entry animations for landing page sections — import from `motion/react`, not `framer-motion`. Fully React 19-compatible. ~30KB gzip when tree-shaken.
-- `react-intersection-observer@^10.0.3`: 2KB `useInView` hook for class-based scroll triggers where full `motion` is overkill. Zero dependencies.
-- `lucide-react@^0.577.0`: Tree-shakeable SVG icon set (577 icons, TypeScript types). Required because the project prohibits emoji in UI — SVG icons are the mandated alternative.
+**Core technologies and their v2.3 roles:**
+- **drizzle-orm ^0.45.1**: One add-only migration — 4 nullable/defaulted columns on `payrollWeeks` (`submitted_at`, `submitted_to`, `amendment_number`, `original_week_id`). Manual journal registration in `meta/_journal.json` required; next `idx` is 5.
+- **pdf-lib ^1.17.1**: Amended WH-347 label via string assembly in `export.ts` — the `payrollNumber` field already accepts strings; no coordinate changes needed.
+- **TanStack Query ^5.91.0**: `useMutation` for copy/submit/amend/archive actions; `invalidateQueries` for cache sync. Existing query key patterns apply directly.
+- **React 19 + TailwindCSS v4**: One new page (`WorkerViolationsPage`); extensions to 9 existing pages. Existing `Badge`, `Card`, `Button`, `PageHeader` components cover all UI needs.
+- **React Router DOM ^7.13.1**: One new route (`/workers/:workerId/violations`). Dashboard filter state must use `useSearchParams` — not `useState` — to survive back-navigation.
+- **better-sqlite3 ^12.8.0**: No changes. SQLite is appropriate for this single-user app; max dataset size is hundreds of rows.
 
-**CSS-only additions (no new packages):** Extended `@theme` block in `index.css` covering typography scale, spacing tokens, border radii, shadow tokens, and brand surface colors. `@layer base` sets font defaults on `body` and `h1-h4` elements so font families are never applied per-component. `@layer components` defines `.hcc-card` and `.hcc-table` shared style recipes for patterns repeated across 3+ components.
-
-**Explicitly ruled out:** shadcn/ui (confirmed Tailwind v4 transparency rendering bug), `@tailwindcss/typography` (unnecessary for structured JSX pages), `@tanstack/react-table` (overkill for read-only compliance tables), GSAP (imperative API fights React's model), dark mode toggle (adds significant CSS complexity with no value for a compliance-focused audience).
+**What NOT to add:** `@tanstack/react-table`, any date picker library, `immer`, `react-pdf`, pagination libraries, `lodash`. Each adds complexity without solving a real problem at this dataset scale.
 
 ---
 
 ### Expected Features
 
-The functional feature set — compliance flags, WH-347 generation, worker management, payroll entry — is complete in v2.0. v2.1 is entirely design and marketing.
+**v2.3 scope (all 6 must ship):**
+- **Copy Previous Payroll Week** — pre-fill a new week from prior week's worker/hour data; requires live rate re-fetch (not snapshot copy) for compliance integrity; returns `{ copied, skipped, skippedWorkers }` with UI warning for omitted entries
+- **WH-347 Submission Tracking** — record `submitted_at`, `submitted_to`; add server-side edit lock (`checkWeekEditable()`) on submitted weeks; submission panel on PayrollWeekDetailPage; submitted badges on PayrollListPage
+- **Payroll Amendment Workflow** — create a new `payrollWeeks` row with `amendment_number` and `original_week_id`; "N (AMENDED M)" label in WH-347 payroll number string field; `UNIQUE(original_week_id, amendment_number)` constraint prevents double-submission
+- **Project Completion / Archive** — `status = 'closed'` via existing column; server-side `?status=` filter on `GET /api/projects`; compliance pre-check before archive confirmation (409 if open violations, with explicit user acknowledgment)
+- **Dashboard Search + Filter** — client-side `useMemo` filter on name + fundingType; URL params (`useSearchParams`) for filter state persistence; compliance filter deferred to v2.4 (requires batch summary endpoint)
+- **Per-Worker Compliance History** — cross-project view joined on `(name, ssnLast4, userId)`; batch entry load (not N+1 per week); snapshot-only compliance computation; new `WorkerViolationsPage` at `/workers/:workerId/violations`
 
-**Must have (table stakes design — v2.1):**
-- Consistent typography scale enforced across all pages — Oswald for headers, Inter for body, at defined rem sizes
-- Card-based layout with uniform padding and border-radius — single reusable `.hcc-card` class applied everywhere
-- Compliance status badges with semantic color — green = compliant, red = violation, yellow = warning — consistent across all views
-- Data tables with visible structure — header/body distinction, row borders, proper cell padding via `.hcc-table`
-- Dark nav + gold accent applied on every page — currently inconsistent across routes
-- Primary button hierarchy — one primary CTA per screen; secondary and ghost variants visually subordinate
-- Empty states with action-oriented copy — at minimum for: no projects, no workers, no payroll weeks
-- Landing page — hero, pain acknowledgment, how-it-works, feature highlights, trust signals, CTA close, footer
-
-**Should have (differentiators):**
-- HCC dark/gold brand applied rigorously throughout — every competitor uses enterprise blue; this is low-cost visual differentiation at genuine category scale
-- Compliance status above the fold on dashboard — violation counts on project cards, not buried in project detail
-- Workflow progress indicator on project detail — steps: project created / workers added / payroll entered / WH-347 ready
-- Outcome-focused empty states with specific action prompts instead of "No data found"
-- WH-347 download loading/success state feedback — "Generating..." spinner transitioning to "Download ready" button
-- Compliance preflight before WH-347 download — brief open-violation count as a final user checkpoint
-- Print CSS for on-screen compliance reports
-
-**Defer (v2.2+):**
-- PDF fringe benefit summary report and worker pay history report
-- Apprentice ratio daily check (COMP-03 rule)
+**Explicitly deferred:**
+- Dashboard compliance filter (requires `GET /api/compliance/projects/summary` batch endpoint — not in v2.3 scope)
 - State-specific forms (CA DIR, WA L&I)
-- Dark mode toggle
-
-**Landing page specifics:** Hero must name WH-347, Davis-Bacon, and SAM.gov in the first viewport. Primary CTA is "Create Free Account" linking to `/register`. No logo bar at launch (no client logos available). Trust signals are compliance currency signals ("January 2025 WH-347 form — latest DOL revision"), regulatory alignment statements, and product screenshots — not fabricated social proof metrics. No stock hardhat photography; use product screenshots and HCC brand colors.
+- Auto-submit to agency portal
+- Payroll/QuickBooks integration
 
 ---
 
 ### Architecture Approach
 
-The architecture is a single-SPA approach with no new routing infrastructure beyond what React Router already provides. `LandingPage.tsx` is a public React route at `/`, declared as a sibling outside the `<ProtectedRoute>` wrapper in `App.tsx`. No separate deployment, no iframe, no second Vite config. The `*` wildcard redirect must become auth-state-aware: authenticated users route to `/dashboard`, unauthenticated users route to `/`. The `/register` route must be explicitly added as a public sibling of `/login` — without this, the landing page CTA dead-ends at the login form for new users.
+The system is a React/Vite client communicating with an Express server over a REST API, backed by Drizzle ORM on SQLite. All v2.3 features fit within the existing three-layer boundary: client pages → server routes → services + ORM. No new layers, no new infrastructure.
 
-The design token flow is one-directional: `@theme` in `index.css` → Vite processes → CSS custom properties on `:root` plus generated utility classes → `@layer base` sets element font defaults → React components reference utility class names → browser resolves. A brand color change is a single-line edit in `index.css` with no JSX touch required.
+**Major components and v2.3 changes:**
+1. **`schema.ts`** (MODIFIED) — 4 new columns on `payrollWeeks`; one migration file
+2. **`payrollService.ts`** (MODIFIED) — `copyPayrollWeek()` with live rate re-fetch; `createAmendedWeek()` as new row with bulk entry copy
+3. **`reportsService.ts`** (MODIFIED) — `getWorkerViolations(workerId, userId)` with cross-project join on `(name, ssnLast4)` and batch compliance computation
+4. **`routes/payroll.ts`** (MODIFIED) — `POST /weeks/copy`, `POST /weeks/:id/submit`, `DELETE /weeks/:id/submit`, `POST /weeks/:id/amend`; `checkWeekEditable()` guard on all entry write routes
+5. **`routes/projects.ts`** (MODIFIED) — `?status=` query param defaulting to `active`; compliance pre-check before archive
+6. **`routes/export.ts`** (MODIFIED) — amended payroll number label string assembly
+7. **`DashboardPage.tsx`** (MODIFIED) — search/filter bar, `useSearchParams`, archive toggle, `useMemo`-filtered list
+8. **`WorkerViolationsPage.tsx`** (NEW) — `/workers/:workerId/violations`, compliance history table with project/week context
 
-**Major components:**
-1. `src/client/index.css` — single source of truth for all design tokens, base styles, and shared component recipes; must not be split into imported sub-files
-2. `src/client/components/ui/Badge.tsx` — typed status badge primitive with `gold | gray | green | red` variants; replaces all inline badge spans across 10+ pages
-3. `src/client/components/ui/Card.tsx` — card shell primitive with optional padding variant; replaces inline card divs
-4. `src/client/components/ui/PageHeader.tsx` — page title + subtitle + action slot; replaces repeated h1+button patterns on every page
-5. `src/client/pages/LandingPage.tsx` — full marketing homepage at public route `/`; composed from section components under `components/landing/`
-
-**Build sequence (dependency-ordered):**
-1. CSS foundation (tokens, base, components layers) — validates the token pipeline before any React changes
-2. Primitive UI components — typed wrappers that all pages will use
-3. Layout + shared components polish — affects all protected pages simultaneously
-4. Landing page + routing — public route, auth-aware wildcard
-5. Page-by-page polish pass — apply tokens and primitives to all 8+ existing pages
+**DB migration:** One file — `0009_payroll_week_submission_amendment.sql` — with 4 `ALTER TABLE` statements. Registered at `idx: 5` in `meta/_journal.json`. No migration needed for archive (`status` column exists), copy (no schema changes), or worker history (all data exists).
 
 ---
 
 ### Critical Pitfalls
 
-1. **`--color-*: initial` in `@theme` wipes all default Tailwind colors** — Adding this to "clean up" the palette silently removes all `text-gray-*`, `bg-red-*`, `bg-white`, and `border-*` classes from 33 existing components. Prevention: add tokens only; never use `initial` namespace wipe; add an explicit comment in `index.css` before touching the file.
+1. **Stale rate snapshots in copy operation** — The copy route must call `wageLookup.ts` for fresh rates per classification. Never clone `baseRateSnapshot`/`fringeRateSnapshot` from the source week. Entries where rate lookup fails must be omitted with a warning — not defaulted to zero. Recovery cost if violated: HIGH (requires amendment weeks + agency renotification).
 
-2. **`@theme` in an imported CSS file fails silently** — TailwindCSS v4 only processes `@theme` from the file where `@import "tailwindcss"` lives. A separate `tokens.css` with `@theme` produces no utility classes. Prevention: all `@theme` content stays in `index.css`; only `@layer components` content is safe to split.
+2. **No server-side edit lock on submitted weeks** — `checkWeekEditable()` is non-negotiable on `PUT /api/payroll/entries/:id` and `POST /api/payroll/entries`. Ships in the same phase as submission tracking — never deferred. A UI disable is not a security boundary; any API caller bypasses it.
 
-3. **`focus:outline-none` renamed to `outline-hidden` in v4** — 5+ confirmed instances of the old class exist on form inputs. In v4, `outline-none` sets a transparent 2px outline that interferes with the gold ring in accessibility and forced-color modes. Prevention: grep and replace as the first task in the typography phase.
+3. **Amendment corrupts original audit trail** — `POST /weeks/:id/amend` must create a NEW `payrollWeeks` row. Never call `upsertPayrollEntry()` with the original `payrollWeekId`. The original row must become read-only once an amendment exists. 29 CFR Part 3 requires both original and amendment to be preserved.
 
-4. **Global font application breaks table column widths** — Switching from browser default to Inter changes character metrics, causing `table-auto` column layout to recalculate. The 7-day payroll entry grid and dollar-amount columns are at overflow risk. Prevention: apply the font change as an isolated first step, then manually verify all table-heavy pages before proceeding.
+4. **Project hard-delete violates federal records retention** — No DELETE endpoint for projects. Archive is status-only: `UPDATE projects SET status = 'closed'`. Federal regulation requires certified payroll records for 3 years post-completion.
 
-5. **Landing page routing conflict with existing wildcard** — The current `<Navigate to="/dashboard" replace />` wildcard dead-ends new users: if `/register` is not an explicit public route, clicking the landing page CTA routes through `/dashboard` → `/login`. Prevention: write the full routing table spec (public vs. protected, auth states, wildcard behavior) before writing any landing page UI. Verify with 4 manual test cases.
+5. **Worker history cross-project disambiguation** — Worker identity join must use `(name, ssnLast4, userId)` across projects, not `WHERE worker_id = ?`. A single-ID query silently gives a project-scoped view while the UX implies cross-project. Workers with identical names but different SSNs must not be merged.
 
-6. **7 hardcoded inline `style={{ }}` brand values in existing components** — `ManualWageEntryForm`, `WageClassificationsTable`, `AdminStateWagePage`, `WageLookupPage`, and `ReportsPage` use `style={{ backgroundColor: '#F5C518' }}` or `style={{ fontFamily: 'Oswald' }}`. These will not update when design tokens are applied. Prevention: audit and clear all inline brand values as a prerequisite to token rollout.
-
-7. **Generic landing page copy will not convert the target audience** — Contractors evaluating Davis-Bacon compliance software need "WH-347," "Davis-Bacon," and "SAM.gov" visible in the first viewport. Abstract SaaS language ("streamline your workflow") does not match how this audience searches or evaluates software. Prevention: write copy before building UI; verify the hero names the form and the regulation before touching JSX.
+6. **Migration not registered in `_journal.json`** — If the SQL migration file exists but is not in the journal, Drizzle silently skips it. TypeScript types include the new columns; runtime values are `undefined`. Verify post-migration: `SELECT sql FROM sqlite_master WHERE name = 'payroll_weeks'`.
 
 ---
 
 ## Implications for Roadmap
 
-The architecture and pitfall dependency ordering strongly suggests a 5-phase build. All phases are sequential — each depends on the prior phase being verified complete.
-
-### Phase 1: CSS Design Token Foundation
-
-**Rationale:** Everything else depends on this. Tokens must exist before primitive components can reference them. The three highest-severity pitfalls (color namespace wipe, `@theme` split failure, inline style drift) are all addressed in this phase. Doing this first validates the entire token pipeline before any React code is touched.
-
-**Delivers:** Fully extended `@theme` block in `index.css` (colors, typography scale, spacing, shadows, radii); `@layer base` defaults for body and heading fonts; `.hcc-card` and `.hcc-table` in `@layer components`; Google Fonts loading via `index.html`; all 7 hardcoded inline brand values migrated to token-based classes.
-
-**Addresses:** Typography consistency, card padding consistency, table styling (from FEATURES.md table stakes design)
-
-**Avoids:** Color namespace wipe (Pitfall 3 in PITFALLS.md), inline style drift (Pitfall 6), font loading FOUT (ARCHITECTURE.md anti-pattern 5)
-
-**Research flag:** Standard patterns — no additional research needed. Exact CSS is specified in ARCHITECTURE.md Pattern 1 and Pattern 2. Execute directly.
+Based on the combined research, 6 phases are recommended — each scoped to minimize re-work across shared files and ordered by hard dependencies.
 
 ---
 
-### Phase 2: Primitive UI Components
+### Phase 1: DB Migration + Project Archive
 
-**Rationale:** `Badge`, `Card`, and `PageHeader` primitives are the building blocks all 8+ pages will use. Creating them before the page polish pass ensures consistent application — not page-by-page reinvention. Primitive creation requires Phase 1 tokens to be available.
+**Rationale:** The migration is a prerequisite for submission tracking and amendments; it must be first. Project archive uses the already-existing `status` column and shares `DashboardPage.tsx` work with the search/filter phase — combining them in Phase 1 and 2 avoids touching the same file twice.
 
-**Delivers:** `components/ui/Badge.tsx` with `gold | gray | green | red | yellow` variants; `components/ui/Card.tsx` with padding variant; `components/ui/PageHeader.tsx` with title + subtitle + action slot.
+**Delivers:** Migration `0009` with 4 new `payrollWeeks` columns; `GET /api/projects` filtered to `status=active` by default; archive/restore button on `ProjectDetailPage`; "Show Archived" toggle on `DashboardPage`; archived badge on `ProjectCard`; compliance pre-check before archive (409 if open violations).
 
-**Implements:** ARCHITECTURE.md Pattern 4 (typed primitive wrappers)
+**Addresses:** Feature 4 (project archive); migration prerequisite for Features 2 and 3.
 
-**Avoids:** Inconsistent badge colors and multiple ad-hoc card implementations that accumulate independently across pages
+**Avoids:** Pitfall 6 (hard-delete — no DELETE route for projects). Pitfall 7 (archive with open violations — pre-check required). Pitfall 13 (migration journal — verify columns immediately after migration).
 
-**Research flag:** Standard patterns — implementation specs are in ARCHITECTURE.md Pattern 4. No additional research needed.
-
----
-
-### Phase 3: App Shell + Layout Polish
-
-**Rationale:** `Layout.tsx` wraps all protected pages. Polishing it once in a single phase ensures every page inherits the correct dark nav + gold accent without touching 8 individual page files. This phase also addresses the most visible first impression for returning users.
-
-**Delivers:** `Layout.tsx` refactored to token classes with SVG logo; `LoginPage.tsx` polished (first impression for all new users); all protected pages receive `.hcc-table` class on their data tables.
-
-**Addresses:** Dark nav + gold accent on every page, data table structure (FEATURES.md table stakes design)
-
-**Avoids:** Regression risk — `Layout.tsx` changes affect all protected pages simultaneously; verify with existing 181-test suite after this phase before proceeding
-
-**Research flag:** Standard patterns. Mechanical token substitution on shared components. No novel territory.
+**Research flag:** Standard patterns. Skip research-phase.
 
 ---
 
-### Phase 4: Landing Page + Routing
+### Phase 2: Dashboard Search + Filter
 
-**Rationale:** The landing page depends on the token system (Phase 1) and the `motion` package (new install). It requires a routing table redesign that must be planned in full before any UI is written (Pitfall 5 in PITFALLS.md). This phase is a self-contained deliverable — the public face of the product — and must be verified with all 4 routing test cases before declaring it complete.
+**Rationale:** Shares `DashboardPage.tsx` with Phase 1 (archive toggle already touches this file). Client-side filter with `useMemo` is the simplest feature in v2.3 — zero server changes, immediate contractor-visible value.
 
-**Delivers:** `LandingPage.tsx` at public route `/` with hero, pain acknowledgment, how-it-works, feature highlights, trust signals, CTA close, and footer; `App.tsx` routing updated with auth-aware wildcard; `/register` added as explicit public route; `motion`, `react-intersection-observer`, and `lucide-react` installed.
+**Delivers:** Search by name, filter by funding type, `useSearchParams`-based URL param persistence, zero-results EmptyState.
 
-**Uses:** motion, react-intersection-observer, lucide-react (STACK.md new installs)
+**Addresses:** Feature 5.
 
-**Avoids:** Routing conflict dead-ending the registration flow (Pitfall 5), generic copy failing to convert the GC audience (Pitfall 7), CTA linking to `/login` instead of `/register` (PITFALLS.md UX pitfalls section)
+**Avoids:** Pitfall 11 (filter state lost on navigation — `useSearchParams` required from day one). Pitfall 12 (per-keystroke server queries — client-side filtering over cached data).
 
-**Research flag:** Copy strategy requires attention before building UI. The research confirms what the copy must contain (WH-347, Davis-Bacon, SAM.gov, outcome-focused framing) but the actual headline and section copy must be drafted and reviewed before JSX is written. This is a content problem, not a code problem.
+**Research flag:** Standard patterns. Skip research-phase.
 
 ---
 
-### Phase 5: Page-by-Page Polish Pass
+### Phase 3: WH-347 Submission Tracking
 
-**Rationale:** With tokens, primitives, and layout established, each page becomes a safe, independent substitution pass: swap inline hex values for token classes, apply `<Badge>` and `<Card>` primitives, apply `<PageHeader>`, add empty states with action copy. Each page is independently verifiable. Run the 181 existing tests after each page to confirm no regressions.
+**Rationale:** Depends on Phase 1 migration (new `submitted_at`, `submitted_to` columns). Establishes submission status as a prerequisite for the Amendment Workflow's "Amend" button trigger.
 
-**Delivers:** All 8+ existing app pages (Dashboard, ProjectDetail, Workers, PayrollEntry, PayrollWeekDetail, Reports, OTScenario, WageLookup) using token classes, primitive components, and consistent empty states; compliance badges with semantic colors across all pages; workflow progress indicator on ProjectDetail; WH-347 loading/success state feedback; compliance preflight summary before WH-347 download.
+**Delivers:** `POST /submit` and `DELETE /submit` routes; submission panel (Card) on `PayrollWeekDetailPage`; submitted/not-submitted badges on `PayrollListPage`; server-side `checkWeekEditable()` guard on all payroll entry write routes; `PayrollWeek` TypeScript interface extended.
 
-**Addresses:** All remaining FEATURES.md table stakes design items and differentiator features
+**Addresses:** Feature 2.
 
-**Avoids:** Font-change table column overflow (Pitfall 4) — apply Inter globally as the first action in Phase 5 and verify the payroll grid at 1280px before continuing; `focus:outline-hidden` migration (Pitfall 2) — first task of this phase
+**Avoids:** Pitfall 3 (no edit lock — ships in same phase as submission tracking, never deferred). Security requirement: `submittedAt` set server-side only, never accepted from request body.
 
-**Research flag:** Manual visual verification required on PayrollEntryPage (7-day grid) and WageClassificationsTable after Inter is applied globally. No automated test covers layout regression. Flag these two pages for explicit human review before Phase 5 is declared complete.
+**Research flag:** Standard patterns. Skip research-phase.
+
+---
+
+### Phase 4: Copy Previous Payroll Week
+
+**Rationale:** The bulk entry copy logic validated here is reused by the Amendment Workflow in Phase 5. Building and testing it first ensures the pattern is correct before it is extended.
+
+**Delivers:** `POST /api/payroll/weeks/copy` route; live rate re-fetch per classification via `wageLookup.ts`; "Copy from previous week" option in `PayrollEntryPage` new-week form; copy response with `{ copied, skipped, skippedWorkers }`; UI warning for skipped entries; strict field allowlist (no submission flags, no rate snapshot carry-over).
+
+**Addresses:** Feature 1.
+
+**Avoids:** Pitfall 1 (stale rate snapshots — rate re-fetch is mandatory). Pitfall 2 (submission flags copied to new week — `submittedAt` must be null on copy output regardless of source week state).
+
+**Research flag:** Review `wageLookup.ts` before building the copy route. Confirm the per-classification lookup is batchable and that graceful per-classification failure (omit entry, not default to zero) is supported by the existing function signature.
+
+---
+
+### Phase 5: Payroll Amendment Workflow
+
+**Rationale:** Depends on Phase 1 migration (`amendment_number`, `original_week_id` columns), Phase 3 submission tracking ("Amend" button only surfaces when `submittedAt` is not null), and Phase 4 copy-entries pattern (bulk entry creation reused for amendment).
+
+**Delivers:** `POST /api/payroll/weeks/:id/amend` route; new `payrollWeeks` row with `amendment_number + 1` and `original_week_id`; `UNIQUE(original_week_id, amendment_number)` DB constraint; "N (AMENDED M)" label in WH-347 via `export.ts` string assembly; amendment badge on `PayrollListPage`; "Amend This Week" button on `PayrollWeekDetailPage`.
+
+**Addresses:** Feature 3.
+
+**Avoids:** Pitfall 4 (in-place amendment — new row mandatory). Pitfall 5 (amendment numbering conflict — unique constraint in migration). Pitfall 14 (PDF coordinate mismatch — amendment label in `payrollNumber` string field, not a coordinate overlay).
+
+**Research flag:** Verify `wh347Data.payrollNumber` type accepts string values in `wh347Generator.ts` before implementing. Confirm `export.ts` amendment label assembly does not require `fillWh347()` changes.
+
+---
+
+### Phase 6: Per-Worker Compliance History
+
+**Rationale:** Fully independent of all other features — read-only reporting with no schema changes. Placed last because it requires the most implementation care (cross-project join, batch compliance, N+1 avoidance, worker disambiguation).
+
+**Delivers:** `GET /api/reports/workers/:workerId/violations` route; `getWorkerViolations(workerId, userId)` in `reportsService.ts` using `(name, ssnLast4)` cross-project join and batch entry load; `WorkerViolationsPage` at `/workers/:workerId/violations`; "Compliance History" link per worker row on `WorkersPage`.
+
+**Addresses:** Feature 6.
+
+**Avoids:** Pitfall 8 (live rate re-computation instead of snapshot — history route must not import `wageLookup.ts`). Pitfall 9 (N+1 queries — batch all entries in one query, run compliance in memory, not per-week loop). Pitfall 10 (worker disambiguation — join on `(name, ssnLast4)`, not `worker_id`).
+
+**Research flag:** Review `complianceService.computeCompliance()` function signature before designing `getWorkerViolations()`. Confirm the batch-entries-then-compute-in-memory approach is compatible with the existing function's input contract.
 
 ---
 
 ### Phase Ordering Rationale
 
-- CSS tokens before components before pages: `@theme` must exist before components reference generated utility classes. Components must exist before pages use them. This is a hard dependency chain with no safe way to reorder.
-- Layout before individual pages: `Layout.tsx` wraps all protected pages. One change propagates everywhere. Polishing it in Phase 3 means Phase 5 pages inherit the correct nav without per-page nav work.
-- Landing page as a discrete phase: The landing page is the only new route, uses the only new packages, and requires the routing table redesign. Isolating it in Phase 4 lets the routing be fully verified before page polish begins.
-- Fix pitfalls before extending: Pitfall 2 (outline-none), Pitfall 4 (font + tables), and Pitfall 6 (inline styles) are each addressed in their respective prerequisite phases — not deferred. Deferring these creates compounding visual inconsistency that is harder to untangle later.
+- **Migration first** — submission tracking (Phase 3) and amendment (Phase 5) cannot start without the new columns
+- **Archive alongside migration** — zero schema work needed; shares `DashboardPage.tsx` with search/filter
+- **Search/filter immediately after archive** — both modify `DashboardPage.tsx`; combine the file touch into two sequential phases rather than revisiting
+- **Submission tracking before amendment** — "Amend" button is gated on `submittedAt` not null; Phase 3 must complete first
+- **Copy before amendment** — bulk entry copy pattern built in Phase 4 is reused in Phase 5; validate once, extend once
+- **Worker history last** — independent read-only feature; highest implementation complexity; no downstream dependencies
+
+---
+
+### Research Flags
+
+Phases needing deeper review before implementation:
+
+- **Phase 4 (Copy Previous Week):** Review `wageLookup.ts` — confirm the per-classification lookup supports graceful failure per entry (omit vs. default to zero). This is the highest-risk implementation decision in v2.3.
+- **Phase 5 (Amendment Workflow):** Verify `wh347Data.payrollNumber` type in `wh347Generator.ts` accepts string values. Confirm `export.ts` string assembly approach before writing any route code.
+- **Phase 6 (Per-Worker Compliance History):** Review `complianceService.computeCompliance()` input contract before designing the batch query. Write a 20-week test fixture before any implementation to catch N+1 regressions.
+
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (DB Migration + Archive):** Add-only migration; `status` column already exists. Standard Drizzle journal pattern.
+- **Phase 2 (Dashboard Search):** Client-side `useMemo` + `useSearchParams`. No novel patterns.
+- **Phase 3 (Submission Tracking):** PATCH route + status panel + edit lock guard. All established patterns in the codebase.
 
 ---
 
@@ -192,18 +205,22 @@ The architecture and pitfall dependency ordering strongly suggests a 5-phase bui
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All three new packages confirmed at current versions; React 19 + Vite compatibility verified; TailwindCSS v4 patterns from official documentation |
-| Features | HIGH | Functional features grounded in 29 CFR regulatory docs and January 2025 WH-347 revision. Design features from live competitor research (LCPtracker, Elation, Hammr) and SaaS pattern library analysis |
-| Architecture | HIGH | TailwindCSS v4 `@theme` behavior verified against official docs and confirmed GitHub issues; all patterns validated against direct codebase inspection of 33 TSX files |
-| Pitfalls | HIGH | Critical pitfalls confirmed against official v4 docs, GitHub issues, and direct codebase audit; all 7 inline style locations identified by file and line pattern |
+| Stack | HIGH | All versions read directly from `package.json`. Feature-by-feature analysis confirms zero new library requirements. |
+| Features | HIGH | Regulatory requirements grounded in 29 CFR Part 3, Part 5, CWHSSA, and WH-347 Jan 2025 revision. v2.3 scope validated against shipped v2.0/v2.1/v2.2 functionality. |
+| Architecture | HIGH | Based on direct codebase analysis of schema, routes, services, client pages, and migration journal. No inference required — all affected files read directly. |
+| Pitfalls | HIGH | Derived from direct codebase audit (exact functions and routes at risk identified) plus federal regulatory analysis (29 CFR records retention). Recovery costs quantified. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Font weight selection:** Research recommends Oswald at 400/600 and Inter at 400/500/600. Confirm whether bold Inter (700) is needed for any compliance badge label before writing the Google Fonts URL — adding a weight later requires a cache-bust deploy.
-- **WageClassificationsTable `<tr>` background:** The table uses `style={{ backgroundColor: '#F5C518' }}` on a `<tr>` element. Migration to `className="bg-brand-gold"` on a `<tr>` should be verified against TailwindCSS v4's specificity behavior on table row elements before applying broadly.
-- **Auth-aware wildcard implementation:** Pitfall 5 identifies that the wildcard must distinguish authenticated from unauthenticated users. The existing `ProtectedRoute` auth-check logic may need extraction into a shared `useAuth` hook to avoid duplication in both `ProtectedRoute` and the new wildcard component. Evaluate scope during Phase 4 routing planning.
+- **Rate re-fetch batch pattern:** `wageLookup.ts` was not read during research. The batch-per-classification approach and its failure mode (classification not found → omit, not default) need confirmation against the actual function signature before Phase 4 begins.
+
+- **`wh347Data.payrollNumber` type:** STACK.md asserts this field accepts string values. Verify in `wh347Generator.ts` type definitions at the start of Phase 5.
+
+- **`_journal.json` next index:** ARCHITECTURE.md states `idx: 5` is next. Verify at migration time — if any development migration was added since research, the index will differ.
+
+- **Dashboard compliance filter scope:** Explicitly deferred from v2.3. Requires a `GET /api/compliance/projects/summary?projectIds=...` batch endpoint. Name this as a v2.4 item during roadmap planning to prevent scope creep.
 
 ---
 
@@ -211,29 +228,26 @@ The architecture and pitfall dependency ordering strongly suggests a 5-phase bui
 
 ### Primary (HIGH confidence)
 
-- [TailwindCSS v4 @theme directive — official docs](https://tailwindcss.com/docs/theme) — token system, utility class generation, namespace wipe behavior
-- [TailwindCSS v4 @layer / adding custom styles — official docs](https://tailwindcss.com/docs/adding-custom-styles) — base, components, utilities layer semantics
-- [TailwindCSS v4 upgrade guide — official docs](https://tailwindcss.com/docs/upgrade-guide) — shadow scale rename, outline-none rename, ring width changes
-- [GitHub issue #18966 — @theme fails in imported CSS files](https://github.com/tailwindlabs/tailwindcss/issues/18966) — confirmed @theme split limitation
-- [motion npm / motion.dev docs](https://motion.dev/docs/react) — v12 React import path, whileInView API, React 19 compatibility
-- [DOL WH-347 form and instructions (Rev. Jan 2025)](https://www.dol.gov/agencies/whd/forms/wh347) — WH-348 consolidation, J/RA field addition
-- Direct codebase audit — 33 TSX files reviewed for inline styles, v4-affected classes, table patterns (2026-03-20)
+- `package.json` — all installed library versions, read directly
+- `src/server/db/schema.ts` — full table structure; `projects.status` column confirmed existing at `'active' | 'closed'`
+- `src/server/db/migrations/meta/_journal.json` — migration sequence; next `idx` determined as 5
+- `src/server/routes/payroll.ts`, `projects.ts`, `export.ts`, `reports.ts` — existing route patterns confirmed
+- `src/server/services/payrollService.ts`, `complianceService.ts`, `reportsService.ts`, `wh347Generator.ts` — service function signatures
+- `src/client/pages/DashboardPage.tsx`, `PayrollListPage.tsx`, `PayrollWeekDetailPage.tsx` — existing component structure
+- `.planning/PROJECT.md` — stack constraints, key decisions, migration workflow, rate snapshot immutability rules
 
-### Secondary (MEDIUM confidence)
+### Secondary (MEDIUM-HIGH confidence)
 
-- [LCPtracker](https://lcptracker.com/), [Elation Systems](https://www.elationsys.com/), [Hammr](https://www.hammr.com/prevailing-wage-software-for-construction) — live competitor design research (2026-03-20)
-- [SaaSUI Design Library](https://www.saasui.design/) — SaaS UI pattern research; 22+ B2B SaaS pattern categories
-- [GitHub discussion #18560 — @theme vs @theme inline](https://github.com/tailwindlabs/tailwindcss/discussions/18560) — when inline keyword is required
-- [React Router: Private Routes — Robin Wieruch](https://www.robinwieruch.de/react-router-private-routes/) — public vs. protected route pattern
-- [B2B SaaS Landing Page Best Practices — Flow Agency](https://www.flow-agency.com/blog/b2b-saas-landing-page-best-practices/) — CTA placement, hero structure
-- [9 B2B Landing Page Lessons From 2025 — Instapage](https://instapage.com/blog/b2b-landing-page-best-practices) — copy mistakes, feature-vs-benefit framing
+- DOL WH-347 Instructions (January 2025 revision) — amendment marking requirements, form field structure
+- 29 CFR Part 3 (Copeland Act) — 3-year records retention requirement post-project-completion
+- 29 CFR Part 5 (Davis-Bacon) — weekly certified payroll submission requirements, CWHSSA OT rules
+- Test suite analysis: `tests/routes/compliance.test.ts`, `tests/routes/payroll.test.ts` — identified test coverage gaps for new features
 
-### Tertiary (LOW confidence)
+### Tertiary (MEDIUM confidence)
 
-- [Framer Motion + Tailwind 2025 stack — dev.to](https://dev.to/manukumar07/framer-motion-tailwind-the-2025-animation-stack-1801) — community validation of motion + Tailwind pairing; consistent with official docs but not authoritative
-- [Tailwind v4 + shadcn transparency bug — GitHub discussion](https://github.com/tailwindlabs/tailwindcss/discussions/17137) — reinforces not using shadcn; community report, not officially confirmed
+- STACK.md v2.1 prior research — `lucide-react` icons, `Badge`/`Card` primitives confirmed installed; used as corroborating reference
 
 ---
 
-*Research completed: 2026-03-20*
+*Research completed: 2026-03-23*
 *Ready for roadmap: yes*

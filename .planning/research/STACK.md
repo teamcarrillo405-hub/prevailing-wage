@@ -1,205 +1,260 @@
 # Stack Research
 
-**Domain:** Design system polish + marketing landing page (v2.1 additions to existing React + TailwindCSS v4 app)
-**Researched:** 2026-03-20
+**Domain:** Contractor workflow efficiency + audit readiness (v2.3 additions to existing compliance app)
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ---
 
-## Context: What Already Exists (Do Not Re-research)
+## Verdict: No New Libraries Required
 
-The following are confirmed installed and working. This research covers ONLY what is needed for v2.1 new features.
-
-| Technology | Version (package.json) | Status |
-|------------|----------------------|--------|
-| React 19 + Vite | ^19.2.4 / ^8.0.0 | Installed |
-| TailwindCSS v4 | ^4.2.2 | Installed, `@tailwindcss/vite` plugin |
-| `clsx` + `tailwind-merge` | installed in v2.0 | Installed |
-| Recharts 3 | ^3.8.0 | Installed |
-| @tanstack/react-query | ^5.91.0 | Installed |
-| react-hook-form + zod | ^7.71.2 / ^4.3.6 | Installed |
-| Oswald + Inter fonts | Loaded via `@theme` in index.css | Configured |
-| Brand gold `#F5C518` | Defined as `--color-brand-gold` in `@theme` | Configured |
-
-**Existing `@theme` block in `index.css`:**
-```css
-@import "tailwindcss";
-
-@theme {
-  --color-brand-gold: #F5C518;
-  --font-headline: 'Oswald', sans-serif;
-  --font-body: 'Inter', sans-serif;
-}
-```
-
-This is the correct TailwindCSS v4 CSS-first token approach. Fonts and brand color are already registered as utility-generating CSS custom properties.
+All 6 features in v2.3 are CRUD operations, SQL aggregations, and client-side filtering on existing data shapes. The existing stack covers every technical need. Adding libraries would be over-engineering.
 
 ---
 
-## Recommended Additions for v2.1
+## Context: Confirmed Installed Stack
 
-### Core Libraries — New Installs
+Read directly from `package.json` — these are production-pinned versions.
 
-| Library | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| `motion` | ^12.38.0 | Scroll-triggered entry animations on the landing page hero, feature grid, and CTA | Framer Motion rebranded to `motion` in late 2024. v12.x fully supports React 19. Import path is `motion/react`. Provides `<motion.div>`, `whileInView`, `initial`/`animate` declarative props. Best-in-class for marketing landing page animations — used by Framer and Figma at scale (30M+ npm downloads/month). Adds roughly 30KB gzip when tree-shaken to used components only. CSS-only transitions won't cut it for staggered feature-card reveals or hero text entry. |
-| `react-intersection-observer` | ^10.0.3 | `useInView` hook for triggering class-based animations when sections scroll into viewport | When `motion` is too heavy for a specific effect (e.g., adding a class once to trigger a CSS transition), this 2KB hook is the right tool. v10.0.3 is the current stable. Works independently of `motion` — use both where appropriate. Replaces manual `IntersectionObserver` instantiation in every component. |
-| `lucide-react` | ^0.577.0 | SVG icon set for landing page feature icons and app UI polish | 577 icons, fully tree-shakeable (each icon is its own import), TypeScript types included, no sprite sheets. Works with Tailwind utility classes (`className="w-5 h-5 text-brand-gold"`). The project constraint (per memory) bans emojis in UI — SVG icons are the required alternative. Lucide is the standard pairing with Tailwind utility-first projects. |
-
-### Design Token Extensions — CSS Only, No New Packages
-
-The following additions belong in `index.css` inside the existing `@theme` block. They extend the token system without adding npm dependencies.
-
-```css
-@theme {
-  /* Existing */
-  --color-brand-gold: #F5C518;
-  --font-headline: 'Oswald', sans-serif;
-  --font-body: 'Inter', sans-serif;
-
-  /* Add: typography scale */
-  --font-size-display: 3.5rem;   /* 56px — landing page hero headline */
-  --font-size-h1: 2.25rem;       /* 36px — page titles */
-  --font-size-h2: 1.75rem;       /* 28px — section headers */
-  --font-size-h3: 1.25rem;       /* 20px — card headers */
-  --font-size-body: 1rem;        /* 16px — body copy */
-  --font-size-small: 0.875rem;   /* 14px — labels, captions */
-
-  /* Add: spacing tokens for card/table consistency */
-  --spacing-card: 1.5rem;        /* 24px — card padding */
-  --radius-card: 0.75rem;        /* 12px — card border-radius */
-  --radius-badge: 9999px;        /* pill badges */
-
-  /* Add: brand surface colors */
-  --color-surface-dark: #1a1a1a;    /* dark nav, matching existing PROJECT.md spec */
-  --color-surface-mid: #242424;     /* slightly lighter dark surface */
-  --color-surface-light: #f9fafb;   /* light page background */
-  --color-border: #e5e7eb;          /* table/card borders */
-  --color-text-muted: #6b7280;      /* secondary text */
-
-  /* Add: shadow tokens */
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-}
-```
-
-TailwindCSS v4's `@theme` generates utility classes from every custom property. Defining `--color-surface-dark` means `bg-surface-dark`, `text-surface-dark`, and `border-surface-dark` utility classes are auto-generated with no config file needed. This is the correct CSS-first v4 pattern — do not use a `tailwind.config.js` for these.
+| Technology | Installed Version | Relevant Capability |
+|------------|------------------|---------------------|
+| React 19 | ^19.2.4 | UI components, hooks |
+| TailwindCSS v4 | ^4.2.2 | Styling, design tokens |
+| TanStack Query | ^5.91.0 | Server state, cache invalidation |
+| react-hook-form + zod | ^7.71.2 / ^4.3.6 | Form validation |
+| drizzle-orm | ^0.45.1 | DB queries, add-only migrations |
+| better-sqlite3 | ^12.8.0 | SQLite driver |
+| pdf-lib | ^1.17.1 | WH-347 PDF generation |
+| react-router-dom | ^7.13.1 | Client-side routing |
+| lucide-react | ^0.577.0 | SVG icons |
+| vitest | ^4.1.0 | Test runner (188 passing) |
 
 ---
 
-## What Is NOT Needed
+## Feature-by-Feature Stack Analysis
 
-| Library | Why Not | What to Use Instead |
-|---------|---------|-------------------|
-| `shadcn/ui` or any component library | PROJECT.md explicitly forbids new UI frameworks. Additionally, shadcn has known transparency rendering issues with Tailwind v4 (confirmed in Tailwind GitHub discussions). Radix UI's maintenance status is uncertain as of 2025. | Hand-rolled components using Tailwind utility classes + clsx + tailwind-merge |
-| `Material UI (MUI)` | Opinionated design system fights the custom HCC brand. Adds ~300KB to bundle. Style override battles with Tailwind. | Same — utility classes + design tokens |
-| `@tailwindcss/typography` plugin | This plugin styles HTML-rendered markdown (blog posts, prose content). The landing page and app pages are all structured JSX, not rendered markdown. Adding it for headline/body styles when `@theme` custom fonts are already registered adds 20KB of CSS and no benefit. | Use the existing `--font-headline` and `--font-body` tokens. Typography hierarchy is a set of reusable class combinations — document them in a `typography.ts` constants file, not a plugin. |
-| `@tanstack/react-table` | Landing page and polished data displays use read-only tables. TanStack Table is appropriate for sortable/filterable data grids. Pay history and fringe reports are static read-only — native `<table>` + Tailwind styling is sufficient. | Plain HTML `<table>` elements with Tailwind utility classes |
-| `styled-components` / CSS modules | The project is already committed to Tailwind utility classes. Mixing paradigms creates inconsistency and doubles tooling. | Tailwind utility classes only |
-| `@fontsource/oswald` or `@fontsource/inter` | These fonts are presumably loaded via link tags or CSS import already. Adding npm font packages adds ~500KB of font files to the bundle. | Verify Google Fonts `<link>` is in `index.html`; if not, add the link tag, not an npm package |
-| `gsap` (GreenSock) | Powerful but 50KB+ gzip, overkill for landing page entry animations. API is imperative, not declarative — fights React's model. | `motion` package handles all required landing page animations declaratively |
+### Feature 1: Copy Previous Payroll Week
+
+**What it needs:** Read prior week's payroll entries, POST to create a new week pre-filled with those hours.
+
+**Existing tools cover it:**
+- `payrollService.ts` already has `getPayrollEntries(weekId)` and `createPayrollWeek()` — the copy operation is a service-layer function that reads one week and writes another
+- `payrollWeeks` and `payrollEntries` tables in Drizzle schema already have all needed columns
+- TanStack Query `useMutation` handles the POST + cache invalidation on success
+- react-hook-form is not needed — this is a one-click action with a confirmation modal, not a form
+
+**New code needed:** One new POST route (`POST /api/payroll/weeks/:weekId/copy`), one new service function, one button + modal on `PayrollListPage`.
+
+**No new libraries.**
 
 ---
 
-## Typography Hierarchy Implementation
+### Feature 2: WH-347 Submission Tracking
 
-TailwindCSS v4 handles typography through utility class combinations. The correct approach is to define a shared `cn()` helper function and typography class constants — not a plugin.
+**What it needs:** Store submitted date, agency name, submitter on a payroll week. Display on Payroll Week Detail and list.
 
-**Pattern: `src/client/lib/typography.ts`**
+**Existing tools cover it:**
+- `payrollWeeks` schema needs 3 new nullable columns: `submittedAt` (text ISO date), `submissionAgency` (text), `submittedBy` (text) — add-only Drizzle migration
+- PATCH route on `/api/payroll/weeks/:weekId` (or new `/submit`) updates these columns
+- TanStack Query `invalidateQueries` propagates the change to PayrollListPage and PayrollWeekDetailPage
+- Badge component (existing `ui/Badge.tsx`) renders "Submitted" vs "Not Submitted" status
+
+**Migration note:** `projects.status` column already exists in schema.ts as `'active' | 'closed'` — submission tracking columns follow the same pattern.
+
+**No new libraries.**
+
+---
+
+### Feature 3: Payroll Amendment Workflow
+
+**What it needs:** Mark a submitted week as amended, flag the regenerated WH-347 PDF as "CORRECTED."
+
+**Existing tools cover it:**
+- New columns on `payrollWeeks`: `isAmended` (boolean integer), `amendmentReason` (text nullable), `originalSubmittedAt` (text nullable — preserve original date when amending)
+- `fillWh347()` in `src/server/services/wh347Service.ts` (or equivalent) already renders PDF via coordinate overlay — pass an `isAmended: boolean` flag to conditionally render "CORRECTED" text overlay using existing `pdf-lib` `drawText()` call
+- Amendment creates no new week row — it updates the existing week's data and regenerates the PDF from the same `weekId`
+- Zod schema on PATCH route validates `amendmentReason` is present when `isAmended: true`
+
+**Critical constraint (from PROJECT.md):** Rate snapshots on `payrollEntries` are immutable. Amendment allows editing hours/deductions but `baseRateSnapshot` and `fringeRateSnapshot` stay frozen to original entry values. The compliance engine re-runs on amended data using those frozen snapshots.
+
+**No new libraries.**
+
+---
+
+### Feature 4: Project Completion / Archive
+
+**What it needs:** Set project status to `'closed'`, filter closed projects off the active dashboard.
+
+**Status: Schema already has this field.**
+
+From `schema.ts` line 30:
 ```typescript
-// Define reusable typography class strings as named constants
-// Apply via className={typography.h1} in components
-export const typography = {
-  display: 'font-headline text-display font-bold tracking-tight leading-none',
-  h1:      'font-headline text-h1 font-bold tracking-tight',
-  h2:      'font-headline text-h2 font-semibold tracking-tight',
-  h3:      'font-headline text-h3 font-semibold',
-  body:    'font-body text-body leading-relaxed',
-  small:   'font-body text-small text-text-muted',
-  label:   'font-body text-small font-medium uppercase tracking-wide',
-} as const;
+status: text('status').notNull().default('active').$type<'active' | 'closed'>(),
 ```
 
-This approach uses the `@theme` tokens already defined, generates no new CSS, and creates a single authoritative source for all type sizes — ensuring consistency across the landing page and all app pages.
+The column exists. No migration needed — it was added in a prior phase.
+
+**Remaining work:**
+- PATCH route on `/api/projects/:projectId` to set `status: 'closed'`
+- Dashboard query already fetches all projects — add `.where(eq(projects.status, 'active'))` filter server-side, or filter client-side from the TanStack Query cache (client-side preferred since data is already loaded)
+- "Show Archived" toggle on DashboardPage uses local `useState` to show/hide closed projects without a new network request
+- "Archive Project" button on ProjectDetailPage with confirmation modal (same pattern as WH-347 preflight modal already implemented in v2.2)
+
+**No migration needed. No new libraries.**
 
 ---
 
-## Landing Page Architecture
+### Feature 5: Dashboard Search + Filter
 
-The landing page is a single React route component at `/`. It requires no additional routing beyond what `react-router-dom` (already installed) provides. All animation is handled by the `motion` package.
+**What it needs:** Search projects by name, filter by compliance status badge and funding type.
 
-**Component structure to build:**
+**Existing tools cover it:**
+- Data is already in TanStack Query cache on `DashboardPage` — all projects fetched on load
+- Filter logic is pure `Array.filter()` + `String.includes()` in a `useMemo()` — zero network requests, no server changes
+- Compliance badge data is already fetched per `ProjectCard` (see `compliance.ts` route) — join by `projectId` in the memo
+- react-hook-form is not needed — search input is a single uncontrolled `<input>` with `onChange` updating a `useState` string
+- `lucide-react` `Search` icon already installed for the search input adornment
+
+**Implementation pattern:**
+```typescript
+// In DashboardPage — pure client-side, no new dependencies
+const [search, setSearch] = useState('');
+const [fundingFilter, setFundingFilter] = useState<string>('all');
+const [complianceFilter, setComplianceFilter] = useState<string>('all');
+
+const filtered = useMemo(() =>
+  projects
+    .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    .filter(p => fundingFilter === 'all' || p.fundingType === fundingFilter)
+    .filter(p => complianceFilter === 'all' || complianceBadges[p.id] === complianceFilter),
+  [projects, search, fundingFilter, complianceFilter, complianceBadges]
+);
 ```
-src/client/pages/LandingPage.tsx          — root route "/"
-src/client/components/landing/
-  HeroSection.tsx                         — headline, subhead, CTA buttons
-  FeatureGrid.tsx                         — 3-column feature cards with Lucide icons
-  SocialProofSection.tsx                  — "Davis-Bacon compliance built for GCs"
-  PricingCTA.tsx                          — single CTA to register
-src/client/components/shared/
-  Button.tsx                              — primary/secondary/ghost variants
-  Badge.tsx                               — status pill variants (already noted in v2.0)
-  Card.tsx                                — standard card container
-```
 
-No new packages needed for routing, data fetching, or state management on the landing page. It is static content.
+**No new libraries. No server changes.**
 
 ---
 
-## Installation
+### Feature 6: Per-Worker Compliance History
 
-```bash
-# New production dependencies for v2.1
-npm install motion@^12.38.0 react-intersection-observer@^10.0.3 lucide-react@^0.577.0
+**What it needs:** Aggregate all violations for a worker across all projects and weeks — worker-centric audit view.
+
+**Existing tools cover it:**
+- Drizzle ORM supports the required JOIN: `payrollEntries` → `payrollWeeks` → `projects` → filter by `workerId`
+- `computeCompliance()` in `complianceService.ts` already runs per-week — new service function iterates worker's weeks and collects violations
+- New route: `GET /api/workers/:workerId/compliance-history` — returns array of `{ weekId, weekEndingDate, projectName, violations[] }`
+- New page: `WorkerComplianceHistoryPage` at `/workers/:workerId/compliance` — a new route in `App.tsx`
+- TanStack Query `useQuery` fetches on mount; no polling needed (audit view is read-only)
+- Existing `Badge` component renders violation/compliant status per row
+- Existing `Card` and `PageHeader` components handle layout
+
+**Performance note:** For the single-user SQLite app, iterating weeks per worker is fine. Worker count per project is typically 5-30; weeks are typically 10-52 per project. Total rows are in the hundreds, not millions. No pagination needed.
+
+**No new libraries.**
+
+---
+
+## Recommended Stack for v2.3
+
+### Core Technologies (No Changes)
+
+| Technology | Version | Role in v2.3 |
+|------------|---------|--------------|
+| Node.js + Express | existing | New routes for copy, submit, amend, archive, compliance history |
+| TypeScript | ^5.9.3 | Type safety for new request/response shapes |
+| drizzle-orm | ^0.45.1 | Schema migrations (3 new columns on `payrollWeeks`) + new queries |
+| better-sqlite3 | ^12.8.0 | No changes |
+| pdf-lib | ^1.17.1 | "CORRECTED" text overlay on amended WH-347 — uses existing `drawText()` |
+| React 19 + Vite | existing | New pages (WorkerComplianceHistoryPage), new components (search bar, submit modal) |
+| TanStack Query | ^5.91.0 | `useMutation` for copy/submit/amend/archive, `invalidateQueries` for cache sync |
+| TailwindCSS v4 | ^4.2.2 | No new tokens needed; existing `Badge`, `Card`, `Button`, `PageHeader` cover all UI |
+| zod | ^4.3.6 | Validation schemas for new PATCH/POST endpoints |
+| react-hook-form | ^7.71.2 | Amendment reason field (single text input — can use `useState` instead if preferred) |
+| lucide-react | ^0.577.0 | `Search` icon for dashboard search input, `CheckCircle` for submitted badge |
+| vitest | ^4.1.0 | Tests for new service functions (copy, submit, amend, compliance history aggregation) |
+
+### New Libraries: None
+
+---
+
+## DB Schema Changes Required
+
+Three columns on `payrollWeeks` — add-only migration following existing pattern.
+
+```sql
+-- Migration: submission tracking + amendment workflow
+ALTER TABLE payroll_weeks ADD COLUMN submitted_at TEXT;
+ALTER TABLE payroll_weeks ADD COLUMN submission_agency TEXT;
+ALTER TABLE payroll_weeks ADD COLUMN submitted_by TEXT;
+ALTER TABLE payroll_weeks ADD COLUMN is_amended INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE payroll_weeks ADD COLUMN amendment_reason TEXT;
+ALTER TABLE payroll_weeks ADD COLUMN original_submitted_at TEXT;
 ```
 
-No new dev dependencies needed. All three packages ship TypeScript declarations.
+Register in `src/server/db/migrations/meta/_journal.json` per PROJECT.md migration workflow.
 
-Verify Google Fonts link exists in `src/client/index.html` — if not, add:
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-```
+`projects.status` column (`'active' | 'closed'`) already exists in schema.ts — **no migration needed**.
+
+---
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `@tanstack/react-table` | Dashboard search/filter is client-side `Array.filter()` on ~10-50 projects. TanStack Table adds complexity for a use case that needs 10 lines of `useMemo`. | `useState` + `useMemo` in `DashboardPage` |
+| Any date picker library (`react-datepicker`, etc.) | Submission date is the current date (auto-set on submit action) or a simple `<input type="date">`. No calendar UI needed. | Native `<input type="date">` styled with Tailwind |
+| `immer` or additional state management | All state is server state managed by TanStack Query. No complex client state mutations. | TanStack Query cache + `useState` for filter/search UI state |
+| `react-pdf` or `pdfjs-dist` | PDF viewing in-browser is not a feature. PDF download via pdf-lib is already working. | Existing pdf-lib download flow |
+| Pagination library | Worker compliance history and project lists are small datasets (SQLite single-user app). Max ~50 projects, ~30 workers/project, ~52 weeks/project. | Render all rows; add browser scroll |
+| `lodash` or `ramda` | No complex data transformations. Filter/sort operations are 1-3 lines of native array methods. | Native `Array.filter()`, `Array.sort()`, `String.includes()` |
+
+---
+
+## New Routes Summary
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/payroll/weeks/:weekId/copy` | Copy prior week entries into a new week |
+| PATCH | `/api/payroll/weeks/:weekId/submit` | Mark week submitted (sets submittedAt, agency, submittedBy) |
+| PATCH | `/api/payroll/weeks/:weekId/amend` | Mark week amended (sets isAmended, amendmentReason, preserves originalSubmittedAt) |
+| PATCH | `/api/projects/:projectId/archive` | Set project status to 'closed' |
+| GET | `/api/workers/:workerId/compliance-history` | Aggregate violations across all weeks for one worker |
+
+Dashboard search/filter (Feature 5) requires no new server routes — fully client-side.
+
+---
+
+## New Pages Summary
+
+| Page | Route | Feature |
+|------|-------|---------|
+| `WorkerComplianceHistoryPage` | `/workers/:workerId/compliance` | Feature 6 — per-worker audit view |
+
+Remaining features (1-5) extend existing pages: PayrollListPage, PayrollWeekDetailPage, ProjectDetailPage, DashboardPage.
 
 ---
 
 ## Version Compatibility
 
-| Package | Compatible With | Notes |
-|---------|----------------|-------|
-| `motion@12.x` | React 19, Vite | Import from `motion/react` not `framer-motion`. `framer-motion` package still works but is the legacy alias. Use `motion` package for new projects. React Compiler compatible. |
-| `react-intersection-observer@10.x` | React 19, SSR | Zero dependencies. Uses native `IntersectionObserver` API (supported in all modern browsers). No polyfill needed for this app's target audience (contractors on desktop browsers). |
-| `lucide-react@0.577.x` | React 19, TypeScript | Tree-shakeable — only imported icons are bundled. Works with Tailwind `className` prop directly. No CSS import needed. |
-| `tailwind-merge@3.x` (existing) | TailwindCSS v4.x | Already installed in v2.0. v3.x is specifically for Tailwind v4. |
-
----
-
-## Alternatives Considered
-
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|------------------------|
-| `motion` (v12) | `react-spring` | react-spring is better for physics-based drag/gesture interactions. For marketing page enter animations and hover effects, `motion`'s declarative `whileInView` is the right mental model. |
-| `lucide-react` | `heroicons`, `phosphor-icons` | heroicons is fine if already in a project. lucide has a larger icon set (577 vs ~292 heroicons). `phosphor-icons` offers multiple weight variants — useful for app UIs but not needed here. |
-| `react-intersection-observer` | Native `IntersectionObserver` hook | Use native only for one-off cases. For multiple animated sections on a landing page, `useInView` from react-intersection-observer removes boilerplate correctly. |
-| CSS `@theme` token extensions | `tailwind.config.js` | TailwindCSS v4 CSS-first approach deprecates `tailwind.config.js` for token definition. The `@theme` block in CSS is the authoritative v4 pattern. |
-| Hand-rolled components | shadcn/ui copy-paste | shadcn/ui has Tailwind v4 compatibility bugs (transparent dropdowns). Hand-rolling is 10-30 lines per component and is fully controlled. |
+| Package | Version | Notes |
+|---------|---------|-------|
+| drizzle-orm | ^0.45.1 | `ALTER TABLE ... ADD COLUMN` migrations work with existing `meta/_journal.json` pattern — manually register new migration file |
+| pdf-lib | ^1.17.1 | `drawText()` supports arbitrary text overlay at coordinates — "CORRECTED" stamp follows same pattern as existing WH-347 field overlays |
+| TanStack Query | ^5.91.0 | `invalidateQueries({ queryKey: ['payrollWeeks', weekId] })` pattern already used in codebase — same for new mutations |
+| zod | ^4.3.6 | Zod v4 — already installed; new schemas for amendment reason, submission fields follow existing `CreateWeekSchema` pattern |
 
 ---
 
 ## Sources
 
-- [motion npm package](https://www.npmjs.com/package/motion) — v12.38.0 confirmed current, React 19 fully supported (HIGH confidence)
-- [Motion for React docs](https://motion.dev/docs/react) — `motion/react` import path, `whileInView` API (HIGH confidence)
-- [react-intersection-observer npm](https://www.npmjs.com/package/react-intersection-observer) — v10.0.3 confirmed current (HIGH confidence)
-- [lucide-react npm](https://www.npmjs.com/package/lucide-react) — v0.577.0 confirmed current, tree-shakeable (HIGH confidence)
-- [tailwind-merge npm](https://www.npmjs.com/package/tailwind-merge) — v3.x targets Tailwind v4 confirmed (HIGH confidence)
-- [Tailwind CSS v4 @theme docs](https://tailwindcss.com/docs/theme) — CSS-first token system, utility class generation from custom properties (HIGH confidence)
-- [Tailwind v4 + Radix/shadcn transparency bug](https://github.com/tailwindlabs/tailwindcss/discussions/17137) — confirmed compatibility issue, reinforces not using shadcn (MEDIUM confidence)
-- [Framer Motion + Tailwind 2025 stack](https://dev.to/manukumar07/framer-motion-tailwind-the-2025-animation-stack-1801) — community validation of the pairing (MEDIUM confidence)
-- Existing codebase — `index.css`, `package.json`, `vite.config.ts` reviewed directly (HIGH confidence)
+- `package.json` — all installed versions read directly (HIGH confidence)
+- `src/server/db/schema.ts` — `projects.status` already `'active' | 'closed'`; `payrollWeeks` columns confirmed (HIGH confidence)
+- `src/server/routes/compliance.ts` — `computeCompliance(db, weekId)` API confirmed, per-worker aggregation follows same pattern (HIGH confidence)
+- `src/server/routes/payroll.ts` — `createPayrollWeek`, `getPayrollEntries` service functions confirmed (HIGH confidence)
+- `.planning/PROJECT.md` — constraints confirmed: add-only migrations, no new UI frameworks, rate snapshots immutable, pdf-lib for all PDF work (HIGH confidence)
+- Previous STACK.md (v2.1) — confirmed `lucide-react` installed, `Badge`/`Card`/`Button`/`PageHeader` primitives exist (HIGH confidence)
 
 ---
 
-*Stack research for: HCC Prevailing Wage v2.1 — Design Polish + Landing Page*
-*Researched: 2026-03-20*
+*Stack research for: HCC Prevailing Wage v2.3 — Contractor Workflow Efficiency + Audit Readiness*
+*Researched: 2026-03-23*

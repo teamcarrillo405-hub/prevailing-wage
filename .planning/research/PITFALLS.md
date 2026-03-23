@@ -1,236 +1,346 @@
 # Pitfalls Research
 
-**Domain:** Design polish + landing page on existing React + TailwindCSS v4 app
-**Researched:** 2026-03-20
-**Confidence:** HIGH (Tailwind v4 official docs, direct codebase audit of 33 TSX files, community discussions)
+**Domain:** Davis-Bacon compliance payroll system — adding workflow efficiency + audit readiness features to existing app
+**Researched:** 2026-03-23
+**Confidence:** HIGH (direct codebase audit of schema, services, routes, tests; compliance-domain analysis; migration pattern review)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: TailwindCSS v4 Renamed Shadow Classes Will Break Existing Components If New Code Uses v3 References
+### Pitfall 1: Copy Previous Week Carries Stale Rate Snapshots Instead of Current Live Rates
 
 **What goes wrong:**
 
-TailwindCSS v4 shifted the shadow scale by one step. `shadow-sm` in v4 produces what `shadow` produced in v3. `shadow-xs` in v4 produces what `shadow-sm` produced in v3. If any new landing page or polished component code is written against v3 documentation or tutorial examples, the shadow weights will be off. A landing page card using `shadow-sm` for a subtle lift will render heavier than intended. Existing components already in the codebase (GsaRateDisplay, LiveCalcDisplay) that use `shadow-sm` were presumably built against v4 semantics and look correct today — the danger is new code added during this milestone that copies v3 patterns.
+The copy operation queries the previous week's `payrollEntries` and clones them into a new week. If `baseRateSnapshot` and `fringeRateSnapshot` are copied as-is from the old entries, the new week's entries carry the rate from when the source week was entered — not the current prevailing wage rate. For auditors, each payroll week's certification asserts that workers were paid no less than the prevailing wage at the time of that week's work. If a wage determination was updated between the copied week and the new week, the copied snapshot is stale and the certification is incorrect.
 
-Full rename table relevant to this project:
-
-| v3 class | v4 equivalent |
-|----------|--------------|
-| `shadow-sm` | `shadow-xs` |
-| `shadow` | `shadow-sm` |
-| `shadow-md` | `shadow-md` (unchanged) |
-| `shadow-lg` | `shadow-lg` (unchanged) |
-| `shadow-xl` | `shadow-xl` (unchanged) |
+This is not a hypothetical. SAM.gov wage determinations are revised on 30-day cache cycles in this app (`wdolSync.ts`). A revision could have landed since the prior week. The copy feature makes it trivially easy to enter a month of payroll using a stale rate — and the compliance engine (`complianceService.ts`) will not flag it, because it only compares `grossWages` against the stored snapshots, never against live wage determinations.
 
 **Why it happens:**
 
-The majority of Tailwind tutorials, component libraries, and StackOverflow answers were written for v3. When building the landing page, developers copy-paste hero sections and card components from v3-era resources without realizing the shadow scale shifted.
+The copy operation is a database clone. Every field that makes a payroll entry complete is in the source row. Developers naturally copy all fields. Rate snapshots look like metadata, not like fields with compliance meaning.
 
 **How to avoid:**
 
-Before writing any new component, set a rule: reference the [official v4 shadow docs](https://tailwindcss.com/docs/box-shadow) directly, not any third-party tutorial. When establishing the design token system, define named shadow tokens (`--shadow-card: ...`) in `@theme` so new components reference tokens, not raw Tailwind shadow classes. This insulates all components from the scale confusion.
+The copy route must NOT copy `baseRateSnapshot` or `fringeRateSnapshot`. Instead, the copy operation must perform a fresh rate lookup via `wageLookup.ts` for each worker's trade classification, using the project's locked WD identifier (`projects.wdIdentifier`). The new week's entries get fresh snapshots. If the rate lookup fails for any classification, that entry must be omitted from the pre-fill (not defaulted to zero or copied from the old week) and the UI must display a clear warning: "Rate not found for [classification] — enter manually."
 
 **Warning signs:**
 
-Landing page cards look noticeably heavier or lighter than app cards using the same class. A "subtle" shadow looks like a modal shadow. Visual inconsistency between pages that should feel unified.
+The copy endpoint returns 201 with entries that have identical `baseRateSnapshot` values to the prior week. The new week's compliance check passes even though the wage determination was updated the prior month. The test for copy passes but does not assert that rate snapshots were re-fetched.
 
-**Phase to address:** Design Token phase — define `--shadow-card`, `--shadow-modal`, `--shadow-elevated` as explicit tokens in `@theme` before writing any new UI.
+**Phase to address:** Phase for Copy Previous Week — the rate re-fetch must be in the first implementation. No copy-and-fix-later; stale snapshots corrupt the audit trail from the moment of copy.
 
 ---
 
-### Pitfall 2: focus:outline-none Behavior Changed in v4 — Existing Form Inputs Have a Broken Focus Pattern
+### Pitfall 2: Copy Previous Week Copies Submitted or Locked Data — User Unknowingly Creates a New Submitted Week
 
 **What goes wrong:**
 
-The existing codebase uses `focus:outline-none focus:ring-2 focus:ring-[#F5C518]` on form inputs throughout LoginForm, RegisterForm, and GsaRateForm. In TailwindCSS v4, `outline-none` was renamed to `outline-hidden`. The old `outline-none` in v4 sets `outline: 2px solid transparent` — which is visually invisible but technically creates a focus outline that can interfere with the `ring` on some browsers and accessibility tools.
+When WH-347 submission tracking is added, a payroll week will gain a `submittedAt` timestamp and `submissionAgency` field (or similar). If the copy operation does not explicitly exclude these fields, the new week is created already marked as submitted. The user opens the new week, sees "Submitted," assumes the prior week was referenced, and does not re-enter or verify the new week's hours. A week with copied hours and a fake submission timestamp goes unreported.
 
-The `ring` bare class also changed: in v3 it generated a `3px` ring; in v4 it generates a `1px` ring. The code uses `ring-2` (explicit width), which is safe, but `ring-1` patterns elsewhere in `GsaRateForm` will produce a thinner ring than was designed.
+Even without a `submittedAt` field being copied, there is a second risk: if the source week is locked for editing (a natural constraint on submitted weeks), the copy API must verify ownership and lock status of the source week before reading from it, not just the destination project.
 
 **Why it happens:**
 
-These utilities were stable across v3 and looked correct in development. The v4 behavior change for `outline-none` is subtle — the ring still appears, the change only becomes apparent in browser accessibility mode, forced-colors mode, or when a downstream CSS reset applies its own outline handling.
+The copy route reads the entire prior week record and its entries. A bulk insert of those fields into a new week row will include any status/submission fields added alongside the copy feature in the same milestone unless explicitly excluded.
 
 **How to avoid:**
 
-Global search for `outline-none` in `src/client/` and replace every instance with `outline-hidden`. This is a mechanical find-and-replace with no logic risk. Do it at the start of the Typography/Input Polish phase. There are at least 5 confirmed occurrences (LoginForm: 2, RegisterForm: 2, GsaRateForm: 1).
+The copy operation must use a strict allowlist of fields to carry forward — never a `SELECT *` clone. Allowlisted fields: `workerId`, `classificationId`, daily hours (`monSt`…`sunOt`). Explicitly excluded: `id`, `payrollWeekId`, `grossWages`, `netPay`, `deductions`, any submission-related fields. Document the allowlist as a comment in the copy service function. Write a test asserting that the new week has `submittedAt: null` regardless of the source week's submission state.
 
 **Warning signs:**
 
-Input fields show a faint duplicate focus indicator in forced-color accessibility mode. Screen reader tools report "outline: 2px transparent" as the focus style. In some browsers, tabbing to an input shows both a system outline and the gold ring simultaneously.
+A newly created week via copy shows "Submitted" status. The payroll list shows two weeks with the same submission date. The compliance engine skips checking the new week because it appears already certified.
 
-**Phase to address:** Typography + Input Polish phase — fix all form inputs as the first task of that phase before changing any visual styling.
+**Phase to address:** Phase for Copy Previous Week — coordinate with the WH-347 Submission Tracking phase to finalize which fields exist before the copy allowlist is written.
 
 ---
 
-### Pitfall 3: @theme Color Token Addition Can Accidentally Wipe All Default Utility Colors
+### Pitfall 3: Submission Tracking Has No Edit Lock — Submitted Weeks Remain Editable
 
 **What goes wrong:**
 
-TailwindCSS v4 uses `@theme` to define design tokens that also generate utility classes. The current `@theme` in `src/client/index.css` is minimal and correct:
+WH-347 submission tracking adds a `submittedAt` field to `payrollWeeks`. If the existing `PUT /api/payroll/entries/:id` route does not check for submission status, contractors can continue editing entries on submitted weeks. An auditor who received a WH-347 for Week 5 can be shown a different set of hours on the app's screen than what was submitted. This is a federal form falsification risk, not just a data integrity issue.
 
-```css
-@theme {
-  --color-brand-gold: #F5C518;
-  --font-headline: 'Oswald', sans-serif;
-  --font-body: 'Inter', sans-serif;
-}
-```
-
-The dangerous pattern emerges when a developer, wanting to "clean up" the color system and restrict available utilities to only brand-approved colors, adds `--color-*: initial` to the theme block. This clears the entire color namespace. Every `text-gray-*`, `bg-red-*`, `bg-white`, `text-black`, and `border-gray-*` class across all 33 components silently stops working. The app renders with no background colors, no text colors beyond currentColor, and no border colors — a catastrophic visual regression that no test will catch.
+The existing `upsertPayrollEntry()` function in `payrollService.ts` has no gate: it accepts any `payrollWeekId` and upserts immediately. No check for week status, no check for whether the week is final.
 
 **Why it happens:**
 
-The Tailwind v4 docs describe `--color-*: initial` as the way to replace the full color palette when building a custom design system. It is the correct tool for a greenfield custom design system. It is the wrong tool for adding tokens to an existing system that depends on Tailwind's default palette.
+The submission tracking feature is implemented as a status column, and developers assume "visible status" is sufficient. The enforcement — blocking writes on submitted weeks — is a separate, easy-to-miss step that lives in the route layer, not in the UI.
 
 **How to avoid:**
 
-ADD tokens to `@theme`. Never use `--color-*: initial` or `--*: initial` in this project. The project already has 33 components using `text-gray-*`, `bg-red-*`, `bg-green-*`, and other default Tailwind colors for compliance badges, error states, and status indicators. All of these must remain functional. The design token strategy for this project is additive: define brand-specific tokens (`--color-brand-gold`, `--color-nav-dark`, etc.) without removing any defaults.
+Add a `checkWeekEditable()` guard in `payrollService.ts` or as middleware on the payroll entry routes. This function checks `payrollWeeks.submittedAt IS NULL` and throws a 409 Conflict if the week is submitted. The guard must fire on: `PUT /api/payroll/entries/:id`, `POST /api/payroll/entries`, and any future amendment routes before the amendment flow is established. The UI edit form must also be disabled/hidden when the week is submitted, but the server-side guard is non-negotiable — UI state is not a security boundary.
 
 **Warning signs:**
 
-After a `@theme` change, the entire app renders with white backgrounds and black text only. Tables have no border colors. Compliance badges (red/green) disappear. The Vite HMR reload triggers immediate full visual collapse.
+Automated tests for entry upsert pass without a submitted-week fixture. The compliance check shows different data than what was included in the submitted PDF. Manual test: mark a week submitted, then call `PUT /api/payroll/entries/:id` directly — if it returns 200, the guard is missing.
 
-**Phase to address:** Design Token phase — establish the "ADD only, never wipe" rule explicitly in a comment inside `index.css` before any token additions.
+**Phase to address:** Phase for WH-347 Submission Tracking — the edit lock must ship in the same phase as the submission flag, not deferred to a later phase.
 
 ---
 
-### Pitfall 4: Global Font Change Breaks Payroll Table Column Widths
+### Pitfall 4: Payroll Amendment Corrupts the Original Audit Trail
 
 **What goes wrong:**
 
-The payroll entry and week detail pages contain numeric-heavy tables with 7-day-of-week columns and dollar amount columns. These tables use HTML `table` elements with `table-auto` layout, which calculates column widths from content width. The system currently uses the browser default font (likely a system sans-serif). Switching to Inter — a well-hinted web font with specific character metrics — will change the rendered width of every text node. In `table-auto`, this directly changes column widths.
+The amendment workflow corrects a submitted week. The most dangerous implementation pattern is updating the original `payrollEntries` rows in place: the original snapshot is gone, and there is no record of what was submitted vs. what was corrected. DOL investigation procedures require the original certified payroll and the amendment to both be preserved, clearly labeled, and traceable to each other.
 
-Specific risk scenarios:
-- The 7-day payroll entry grid (monST, monOT, tueST... sunOT) may exceed its container on narrow viewports after Inter increases character spacing
-- Dollar amount columns with values like `$1,234.56` may gain 2-4px per cell, causing the rightmost columns to push outside the visible area
-- `WageClassificationsTable.tsx` (used on multiple pages) has a gold `<tr style={{ backgroundColor: '#F5C518' }}>` header row — confirming it was hand-styled and column widths were not explicitly constrained
-
-The 181 passing tests cover compliance logic, not layout. No test will catch these regressions.
+A secondary corruption risk: if the amendment re-uses the original `payrollWeekId` with a flag like `isAmended: true`, any future query that joins on `payrollWeekId` may return the amended values in contexts where the original values are expected (e.g., the reports page showing the fringe benefit summary for the original submission period).
 
 **Why it happens:**
 
-Typography changes feel "safe" because they don't touch business logic. Layout is emergent — it depends on font metrics that developers do not treat as part of their mental model of what typography changes affect.
+Updating in place is the simplest code path. `upsertPayrollEntry()` already uses `onConflictDoUpdate` — it is one call away from overwriting the original data.
 
 **How to avoid:**
 
-Apply Inter as the global body font first, as an isolated change, and do a manual visual review of every table-heavy page before making any other design changes:
-1. PayrollEntryPage (7-day grid with ST/OT columns)
-2. PayrollWeekDetailPage (hours + dollar amounts + compliance flags)
-3. WorkersPage (classifications table with base rate, fringe rate, total rate columns)
-4. ReportsPage (fringe benefit summary, worker pay history)
-5. WageClassificationsTable component (shared, used in multiple pages)
+Amendments must be a new `payrollWeeks` row, not an update to the existing row. The schema should have:
+- `payrollWeeks.amendedFromWeekId TEXT REFERENCES payroll_weeks(id)` — nullable; set on amendment weeks
+- `payrollWeeks.amendmentNumber INTEGER NOT NULL DEFAULT 0` — 0 for original, 1 for first amendment, etc.
 
-If any column overflows, add explicit `min-w-*` or `w-*` constraints to the affected `<th>` elements before proceeding with further styling. This is an additive fix that does not change any logic.
+The original week row must be made read-only at the DB layer (via the edit lock guard from Pitfall 3) when an amendment exists. The amended week contains entirely new `payrollEntries` rows with fresh rate snapshots. The WH-347 generator reads from the amendment week and places "AMENDMENT" prominently on the form header. The original PDF artifact is never regenerated or replaced.
 
 **Warning signs:**
 
-After applying the font, horizontal scrollbars appear on previously non-scrollable tables. Dollar amounts wrap across two lines mid-value. Day-column headers no longer align with their data cells. The payroll entry grid pushes outside the `max-w-7xl` container.
+The amendment flow calls `upsertPayrollEntry()` with the original `payrollWeekId`. After amendment, the original week's `grossWages` values differ from what was included in the submitted PDF. The reports page shows amended values for the original submission date.
 
-**Phase to address:** Typography phase — apply global font change as the very first step, do the visual audit immediately, fix any column overflows before moving to card/table polish.
+**Phase to address:** Phase for Payroll Amendment Workflow — design the amendment schema before any route implementation. Write a migration that adds `amendedFromWeekId` and `amendmentNumber` columns before any amendment logic is coded.
 
 ---
 
-### Pitfall 5: Landing Page Route Conflicts With Existing Wildcard Redirect
+### Pitfall 5: Amendment Numbering Conflicts When Multiple Amendments Exist
 
 **What goes wrong:**
 
-The current `App.tsx` has `<Route path="*" element={<Navigate to="/dashboard" replace />} />` as the catch-all. When the landing page is added at `/`, the routing table creates a conflict: an unauthenticated visitor who types any URL other than `/` or `/login` is sent to `/dashboard`, which sends them to `/login` (via ProtectedRoute), which is the correct behavior. But the problem is the landing page CTA.
+If amendment numbering is computed at query time (`SELECT MAX(amendmentNumber) FROM payroll_weeks WHERE amendedFromWeekId = ?`) rather than enforced by a database constraint, two concurrent amendment creation requests (or a re-try on timeout) can both read `MAX = 0` and both insert `amendmentNumber = 1`. The result is two Amendment #1 rows for the same original week. The audit trail has a numbering conflict that cannot be resolved without knowing which amendment was filed with the agency.
 
-If the landing page CTA links to `/register` and `/register` is not added as an explicit public route, the visitor is sent to `/dashboard` by the wildcard, then to `/login` by ProtectedRoute. The registration path is dead. New users cannot sign up from the landing page — the entire purpose of the landing page is broken.
-
-A second conflict: the wildcard currently sends authenticated users with a bad URL to `/dashboard`. If the wildcard is changed to send everyone to `/` (the landing page), then authenticated users who mistype a URL see the marketing page, then get redirected to `/dashboard`, creating an unnecessary redirect hop and a flash of the landing page.
+For a single-user app (no concurrency from multiple sessions), this is low probability — but the amendment creation flow may include a user double-clicking the "Create Amendment" button, which is exactly the scenario the existing `useRef` double-click guard was built to prevent for WH-347 download.
 
 **Why it happens:**
 
-The existing routing was designed for a single-entry-point app where `/login` is the homepage. Adding a marketing landing page requires redesigning the entire public/protected route split, including what the wildcard does and what happens when an authenticated user visits a public route.
+Developers compute the next amendment number in application code before insert, which is a read-then-write with no atomicity guarantee.
 
 **How to avoid:**
 
-Plan the full routing table as a written spec before touching `App.tsx`:
-
-| Path | Public | Authenticated user visits | Unauthenticated user visits |
-|------|--------|--------------------------|----------------------------|
-| `/` | Yes | Redirect to `/dashboard` | Show landing page |
-| `/login` | Yes | Redirect to `/dashboard` | Show login form |
-| `/register` | Yes | Redirect to `/dashboard` | Show register form |
-| `/dashboard` | No | Show dashboard | Redirect to `/login` |
-| `*` wildcard | — | Redirect to `/dashboard` | Redirect to `/` |
-
-The wildcard needs auth-state awareness: authenticated users should go to `/dashboard`, unauthenticated users should go to `/`. The current `ProtectedRoute` component can be reused but the wildcard itself needs to become an auth-aware component rather than a static `<Navigate>`.
+Add a database-level unique constraint: `UNIQUE(amendedFromWeekId, amendmentNumber)`. The insert will fail with a constraint error if a duplicate number is attempted. The route layer catches the constraint error and returns 409. The UI disables the "Create Amendment" button after first click, using the same `useRef` pattern already proven in `PayrollWeekDetailPage.tsx`.
 
 **Warning signs:**
 
-Landing page CTA click results in the login page appearing instead of the registration form. An authenticated user mistyping a URL sees the marketing page momentarily before redirecting. The back button from `/login` returns to the landing page and immediately redirects again (loop).
+Two rows with `amendedFromWeekId = 'abc123'` and `amendmentNumber = 1` exist in the database. The amendment list for a week shows "Amendment #1" twice. The WH-347 generator selects the wrong amendment to render because `ORDER BY amendmentNumber` returns ambiguous results.
 
-**Phase to address:** Landing Page phase — rewrite the routing table as the first task before building any landing page UI. Verify the routing spec with 4 manual test cases (public URLs × 2 auth states).
+**Phase to address:** Phase for Payroll Amendment Workflow — add the unique constraint to the migration, not as an afterthought.
 
 ---
 
-### Pitfall 6: Hardcoded Inline Style Brand Values Will Not Update With Design Tokens
+### Pitfall 6: Project Archive Breaks Dashboard Compliance Roll-Up
 
 **What goes wrong:**
 
-The codebase audit found 7 instances of `style={{ ... }}` using brand-specific values:
+The dashboard currently fetches compliance status per project. If archived projects are soft-filtered client-side only (e.g., a React state toggle), every compliance query still runs for all projects including archived ones. The bigger risk: if archiving hard-deletes the project (or if a future cleanup script prunes `status = 'closed'` projects), all child records (`payrollWeeks`, `payrollEntries`, `workers`) are cascade-deleted because of the existing `ON DELETE CASCADE` foreign keys defined in `schema.ts`. The audit trail for a completed federal project is destroyed.
 
-- `ManualWageEntryForm.tsx`: `style={{ backgroundColor: '#F5C518' }}`
-- `WageClassificationsTable.tsx`: `<tr style={{ backgroundColor: '#F5C518' }}>` (the gold header row)
-- `AdminStateWagePage.tsx`: `style={{ backgroundColor: ... '#F5C518' ... }}` (conditional)
-- `WageLookupPage.tsx`: `style={{ backgroundColor: '#F5C518' }}`
-- `ReportsPage.tsx`: `style={{ fontFamily: 'Oswald, sans-serif' }}` (3 instances — section headers in the reports)
-
-When design tokens are applied and `--color-brand-gold` is the canonical gold value, these 7 elements will not update. If the brand gold is adjusted (even slightly, e.g., for print contrast), or if Oswald is swapped for a different headline font during a future brand refresh, these locations will silently diverge from the rest of the application.
-
-During the design polish work, if the gold is visually adjusted on most buttons but not on these 4 hardcoded elements, the app will have two visually different "golds" — detectable to a careful eye, unprofessional to a client demo audience.
+For Davis-Bacon compliance, federal regulation (29 CFR Part 3) requires certified payroll records to be maintained for three years after project completion. Hard-deleting an archived project is a federal records retention violation.
 
 **Why it happens:**
 
-These were pragmatic shortcuts during earlier development passes. Conditional backgrounds and inline font families are the path of least resistance when Tailwind's arbitrary value syntax feels cumbersome or when a dynamic value is needed.
+The `status` field already exists on `projects` table (`'active' | 'closed'`). A developer implementing "archive" may assume that setting `status = 'closed'` is archive, not realizing the field exists but the filter does not, and then add a DELETE endpoint as an alternative. The cascade behavior is invisible unless the schema comment flags it.
 
 **How to avoid:**
 
-Migrate all 7 instances as part of the Design Token phase:
-- `style={{ backgroundColor: '#F5C518' }}` → `className="bg-brand-gold"` (after the `@theme` token is confirmed)
-- Conditional: `style={{ backgroundColor: condition ? '#F5C518' : undefined }}` → `className={condition ? 'bg-brand-gold' : ''}`
-- `style={{ fontFamily: 'Oswald, sans-serif' }}` → `className="font-headline"` (the `@theme` token already exists)
+Archive is exclusively a status update: `UPDATE projects SET status = 'closed'`. No DELETE route should exist for projects. The `status = 'closed'` filter must be enforced server-side on the `GET /api/projects` route — not client-side — so that archived projects never appear in dashboard queries, compliance roll-ups, or the payroll list. Write a test asserting that a closed project does not appear in the projects list response. Add a comment to the projects route and schema: "Projects are NEVER deleted — status = 'closed' is the archive state. Federal records retention: 3 years post-completion."
 
 **Warning signs:**
 
-After a gold color token update in `@theme`, most buttons update but the WageClassificationsTable header row remains the old gold. The Reports page section headers render Oswald even after a theoretical font swap. Running `grep -rn "style={{" src/client/` after the design polish milestone should return zero brand color or font family values.
+A DELETE endpoint for projects exists or is planned. The `GET /api/projects` route does not filter by `status`. Archived project compliance data appears in the dashboard badge count. The cascade behavior is exercised by any test that deletes a project.
 
-**Phase to address:** Design Token phase — audit and clear all inline brand values as a prerequisite before adding new token-based styling.
+**Phase to address:** Phase for Project Completion / Archive — server-side filter on projects list must be the first implementation step, before any UI toggle is built.
 
 ---
 
-### Pitfall 7: B2B SaaS Landing Page With Generic Copy Does Not Convert Contractors
+### Pitfall 7: Archived Project With Active Violations Silently Disappears From Compliance View
 
 **What goes wrong:**
 
-A landing page that says "Streamline your payroll workflow" or "Modern compliance management for your business" will not convert a general contractor who is worried about a Davis-Bacon audit. The landing page audience is a specific person: a GC or project manager who has manually looked up prevailing wage rates, printed WH-347 forms, and been told by their attorney that incomplete certified payroll can disqualify them from future bids.
-
-Generic SaaS hero language fails because:
-1. It doesn't name the problem the user actually has (the WH-347 form, the SAM.gov rate lookup, the DOL audit risk)
-2. It doesn't mention Davis-Bacon, which is the exact search term the target user types
-3. It uses abstract benefit language ("streamline", "optimize") instead of concrete action language ("generate the WH-347 form in 3 clicks, with rates auto-filled from SAM.gov")
-
-This is not a code pitfall — it is an execution risk that will result in a beautiful landing page that generates zero registrations.
+A project is archived with unresolved compliance violations (under-wage flags, CWHSSA OT mismatches). After archiving, the dashboard no longer shows the project. The violations exist in the database but are invisible. If a DOL investigator requests records for that project, the contractor has no awareness that violations were unresolved at archive time — and the app gave no warning.
 
 **Why it happens:**
 
-Developers write copy the way they describe features to each other: "it helps with payroll compliance." Product marketing copy must describe the user's problem from the user's perspective: "You lose federal contracts because your certified payroll has errors."
+The archive action is a status field update. No pre-condition check fires. The UI confirms "Project archived" without surfacing compliance state.
 
 **How to avoid:**
 
-The hero headline must name the form: "WH-347 Certified Payroll, Done Right." or "Stop Manually Looking Up Davis-Bacon Rates." The subheadline must state the outcome: "Generate the January 2025 WH-347 form with wage rates auto-populated from SAM.gov. No manual rate lookup. No missed compliance flags." The feature list must name specific features: "Auto-fetches federal wage determinations by state/county," "Flags under-wage payments before submission," "Generates multi-page WH-347 for large crews."
-
-Competitors to beat (LCPtracker, Elation, ADP) all have enterprise-feeling but generic copy. HCC wins by being more specific.
+The archive route must run a compliance check across all payroll weeks for the project before updating status. If any week has `hasViolations: true`, the API returns a 409 with a payload listing the weeks and violation counts. The UI presents a blocking modal: "This project has [N] compliance violations across [M] weeks. Archive anyway?" with an explicit acknowledgment checkbox. The archive proceeds only after the user confirms. The acknowledgment timestamp is stored on the project row (`archivedWithViolations: boolean`, `archivedAt: text`). This creates an explicit audit record that the contractor knowingly archived a project with open violations.
 
 **Warning signs:**
 
-Landing page copy could describe any construction software. The WH-347 form is not mentioned by name in the hero. "Davis-Bacon" does not appear in the first viewport. The CTA says "Get Started" instead of something specific ("Try It Free" or "Generate Your First WH-347").
+The archive endpoint does not call `computeCompliance()`. The archive confirmation dialog has no mention of open violations. Archiving a project with violation entries does not produce any warning.
 
-**Phase to address:** Landing Page phase — write copy before building the UI. Verify: does the hero mention WH-347, Davis-Bacon, or SAM.gov? If not, rewrite before building.
+**Phase to address:** Phase for Project Completion / Archive — implement the compliance pre-check before the archive action is user-accessible.
+
+---
+
+### Pitfall 8: Per-Worker Compliance History Mixes Snapshot Data With Live Data
+
+**What goes wrong:**
+
+The per-worker compliance history view shows violations across all payroll weeks. Each violation record in `complianceService.ts` is computed by comparing `grossWages` against the snapshot-based expected wage. If the history view re-computes compliance at query time using a live wage lookup instead of the frozen snapshots, the displayed violation status will differ from the status at the time of the original payroll entry.
+
+For example: Week 5 had no violation at the time of entry because the prevailing rate was $28/hr. The rate was later updated to $31/hr. A live re-computation shows a violation for Week 5. The contractor now believes they have a violation that did not exist — or worse, a violation that existed is no longer shown because the rate dropped.
+
+Audit responses require point-in-time accuracy: "What was the compliance status when this payroll was certified?"
+
+**Why it happens:**
+
+Developers writing a "history" query naturally use the most current data available. The distinction between snapshot-time compliance and current-rate compliance is non-obvious and undocumented in the route layer.
+
+**How to avoid:**
+
+The per-worker compliance history must call `computeCompliance()` for each relevant week with the week's frozen entry data — exactly as `complianceService.ts` already does. It must never call `wageLookup.ts` or read from `wageDeterminations`. Add a comment to the compliance history route: "Compliance is always computed from snapshot data in payrollEntries — NEVER re-read from live wage determinations." Consider adding a `snapshotBaseRate`/`snapshotFringeRate` to the displayed violation record so auditors can see the exact rate that was used in the compliance check.
+
+**Warning signs:**
+
+The worker history route imports `wageLookup.ts` or `wdolFetcher.ts`. The displayed violation status for a completed week changes when viewed on different dates. Test fixtures that hardcode rates and then check violation status fail intermittently.
+
+**Phase to address:** Phase for Per-Worker Compliance History — establish the data source contract (snapshots only) before writing any query logic.
+
+---
+
+### Pitfall 9: Per-Worker History Has N+1 Query Problem at Scale
+
+**What goes wrong:**
+
+A worker compliance history view that loads all payroll weeks for a worker, then runs a separate compliance query for each week, produces N+1 database queries. For a worker on a year-long project (52 weeks) working on two projects simultaneously (104 weeks total), this is 105+ SQLite queries per page load. SQLite is synchronous and single-threaded in this stack — this will block the server process for a noticeable duration.
+
+The existing compliance route already has a pattern that runs one compliance computation per week, which is acceptable for a single-week view. That pattern does not scale to a multi-week history view.
+
+**Why it happens:**
+
+The natural implementation loops over weeks and calls `computeCompliance(weekId)` for each one. It works in development with 3-5 weeks of test data and fails in production with 52+ weeks.
+
+**How to avoid:**
+
+The per-worker history query must fetch all relevant payroll entries in a single query, grouped by week. The compliance computation must be done in memory over the batched result set, not by calling `computeCompliance()` per week. Write the batch query first, before the computation loop. Add a test fixture with at least 20 weeks for the same worker and assert the response time is under 500ms. For the dashboard compliance roll-up (which already exists), verify it uses `staleTime: 60_000` caching (the `ProjectCard` pattern documented in PROJECT.md) — the same approach should be used for the worker history query.
+
+**Warning signs:**
+
+The worker history route calls `getPayrollWeek(weekId)` inside a loop. The response time for a worker with 20+ weeks is measurably slower than for a worker with 2 weeks. SQLite `EXPLAIN QUERY PLAN` shows repeated full-table scans on `payroll_entries`.
+
+**Phase to address:** Phase for Per-Worker Compliance History — write the batch query before the computation logic.
+
+---
+
+### Pitfall 10: Worker Disambiguation Is Ignored — Same Name Across Projects Creates History Confusion
+
+**What goes wrong:**
+
+The per-worker compliance history view is scoped to a worker record (`workers.id`). Workers are project-scoped in the schema: `workers.projectId` is not null. A contractor who works on two concurrent federal projects is entered as two separate worker records with the same name and SSN last 4. The history view for `workerId = 'abc'` on Project A has no relationship to `workerId = 'def'` on Project B.
+
+The UI feature is "per-worker compliance history across all projects." If the implementation queries by `workerId` only, it silently gives a project-scoped view while the UX implies a worker-scoped view. The contractor believes they are seeing Carlos Rivera's full compliance record; they are seeing only his record for one project.
+
+**Why it happens:**
+
+The worker entity in this schema is inherently project-scoped. There is no global worker identity table. A "across all projects" query requires joining on worker name + SSN last 4, not on worker ID.
+
+**How to avoid:**
+
+The per-worker history query must join `workers` records by `(name, ssnLast4, userId)` — matching the authenticated user's projects, the same worker name, and the same SSN last 4. This produces a cross-project view. The query must deduplicate and label entries by project name so the user can see that "Week 5, Project A" and "Week 3, Project B" belong to the same physical person. Document the join logic in a comment: "Workers are project-scoped; cross-project identity is matched on (name, ssnLast4)." Add a unique case: a test with the same worker on two projects confirms the history view includes both.
+
+**Warning signs:**
+
+The worker history route query uses `WHERE worker_id = ?` with a single ID. The history for a worker who appears on three projects only shows one project's data. There is no "project" label on each week row in the history view.
+
+**Phase to address:** Phase for Per-Worker Compliance History — define the cross-project join strategy before any route implementation.
+
+---
+
+### Pitfall 11: Dashboard Filter State Lost on Navigation — Users Lose Context Mid-Workflow
+
+**What goes wrong:**
+
+A contractor filters the dashboard to "violation only, federal funding" and clicks into a project to investigate a violation. When they press the browser back button, the dashboard resets to the unfiltered state. They must re-apply the filter to continue reviewing the other projects in the set. For a contractor reconciling payroll before a DOL audit, losing filter state on every navigation break means re-filtering 5-10 times per session — a friction point that increases the chance of missing a project.
+
+**Why it happens:**
+
+React state for filters is local to the component and resets on unmount. The back navigation unmounts `DashboardPage` and remounts it with initial state.
+
+**How to avoid:**
+
+Persist filter state via URL query parameters: `?status=violation&funding=federal`. React Router's `useSearchParams()` reads and writes these params. On mount, the filter state is initialized from the URL. Filter changes update the URL (no page navigation, just param update). When the user presses back from a project page, the dashboard URL restores its params and the filter re-applies automatically. This also makes the filtered view bookmarkable and shareable. Test: navigate to a project from a filtered dashboard, press back, assert filter params are preserved.
+
+**Warning signs:**
+
+Filter state is managed with `useState`, not `useSearchParams`. The dashboard URL never includes query parameters when filters are active. Pressing back resets all filters.
+
+**Phase to address:** Phase for Dashboard Search + Filter — use URL params from the first implementation.
+
+---
+
+### Pitfall 12: Dashboard Search Triggers a Query on Every Keystroke — Performance on Large Project Lists
+
+**What goes wrong:**
+
+A dashboard with 50+ projects that fetches a filtered list from the server on every character of a search input will send a query on every keypress. At 50 projects this is cosmetically acceptable but creates multiple in-flight requests that can resolve out of order (stale results rendering after fresh results). At 200 projects it creates server load spikes during typing.
+
+The existing dashboard already fetches compliance per ProjectCard with a `staleTime: 60_000` pattern. Search-triggered fetches bypass this cache.
+
+**Why it happens:**
+
+The search input's `onChange` handler calls `refetch()` or modifies a query key directly. This is the natural pattern when discovering React Query.
+
+**How to avoid:**
+
+Debounce the search input: 300ms delay before the query key updates. Use `useDeferredValue()` from React 18 for the input value that feeds the query. For a project list at current scale (SQLite, single user), client-side filtering of the full project list fetch is simpler and avoids server round-trips entirely: fetch all projects once (with `staleTime: 60_000`), filter in memory. Server-side search is only needed if the project count exceeds ~500. Document which approach is in use and why.
+
+**Warning signs:**
+
+Network tab shows a request per character typed. Multiple in-flight requests have overlapping response times. The project list flickers during typing as responses arrive out of order.
+
+**Phase to address:** Phase for Dashboard Search + Filter — decide client-side vs. server-side filtering at the start, before building the input component.
+
+---
+
+### Pitfall 13: Migration Not Registered in _journal.json — New Columns Are Invisible to Drizzle
+
+**What goes wrong:**
+
+The project's migration workflow requires manual registration of new SQL migration files in `meta/_journal.json`. The existing journal has 5 entries mapping to 8 migration files (files 0005, 0006, 0007 are not in the journal — they appear to be applied directly or via another mechanism). If a new migration for v2.3 schema changes (submission tracking columns, amendment columns, archive columns) is written as a SQL file but not registered, Drizzle will not apply it on next startup. The schema TypeScript definitions will include the new columns; the actual SQLite tables will not. Runtime will throw column-not-found errors.
+
+**Why it happens:**
+
+The migration file is created and looks correct. The developer runs the app, sees it start, and assumes migrations ran. Drizzle only runs migrations registered in the journal.
+
+**How to avoid:**
+
+Every new migration file must have a corresponding entry in `meta/_journal.json` with the correct `idx` (next sequential integer), `version: "6"`, `when` (current timestamp in ms), `tag` (filename without .sql extension), and `breakpoints: true`. After adding, restart the server and verify the new columns exist: `SELECT sql FROM sqlite_master WHERE name = 'payroll_weeks'` should include the new column names. Add a step to the definition of done for every phase that touches the schema: "Run column verification query, confirm new columns present."
+
+**Warning signs:**
+
+Server starts without errors but `payrollWeeks.submittedAt` is undefined at runtime. Drizzle select on `payrollWeeks` does not include the new column in results. TypeScript types include the field but runtime values are always `undefined`.
+
+**Phase to address:** Every phase that adds schema columns — establish the journal registration step as a checklist item in the phase definition.
+
+---
+
+### Pitfall 14: WH-347 Amendment PDF Prints "AMENDMENT" Incorrectly — DOL Form Requirements Not Met
+
+**What goes wrong:**
+
+The DOL WH-347 form has a specific header structure. For amendment submissions, DOL expects the certified payroll to be clearly marked as a correction. The existing `wh347Generator.ts` uses coordinate overlay on a flat PDF — there is no AcroForm field to check or uncheck. If the amendment marker is added as an overlay at approximate coordinates without measurement verification, it may print over existing form text, outside the printable area, or at a scale that is illegible.
+
+The existing `checkboxFinal` field at `{ page: 0, x: 39, y: 497 }` shows the coordinate precision required. An "AMENDMENT" marker at the wrong position invalidates the form for DOL submission.
+
+**Why it happens:**
+
+The amendment PDF generation is treated as a "just add a label" task. The coordinate system requires measurement against the actual PDF grid, which was done once at the start of the project and not revisited.
+
+**How to avoid:**
+
+Before implementing amendment PDF generation: open `wh347-grid.pdf` (if it exists from the original coordinate measurement session) or create a new annotated grid for the amendment form area. Measure the exact coordinates for the amendment marker. The DOL WH-347 instructions say to mark "AMENDED" in the certified payroll number box or at the top of the form — identify the exact field this corresponds to in the coordinate map and add it as a named constant in `WH347_FIELDS`. Test by generating an amendment PDF and visually confirming the marker position does not overlap any existing field text.
+
+**Warning signs:**
+
+The amendment PDF "AMENDMENT" label is visible in the PDF viewer but overlaps the payroll number or contractor name field. The label is clipped at the page margin. The label is rendered in the wrong font size relative to the surrounding form text.
+
+**Phase to address:** Phase for Payroll Amendment Workflow — coordinate measurement must precede any PDF generation code.
 
 ---
 
@@ -238,12 +348,13 @@ Landing page copy could describe any construction software. The WH-347 form is n
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Leave `focus:outline-none` unfixed | Saves 20 minutes | Accessibility failures; inconsistent focus rings across forms; fails WCAG 2.1 SC 2.4.7 | Never — fix during Typography phase |
-| Keep inline `style={{ backgroundColor: '#F5C518' }}` | No code change needed | Token rollout creates two sources of truth for brand gold; one-off fixes required on every brand update | Never — clear before design token rollout |
-| Load all 9 Google Font weights (100-900) for Inter | Font always available | 600-900ms extra TTFB on first load; LCP degrades | Never — load only weights actually used: 400, 500, 600 |
-| Use CSS animations from a third-party library on landing page | Visual polish faster | 30-100KB of unused animation CSS hits every app route | Never — write the 2-3 keyframes needed directly |
-| Skip routing table planning and just add `/` as a route | Landing page renders immediately | CTA points to wrong destination; auth edge cases break on first test | Never — routing spec must precede UI |
-| Apply `--color-*: initial` to "clean up" Tailwind defaults | Clean token namespace | Nukes all default Tailwind colors; all 33 components break | Never in this project |
+| Copy rate snapshots from source week instead of re-fetching | Copy endpoint is simpler, no rate lookup required | Stale rates in new weeks; compliance engine silently accepts incorrect snapshots; audit trail is compromised | Never — rate re-fetch is mandatory |
+| Enforce submission lock only in the UI (disabled form) | Faster to implement | Server routes remain writable; any API call (including tests, curl) bypasses the lock; submitted records are mutated | Never — server-side guard is required |
+| Store amendment as a flag on the original week (`isAmended: true`) | No new table rows or migration | Original entry data is overwritten; audit trail is destroyed; DOL compliance is violated | Never |
+| Filter archived projects client-side only | No server change needed | Archived projects still appear in compliance roll-up counts; dashboard badge counts are inflated | Never — server-side filter is required |
+| Compute worker cross-project history by name-string match with no SSN deduplication | Simpler join | Workers with identical names but different SSNs are merged; workers with different formatting of the same name are split | Never — SSN last 4 is required for disambiguation |
+| Use `useState` for dashboard filter instead of URL params | Simpler code | Filter state lost on navigation; back-button breaks workflow; URL is not shareable | Acceptable only if filter is a single toggle with low re-use frequency — not acceptable for a multi-filter dashboard |
+| Skip `_journal.json` registration and apply migrations manually in development | Faster iteration | Migration is not applied in any other environment; production startup fails | Never — always register |
 
 ---
 
@@ -251,11 +362,11 @@ Landing page copy could describe any construction software. The WH-347 form is n
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Google Fonts loading | Using `@import url(...)` inside the `@theme {}` block in `index.css` | Load Google Fonts via `<link>` in `src/client/index.html` or as a top-level `@import` before `@import "tailwindcss"` in `index.css` — never inside `@theme` |
-| Google Fonts loading | Loading Oswald and Inter font families on the landing page but not in the app (or vice versa) | Both fonts are used in `@theme` for the whole app — load them once in `index.html` for all routes; Google Fonts will cache them |
-| Vite `root: 'src/client'` | Adding CSS outside `src/client/` and expecting Tailwind to process it | All CSS must live under `src/client/` — the Vite config sets `root: 'src/client'`; files outside this root are not processed by `@tailwindcss/vite` |
-| CSS custom properties on landing page | Defining landing-page-specific CSS variables in a separate file that is conditionally loaded | Use the global `@theme` in `index.css` for all tokens; never conditionally load CSS per route in this stack — it creates cascade ordering surprises |
-| `@theme inline` vs `@theme` | Using `@theme inline` by default for all tokens | Only use `@theme inline` when a token value references another CSS variable; literal string values (like `'Oswald', sans-serif`) are safe in plain `@theme` |
+| `upsertPayrollEntry()` for amendment creation | Calling `upsertPayrollEntry()` with the original `payrollWeekId` — the `onConflictDoUpdate` silently overwrites the original entry | Create a new `payrollWeeks` row with `amendedFromWeekId` set, then insert new `payrollEntries` rows for the new week |
+| `computeCompliance()` in worker history | Calling per-week in a loop, one DB round-trip per week | Batch-load all weeks' entries in a single query, run compliance computation in memory |
+| `wageLookup.ts` in copy route | Calling rate lookup per classification sequentially | Batch all classifications for the project in one lookup; fail gracefully per classification without blocking the copy |
+| `payrollWeeks.status` filter in existing route | `GET /api/payroll/projects/:projectId/weeks` does not filter by project status — returning weeks for archived projects | Add a project status check at the route level; or query-join `payrollWeeks` through `projects` and include `WHERE projects.status = 'active'` |
+| pdf-lib coordinate overlay for amendment marker | Using `page.drawText('AMENDMENT', { x: approx, y: approx })` without measurement | Measure against the actual form PDF grid at the specific position DOL expects; add to `WH347_FIELDS` as a named constant |
 
 ---
 
@@ -263,9 +374,10 @@ Landing page copy could describe any construction software. The WH-347 form is n
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Hero image unoptimized (PNG, no dimensions) | LCP > 2.5s; Google penalizes landing page; first impression is blank | Use WebP, set explicit `width`/`height`, add `fetchpriority="high"` to hero `<img>` | Every visit on mobile or slow connection |
-| Loading all Google Font weights (100-900) | Fonts take 400-800ms to load; text renders with system fallback until then (FOUT) | Specify exact weights in the Google Fonts URL: `?family=Oswald:wght@400;600&family=Inter:wght@400;500;600` | First visit to any page before fonts are cached |
-| Landing page CSS bleeds into app bundle | App gets heavier with each landing section added | Keep all landing styles as Tailwind utilities (no new CSS layers); if custom styles needed, scope them to a `.landing` parent class | At scale; not a problem at current project size |
+| N+1 compliance computation in worker history | Page load time scales linearly with week count; 52 weeks = 52+ DB queries | Batch entry load + in-memory computation | Visible at 10+ weeks per worker; painful at 30+ |
+| Dashboard search on every keystroke with server fetch | Network tab shows a request per character; results flicker | 300ms debounce + client-side filtering for lists under 500 items | Immediately noticeable on any network latency |
+| Compliance roll-up for all projects including archived | Dashboard load time grows as project count grows | Server-side `WHERE status = 'active'` filter on projects list | Noticeable at 20+ archived projects |
+| Amendment history query without index on `amendedFromWeekId` | Amendment chain lookup is a full table scan on `payroll_weeks` | Add index: `CREATE INDEX idx_payroll_weeks_amended_from ON payroll_weeks(amended_from_week_id)` | Visible at 100+ weeks total |
 
 ---
 
@@ -273,8 +385,10 @@ Landing page copy could describe any construction software. The WH-347 form is n
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| `/register` not added as an explicit public route | Unauthenticated visitors following the CTA get redirected to login (dead end); no security risk but registration is unreachable | Add `/register` as a sibling of `/login` outside `ProtectedRoute` in `App.tsx` |
-| Landing page served through a component that reads from AuthContext before AuthContext has initialized | Loading spinner flashes; in worst case, a brief redirect to `/login` occurs for all visitors including unauthenticated ones | Landing page component should render immediately without waiting for `isAuthenticated` to resolve — it is a public page |
+| No server-side edit lock on submitted weeks | Any API caller (including automated scripts or test suites) can overwrite submitted payroll data; submitted certification is meaningless | `checkWeekEditable()` guard on all payroll entry write routes; returns 409 if `submittedAt IS NOT NULL` |
+| Project ownership not checked on amendment source week | A user could submit a `POST /api/payroll/amendments` with a `sourceWeekId` from another user's project and read/copy that project's entries | `assertProjectOwner()` must be called on the source week's `projectId`, not just the destination project |
+| Amendment creation not idempotent — double-submit creates two amendment rows | Two Amendment #1 records exist; audit trail is ambiguous | Unique constraint on `(amendedFromWeekId, amendmentNumber)` + `useRef` double-click guard in the UI |
+| Submission timestamp is client-supplied | Client sends `submittedAt: "2025-01-01"` (backdated submission) — creates a false audit timestamp | `submittedAt` must be set server-side as `new Date().toISOString()` — never accepted from the request body |
 
 ---
 
@@ -282,24 +396,27 @@ Landing page copy could describe any construction software. The WH-347 form is n
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Landing page CTA says "Get Started" and links to `/login` | New visitors have no account — they see a login form and don't know what to do | CTA says "Start Free" and links to `/register`; secondary link below says "Already have an account? Log in" |
-| Landing page hero uses the same `bg-gray-900` dark as the app nav | Visitors feel they are already inside the app; the marketing page loses its distinct identity | Use a slightly different dark for the landing hero (e.g., `bg-gray-950` or pure black `#000`) vs. the nav's `#1a1a1a` |
-| Design polish changes the visual position or label of the "Submit Payroll" / "Generate WH-347" buttons | Users who process payroll weekly have muscle memory for the submit flow; a moved button causes errors on deadline day | During polish, change color, shadow, border-radius — never change position or label of compliance-critical action buttons |
-| Single CTA in landing page hero only | Users who read the full feature list (scrolled to the bottom) must scroll all the way back up to register | Repeat the CTA button after the features section and at the page bottom |
-| Landing page uses animated number counters ("10,000+ contractors") without real data | Skeptical B2B buyers see placeholder-looking numbers and trust the brand less | Use specific, true claims ("Generates the January 2025 WH-347 revision") rather than fabricated social proof |
+| "Mark Submitted" is a single click with no confirmation | Contractors click it accidentally mid-edit; week is locked; they must file an amendment to correct a premature submission | Require a confirmation modal with the submission date and agency name before marking submitted |
+| Submission status is only visible on the week detail page | Contractor cannot see at a glance which weeks are submitted from the payroll list | Add a "Submitted" badge to each row in the payroll weeks list; include submission date in the list view |
+| Copy Previous Week shows a success state but does not warn about workers with no rates | Contractor starts the new week with missing entries; discovers the gap on payday | Copy result response must include `{ copied: N, skipped: M, skippedWorkers: [...] }` and the UI must show a dismissible warning if any workers were skipped |
+| Archive confirmation has no record count summary | Contractor archives a project without realizing it had 30 weeks of payroll records that are now hidden | Archive confirmation modal must show: "This will archive [N] payroll weeks and [M] workers. Records are preserved and accessible via [link]." |
+| Per-worker history shows violations without the snapshot rate used | Contractor cannot explain to an auditor why a violation was flagged — was the rate $28 or $31? | Display `baseRateSnapshot` and `fringeRateSnapshot` alongside each violation record in the history view |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Design token cleanup:** Run `grep -rn "style={{" src/client/` and confirm zero instances of `#F5C518` or `Oswald` in inline styles before considering tokens "done"
-- [ ] **focus:outline-hidden migration:** Tab through every form in the app (Login, Register, Payroll Entry, Worker Add, Project Create) — confirm gold ring appears clearly with no double-outline
-- [ ] **Table layout after font change:** Open PayrollEntryPage on a 1280px viewport — confirm the 7-day hour grid fits without horizontal scroll after Inter is applied globally
-- [ ] **Landing page routing — 4 cases:** (1) Unauthenticated visits `/` → landing page. (2) Authenticated visits `/` → redirected to `/dashboard`. (3) Unauthenticated clicks CTA → `/register` form appears. (4) Unauthenticated visits `/bad-url` → redirected to `/` not `/dashboard`
-- [ ] **Registration reachable:** New user can complete the full flow: landing page → CTA click → register form → dashboard — without ever seeing an unexpected redirect
-- [ ] **Brand consistency:** Open LoginPage, DashboardPage, WorkersPage, ReportsPage side-by-side — all headings use Oswald at the same scale, all primary buttons are the same gold, all card shadows are the same depth
-- [ ] **Google Fonts load:** Check Network tab — only `Oswald:wght@400;600` and `Inter:wght@400;500;600` are requested, not the full 9-weight family
-- [ ] **Landing page mobile:** Resize to 375px width — hero headline fits on 3 lines max, CTA button is full-width, feature list is readable, no horizontal scroll
+- [ ] **Copy Previous Week:** New week's entries have `baseRateSnapshot` and `fringeRateSnapshot` values that differ from the source week when a rate update occurred between the two weeks — verify this case explicitly in tests
+- [ ] **Copy Previous Week:** New week has `submittedAt: null` regardless of source week submission state — assert in the copy test
+- [ ] **Submission Tracking:** Call `PUT /api/payroll/entries/:id` directly on a submitted week and confirm a 409 response — do not rely on the UI being disabled
+- [ ] **Amendment Workflow:** After creating an amendment, read the original week's entries and confirm they are unchanged — assert original snapshots match pre-amendment values
+- [ ] **Amendment Numbering:** Create two amendments for the same source week via two rapid API calls and confirm only one succeeds (constraint error on second)
+- [ ] **Project Archive:** Call `DELETE /api/projects/:id` (if endpoint exists) — confirm it returns 405 Method Not Allowed or 404
+- [ ] **Project Archive:** Archive a project, then call `GET /api/projects` — confirm the archived project does not appear in the response
+- [ ] **Archive With Violations:** Archive a project with an unresolved violation week — confirm the API returns a warning/confirmation prompt, not a silent 200
+- [ ] **Worker History Cross-Project:** Add the same worker (same name, same SSN last 4) to two projects, enter payroll on both — confirm the history view shows weeks from both projects
+- [ ] **Dashboard Filter URL Params:** Apply a filter, navigate to a project, press back — confirm filter params are present in the URL and filter is re-applied
+- [ ] **Migration Registration:** Run `SELECT sql FROM sqlite_master WHERE name = 'payroll_weeks'` after startup and confirm new v2.3 columns are present in the output
 
 ---
 
@@ -307,11 +424,13 @@ Landing page copy could describe any construction software. The WH-347 form is n
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| `@theme` color namespace wipe with `--color-*: initial` | LOW | Revert the `@theme` block to remove `initial`; all default Tailwind colors return on next Vite HMR rebuild; no data or logic affected |
-| Table column overflow after font change | LOW | Add `min-w-[X]` to affected `<th>` elements — purely additive, no logic changes, no test risk |
-| Landing page CTA links to wrong route | LOW | Update `href` in the CTA component and add `/register` to `App.tsx` as a public route; 30-minute fix |
-| Inline style drift discovered post-launch | LOW | `grep -rn "style={{" src/client/` identifies all instances; migrate one-by-one to `className` utilities; no functional risk |
-| Generic copy on landing page doesn't convert | MEDIUM | Copy is a content change only — HTML edit, no CSS/logic risk; but requires a re-deploy and potentially re-designing the hero section around the new copy structure |
+| Stale rate snapshots copied into new week | HIGH | Identify all weeks created via copy; for each, determine the correct rate at the week-ending date; issue amendment weeks with correct rates; regenerate WH-347s; notify affected agencies |
+| Original entry data overwritten by amendment | HIGH | Restore from database backup if available; if no backup, reconstruct from the submitted PDF (if saved); manually re-enter original values into a corrected audit log |
+| Submitted week edited without lock | HIGH | Cross-reference against the submitted WH-347 PDF; determine which changes occurred post-submission; file amendments for any affected weeks |
+| Hard-deleted project data | HIGH | No recovery without backup; SQLite WAL file may have pre-delete state if caught quickly; otherwise data is gone — enforce the no-delete rule before this scenario occurs |
+| Worker history shows wrong cross-project data | MEDIUM | Re-query with corrected join logic; no data was mutated, only displayed incorrectly; fix the query and re-render |
+| Dashboard filter lost on navigation | LOW | Add URL param persistence; no data affected, pure UX fix |
+| Migration not registered in journal | LOW | Add journal entry, restart server, columns appear; no data loss if caught before production use |
 
 ---
 
@@ -319,28 +438,32 @@ Landing page copy could describe any construction software. The WH-347 form is n
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Shadow class rename confusion | Phase 1: Design Tokens | All new components reference shadow tokens, not raw `shadow-*` classes |
-| `focus:outline-none` broken in v4 | Phase 2: Typography + Input Polish | Tab through all forms; gold ring appears without double outline |
-| `@theme` color namespace wipe | Phase 1: Design Tokens | `--color-*: initial` never appears in `index.css`; all default Tailwind colors still render on existing pages |
-| Font change breaks table columns | Phase 2: Typography (first action in phase) | PayrollEntryPage 7-day grid fits at 1280px after Inter applied |
-| Landing page routing conflicts | Phase 3: Landing Page (routing spec first) | 4-case routing test passes before any landing page UI is built |
-| Inline brand styles survive token rollout | Phase 1: Design Tokens | `grep style src/client/` returns zero hardcoded `#F5C518` or `Oswald` values |
-| Generic landing page copy | Phase 3: Landing Page (copy before UI) | Hero mentions WH-347 by name; "Davis-Bacon" appears in first viewport |
+| Stale rate snapshots in copy | Copy Previous Week phase | Test: copy a week after updating the project WD; new week entries have different snapshot values than source week |
+| Submission flags copied to new week | Copy Previous Week phase (coordinate with Submission Tracking) | Test: copy a submitted week; new week has `submittedAt: null` |
+| No edit lock on submitted weeks | WH-347 Submission Tracking phase | Integration test: PUT on submitted week returns 409 |
+| Amendment corrupts original audit trail | Payroll Amendment Workflow phase — migration first | Test: original week entries are unchanged after amendment creation |
+| Amendment numbering conflict | Payroll Amendment Workflow phase — unique constraint in migration | Test: double-submit amendment creation returns constraint error |
+| Hard-delete of archived projects | Project Completion / Archive phase | Test: no DELETE route exists; GET /projects omits closed projects |
+| Archive with open violations — no warning | Project Completion / Archive phase | Test: archive a project with violation week returns 409 or warning payload |
+| Mixed snapshot/live data in worker history | Per-Worker Compliance History phase | Code review: history route imports must not include wageLookup.ts |
+| N+1 queries in worker history | Per-Worker Compliance History phase | Test fixture with 20 weeks; assert response time < 500ms |
+| Worker disambiguation across projects | Per-Worker Compliance History phase | Test: same worker on two projects appears in history with both project labels |
+| Filter state lost on navigation | Dashboard Search + Filter phase | Test: apply filter, navigate, back-button, assert URL params preserved |
+| Per-keystroke search requests | Dashboard Search + Filter phase | Network tab shows single request per debounce period, not per character |
+| Migration not registered in journal | Every schema-change phase | Post-migration: `SELECT sql FROM sqlite_master` shows new columns |
+| Amendment PDF coordinate mismatch | Payroll Amendment Workflow phase | Visual review of generated amendment PDF against DOL form layout |
 
 ---
 
 ## Sources
 
-- [Tailwind CSS v4 Theme Variables — Official Docs](https://tailwindcss.com/docs/theme) — `@theme` vs `:root`, `inline` keyword, namespace wipe behavior
-- [Tailwind CSS v4 Upgrade Guide — Official Docs](https://tailwindcss.com/docs/upgrade-guide) — full rename table: shadows, rings, outlines
-- [Tailwind CSS v4.0 Release Notes](https://tailwindcss.com/blog/tailwindcss-v4) — default ring/border color changes, browser requirements
-- [v4 @theme vs @theme inline — GitHub Discussion #18560](https://github.com/tailwindlabs/tailwindcss/discussions/18560) — when `inline` is needed vs. default behavior
-- [Theming best practices in v4 — GitHub Discussion #18471](https://github.com/tailwindlabs/tailwindcss/discussions/18471) — additive token strategy
-- [React Router: Private Routes — Robin Wieruch](https://www.robinwieruch.de/react-router-private-routes/) — public vs. protected route pattern, auth-aware wildcard
-- [B2B SaaS Landing Page Best Practices 2026 — Genesys Growth](https://genesysgrowth.com/blog/designing-b2b-saas-landing-pages) — copy mistakes, feature-vs-benefit framing
-- [9 B2B Landing Page Lessons From 2025 — Instapage](https://instapage.com/blog/b2b-landing-page-best-practices) — CTA placement, hero structure
-- Codebase audit — `src/client/` — 33 TSX files reviewed for inline styles, v4-affected utility classes, table patterns (2026-03-20)
+- Direct codebase audit: `src/server/db/schema.ts`, `src/server/services/payrollService.ts`, `src/server/services/complianceService.ts`, `src/server/services/wh347Generator.ts`, `src/server/routes/payroll.ts`, `src/server/db/migrations/meta/_journal.json` (2026-03-23)
+- `.planning/PROJECT.md` — key decisions, stack constraints, migration workflow documentation
+- Test suite structure: `tests/routes/compliance.test.ts`, `tests/routes/payroll.test.ts`, `tests/services/complianceService.test.ts` — fixture patterns used to identify test coverage gaps
+- 29 CFR Part 3 — Contractors and Subcontractors on Public Building or Public Work Financed in Whole or in Part by Loans or Grants from the United States (3-year records retention requirement)
+- DOL WH-347 Instructions (January 2025 revision) — amendment marking requirements
+- Drizzle ORM migration documentation — journal registration requirement for SQLite migrations
 
 ---
-*Pitfalls research for: Design polish + landing page on existing React + TailwindCSS v4 app (HCC Prevailing Wage v2.1)*
-*Researched: 2026-03-20*
+*Pitfalls research for: Davis-Bacon compliance payroll system — v2.3 contractor workflow efficiency + audit readiness features*
+*Researched: 2026-03-23*
