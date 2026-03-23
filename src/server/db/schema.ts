@@ -114,6 +114,11 @@ export const payrollWeeks = sqliteTable('payroll_weeks', {
   weekEndingDate: text('week_ending_date').notNull(), // ISO 8601 date string
   payrollNumber: integer('payroll_number').notNull(),
   isFinal: integer('is_final', { mode: 'boolean' }).notNull().default(false),
+  // Phase 17 migration columns — nullable, for Phases 19 and 21
+  submittedAt: text('submitted_at'),
+  submittedTo: text('submitted_to'),
+  amendmentNumber: integer('amendment_number'),
+  originalWeekId: text('original_week_id'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

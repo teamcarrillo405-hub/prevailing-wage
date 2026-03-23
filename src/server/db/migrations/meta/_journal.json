@@ -36,6 +36,13 @@
       "when": 1774000000000,
       "tag": "0008_program_name",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1774100000000,
+      "tag": "0009_payroll_week_submission_amendment",
+      "breakpoints": true
     }
   ]
 }
