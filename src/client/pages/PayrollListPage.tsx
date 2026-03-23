@@ -18,6 +18,8 @@ interface PayrollWeek {
   submittedAt: string | null;
   submittedTo: string | null;
   createdAt: string;
+  amendmentNumber: number | null;
+  originalWeekId: string | null;
 }
 
 interface PayrollWeeksResponse {
@@ -222,6 +224,9 @@ export function PayrollListPage() {
                     <Badge variant="compliant" className="ml-2">Submitted</Badge>
                   ) : (
                     <Badge variant="neutral" className="ml-2">Not Submitted</Badge>
+                  )}
+                  {week.amendmentNumber != null && (
+                    <Badge variant="warning" className="ml-2">Amendment {week.amendmentNumber}</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-3">

@@ -19,6 +19,8 @@ interface PayrollWeek {
   submittedAt: string | null;
   submittedTo: string | null;
   createdAt: string;
+  amendmentNumber: number | null;
+  originalWeekId: string | null;
 }
 
 interface PayrollEntryRow {
@@ -96,6 +98,7 @@ export function PayrollWeekDetailPage() {
   const [generating, setGenerating] = useState(false);
   const [showPreflight, setShowPreflight] = useState(false);
   const generatingRef = useRef(false);
+  const amendingRef = useRef(false);
   const hiddenAnchorRef = useRef<HTMLAnchorElement>(null);
 
   const queryClient = useQueryClient();
@@ -186,6 +189,27 @@ export function PayrollWeekDetailPage() {
     }
   }
 
+  const handleAmendClick = async () => {
+    if (amendingRef.current) return;
+    amendingRef.current = true;
+    try {
+      const res = await fetch('/api/payroll/weeks/amend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ originalWeekId: weekId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || 'Failed to create amendment');
+        return;
+      }
+      const result = await res.json();
+      navigate(`/projects/${projectId}/payroll/${result.weekId}`);
+    } finally {
+      amendingRef.current = false;
+    }
+  };
+
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
@@ -202,11 +226,16 @@ export function PayrollWeekDetailPage() {
               &larr; Back to Payroll
             </button>
             {week && (
-              <h1 className="text-2xl font-headline text-gray-900">
+              <h1 className="text-2xl font-headline text-gray-900 flex items-center flex-wrap gap-2">
                 Payroll Week #{week.payrollNumber}
-                <span className="ml-3 text-base font-normal text-gray-500">
+                <span className="text-base font-normal text-gray-500">
                   Week Ending {week.weekEndingDate}
                 </span>
+                {week.amendmentNumber != null && (
+                  <Badge variant="warning" className="ml-1">
+                    Amendment {week.amendmentNumber}
+                  </Badge>
+                )}
               </h1>
             )}
           </div>
@@ -361,14 +390,23 @@ export function PayrollWeekDetailPage() {
                     {week.submittedAt} — {week.submittedTo}
                   </span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={unsubmitMutation.isPending}
-                  onClick={() => unsubmitMutation.mutate()}
-                >
-                  {unsubmitMutation.isPending ? 'Clearing...' : 'Un-submit'}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleAmendClick}
+                  >
+                    Amend This Week
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={unsubmitMutation.isPending}
+                    onClick={() => unsubmitMutation.mutate()}
+                  >
+                    {unsubmitMutation.isPending ? 'Clearing...' : 'Un-submit'}
+                  </Button>
+                </div>
               </div>
             ) : showSubmitForm ? (
               <div className="px-5 py-4 space-y-3">
