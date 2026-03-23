@@ -47,10 +47,10 @@ completed: 2026-03-23
 
 ## Performance
 
-- **Duration:** ~5 min
+- **Duration:** ~15 min
 - **Started:** 2026-03-23T23:25:00Z
-- **Completed:** 2026-03-23T23:31:40Z
-- **Tasks:** 2 auto tasks completed (Task 3 is a checkpoint)
+- **Completed:** 2026-03-23T23:55:00Z
+- **Tasks:** 3 (2 auto + 1 human-verify checkpoint — approved)
 - **Files modified:** 2
 
 ## Accomplishments
@@ -59,7 +59,8 @@ completed: 2026-03-23
 - "Amendment N" badge rendered in the `PayrollWeekDetailPage` h1 header when `week.amendmentNumber != null`
 - "Amendment N" badge rendered on each row in `PayrollListPage` when `week.amendmentNumber != null`
 - Both `PayrollWeek` interfaces extended with `amendmentNumber: number | null` and `originalWeekId: string | null`
-- Full 218-test suite remains GREEN after both changes
+- Full end-to-end browser verification approved — amendment workflow confirmed working
+- Full test suite GREEN: 1068 tests passing (95 test files)
 
 ## Task Commits
 
@@ -67,6 +68,7 @@ Each task was committed atomically:
 
 1. **Task 1: PayrollWeekDetailPage — Amend button + amendment badge** - `2685441` (feat)
 2. **Task 2: PayrollListPage — amendment badge on list rows** - `875fea7` (feat)
+3. **Task 3: Browser verification checkpoint** - approved by user
 
 ## Files Created/Modified
 
@@ -93,9 +95,9 @@ None — no external service configuration required.
 
 ## Next Phase Readiness
 
-- Task 3 (browser verification) is a `checkpoint:human-verify` — requires manual testing in the browser
-- Server must be started (`npm run dev`, port 4099) before verification
-- All automated preconditions are met: both auto tasks committed, 218 tests passing
+- Phase 21 fully complete — AMD-01, AMD-02 (PDF label from Plan 01), AMD-03 all satisfied
+- 1068 tests passing, amendment workflow verified end-to-end in browser
+- Phase 22 (Per-Worker Compliance History) can proceed
 
 ---
 *Phase: 21-payroll-amendment-workflow*

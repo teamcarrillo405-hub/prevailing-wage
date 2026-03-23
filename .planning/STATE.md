@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
-status: Ready to plan
-stopped_at: Completed 20-02-PLAN.md
-last_updated: "2026-03-23T22:58:11.441Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 21-02-PLAN.md
+last_updated: "2026-03-23T23:44:41.292Z"
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 6
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 20 — copy-previous-payroll-week
+**Current focus:** Phase 21 — payroll-amendment-workflow
 
 ## Current Position
 
-Phase: 21
-Plan: Not started
+Phase: 21 (payroll-amendment-workflow) — EXECUTING
+Plan: 2 of 2
 
 ### Phase Structure
 
@@ -57,6 +57,9 @@ Plan: Not started
 | 18 | 1/1 | ✅ Complete |
 | Phase 20 P01 | 4 | 1 tasks | 3 files |
 | Phase 20 P02 | 15 | 2 tasks | 1 files |
+| Phase 21 P01 | 5min | 2 tasks | 4 files |
+| Phase 21-payroll-amendment-workflow P02 | 5min | 2 tasks | 2 files |
+| Phase 21 P02 | 15min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -177,6 +180,10 @@ Plan: Not started
 - [Phase 20]: Use getCachedWd ?? lookupWageDetermination for cache-first WD lookup in copyPayrollWeek (matching workers.ts pattern)
 - [Phase 20]: POST /weeks/copy placed before GET /weeks/:id to prevent wildcard route capture
 - [Phase 20]: weeks[0] used as default source (DESC sort already applied); weekEndingDate pre-populated as source+7 days; copyingRef useRef for synchronous double-click guard on Preview+Confirm; direct navigate (no modal) when weeks.length === 0
+- [Phase 21-01]: amendPayrollWeek() is dedicated (not copyPayrollWeek()) — copy re-fetches live rates, amendment clones snapshots per 29 CFR Part 3
+- [Phase 21-01]: rootWeekId = originalWeek.originalWeekId ?? originalWeek.id — chains always resolve to root week for sequential numbering
+- [Phase 21-02]: Amend This Week shown for any submitted week — service resolves root week, no UI distinction needed
+- [Phase 21-02]: Amend This Week shown for any submitted week — service resolves root week, no UI distinction needed
 
 ### Research Flags for v2.3
 
@@ -194,6 +201,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T22:29:23.081Z
-Stopped at: Completed 20-02-PLAN.md
+Last session: 2026-03-23T23:44:41.287Z
+Stopped at: Completed 21-02-PLAN.md
 Resume file: None
