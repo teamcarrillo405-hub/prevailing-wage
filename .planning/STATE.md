@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.3
-milestone_name: Contractor Workflow Efficiency + Audit Readiness
-status: v2.3 milestone complete
-stopped_at: Completed 22-02-PLAN.md
-last_updated: "2026-03-24T18:15:40.121Z"
+milestone: v2.4
+milestone_name: Ship-Ready + Design Elevation
+status: Defining requirements
+stopped_at: ~
+last_updated: "2026-03-24T18:30:00.000Z"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 11
-  completed_plans: 11
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # State

@@ -8,6 +8,17 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
+## Current Milestone: v2.4 — Ship-Ready + Design Elevation
+
+**Goal:** Close remaining features, elevate the UI to match HCC website quality, guide contractors through every step of the workflow, and deploy to a live URL.
+
+**Target features:**
+- Dashboard compliance status filter + CSV export from compliance history
+- Contractor guidance throughout — homepage explainer, step-by-step cues, contextual help, inline tooltips, empty states with instructions
+- UI/UX overhaul — construction photography, dark gold gradients, card depth matching HCC website standard
+- State-specific prevailing wage forms (California DIR, Washington L&I)
+- Operational deployment: cloud hosting, controlled auth, SAM.gov production key
+
 ## Current State (v2.3)
 
 **Shipped:** 2026-03-24
@@ -93,10 +104,15 @@ A contractor can run a full project end-to-end — create project → add worker
 
 ### Active
 
-<!-- v2.4 — next milestone -->
+<!-- v2.4 — in progress -->
 
 - Dashboard compliance status filter (requires batch compliance summary endpoint)
 - CSV export from per-worker compliance history page
+- Contractor guidance: homepage explainer, step-by-step cues, contextual help text, inline tooltips, instructional empty states
+- UI/UX overhaul: construction photography, dark gold gradients, card depth/shadows matching HCC website standard
+- California DIR prevailing wage form
+- Washington L&I prevailing wage form
+- Operational: cloud hosting, SQLite persistence, controlled auth, SAM.gov production key
 
 ### Out of Scope
 
