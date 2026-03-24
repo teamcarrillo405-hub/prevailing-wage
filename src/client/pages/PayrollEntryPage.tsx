@@ -35,10 +35,26 @@ interface WorkersResponse {
   };
 }
 
+interface ProjectResponse {
+  data: {
+    project: {
+      id: string;
+      state: string;
+    };
+  };
+}
+
 export function PayrollEntryPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [useMock, setUseMock] = useState(false);
+
+  const { data: projectData } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () =>
+      api.get<ProjectResponse>(`/projects/${projectId}`),
+    enabled: !!projectId,
+  });
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['workers', projectId],
@@ -46,6 +62,8 @@ export function PayrollEntryPage() {
       api.get<WorkersResponse>(`/projects/${projectId}/workers`),
     enabled: !!projectId,
   });
+
+  const isCA = projectData?.data?.project?.state === 'CA';
 
   // Flatten workers × classifications into rows for the form
   const workerRows = (data?.data?.workers ?? []).flatMap((w) =>
@@ -107,6 +125,7 @@ export function PayrollEntryPage() {
             projectId={projectId!}
             workers={workerRows}
             onSave={handleSave}
+            isCA={isCA}
           />
         )}
       </div>

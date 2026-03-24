@@ -32,12 +32,20 @@ interface PayrollWeekFormValues {
   friOt: number;
   satOt: number;
   sunOt: number;
+  monDt: number;
+  tueDt: number;
+  wedDt: number;
+  thuDt: number;
+  friDt: number;
+  satDt: number;
+  sunDt: number;
 }
 
 interface PayrollWeekFormProps {
   projectId: string;
   workers: WorkerRow[];
   onSave: (weekId: string) => void;
+  isCA?: boolean;
 }
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -51,7 +59,7 @@ const DAY_LABELS: Record<string, string> = {
   sun: 'Sun',
 };
 
-export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormProps) {
+export function PayrollWeekForm({ projectId, workers, onSave, isCA = false }: PayrollWeekFormProps) {
   // Single-worker form — uses first worker for live display
   // Full multi-worker grid would iterate workers; this delivers the CPAY-01 behavior
   const firstWorker = workers[0];
@@ -64,6 +72,7 @@ export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormP
       fringeRate: firstWorker?.fringeRate ?? 0,
       monSt: 0, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
       monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+      monDt: 0, tueDt: 0, wedDt: 0, thuDt: 0, friDt: 0, satDt: 0, sunDt: 0,
     },
   });
 
@@ -112,6 +121,15 @@ export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormP
           friOt: data.friOt,
           satOt: data.satOt,
           sunOt: data.sunOt,
+          ...(isCA ? {
+            monDt: data.monDt || 0,
+            tueDt: data.tueDt || 0,
+            wedDt: data.wedDt || 0,
+            thuDt: data.thuDt || 0,
+            friDt: data.friDt || 0,
+            satDt: data.satDt || 0,
+            sunDt: data.sunDt || 0,
+          } : {}),
           baseRateSnapshot: data.baseRate,
           fringeRateSnapshot: data.fringeRate,
         }),
@@ -179,6 +197,11 @@ export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormP
                       {DAY_LABELS[d]} OT
                     </th>
                   ))}
+                  {isCA && DAYS.map((d) => (
+                    <th key={`${d}-dt`} className="text-center px-1 py-2 font-medium text-amber-800 w-16">
+                      {DAY_LABELS[d]} DT
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -219,6 +242,18 @@ export function PayrollWeekForm({ projectId, workers, onSave }: PayrollWeekFormP
                             min: 0,
                           })}
                           className="w-14 px-1 py-1 text-center border border-amber-200 rounded text-xs focus:outline-hidden focus:border-amber-400"
+                        />
+                      </td>
+                    ))}
+                    {isCA && DAYS.map((d) => (
+                      <td key={`${d}-dt`} className="px-1 py-2 text-center">
+                        <input
+                          type="number"
+                          step="0.25"
+                          min="0"
+                          {...register(`${d}Dt` as keyof PayrollWeekFormValues, { valueAsNumber: true })}
+                          className="w-14 rounded border border-amber-300 px-1 py-0.5 text-center text-sm"
+                          defaultValue={0}
                         />
                       </td>
                     ))}

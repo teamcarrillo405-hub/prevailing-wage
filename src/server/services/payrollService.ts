@@ -69,6 +69,13 @@ export interface UpsertPayrollEntryInput {
   friOt?: number;
   satOt?: number;
   sunOt?: number;
+  monDt?: number;
+  tueDt?: number;
+  wedDt?: number;
+  thuDt?: number;
+  friDt?: number;
+  satDt?: number;
+  sunDt?: number;
   baseRateSnapshot: number;
   fringeRateSnapshot: number;
   grossWages?: number | null;
@@ -141,6 +148,13 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     friOt: input.friOt ?? 0,
     satOt: input.satOt ?? 0,
     sunOt: input.sunOt ?? 0,
+    monDt: input.monDt ?? 0,
+    tueDt: input.tueDt ?? 0,
+    wedDt: input.wedDt ?? 0,
+    thuDt: input.thuDt ?? 0,
+    friDt: input.friDt ?? 0,
+    satDt: input.satDt ?? 0,
+    sunDt: input.sunDt ?? 0,
     baseRateSnapshot: input.baseRateSnapshot,
     fringeRateSnapshot: input.fringeRateSnapshot,
     grossWages: input.grossWages ?? null,
@@ -174,6 +188,13 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         friOt: values.friOt,
         satOt: values.satOt,
         sunOt: values.sunOt,
+        monDt: values.monDt,
+        tueDt: values.tueDt,
+        wedDt: values.wedDt,
+        thuDt: values.thuDt,
+        friDt: values.friDt,
+        satDt: values.satDt,
+        sunDt: values.sunDt,
         baseRateSnapshot: values.baseRateSnapshot,
         fringeRateSnapshot: values.fringeRateSnapshot,
         grossWages: values.grossWages,

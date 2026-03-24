@@ -920,14 +920,74 @@ describe('GET /api/export/wh347 — AMD-02', () => {
 
 describe('DT hours - CAL-03', () => {
   it('should accept monDt-sunDt fields in payroll entry for CA project', async () => {
-    // POST /api/payroll/entries with monDt: 2, tueDt: 1.5
-    // Expect 200/201, entry includes DT values
-    expect(true).toBe(false); // RED stub
+    const cookie = await registerAndLogin('cal03-dt-fields');
+    const projectId = await createProject(cookie);
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-04-01', payrollNumber: 400 });
+    const weekId = weekRes.body.id as string;
+
+    const res = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        monDt: 2,
+        tueDt: 1.5,
+        baseRateSnapshot: 45.00,
+        fringeRateSnapshot: 20.00,
+      });
+
+    expect(res.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.entries.length).toBeGreaterThanOrEqual(1);
+    const entry = getRes.body.entries[0].entry;
+    expect(entry.monDt).toBe(2);
+    expect(entry.tueDt).toBe(1.5);
   });
 
   it('should default DT fields to 0 when not provided', async () => {
-    // POST /api/payroll/entries without DT fields (existing WH-347 payload)
-    // Expect success, DT values are 0
-    expect(true).toBe(false); // RED stub
+    const cookie = await registerAndLogin('cal03-no-dt');
+    const projectId = await createProject(cookie);
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-04-08', payrollNumber: 401 });
+    const weekId = weekRes.body.id as string;
+
+    const res = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        tueSt: 8,
+        baseRateSnapshot: 45.00,
+        fringeRateSnapshot: 20.00,
+      });
+
+    expect(res.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.entries.length).toBeGreaterThanOrEqual(1);
+    const entry = getRes.body.entries[0].entry;
+    expect(entry.monDt).toBe(0);
+    expect(entry.tueDt).toBe(0);
+    expect(entry.sunDt).toBe(0);
   });
 });
