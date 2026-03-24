@@ -1,5 +1,6 @@
 // src/client/pages/WorkerComplianceHistoryPage.tsx
 // Route: /projects/:projectId/workers/:workerId/compliance-history
+import { useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -7,6 +8,7 @@ import { Layout } from '../components/shared/Layout';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 
@@ -58,6 +60,32 @@ export function WorkerComplianceHistoryPage() {
     enabled: !!workerId,
   });
 
+  const downloadingRef = useRef(false);
+
+  async function handleDownloadCsv() {
+    if (downloadingRef.current || !workerId || !data) return;
+    downloadingRef.current = true;
+    try {
+      const res = await fetch(`/api/compliance/worker/${workerId}/history/csv`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        console.error('CSV download failed:', res.status);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const workerNameSafe = (data.workerName ?? 'worker').replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+      a.download = `compliance-history-${workerNameSafe}.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } finally {
+      downloadingRef.current = false;
+    }
+  }
+
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
@@ -83,6 +111,13 @@ export function WorkerComplianceHistoryPage() {
                 data.ssnLast4 ? `SSN: ***-**-${data.ssnLast4}` : null,
                 `${data.totalViolations} violation${data.totalViolations !== 1 ? 's' : ''} found`,
               ].filter(Boolean).join(' | ')}
+              action={
+                data.entries.length > 0 ? (
+                  <Button variant="secondary" onClick={handleDownloadCsv}>
+                    Download CSV
+                  </Button>
+                ) : undefined
+              }
             />
 
             {data.totalViolations === 0 ? (
