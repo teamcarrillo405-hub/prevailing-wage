@@ -106,8 +106,8 @@ A contractor can run a full project end-to-end — create project → add worker
 
 <!-- v2.4 — in progress -->
 
-- Dashboard compliance status filter (requires batch compliance summary endpoint)
-- CSV export from per-worker compliance history page
+- ✓ Dashboard compliance status filter + batch summary endpoint (no N+1) — v2.4 Phase 23
+- ✓ CSV export from per-worker compliance history page (17 cols, UTF-8 BOM) — v2.4 Phase 23
 - Contractor guidance: homepage explainer, step-by-step cues, contextual help text, inline tooltips, instructional empty states
 - UI/UX overhaul: construction photography, dark gold gradients, card depth/shadows matching HCC website standard
 - California DIR prevailing wage form
@@ -176,4 +176,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-24 — after v2.3 milestone*
+*Last updated: 2026-03-24 — Phase 23 complete*
