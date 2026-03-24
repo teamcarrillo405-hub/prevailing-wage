@@ -1,5 +1,22 @@
 # Milestones
 
+## v2.3 Contractor Workflow Efficiency + Audit Readiness (Shipped: 2026-03-24)
+
+**Phases completed:** 6 phases, 11 plans, 21 tasks
+
+**Key accomplishments:**
+
+- SQL migration adds 4 nullable submission/amendment columns to payroll_weeks (idx 5 in journal), and GET /api/projects gains active-only default filter with ?status=all override
+- React archive/restore UI: compliance advisory modal, Archived badge on ProjectCard, Show Archived toggle on DashboardPage, Archive/Restore buttons on ProjectDetailPage with TanStack Query invalidation
+- Real-time name search and funding type filter added to DashboardPage with URL-persisted ?q= and ?funding= params — back navigation restores both inputs automatically
+- PATCH/DELETE submit routes + server-side 409 edit lock guard injected in both entry write routes, driven by TDD (assertWeekNotSubmitted x3 confirmed)
+- Submit form + read-only lock banner + Submitted badges on PayrollListPage — SUB-01/02/03 browser-verified end-to-end
+- Three-step modal on PayrollListPage (choose / configure / preview-with-skip-warnings) calling POST /api/payroll/weeks/copy and navigating to the new week on confirm.
+- getWorkerComplianceHistory() service + GET /api/compliance/worker/:workerId/history route + 6-case TDD integration test suite — cross-project violation aggregation via (name, ssnLast4) identity matching
+- WorkerComplianceHistoryPage showing cross-project violation history with Badge-per-type, amounts, and empty state; route and Workers link wired end-to-end
+
+---
+
 ## v2.2 UX Completion + Compliance Hardening (Shipped: 2026-03-23)
 
 **Phases completed:** 2 phases, 4 plans, 5 tasks

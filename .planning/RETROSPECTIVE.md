@@ -104,14 +104,112 @@
 
 ---
 
+## Milestone: v2.2 — UX Completion + Compliance Hardening
+
+**Shipped:** 2026-03-23
+**Phases:** 2 (15-16) | **Plans:** 4 | **Tests:** 188
+
+### What Was Built
+
+- **Apprentice ratio enforcement** (COMP-03): `weekViolations[]` added alongside existing `violations[]` — per-week aggregate check fires only when `journeyworkerHours > 0`
+- **WorkflowProgress indicator**: 4-step inline component on ProjectDetail driven by live TanStack Query data (create → workers → payroll → WH-347)
+- **Print CSS for reports**: `thead { display: table-header-group }` + `overflow: visible !important` on `.overflow-x-auto` — browser print with repeating headers and totals row; `print-hidden` class on UI chrome
+- **WH-347 preflight modal**: violation summary (both `violations[]` and `weekViolations[]`) before generating, Download Anyway / Cancel options
+- **Fetch-driven WH-347 download**: `fetch()` → Blob → `URL.createObjectURL()` → click → `setTimeout(revokeObjectURL, 100)`; `generatingRef` useRef double-click guard
+
+### What Worked
+
+- **`useRef` for double-click guard**: `useState` is async/batched — second click fires before re-render. `useRef.current` is synchronous and immediate. Established the pattern for all future submit/action buttons.
+- **`weekViolations[]` kept separate from `violations[]`**: Not modifying existing violation consumers avoided breaking all Phase 7+ tests with zero code changes.
+- **Fetch-driven download vs plain anchor**: Preflight modal requires async work before the download fires — plain `<a href>` can't intercept. Switching to fetch pattern unlocked the entire preflight UX.
+
+### What Was Inefficient
+
+- **`hiddenAnchorRef` placement**: Initially placed inside modal JSX — modal unmounts when download starts, causing null ref. Moved outside modal to fix. Should have anticipated this upfront.
+- **`overflow: visible !important`** required for print: This CSS quirk (scroll container overrides table header group display in print) isn't documented anywhere obvious. Took research to discover.
+
+### Patterns Established
+
+- `useRef` for synchronous action guards — not `useState`
+- Blob URL revoke after `setTimeout(fn, 100)` — give browser time to initiate download before freeing the object URL
+- `weekViolations[]` as separate array alongside `violations[]` — per-week aggregates must not mix with per-entry violations
+
+### Key Lessons
+
+1. **Ref inside modal = null when modal unmounts**: Any ref that needs to outlive a modal's lifecycle must live outside the modal's JSX subtree.
+2. **Print CSS `overflow: visible !important` is required**: Browser treats `overflow-x: auto` as a scroll container in print, which overrides `thead { display: table-header-group }`. The important override is the only fix.
+3. **New violation types need separate arrays**: Mixing per-entry and per-week violations in the same array would have required consumer updates across the entire codebase. Separate arrays = zero regressions.
+
+### Cost Observations
+
+- Sessions: 1
+- 2 phases, 4 plans
+- Single-day: 2026-03-22 → 2026-03-23
+
+---
+
+## Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
+
+**Shipped:** 2026-03-24
+**Phases:** 6 (17-22) | **Plans:** 10 | **Tests:** 1,522 (+1,334 since v2.2)
+
+### What Was Built
+
+- **DB migration**: 4 new nullable columns on `payroll_weeks` (submitted_at, submitted_to, amendment_number, original_week_id) via idx-5 migration with `-->statement-breakpoint` separators
+- **Project archive/restore**: compliance pre-check advisory (non-blocking), Archived badge, Show Archived toggle on DashboardPage, `?status=all` query param
+- **Dashboard search + filter**: real-time name search, funding type dropdown, URL-persisted `?q=` and `?funding=` params, zero-results empty state
+- **WH-347 submission tracking**: PATCH/DELETE `/weeks/:id/submit`, server-side 409 lock in both entry write routes, `assertWeekNotSubmitted()` service, submitted badges on PayrollListPage, submit form on PayrollWeekDetailPage
+- **Copy previous week**: `copyPayrollWeek()` re-fetches live rates, preview mode returns `{copied[], skipped[]}` without DB write, 3-step modal (choose/configure/preview-with-warnings)
+- **Payroll amendment**: `amendPayrollWeek()` clones rate snapshots (not live re-fetch — 29 CFR Part 3), root-week sequential numbering, "N (AMENDED M)" WH-347 PDF label, amendment badge on list
+- **Per-worker compliance history**: `getWorkerComplianceHistory()` cross-project aggregation by `(name, ssnLast4)`, null-SSN safety scope guard, `WorkerComplianceHistoryPage` with violation cards, Compliance History link per worker row
+
+### What Worked
+
+- **Copy vs Amendment as two separate functions**: Research confirmed they have fundamentally different rate semantics — copy must use live rates (federal compliance), amendment must clone snapshots (29 CFR Part 3 rates-fixed-at-submission). Two explicit service functions made the distinction permanent and testable.
+- **Route ordering as documented pattern**: Registering specific routes before `/:id` wildcards had already bitten v2.0. Adding it to the CLAUDE.md critical rules meant no Phase 20/21/22 route bugs — zero wildcards were accidentally captured.
+- **Preview-then-commit pattern**: The copy route's `preview: true` mode made the 3-step modal trivial to implement — API returns skip warnings without any DB write, then the same endpoint commits on confirmation. Clean separation.
+- **ssnLast4 null safety guard**: Decided early to scope null-SSN workers to their source project only. This prevented a potential false cross-project merge for workers missing SSN data.
+- **TDD RED-GREEN consistently applied**: Every Phase 20/21/22 API plan wrote failing stubs first. Caught integration issues (fixture shape, route registration order) before any UI work.
+
+### What Was Inefficient
+
+- **Dev server migration tracking failure at session start**: The dev SQLite DB had tables applied manually but no `__drizzle_migrations` tracking table, causing Drizzle to try re-running all migrations and crash with "table already exists." Needed a new `scripts/seed-migration-table.mjs` to fix. Root cause: DB was set up manually in an early session before GSD structure was in place. Should have run migrations via Drizzle from the start.
+- **Missing SUMMARY.md files for 19-02 and 22-01**: Two plans executed in prior sessions didn't have their SUMMARY.md saved. Discovered during `complete-milestone` readiness check. Writing SUMMARY.md immediately after each plan execution (not deferred) would prevent this.
+- **Context window exhaustion mid-milestone**: v2.3 spanned 2 context windows — phases 17-19 in session 1, phases 20-22 in session 2. Some planning artifacts (STATE.md, ROADMAP.md progress table) had stale data (showing 19-02 as incomplete) that needed fixing at milestone close.
+
+### Patterns Established
+
+- `copyPayrollWeek()` vs `amendPayrollWeek()` semantic distinction — live re-fetch vs snapshot clone
+- Root-week resolution: `source.originalWeekId ?? source.id` — never chain amendment → amendment
+- Cross-project worker identity: `(name, ssnLast4)` equality; `ssnLast4 === null` scopes to source project only
+- Preview-then-commit API pattern: same endpoint, `preview=true` returns dry-run result without DB write
+- `scripts/seed-migration-table.mjs` — fix for pre-GSD DBs missing `__drizzle_migrations` tracking
+
+### Key Lessons
+
+1. **Always run Drizzle migrations via the CLI — never apply SQL manually**: Manual table creation produces a DB with no migration tracking, guaranteed to fail on next Drizzle-managed run.
+2. **Write SUMMARY.md immediately after each plan**: Deferred summaries are the most common documentation debt. Two missing summaries at milestone close required reconstruction from git log and commit messages.
+3. **Copy ≠ Amendment at the rate level**: These are two distinct federal compliance concepts with different legal requirements. If the codebase treats them as variants of the same function, the next engineer will incorrectly re-use copy for amendment or vice versa. Two named functions with explicit doc comments is the correct boundary.
+4. **ssnLast4 null means "no cross-project identity"**: An empty SSN last 4 field is not equivalent to SSN = "0000" or any fallback — it means identity cannot be asserted. Null check before cross-project merge is a compliance boundary, not a preference.
+
+### Cost Observations
+
+- Sessions: 2 (v2.3 spanned 2 context windows)
+- 64 commits across phases 17-22
+- 74 files changed, ~12,150 net lines
+- Tests grew from 188 to 1,522 (1,334 new tests added)
+- 2 days total (2026-03-23 → 2026-03-24)
+
+---
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v2.0 | v2.1 |
-|--------|------|------|------|
-| Phases | 5 | 4 | 5 |
-| Plans | — | 16 | 14 |
-| Tests | — | 181 | 181 |
-| Files changed | — | 70 | ~45 |
-| LOC (src/) | — | ~10,774 | ~10,375 |
-| Days | — | 1 | 2 |
-| Regressions | — | 0 | 0 |
+| Metric | v1.0 | v2.0 | v2.1 | v2.2 | v2.3 |
+|--------|------|------|------|------|------|
+| Phases | 5 | 4 | 5 | 2 | 6 |
+| Plans | — | 16 | 14 | 4 | 10 |
+| Tests | — | 181 | 181 | 188 | 1,522 |
+| Files changed | — | 70 | ~45 | ~15 | 74 |
+| LOC (src/) | — | ~10,774 | ~10,375 | ~10,800 | ~12,150 net |
+| Days | — | 1 | 2 | 1 | 2 |
+| Regressions | — | 0 | 0 | 0 | 0 |

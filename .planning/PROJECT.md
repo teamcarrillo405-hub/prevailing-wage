@@ -8,24 +8,12 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v2.3 — Contractor Workflow Efficiency + Audit Readiness
+## Current State (v2.3)
 
-**Goal:** Make daily payroll entry faster, give contractors visibility into submission status and project lifecycle, and surface worker-level compliance history for audit responses.
-
-**Target features:**
-- Copy Previous Week — pre-fill new payroll week from prior week's hours
-- WH-347 Submission Tracking — mark weeks submitted with date/agency, visible on Payroll Week Detail and payroll list
-- Payroll Amendment Workflow — correct a submitted week and generate an amended WH-347 (resubmission)
-- Project Completion / Archive — mark projects complete, filter archived projects off the active dashboard
-- Dashboard Search + Filter — search by name, filter by compliance status and funding type
-- Per-Worker Compliance History — worker-centric view of all violations across all projects and weeks
-
-## Current State (v2.2)
-
-**Shipped:** 2026-03-23
-**Tests:** 188 passing
+**Shipped:** 2026-03-24
+**Tests:** 1,522 passing
 **Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation
-**LOC:** ~10,600 TypeScript (src/)
+**LOC:** ~12,150 net new lines (74 files changed since v2.2)
 
 **What works end-to-end:**
 - Full marketing landing page at "/" (HCC brand, WH-347/Davis-Bacon/SAM.gov above fold, CTA to /register)
@@ -93,16 +81,22 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ WH-347 preflight: compliance violation summary before generating, Download Anyway / Cancel — v2.2
 - ✓ WH-347 download feedback: "Generating..." label during fetch, double-click guard via useRef — v2.2
 
+<!-- Shipped in v2.3 (phases 17-22) -->
+
+- ✓ DB extended with submitted_at, submitted_to, amendment_number, original_week_id columns on payroll_weeks — v2.3
+- ✓ Project archive/restore: compliance pre-check advisory, Archived badge, Show Archived toggle — v2.3
+- ✓ Dashboard name search + funding type filter with URL-persisted state — v2.3
+- ✓ WH-347 submission tracking: mark submitted with date/agency, server-side edit lock, un-submit — v2.3
+- ✓ Copy previous payroll week: 3-step modal, live rate re-fetch, skipped-entry warning — v2.3
+- ✓ Payroll amendment workflow: amend submitted week, "N (AMENDED M)" WH-347 label, pre-filled from original — v2.3
+- ✓ Per-worker compliance history: cross-project violation aggregation by (name, ssnLast4) identity — v2.3
+
 ### Active
 
-<!-- v2.3 — in progress -->
+<!-- v2.4 — next milestone -->
 
-- Copy previous payroll week to pre-fill new week entry
-- WH-347 submission tracking (mark submitted with date/agency)
-- Payroll amendment workflow (corrected WH-347 resubmission)
-- Project completion / archive status
-- Dashboard search and filter (name, compliance status, funding type)
-- Per-worker compliance history across all projects and weeks
+- Dashboard compliance status filter (requires batch compliance summary endpoint)
+- CSV export from per-worker compliance history page
 
 ### Out of Scope
 
@@ -158,6 +152,12 @@ A contractor can run a full project end-to-end — create project → add worker
 | useRef for double-click guard | `useState` setter is async/batched — second click fires before re-render; `useRef.current` is synchronous | ✓ Good — v2.2 |
 | weekViolations[] separate from violations[] | COMP-03 is per-week aggregate; existing per-entry violations consumers would break if shape changed | ✓ Good — v2.2 |
 | Single user per account | Simplicity for v1/v2; multi-user is a future milestone | — Pending |
+| copyPayrollWeek() re-fetches live rates | Federal compliance: stale snapshots produce invalid certified payroll | ✓ Good — v2.3 |
+| amendPayrollWeek() clones snapshots | 29 CFR Part 3: rates fixed at submission time; amendment must use same rates | ✓ Good — v2.3 |
+| Amendment always resolves to root week | rootWeekId = source.originalWeekId ?? source.id — prevents chained amendment numbering | ✓ Good — v2.3 |
+| ssnLast4=null scopes to source project only | Null identity cannot safely assert cross-project worker match | ✓ Good — v2.3 |
+| Route ordering: specific before wildcard | All new routes must register before /:id wildcards on Express routers | ✓ Good — v2.3 |
+| Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-23 — v2.3 milestone started*
+*Last updated: 2026-03-24 — after v2.3 milestone*
