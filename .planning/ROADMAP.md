@@ -61,7 +61,7 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 - [ ] **Phase 19: WH-347 Submission Tracking** — mark weeks submitted with date/agency, server-side edit lock, un-submit, submitted badges on payroll list
 - [x] **Phase 20: Copy Previous Payroll Week** — copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning (completed 2026-03-23)
 - [x] **Phase 21: Payroll Amendment Workflow** — amend submitted week as new row, "N (AMENDED M)" WH-347 label, pre-filled entries from original (completed 2026-03-23)
-- [ ] **Phase 22: Per-Worker Compliance History** — cross-project violation history page, compliance history link per worker row
+- [x] **Phase 22: Per-Worker Compliance History** — cross-project violation history page, compliance history link per worker row (completed 2026-03-24)
 
 ## Phase Details
 
@@ -170,4 +170,4 @@ Plans:
 | 19. WH-347 Submission Tracking | v2.3 | 1/2 | In Progress|  |
 | 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete    | 2026-03-23 |
 | 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete    | 2026-03-23 |
-| 22. Per-Worker Compliance History | v2.3 | 1/2 | In Progress|  |
+| 22. Per-Worker Compliance History | v2.3 | 1/2 | Complete    | 2026-03-24 |
