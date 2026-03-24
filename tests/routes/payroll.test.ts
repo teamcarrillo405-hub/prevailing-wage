@@ -917,3 +917,17 @@ describe('GET /api/export/wh347 — AMD-02', () => {
     expect(res.headers['content-disposition']).toMatch(/amended/i);
   });
 });
+
+describe('DT hours - CAL-03', () => {
+  it('should accept monDt-sunDt fields in payroll entry for CA project', async () => {
+    // POST /api/payroll/entries with monDt: 2, tueDt: 1.5
+    // Expect 200/201, entry includes DT values
+    expect(true).toBe(false); // RED stub
+  });
+
+  it('should default DT fields to 0 when not provided', async () => {
+    // POST /api/payroll/entries without DT fields (existing WH-347 payload)
+    // Expect success, DT values are 0
+    expect(true).toBe(false); // RED stub
+  });
+});

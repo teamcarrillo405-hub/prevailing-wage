@@ -358,6 +358,27 @@ describe('POST /api/projects/:id/workers', () => {
   });
 });
 
+describe('CA project fields - CAL-01', () => {
+  it('should persist cslbLicense and wcPolicyNumber on CA project creation', async () => {
+    // POST /api/projects with state: 'CA', cslbLicense: '123456', wcPolicyNumber: 'WC-789'
+    // Expect 201, response includes cslbLicense and wcPolicyNumber
+    // Use existing seedFixture pattern from the file
+    expect(true).toBe(false); // RED stub — will be implemented in Plan 02
+  });
+
+  it('should allow CA project creation without CSLB fields (optional)', async () => {
+    // POST /api/projects with state: 'CA' but no cslbLicense/wcPolicyNumber
+    // Expect 201, cslbLicense: null, wcPolicyNumber: null
+    expect(true).toBe(false); // RED stub
+  });
+
+  it('should NOT include CA fields in response for non-CA project', async () => {
+    // POST /api/projects with state: 'TX'
+    // Expect 201, cslbLicense is null
+    expect(true).toBe(false); // RED stub
+  });
+});
+
 describe('POST /api/projects/:id/workers/:wid/classifications', () => {
   it('creates classification record and returns 201', async () => {
     const cookie = await registerUser(`classif-create-${Date.now()}@test.com`);
