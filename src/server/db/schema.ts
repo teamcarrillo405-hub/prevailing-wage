@@ -28,6 +28,9 @@ export const projects = sqliteTable('projects', {
   wdLockedAt: text('wd_locked_at'),
 
   status: text('status').notNull().default('active').$type<'active' | 'closed'>(),
+  // Phase 24 — California-specific fields
+  cslbLicense: text('cslb_license'),
+  wcPolicyNumber: text('wc_policy_number'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -144,6 +147,14 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   friOt: real('fri_ot').notNull().default(0),
   satOt: real('sat_ot').notNull().default(0),
   sunOt: real('sun_ot').notNull().default(0),
+  // Daily double-time hours (Mon-Sun) — CA projects only
+  monDt: real('mon_dt').notNull().default(0),
+  tueDt: real('tue_dt').notNull().default(0),
+  wedDt: real('wed_dt').notNull().default(0),
+  thuDt: real('thu_dt').notNull().default(0),
+  friDt: real('fri_dt').notNull().default(0),
+  satDt: real('sat_dt').notNull().default(0),
+  sunDt: real('sun_dt').notNull().default(0),
   // Rate snapshots at time of entry
   baseRateSnapshot: real('base_rate_snapshot').notNull(),
   fringeRateSnapshot: real('fringe_rate_snapshot').notNull(),
