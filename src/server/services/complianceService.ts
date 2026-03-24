@@ -4,9 +4,10 @@
 // frozen snapshots. No live WD lookups — only snapshot columns.
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
 import { calculateCwhssaOt } from './calculations.js';
-import { getPayrollWeek, getPayrollEntries } from './payrollService.js';
+import { getPayrollWeek, getPayrollEntries, listPayrollWeeks } from './payrollService.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -150,5 +151,179 @@ export async function computeCompliance(
     hasViolations: violations.length > 0 || weekViolations.length > 0,
     certProperPayment: !violations.some(v => v.violationType === 'under-wage'),
     certAccuratePayroll: !violations.some(v => v.violationType === 'cwhssa-ot'),
+  };
+}
+
+// ── Per-Worker Compliance History (AUD-01) ────────────────────────────────
+
+export interface WorkerViolationHistoryEntry {
+  projectId: string;
+  projectName: string;
+  weekId: string;
+  weekEndingDate: string;
+  payrollNumber: number;
+  violationType: 'under-wage' | 'cwhssa-ot' | 'apprentice-ratio';
+  detail?: string;
+  expected?: number;
+  actual?: number;
+  delta?: number;
+  apprenticeHours?: number;
+  journeyworkerHours?: number;
+  maxAllowedApprenticeHours?: number;
+}
+
+export interface WorkerComplianceHistory {
+  workerId: string;
+  workerName: string;
+  ssnLast4: string | null;
+  totalViolations: number;
+  entries: WorkerViolationHistoryEntry[];
+}
+
+type WorkerHistoryResult =
+  | WorkerComplianceHistory
+  | { error: 'not_found' }
+  | { error: 'forbidden' };
+
+export async function getWorkerComplianceHistory(
+  db: BetterSQLite3Database<typeof schema>,
+  userId: string,
+  workerId: string,
+): Promise<WorkerHistoryResult> {
+  // 1. Load source worker
+  const [sourceWorker] = await db
+    .select()
+    .from(schema.workers)
+    .where(eq(schema.workers.id, workerId))
+    .limit(1);
+
+  if (!sourceWorker) {
+    return { error: 'not_found' };
+  }
+
+  // 2. Load source worker's project and verify ownership
+  const [sourceProject] = await db
+    .select()
+    .from(schema.projects)
+    .where(eq(schema.projects.id, sourceWorker.projectId))
+    .limit(1);
+
+  if (!sourceProject) {
+    return { error: 'not_found' };
+  }
+
+  if (sourceProject.userId !== userId) {
+    return { error: 'forbidden' };
+  }
+
+  // 3. ssnLast4 safety: if null, only search within the source project
+  let projectsInScope: typeof sourceProject[];
+  if (sourceWorker.ssnLast4 === null) {
+    // No cross-project merge for workers without SSN — too risky of false matches
+    projectsInScope = [sourceProject];
+  } else {
+    // Search across all user's projects
+    projectsInScope = await db
+      .select()
+      .from(schema.projects)
+      .where(eq(schema.projects.userId, userId));
+  }
+
+  // 4. For each project, find workers matching (name, ssnLast4) exactly
+  const allEntries: WorkerViolationHistoryEntry[] = [];
+
+  for (const project of projectsInScope) {
+    // Find matching worker in this project
+    let matchingWorker: typeof sourceWorker | null = null;
+
+    if (project.id === sourceProject.id) {
+      // Always use the source worker for the source project
+      matchingWorker = sourceWorker;
+    } else {
+      // ssnLast4 is non-null here (guaranteed by scope guard above)
+      const [found] = await db
+        .select()
+        .from(schema.workers)
+        .where(
+          and(
+            eq(schema.workers.projectId, project.id),
+            eq(schema.workers.name, sourceWorker.name),
+            eq(schema.workers.ssnLast4, sourceWorker.ssnLast4!),
+          ),
+        )
+        .limit(1);
+
+      matchingWorker = found ?? null;
+    }
+
+    if (!matchingWorker) continue;
+
+    // 5. Load all payroll weeks for this project
+    const weeks = await listPayrollWeeks(project.id);
+
+    for (const week of weeks) {
+      // 6. Run compliance for this week
+      const result = await computeCompliance(db, week.id);
+      if (!result) continue;
+
+      // 7. Per-worker violations (under-wage, cwhssa-ot)
+      for (const v of result.violations) {
+        if (v.workerId !== matchingWorker.id) continue;
+
+        allEntries.push({
+          projectId: project.id,
+          projectName: project.name,
+          weekId: week.id,
+          weekEndingDate: week.weekEndingDate,
+          payrollNumber: week.payrollNumber,
+          violationType: v.violationType,
+          expected: v.expected,
+          actual: v.actual,
+          delta: v.delta,
+        });
+      }
+
+      // 8. Week-level violations (apprentice-ratio) — include if worker had any entry in this week
+      if (result.weekViolations.length > 0) {
+        const [workerEntry] = await db
+          .select()
+          .from(schema.payrollEntries)
+          .where(
+            and(
+              eq(schema.payrollEntries.payrollWeekId, week.id),
+              eq(schema.payrollEntries.workerId, matchingWorker.id),
+            ),
+          )
+          .limit(1);
+
+        if (workerEntry) {
+          for (const wv of result.weekViolations) {
+            allEntries.push({
+              projectId: project.id,
+              projectName: project.name,
+              weekId: week.id,
+              weekEndingDate: week.weekEndingDate,
+              payrollNumber: week.payrollNumber,
+              violationType: wv.violationType,
+              detail: wv.detail,
+              apprenticeHours: wv.apprenticeHours,
+              journeyworkerHours: wv.journeyworkerHours,
+              maxAllowedApprenticeHours: wv.maxAllowedApprenticeHours,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 9. Sort by weekEndingDate DESC
+  allEntries.sort((a, b) => b.weekEndingDate.localeCompare(a.weekEndingDate));
+
+  return {
+    workerId: sourceWorker.id,
+    workerName: sourceWorker.name,
+    ssnLast4: sourceWorker.ssnLast4,
+    totalViolations: allEntries.length,
+    entries: allEntries,
   };
 }
