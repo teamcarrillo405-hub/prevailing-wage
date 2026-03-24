@@ -38,7 +38,7 @@
 
 ### Audit / Compliance History (AUD)
 
-- [ ] **AUD-01**: User can view a per-worker compliance history page showing all violations across all projects and weeks
+- [x] **AUD-01**: User can view a per-worker compliance history page showing all violations across all projects and weeks
 - [ ] **AUD-02**: WorkersPage shows a "Compliance History" link per worker row
 
 ---
@@ -79,5 +79,5 @@
 | AMD-01 | Phase 21 | Complete |
 | AMD-02 | Phase 21 | Complete |
 | AMD-03 | Phase 21 | Complete |
-| AUD-01 | Phase 22 | Pending |
+| AUD-01 | Phase 22 | Complete |
 | AUD-02 | Phase 22 | Pending |

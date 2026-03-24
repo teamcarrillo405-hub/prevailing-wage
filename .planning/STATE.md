@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
-status: Ready to plan
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-03-23T23:49:04.462Z"
+status: Ready to execute
+stopped_at: Completed 22-01-PLAN.md
+last_updated: "2026-03-24T17:25:06.729Z"
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 9
+  total_plans: 11
   completed_plans: 8
 ---
 
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 21 — payroll-amendment-workflow
+**Current focus:** Phase 22 — per-worker-compliance-history
 
 ## Current Position
 
-Phase: 22
-Plan: Not started
+Phase: 22 (per-worker-compliance-history) — EXECUTING
+Plan: 2 of 2
 
 ### Phase Structure
 
@@ -60,6 +60,7 @@ Plan: Not started
 | Phase 21 P01 | 5min | 2 tasks | 4 files |
 | Phase 21-payroll-amendment-workflow P02 | 5min | 2 tasks | 2 files |
 | Phase 21 P02 | 15min | 3 tasks | 2 files |
+| Phase 22 P01 | 4min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,9 @@ Plan: Not started
 - [Phase 21-01]: rootWeekId = originalWeek.originalWeekId ?? originalWeek.id — chains always resolve to root week for sequential numbering
 - [Phase 21-02]: Amend This Week shown for any submitted week — service resolves root week, no UI distinction needed
 - [Phase 21-02]: Amend This Week shown for any submitted week — service resolves root week, no UI distinction needed
+- [Phase 22]: ssnLast4=null workers scoped to source project only — null identity cannot safely merge across projects
+- [Phase 22]: WorkerHistoryResult discriminated union return type (not throw) — route owns HTTP status, service stays pure
+- [Phase 22]: Route /worker/:workerId/history registered before /:weekId wildcard — consistent with /project/:projectId pattern
 
 ### Research Flags for v2.3
 
@@ -201,6 +205,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T23:44:41.287Z
-Stopped at: Completed 21-02-PLAN.md
+Last session: 2026-03-24T17:25:06.724Z
+Stopped at: Completed 22-01-PLAN.md
 Resume file: None

@@ -170,4 +170,4 @@ Plans:
 | 19. WH-347 Submission Tracking | v2.3 | 1/2 | In Progress|  |
 | 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete    | 2026-03-23 |
 | 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete    | 2026-03-23 |
-| 22. Per-Worker Compliance History | v2.3 | 0/2 | Not started | - |
+| 22. Per-Worker Compliance History | v2.3 | 0/2 | Planned    |  |
