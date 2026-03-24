@@ -43,6 +43,20 @@
       "when": 1774100000000,
       "tag": "0009_payroll_week_submission_amendment",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1774387951000,
+      "tag": "0010_ca_project_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1774387951001,
+      "tag": "0011_payroll_entries_double_time",
+      "breakpoints": true
     }
   ]
 }
