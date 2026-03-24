@@ -1,463 +1,558 @@
-# Architecture Research
+# Architecture Patterns
 
-**Domain:** Prevailing wage compliance SaaS — v2.3 feature integration
-**Researched:** 2026-03-23
+**Project:** HCC Prevailing Wage v2.4 — Ship-Ready + Design Elevation
+**Researched:** 2026-03-24
 **Confidence:** HIGH — based on direct codebase analysis of all affected files
 
 ---
 
-## System Overview
+## System Overview (as of v2.3)
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        React Client (Vite)                           │
-│  ┌──────────────┐  ┌────────────────┐  ┌──────────────────────────┐ │
-│  │ DashboardPage│  │ PayrollListPage │  │  PayrollWeekDetailPage   │ │
-│  │  (+ search/  │  │  (+ submitted  │  │  (+ submission panel,    │ │
-│  │   filter,    │  │   badges,      │  │   amend button,          │ │
-│  │   archive    │  │   amendment    │  │   amended WH-347 label)  │ │
-│  │   toggle)    │  │   badges)      │  │                          │ │
-│  └──────┬───────┘  └──────┬─────────┘  └───────────┬──────────────┘ │
-│         │                 │                         │                │
-│  ┌──────┴─────────────────┴─────────────────────────┴─────────────┐ │
-│  │             TanStack Query (queryKey cache + invalidation)       │ │
-│  └──────────────────────────────────┬──────────────────────────────┘ │
-└─────────────────────────────────────┼────────────────────────────────┘
-                                      │ fetch /api/*
-┌─────────────────────────────────────┼────────────────────────────────┐
-│                        Express Server                                 │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────┐  ┌────────────┐  │
-│  │/api/payroll │  │/api/reports  │  │/api/export │  │/api/projects│ │
-│  │ (+ /copy,   │  │ (+ /workers/ │  │ (amended   │  │ (+ ?status  │ │
-│  │  /submit,   │  │  :id/        │  │  PDF label)│  │  filter)    │ │
-│  │  /amend)    │  │  violations) │  │            │  │             │ │
-│  └──────┬──────┘  └──────┬───────┘  └─────┬──────┘  └─────┬──────┘ │
-│         │                │                 │                │        │
-│  ┌──────┴────────────────┴─────────────────┴────────────────┴──────┐ │
-│  │     Services: payrollService, complianceService,                 │ │
-│  │     reportsService, wh347Generator                               │ │
-│  └──────────────────────────────────┬─────────────────────────────┘  │
-└─────────────────────────────────────┼────────────────────────────────┘
-                                      │ Drizzle ORM
-┌─────────────────────────────────────┼────────────────────────────────┐
-│  SQLite                                                               │
-│  payrollWeeks (+ submitted_at, submitted_to,                         │
-│                + amendment_number, original_week_id)                 │
-│  payrollEntries  │  projects (status already exists)                 │
-│  workers  │  workerClassifications  │  wageDeterminations            │
-└────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                         React Client (Vite)                             │
+│  ┌──────────────┐  ┌──────────────────┐  ┌────────────────────────┐   │
+│  │ DashboardPage│  │PayrollWeekDetail  │  │ WorkerCompliance       │   │
+│  │  (+ compliance│  │  (+ PDF generate) │  │ HistoryPage            │   │
+│  │   status filt)│  │                  │  │  (+ CSV export)        │   │
+│  └──────┬───────┘  └────────┬─────────┘  └──────────┬─────────────┘  │
+│         │                   │                        │                 │
+│  ┌──────┴───────────────────┴────────────────────────┴──────────────┐ │
+│  │              TanStack Query (cache + invalidation)                │ │
+│  └──────────────────────────────┬───────────────────────────────────┘ │
+└─────────────────────────────────┼──────────────────────────────────────┘
+                                  │ fetch /api/*
+┌─────────────────────────────────┼──────────────────────────────────────┐
+│                          Express Server                                 │
+│  ┌───────────────┐  ┌──────────────────┐  ┌──────────────────────────┐ │
+│  │/api/export    │  │/api/compliance   │  │/api/projects             │ │
+│  │  /wh347/:id   │  │  /project/:id    │  │  GET /?status=           │ │
+│  │  /csv/lcp/:id │  │  /worker/:id/    │  │  PATCH /:id              │ │
+│  │  /csv/emars/:id│  │    history       │  │                          │ │
+│  │  [+ state PDFs]│  │  /:weekId        │  │                          │ │
+│  │               │  │  [+ /projects/   │  │                          │ │
+│  │               │  │    summary]      │  │                          │ │
+│  └───────┬───────┘  └────────┬─────────┘  └────────────┬─────────────┘ │
+│          │                   │                          │               │
+│  ┌───────┴───────────────────┴──────────────────────────┴────────────┐ │
+│  │   Services: payrollService, complianceService, wh347Generator,    │ │
+│  │             stateFormGenerator (NEW), csvExporter                  │ │
+│  └──────────────────────────────┬────────────────────────────────────┘ │
+└─────────────────────────────────┼──────────────────────────────────────┘
+                                  │ Drizzle ORM
+┌─────────────────────────────────┼──────────────────────────────────────┐
+│  SQLite                                                                 │
+│  projects (status, userId, state, county, fundingType, ...)            │
+│  payrollWeeks (submitted_at, submitted_to, amendment_number, ...)      │
+│  payrollEntries (baseRateSnapshot, fringeRateSnapshot, grossWages,...) │
+│  workers │ workerClassifications │ wageDeterminations                  │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Feature 1: Copy Previous Payroll Week
+## Q1: State Form Route Design
 
-### What it does
-Pre-fill a new payroll week from a prior week's entries (same workers, same classifications, same ST/OT hours as a starting template). Contractor adjusts from there.
+### Recommendation: Single parametric route with a form-type enum
 
-### DB changes
-None. Uses existing `payrollWeeks` and `payrollEntries` tables.
+Register one route:
 
-### New API route
 ```
-POST /api/payroll/weeks/copy
-Body:    { projectId, sourceWeekId, weekEndingDate, payrollNumber }
-Response: { id: newWeekId, payrollNumber }
+GET /api/export/state-form/:weekId?form=ca-dir|wa-li
 ```
 
-Server logic:
-1. `assertProjectOwner(projectId, userId)` — existing ownership pattern
-2. `getPayrollEntries(sourceWeekId)` — already returns all 14 daily hour columns + rate snapshots
-3. `createPayrollWeek({ projectId, weekEndingDate, payrollNumber })`
-4. Iterate source entries: call `upsertPayrollEntry()` for each, with new `payrollWeekId`, copying all ST/OT and snapshot columns verbatim
-
-Rate snapshots from the prior week are copied as-is. They represent the rate at the time of the prior entry. The contractor edits them if rates changed before certifying the new week. This is intentional — the copy is a template, not a certified document.
-
-### Client changes
-- `PayrollEntryPage.tsx` (MODIFIED): Add a "Copy from previous week" option in the new-week creation form. When checked: fetch `GET /api/payroll/projects/:projectId/weeks` to list prior weeks, show a `<select>` for source week, then POST to `/api/payroll/weeks/copy` instead of `POST /api/payroll/weeks`.
-- On success: navigate to the new `PayrollEntryPage` with the new weekId.
-- TanStack Query invalidation: `['payroll-weeks', projectId]`
-
----
-
-## Feature 2: WH-347 Submission Tracking
-
-### What it does
-Mark a payroll week as submitted — record when and to whom. Visible in the payroll list and week detail view.
-
-### DB changes — add-only to `payrollWeeks`
-```sql
-ALTER TABLE payroll_weeks ADD COLUMN submitted_at TEXT;
-ALTER TABLE payroll_weeks ADD COLUMN submitted_to TEXT;
-```
-- `submitted_at`: ISO 8601 timestamp, null = not yet submitted
-- `submitted_to`: free-text agency name (e.g. "DOL EBSA", "City of LA PWB"), null until submitted
-
-Two nullable columns on the existing table. No new table needed.
-
-### New API routes (added to `routes/payroll.ts`)
-```
-POST /api/payroll/weeks/:weekId/submit
-Body:    { submittedTo: string }
-Response: { week }   (full week row with new columns)
-
-DELETE /api/payroll/weeks/:weekId/submit
-Response: { week }   (clears submitted_at and submitted_to)
-```
-
-POST sets `submitted_at = new Date().toISOString()` and `submitted_to = body.submittedTo`.
-DELETE sets both to null. Neither touches `payrollEntries`.
-
-`GET /api/payroll/weeks/:id` already returns the full week row via Drizzle `select()`. Once the migration adds the columns, they appear in the response automatically — no route change needed for reads.
-
-### Client changes
-- `PayrollWeek` interface in both `PayrollListPage.tsx` and `PayrollWeekDetailPage.tsx` (MODIFIED): add `submittedAt: string | null` and `submittedTo: string | null`
-- `PayrollListPage.tsx` (MODIFIED): Render a `<Badge variant="compliant">Submitted</Badge>` next to weeks where `submittedAt` is not null. Show submittedTo text alongside.
-- `PayrollWeekDetailPage.tsx` (MODIFIED): Add a submission status panel (new `<Card>`) below the compliance check card.
-  - Not submitted: show a form with a text input for agency name and a "Mark as Submitted" button
-  - Submitted: show formatted date + agency name + an "Undo" link that calls `DELETE /api/payroll/weeks/:id/submit`
-- Query invalidation: `['payroll-week', weekId]` and `['payroll-weeks', projectId]`
-
----
-
-## Feature 3: Payroll Amendment Workflow
-
-### What it does
-Correct a submitted payroll week, generating an "AMENDED" WH-347 for resubmission.
-
-### Decision: extend `payrollWeeks`, not a new table
-A separate `payroll_amendments` table adds join complexity to every week query downstream (compliance, export, reports). Because there is at most one or two correction cycles per submission in practice, extending `payrollWeeks` is the correct call.
-
-### DB changes — add-only to `payrollWeeks`
-```sql
-ALTER TABLE payroll_weeks ADD COLUMN amendment_number INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE payroll_weeks ADD COLUMN original_week_id TEXT REFERENCES payroll_weeks(id);
-```
-- `amendment_number`: 0 = original, 1 = first amendment, 2 = second
-- `original_week_id`: null for originals; points to the root payroll week for all amendments
-
-### New API route
-```
-POST /api/payroll/weeks/:weekId/amend
-Response: { id: newWeekId, payrollNumber, amendmentNumber }
-```
-
-Server logic:
-1. Load source week, verify ownership
-2. Create a new `payrollWeek` with: same `projectId`, `weekEndingDate`, `payrollNumber`; `amendment_number = sourceWeek.amendment_number + 1`; `original_week_id = sourceWeek.original_week_id ?? sourceWeek.id`; `submitted_at = null`
-3. Copy all `payrollEntries` from source to new week (same bulk-upsert logic as copy-week)
-4. Return new week id
-
-### Amended WH-347 PDF label
-`fillWh347()` in `wh347Generator.ts` is unchanged. The caller (`export.ts`) assembles the `payrollNumber` string. Modify the assembly block in `export.ts`:
+This sits alongside the existing routes in `export.ts`:
 
 ```typescript
-const payrollNumberLabel = week.amendment_number > 0
-  ? `${week.payrollNumber} (AMENDED ${week.amendment_number})`
-  : String(week.payrollNumber);
+// Existing:
+router.get('/wh347/:weekId', ...)
+router.get('/csv/lcptracker/:weekId', ...)
+router.get('/csv/emars/:weekId', ...)
+
+// New:
+router.get('/state-form/:weekId', ...)
 ```
 
-This renders on the WH-347 in the "Certified Payroll No." field. No coordinate or layout changes needed.
+**Why one route, not two separate routes:**
 
-### Client changes
-- `PayrollWeekDetailPage.tsx` (MODIFIED): Show "Amend This Week" button only when `submittedAt` is not null. Show `<Badge variant="warning">Amendment</Badge>` when `amendment_number > 0`.
-- `PayrollListPage.tsx` (MODIFIED): Show amendment badge next to amended weeks. Sort or group so amendments appear adjacent to their original week.
-- `PayrollWeek` interface: add `amendmentNumber: number` and `originalWeekId: string | null`
+The ownership check, week/project load, and entry fetch are identical for both CA DIR and WA L&I. The only difference between them is which generator function is called and which PDF filename is returned. A form-type query param keeps that differentiation at the generation layer without duplicating 30 lines of auth/data-loading boilerplate.
 
-### Build dependency
-Submission tracking (Feature 2) must be complete before amendments. The "Amend" button is shown only on weeks where `submittedAt` is not null.
+The alternative — `/api/export/ca-dir/:weekId` and `/api/export/wa-li/:weekId` — would produce two routes that are structurally identical up to the generator call. The `?form=` param makes the branching point explicit and leaves room for future state forms (NY DOL, etc.) without adding a new route per form.
 
----
-
-## Feature 4: Project Completion / Archive
-
-### What it does
-Mark a project as archived (complete), hide it from the active dashboard by default, show it on demand.
-
-### DB changes
-None. The `projects` table already has `status TEXT NOT NULL DEFAULT 'active'` typed as `'active' | 'closed'`. The existing `DELETE /api/projects/:id` route already sets `status = 'closed'`. The existing `PATCH /api/projects/:id` already accepts `{ status }` via `UpdateProjectSchema`. No new columns or routes are needed.
-
-### API change: `GET /api/projects` (MODIFIED)
-Add an optional `?status=` query param with values `active` (default), `closed`, or `all`. Filter is applied server-side because it is a simple `eq(projects.status, status)` clause — not worth the complexity of parsing on the client.
+**Implementation shape:**
 
 ```typescript
-const statusFilter = req.query.status ?? 'active';
-const where = statusFilter === 'all'
-  ? eq(projects.userId, userId)
-  : and(eq(projects.userId, userId), eq(projects.status, statusFilter));
+// routes/export.ts — new handler at end of file before export
+router.get('/state-form/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const formType = req.query.form as string;
+  const userId = req.user!.userId;
+
+  if (!['ca-dir', 'wa-li'].includes(formType)) {
+    res.status(400).json({ error: 'Invalid form type. Use: ca-dir or wa-li' });
+    return;
+  }
+
+  // Same ownership check + data load as /wh347/:weekId
+  // ...
+
+  // Branch on formType:
+  if (formType === 'ca-dir') {
+    const pdf = await fillCaDirForm(data, templateBytes);
+    res.setHeader('Content-Disposition', `attachment; filename="ca-dir-${weekId}.pdf"`);
+    res.end(Buffer.from(pdf));
+  } else {
+    const pdf = await fillWaLiForm(data, templateBytes);
+    res.setHeader('Content-Disposition', `attachment; filename="wa-li-${weekId}.pdf"`);
+    res.end(Buffer.from(pdf));
+  }
+});
 ```
 
-Default to `active` so existing behavior is unchanged for all current consumers.
+**New files (server-side):**
 
-### Client changes
-- `DashboardPage.tsx` (MODIFIED): Add a "Show Archived" toggle (boolean `useState`). When toggled, pass `?status=all` or `?status=closed` as a query param to the projects fetch. Use `['projects', { status }]` as the query key so toggling does not invalidate the active-project cache.
-- `ProjectDetailPage.tsx` (MODIFIED): Add "Archive Project" / "Restore Project" button in the project actions area. Calls `PATCH /api/projects/:id` with `{ status: 'closed' }` or `{ status: 'active' }`. Invalidate `['projects', { status: 'active' }]` on success.
-- `ProjectCard.tsx` (MODIFIED): When `project.status === 'closed'`, render a `<Badge variant="neutral">Archived</Badge>` on the card and reduce visual emphasis (e.g. opacity-60 or a gray border).
+- `src/server/services/caDirGenerator.ts` (NEW) — mirrors `wh347Generator.ts` structure: exports `fillCaDirForm(data, templateBytes): Promise<Uint8Array>`, uses `pdf-lib` coordinate overlay on the CA DIR official template
+- `src/server/services/waLiGenerator.ts` (NEW) — same pattern for WA L&I form
+- `assets/ca-dir-official.pdf` (NEW) — CA DIR PWC 100 or equivalent official template
+- `assets/wa-li-official.pdf` (NEW) — WA L&I Certified Payroll Report template
+
+**Modified files (server-side):**
+
+- `src/server/routes/export.ts` (MODIFIED) — add single `/state-form/:weekId` handler
+
+**Client trigger:** Add "Download CA DIR" / "Download WA L&I" buttons in `PayrollWeekDetailPage.tsx` using the same fetch-driven Blob download pattern as the existing WH-347 button (confirmed working pattern from v2.2). Only show the button when the project's `state` matches the form's jurisdiction (`project.state === 'CA'` for CA DIR, `project.state === 'WA'` for WA L&I).
+
+**State data note:** `stateWageAdapter.ts` already defines `CaDirAdapter` and `WaLiAdapter` for wage lookups. The CA/WA states are fully supported in the wage determination layer. State form generation is a new output concern only.
 
 ---
 
-## Feature 5: Dashboard Search + Filter
+## Q2: Contractor Guidance System Architecture
 
-### What it does
-Let contractors search by project name and filter by funding type on the dashboard. Compliance filter is scoped below.
+### Recommendation: HelpText primitive + inline prose. No sidebar, no feature tour.
 
-### Decision: client-side filter over TanStack Query data
-A contractor's project list is small (10–100 projects at most). Server-side filtering adds API surface, tests, and cache key fragmentation. Client-side `useMemo` over the already-fetched array is the correct approach.
+The existing UI primitive set (`Card`, `Button`, `Badge`, `PageHeader`, `EmptyState`) already handles the structural layer. The guidance system needs only one new primitive.
 
-### State and filter logic (all in `DashboardPage.tsx`)
+**New primitive: `HelpText.tsx`**
+
 ```typescript
-const [searchTerm, setSearchTerm] = useState('');
-const [fundingTypeFilter, setFundingTypeFilter] = useState<'all' | 'federal' | 'state' | 'mixed'>('all');
+// src/client/components/ui/HelpText.tsx
+// Renders contextual guidance inline with form fields or section headers.
+// Two variants:
+//   inline — small muted text below a form field label
+//   callout — slightly elevated block with an icon, for multi-sentence guidance
 
-const filteredProjects = useMemo(() =>
-  projects
-    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter(p => fundingTypeFilter === 'all' || p.fundingType === fundingTypeFilter),
-  [projects, searchTerm, fundingTypeFilter]
-);
+interface HelpTextProps {
+  children: React.ReactNode;
+  variant?: 'inline' | 'callout';
+}
 ```
 
-### Compliance filter (deferred pattern)
-The compliance badge for each project is fetched inside `ProjectCard` via a per-card `useQuery`. To filter by compliance at the dashboard level, the options are:
+This is a dumb display component — no state, no context, no provider. That is the correct call for this scope.
 
-**Option A (deferred to future):** Add `GET /api/compliance/projects/summary?projectIds=x,y,z` batch endpoint. `DashboardPage` fetches all summaries at once, passes badge data as a prop to each card, and can filter on it.
+**Pattern: guidance is co-located with the feature it describes.**
 
-**Option B (v2.3 scope):** Implement name + fundingType filter now. Note "compliance filter requires batch summary endpoint" in the UI as a future enhancement. Do not block v2.3 on the batch endpoint.
+Do not use a context provider, a help sidebar, or a tooltip system. Those patterns assume the guidance content is decoupled from the UI element — appropriate for multi-user SaaS with role-based help. For a single-user compliance workflow tool, the guidance lives on the page near the action it explains.
 
-Implement Option B for v2.3.
+Specific application per page:
 
-### Client changes
-- `DashboardPage.tsx` (MODIFIED): Add search input + funding type dropdown above the project grid. Add `useMemo`-derived `filteredProjects`. Render `filteredProjects` instead of `projects`. Show zero-results EmptyState when filter yields no matches.
+| Page | Guidance type | Where |
+|------|--------------|-------|
+| `LandingPage.tsx` | Prose explainer (already has sections) | Existing marketing sections — no new component needed |
+| `ProjectDetailPage.tsx` | `HelpText` callout on 4-step workflow indicator | Below step labels, explaining what each step requires |
+| `PayrollEntryPage.tsx` | `HelpText` inline under classification selector | Explains rate snapshot behavior, fringe credit |
+| `WorkersPage.tsx` | `EmptyState` with action (already exists) | Update message copy to explain why workers come first |
+| `PayrollWeekDetailPage.tsx` | `HelpText` callout above WH-347 download | Explains what the form is and when to submit |
+| `DashboardPage.tsx` | `EmptyState` with action (already exists) | Update action label to "Create Your First Project" with subtitle |
+
+**Tooltips: use sparingly, only for icon-only controls.**
+
+Tooltips require hover, which is problematic on touch devices. The existing compliance badges have enough visual affordance. Use `title` attribute for brief hover labels on icon buttons where no text label fits — do not introduce a tooltip library.
+
+**No sidebar guidance panel.** A sidebar would occupy permanent horizontal real estate on every page to serve content a contractor only needs the first three times. The compliance software is used repeatedly by trained users. Guidance should fade into the background, not be permanently prominent.
+
+**New files:**
+- `src/client/components/ui/HelpText.tsx` (NEW) — single primitive, ~30 lines
+
+**Modified files:**
+- `src/client/pages/ProjectDetailPage.tsx` — add callout HelpText under workflow steps
+- `src/client/pages/PayrollEntryPage.tsx` — add inline HelpText under key fields
+- `src/client/pages/PayrollWeekDetailPage.tsx` — add callout HelpText above WH-347 download
+- `src/client/pages/DashboardPage.tsx` — update EmptyState message copy
+- `src/client/pages/WorkersPage.tsx` — update EmptyState message copy
 
 ---
 
-## Feature 6: Per-Worker Compliance History
+## Q3: UI/UX Overhaul Build Order
 
-### What it does
-Show a worker-centric view of all compliance violations across all projects and weeks — for audit responses.
+### Recommendation: tokens → components → pages. Photography via CSS custom property, loaded from `public/`.
 
-### DB changes
-None. All data exists in `payrollEntries`, `payrollWeeks`, `workerClassifications`, and `projects`.
+**Build order and rationale:**
 
-### New API route
+1. **Design tokens first (`src/client/index.css`)**
+
+   Add new tokens to the existing `@theme` block. The existing token architecture is correct — this is an extension, not a replacement:
+
+   ```css
+   /* New tokens for v2.4 */
+   --color-surface-dark: #1a1a1a;        /* full dark surface */
+   --color-surface-dark-alt: #242424;    /* card on dark background */
+   --color-brand-gold-dim: #c9a10e;      /* hover state for gold buttons */
+   --color-gold-gradient-start: #F5C518;
+   --color-gold-gradient-end: #c9a10e;
+   --shadow-card-elevated: 0 4px 12px 0 rgb(0 0 0 / 0.12), 0 2px 4px -1px rgb(0 0 0 / 0.08);
+   ```
+
+   Do not hardcode gradient values in JSX. Define them as CSS custom properties and reference them in component styles. This preserves the existing constraint: all brand values via `@theme` tokens.
+
+2. **Update `Card.tsx` and `Button.tsx` for depth/shadow variants**
+
+   The Card component needs an `elevated` variant that applies `shadow-card-elevated` and slightly stronger border. Do not change existing variant behavior — add the new variant alongside.
+
+   The Button component may need a `gold` variant (filled gold background, dark text) for primary CTAs on dark surfaces. Verify against current `primary` variant behavior before adding.
+
+3. **Pages last — apply tokens and photograph backgrounds page by page**
+
+   Start with `LandingPage.tsx` (highest visual impact, not behind auth). Then `DashboardPage.tsx`. Auth pages last (least visible to returning users).
+
+**Photography integration: `public/` directory + CSS background-image**
+
+There is currently no `public/` directory. Create it. Vite serves `public/` at the root path with no bundling — the correct approach for large static assets like photographs.
+
 ```
-GET /api/reports/workers/:workerId/violations
+/public/
+  hero-construction.jpg      (LandingPage hero section)
+  dashboard-bg.jpg           (DashboardPage header band, optional)
+```
+
+Reference in CSS, not in JSX:
+
+```css
+/* In index.css or a page-specific <style> block */
+.hero-section {
+  background-image: url('/hero-construction.jpg');
+  background-size: cover;
+  background-position: center;
+}
+```
+
+Do not import images via `import heroImg from './hero-construction.jpg'` in React components unless you need Vite's asset hashing (which is not needed for manually managed brand photography). Direct `/public` paths are simpler, cacheable, and swappable without a rebuild.
+
+**Dark gold gradient pattern:**
+
+```css
+.gradient-gold {
+  background: linear-gradient(135deg, var(--color-gold-gradient-start), var(--color-gold-gradient-end));
+}
+```
+
+Applied as a Tailwind utility via `@layer utilities` in `index.css`, not as an inline style. This keeps the constraint: no hardcoded hex in JSX.
+
+**New files:**
+- `public/` directory (NEW)
+- `public/hero-construction.jpg` (NEW — sourced externally)
+- Potentially `public/dashboard-bg.jpg` (NEW — optional)
+
+**Modified files:**
+- `src/client/index.css` — new tokens, new utility classes
+- `src/client/components/ui/Card.tsx` — elevated variant
+- `src/client/components/ui/Button.tsx` — verify if gold variant needed
+- `src/client/pages/LandingPage.tsx` — apply hero background, gradient sections
+- `src/client/pages/DashboardPage.tsx` — apply elevated card styling
+
+---
+
+## Q4: Dashboard Compliance Status Filter Endpoint
+
+### Recommendation: `GET /api/compliance/projects/summary` returns per-project status keyed by projectId.
+
+**Route design:**
+
+Add to `src/server/routes/compliance.ts` — must be registered before `/:weekId` to avoid wildcard capture (the existing file already documents this pattern and applies it for `/project/:projectId` and `/worker/:workerId/history`):
+
+```
+GET /api/compliance/projects/summary
 Response: {
-  workerId: string,
-  workerName: string,
-  violations: Array<{
+  projects: Array<{
     projectId: string,
-    projectName: string,
-    weekId: string,
-    weekEndingDate: string,
-    payrollNumber: number,
-    violationType: 'under-wage' | 'cwhssa-ot' | 'apprentice-ratio',
-    expected?: number,
-    actual?: number,
-    delta?: number,
-    detail?: string
+    status: 'compliant' | 'violations' | 'no-payroll'
   }>
 }
 ```
 
-**Ownership check:** The worker belongs to a project. Verify via join:
+The three status values map cleanly to the filter UI:
+- `compliant` — at least one week exists, no violations found in any week
+- `violations` — at least one week has `hasViolations: true`
+- `no-payroll` — `listPayrollWeeks(projectId)` returns empty array
+
+**Why this shape (not `badge: string`):**
+
+The existing `/api/compliance/project/:projectId` returns `{ badge: 'violations' | 'clean', weekCount, lastWeekNumber }`. That endpoint is per-project and called inside `ProjectCard`. The summary endpoint is dashboard-level and batches all projects at once. Using `status` instead of `badge` avoids confusion between the two endpoints and gives the filter the clean enum it needs.
+
+**Server implementation sketch:**
+
 ```typescript
-const [worker] = await db.select().from(workers)
-  .innerJoin(projects, eq(workers.projectId, projects.id))
-  .where(and(eq(workers.id, workerId), eq(projects.userId, userId)))
-  .limit(1);
+// In compliance.ts — before /:weekId handler
+complianceRouter.get('/projects/summary', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  // Fetch all active projects for this user
+  const userProjects = await db.select()
+    .from(schema.projects)
+    .where(eq(schema.projects.userId, userId));
+
+  const results = await Promise.all(
+    userProjects.map(async (project) => {
+      const weeks = await listPayrollWeeks(project.id);
+      if (weeks.length === 0) {
+        return { projectId: project.id, status: 'no-payroll' as const };
+      }
+      for (const week of weeks) {
+        const result = await computeCompliance(db, week.id);
+        if (result?.hasViolations) {
+          return { projectId: project.id, status: 'violations' as const };
+        }
+      }
+      return { projectId: project.id, status: 'compliant' as const };
+    })
+  );
+
+  res.json({ projects: results });
+});
 ```
 
-**Query strategy:** Call `computeCompliance(db, weekId)` per week that this worker appeared in, then filter `result.violations` to entries where `workerId` matches. This is N+1 per week but is an audit-time operation, not a hot path. Flag it as a known pattern and document that a batch computation path can replace it if needed.
+**Performance note:** `computeCompliance()` is fast (reads snapshots, no live lookups) but it is called per-week per-project. For a contractor with 20 projects × 30 weeks each, this is 600 synchronous computations. Use `Promise.all` across projects (as shown) to parallelize at the project level. Document this as a known O(projects × weeks) operation — acceptable for a single-user app. If a contractor builds up hundreds of projects over years, add a `?projectIds=` param to allow the client to batch only visible projects.
 
-This reuses the existing `complianceService.computeCompliance()` exactly as-is. No service changes.
+**Client-side filter integration in `DashboardPage.tsx`:**
 
-**Worker week lookup:** Query `payrollEntries` joined to `payrollWeeks` and `projects` filtered by `workerId` and `projects.userId = userId` to get the full list of `weekId`s across all projects. Then loop over unique weekIds.
+```typescript
+// Fetch summary once on mount alongside project list
+const { data: complianceSummary } = useQuery({
+  queryKey: ['compliance-summary'],
+  queryFn: () => fetch('/api/compliance/projects/summary').then(r => r.json()),
+  staleTime: 60_000,
+});
 
-### New service function: `reportsService.ts` (MODIFIED)
-Add `getWorkerViolations(workerId, userId)` that runs the query strategy above and returns the structured violation list with project and week context.
+// Build a lookup map
+const complianceByProject = useMemo(() =>
+  Object.fromEntries(
+    (complianceSummary?.projects ?? []).map(p => [p.projectId, p.status])
+  ), [complianceSummary]);
 
-### New client page: `WorkerViolationsPage.tsx` (NEW)
-- Route: `/workers/:workerId/violations` (new route in `App.tsx`)
-- Layout: `PageHeader` with worker name, table of violations with columns: Project, Week Ending, Payroll #, Violation Type, Expected, Actual, Delta
-- Badge per violation type using existing `Badge` variants
-- Entry point: "Compliance History" link on each worker row in `WorkersPage.tsx` (MODIFIED)
+// Add compliance filter state
+const [complianceFilter, setComplianceFilter] = useState<'all' | 'compliant' | 'violations' | 'no-payroll'>('all');
 
-A dedicated page is correct for audit use — it needs full table space and printability.
+// Extend existing filteredProjects useMemo
+const filteredProjects = useMemo(() =>
+  projects
+    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(p => fundingTypeFilter === 'all' || p.fundingType === fundingTypeFilter)
+    .filter(p => complianceFilter === 'all' || complianceByProject[p.id] === complianceFilter),
+  [projects, searchTerm, fundingTypeFilter, complianceFilter, complianceByProject]
+);
+```
+
+This does not pass the compliance badge as a prop to `ProjectCard` — `ProjectCard` continues to fetch its own compliance badge via its existing `useQuery` for display purposes. The summary endpoint is only for filter gating in `DashboardPage`. This avoids prop threading through `ProjectCard`.
+
+**Modified files:**
+- `src/server/routes/compliance.ts` (MODIFIED) — add `/projects/summary` before `/:weekId`
+- `src/client/pages/DashboardPage.tsx` (MODIFIED) — add compliance filter state + useMemo extension
 
 ---
 
-## Component Map: New vs. Modified
+## Q5: Production Deployment — SQLite Persistence
 
-| Component | Status | Change |
-|-----------|--------|--------|
-| `schema.ts` | MODIFIED | Add 4 columns to `payrollWeeks` (submitted_at, submitted_to, amendment_number, original_week_id) |
-| `payrollService.ts` | MODIFIED | Add `copyPayrollWeek()` and `createAmendedWeek()` functions |
-| `reportsService.ts` | MODIFIED | Add `getWorkerViolations()` function |
-| `wh347Generator.ts` | NO CHANGE | `fillWh347()` unchanged — caller assembles amended label string |
-| `routes/export.ts` | MODIFIED | Detect `amendment_number > 0`, format `payrollNumberLabel` |
-| `routes/payroll.ts` | MODIFIED | Add `POST /weeks/copy`, `POST /weeks/:id/submit`, `DELETE /weeks/:id/submit`, `POST /weeks/:id/amend` |
-| `routes/reports.ts` | MODIFIED | Add `GET /workers/:workerId/violations` |
-| `routes/projects.ts` | MODIFIED | Add `?status=` query param to `GET /` list route |
-| `DashboardPage.tsx` | MODIFIED | Search/filter bar, archive toggle, `useMemo` filter, `['projects', { status }]` query key |
-| `PayrollListPage.tsx` | MODIFIED | Submitted badge, amendment badge on week rows; `PayrollWeek` interface extended |
-| `PayrollWeekDetailPage.tsx` | MODIFIED | Submission panel (Card), Amend button, amendment badge; `PayrollWeek` interface extended |
-| `ProjectDetailPage.tsx` | MODIFIED | Archive/Restore action button |
-| `ProjectCard.tsx` | MODIFIED | Render archived state badge |
-| `PayrollEntryPage.tsx` | MODIFIED | "Copy from previous week" option in new-week form |
-| `WorkersPage.tsx` | MODIFIED | Add "Compliance History" link per worker row |
-| `WorkerViolationsPage.tsx` | NEW | Per-worker compliance history table, route `/workers/:workerId/violations` |
+### Recommendation: Volume mount on Railway or Fly.io. Do not migrate to Postgres. Do not use Turso yet.
+
+**Decision: volume mount is the right call for a single-user app at this stage.**
+
+The three options evaluated:
+
+| Option | Pros | Cons | Verdict |
+|--------|------|------|---------|
+| Volume mount (Railway/Fly.io) | Zero code change, SQLite stays, simple ops | Volume must be configured manually, container restarts can lose ephemeral state if volume path misconfigured | USE THIS |
+| Turso (libSQL cloud) | Replicated, no volume needed, branching for dev/prod | Requires replacing `better-sqlite3` with `@libsql/client`, rewriting Drizzle config, async driver vs sync driver mismatch | Defer to v3 if multi-device needed |
+| Postgres (Neon/Supabase) | Standard production DB, no volume management | Full migration of all Drizzle schema and queries, JSON/text type differences, `better-sqlite3` removed, full test suite re-run | Out of scope |
+
+**Why Postgres migration is wrong for v2.4:**
+
+The app has 1,522 passing tests as of v2.3. A Postgres migration would require rewriting the Drizzle schema (`sqliteTable` → `pgTable`), auditing every raw query, updating the test setup, and re-validating all tests. This is a 2–3 day effort that produces no user-visible value. The Postgres migration is a future milestone, not a v2.4 item.
+
+**Why Turso is premature:**
+
+Turso requires switching from `better-sqlite3` (synchronous) to `@libsql/client` (async). Drizzle supports both drivers but the adapter is different. All `db.get()` calls in the codebase (there are several in `stateWageAdapter.ts`) use the synchronous API. This is a non-trivial driver swap. Worth doing when multi-device or collaborative access is needed. Not now.
+
+**Volume mount implementation:**
+
+```
+# Railway: attach a persistent volume to /app/data
+# Set environment variable:
+DATABASE_PATH=/app/data/prevailing-wage.sqlite
+
+# In src/server/db/index.ts — read from env:
+const dbPath = process.env.DATABASE_PATH ?? './prevailing-wage.sqlite';
+```
+
+The current `getDb()` likely uses a hardcoded path. The only required code change is making the path configurable via environment variable.
+
+**Fly.io is the preferred host over Railway for volume stability.** Railway's volume mount is newer and has documented edge cases around IOPS limits. Fly.io volumes are mature and well-documented for SQLite workloads. Either works; Fly.io is lower risk.
+
+**Env config required for production:**
+
+```
+DATABASE_PATH=/app/data/prevailing-wage.sqlite
+JWT_SECRET=<strong random value>
+SAM_GOV_API_KEY=<production key>
+NODE_ENV=production
+PORT=4099
+```
+
+**Auth hardening note:** The existing JWT-in-httpOnly-cookie pattern is correct for production. The constraint from `PROJECT.md` ("do not change auth model") is right. The only hardening needed is ensuring `JWT_SECRET` is a strong value from environment, not a hardcoded fallback.
 
 ---
 
-## DB Migration Strategy
+## Component Map: New vs. Modified (v2.4)
 
-All changes are add-only. Four new nullable/defaulted columns on `payrollWeeks`. No column drops anywhere.
-
-**Migration file: `0009_payroll_week_submission_amendment.sql`**
-```sql
-ALTER TABLE payroll_weeks ADD COLUMN submitted_at TEXT;
-ALTER TABLE payroll_weeks ADD COLUMN submitted_to TEXT;
-ALTER TABLE payroll_weeks ADD COLUMN amendment_number INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE payroll_weeks ADD COLUMN original_week_id TEXT REFERENCES payroll_weeks(id);
-```
-
-Must be manually registered in `src/server/db/migrations/meta/_journal.json` (per PROJECT.md migration workflow constraint). Next `idx` is 5 based on the current journal (entries 0–4).
-
-No migration needed for any other feature: project archive uses the existing `status` column, all other features are computed or use existing tables.
+| File | Status | Change |
+|------|--------|--------|
+| `src/server/routes/export.ts` | MODIFIED | Add `GET /state-form/:weekId?form=` handler |
+| `src/server/routes/compliance.ts` | MODIFIED | Add `GET /projects/summary` before `/:weekId` |
+| `src/server/services/caDirGenerator.ts` | NEW | CA DIR form filler using pdf-lib coordinate overlay |
+| `src/server/services/waLiGenerator.ts` | NEW | WA L&I form filler using pdf-lib coordinate overlay |
+| `src/server/db/index.ts` | MODIFIED | Read `DATABASE_PATH` from env |
+| `src/client/components/ui/HelpText.tsx` | NEW | Inline and callout guidance primitive |
+| `src/client/components/ui/Card.tsx` | MODIFIED | Add `elevated` shadow variant |
+| `src/client/components/ui/Button.tsx` | MODIFIED | Verify/add gold variant for dark surface CTAs |
+| `src/client/index.css` | MODIFIED | New @theme tokens (dark surface, gold gradient, elevated shadow), new utility classes |
+| `src/client/pages/DashboardPage.tsx` | MODIFIED | Compliance status filter, complianceSummary fetch, filter useMemo extension |
+| `src/client/pages/PayrollWeekDetailPage.tsx` | MODIFIED | State form download buttons (conditional on project.state), HelpText callout |
+| `src/client/pages/LandingPage.tsx` | MODIFIED | Hero photography, gradient sections |
+| `src/client/pages/ProjectDetailPage.tsx` | MODIFIED | HelpText callouts on workflow steps |
+| `src/client/pages/PayrollEntryPage.tsx` | MODIFIED | HelpText inline on key fields |
+| `src/client/pages/WorkersPage.tsx` | MODIFIED | EmptyState copy update |
+| `src/client/pages/WorkerComplianceHistoryPage.tsx` | MODIFIED | CSV export button |
+| `assets/ca-dir-official.pdf` | NEW | CA DIR official form template |
+| `assets/wa-li-official.pdf` | NEW | WA L&I official form template |
+| `public/hero-construction.jpg` | NEW | Hero photography asset |
 
 ---
 
 ## Data Flow: Key Scenarios
 
-### Copy Week
+### State Form Download (CA DIR)
 ```
-PayrollEntryPage → user enables "Copy from Week #N"
-  → POST /api/payroll/weeks/copy { sourceWeekId, weekEndingDate, payrollNumber }
-  → payroll.ts: assertProjectOwner → getPayrollEntries(sourceWeekId)
-             → createPayrollWeek() → upsertPayrollEntry() × N entries
-  → Response: { id: newWeekId }
-  → Client navigates to PayrollEntryPage with newWeekId
-  → Invalidate: ['payroll-weeks', projectId]
-```
-
-### Submit Week
-```
-PayrollWeekDetailPage submission panel
-  → POST /api/payroll/weeks/:id/submit { submittedTo }
-  → db.update(payrollWeeks).set({ submitted_at, submitted_to, updatedAt })
-  → Response: { week } (includes new columns)
-  → Invalidate: ['payroll-week', weekId], ['payroll-weeks', projectId]
-  → UI: panel switches to "Submitted on [date] to [agency]" state
+PayrollWeekDetailPage (project.state === 'CA')
+  → "Download CA DIR" button — fetch-driven Blob download
+  → GET /api/export/state-form/:weekId?form=ca-dir
+  → export.ts: same ownership check + week/entry load as /wh347/:weekId
+  → calls fillCaDirForm(data, templateBytes) from caDirGenerator.ts
+  → streams PDF response
+  → client: Blob → URL.createObjectURL() → click → revokeObjectURL
 ```
 
-### Amend Week
+### Dashboard Compliance Filter
 ```
-PayrollWeekDetailPage (submittedAt not null)
-  → "Amend This Week" button
-  → POST /api/payroll/weeks/:id/amend
-  → Server: createPayrollWeek with amendment_number = N+1, original_week_id set
-           → copyEntries from source to new week
-  → Response: { id: newWeekId, amendmentNumber }
-  → Client navigates to PayrollEntryPage for new week (contractor edits)
-  → On WH-347 download from amended week: export.ts formats
-    payrollNumber as "3 (AMENDED 1)"
+DashboardPage mounts
+  → useQuery(['compliance-summary']) → GET /api/compliance/projects/summary
+  → compliance.ts: loads all user projects → per-project:
+      listPayrollWeeks() → for each week: computeCompliance()
+      → returns 'compliant' | 'violations' | 'no-payroll' per project
+  → client: builds complianceByProject lookup map
+  → complianceFilter state drives filteredProjects useMemo
+  → filter chips: "All | Compliant | Has Violations | No Payroll"
 ```
 
-### Worker Violations
+### CSV Export from Compliance History
 ```
-WorkersPage → "Compliance History" link for worker
-  → GET /api/reports/workers/:workerId/violations
-  → reportsService: query all payrollWeeks for worker across all projects
-                  → call computeCompliance(db, weekId) per week
-                  → filter violations by workerId, collect with project context
-  → WorkerViolationsPage renders grouped violation table
+WorkerComplianceHistoryPage
+  → "Export CSV" button (no API call needed)
+  → client-side: serialize existing violations[] array to CSV string
+  → Blob download via URL.createObjectURL()
+  → no new API endpoint required — data already in component state
 ```
 
 ---
 
 ## Build Order with Dependency Reasoning
 
-| Step | Feature | Depends On | Rationale |
-|------|---------|-----------|-----------|
-| 1 | DB migration | — | Prerequisite for submission tracking and amendments. Must be done first. |
-| 2 | Project Archive | Migration not needed | Uses existing `status` column. Completely independent. Delivers visible value immediately. Shares `DashboardPage.tsx` work with Feature 5. |
-| 3 | Dashboard Search + Filter | Step 2 (shares DashboardPage session) | Name + fundingType filter is pure client logic. Do in same session as archive since both modify DashboardPage. |
-| 4 | Submission Tracking | Step 1 (new DB columns) | New routes + UI panel. Independent of amendment. Unlocks the "amend" trigger. |
-| 5 | Copy Previous Week | Step 1 done (no migration needed for copy, but migration defines week shape) | Entry-copying logic is reused by amendments in Step 6. Build it first to validate the pattern. |
-| 6 | Amendment Workflow | Steps 1, 4, 5 | Reuses copy-entries logic. "Amend" button requires submission state from Step 4. |
-| 7 | Per-Worker Violations | — | Fully independent read-only feature. No DB changes. Can slot in any time but placed last as a reporting feature. |
+| Step | Feature | Depends On | Why This Order |
+|------|---------|-----------|----------------|
+| 1 | Design tokens + CSS utilities | — | Everything visual depends on tokens being stable. Extend `index.css` first. |
+| 2 | `HelpText.tsx` primitive | Step 1 tokens | New primitive; no page work until it exists. One small file. |
+| 3 | `Card.tsx` elevated variant | Step 1 tokens | Dashboard and form pages need elevated cards for visual hierarchy. |
+| 4 | Dashboard compliance filter | Existing compliance route | `GET /projects/summary` endpoint + `DashboardPage.tsx` useMemo extension. Most user-visible data feature. |
+| 5 | CSV export from compliance history | — | Client-only; no API changes. Independent; quick win. |
+| 6 | State form generators (CA DIR, WA L&I) | pdf-lib already installed | New service files + single route addition. PDF template assets needed before coding starts — source them first. |
+| 7 | Contractor guidance (HelpText callouts) | Steps 2, 3 | Primitive must exist; applies to multiple pages. Do as a single pass across all pages. |
+| 8 | UI/UX overhaul (photography, gradients) | Steps 1, 3 | Tokens locked, Card variants done. Visual polish pass across LandingPage, DashboardPage. |
+| 9 | Production deployment config | — | Env variable for DATABASE_PATH, Fly.io volume mount setup, SAM.gov prod key. Independent of all feature work. |
+
+**Critical path:** Steps 1 → 4 → 8 for the visual milestone. Steps 6 (state forms) requires sourcing official PDF templates externally before development can begin — this is the most likely scheduling constraint.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Storing Compliance Results in DB
+### Anti-Pattern 1: Separate Routes Per State Form
 
-**What people do:** Create a `compliance_violations` table, write violation rows at payroll entry time, query that table for reports.
+**What:** `/api/export/ca-dir/:weekId` and `/api/export/wa-li/:weekId` as two distinct Express routes.
+**Why it's wrong:** The ownership check, week load, entry fetch, and response headers are identical. Duplicates ~30 lines of boilerplate per new state. Adding NY DOL later becomes a third copy.
+**Do this instead:** One parametric route with `?form=ca-dir|wa-li`. Branch only on the generator call.
 
-**Why it's wrong:** Compliance results are derived from `payrollEntries` snapshots. Storing them duplicates data, creates a sync problem if entries are corrected, and adds write overhead to the hot path.
+### Anti-Pattern 2: Storing Compliance Summary in DB
 
-**Do this instead:** Compute on read. `complianceService.computeCompliance()` is fast because it only reads entries — no live WD lookups. Worker violation history is an audit-time operation, not a dashboard query, so N+1 per week is acceptable.
+**What:** Cache compliance status as a column on the `projects` table (`compliance_status TEXT`), update it whenever payroll entries change.
+**Why it's wrong:** Compliance is computed from frozen snapshots in `payrollEntries`. A cached status column creates a sync problem: any time an entry is added, corrected, or amended, the cached status must be invalidated. The cache management logic becomes more complex than the computation itself.
+**Do this instead:** Compute on read via `computeCompliance()`. It is fast (no live WD lookups). The `/projects/summary` endpoint batches the computation for dashboard use.
 
-### Anti-Pattern 2: New `payroll_amendments` Table
+### Anti-Pattern 3: Importing Photography via Vite Import
 
-**What people do:** Create a `payroll_amendments` table with FK to `payroll_weeks`, treat original and amendment as different entity types.
+**What:** `import heroBg from '../../assets/hero-construction.jpg'` in LandingPage.
+**Why it's wrong:** Vite will process and hash the image at build time. For manually managed brand photography that gets swapped without rebuild, this adds friction. The image hash changes on every swap, invalidating CDN caches unnecessarily.
+**Do this instead:** Place images in `public/` and reference via `/hero-construction.jpg` in CSS. Vite copies `public/` verbatim to `dist/` — no processing, no hashing.
 
-**Why it's wrong:** Every downstream consumer (compliance, WH-347 generation, reports, list queries) would need to join `payroll_amendments` to know if a week is an amendment. `payrollWeeks` is the central entity — extending it with `amendment_number` and `original_week_id` keeps all existing consumers intact.
+### Anti-Pattern 4: Tooltip Library for Guidance
 
-**Do this instead:** Two nullable/defaulted columns on `payrollWeeks`. Zero = original, positive integer = amendment count. `original_week_id` provides back-reference without a separate table.
+**What:** Install `@radix-ui/react-tooltip` or `react-tooltip` for contextual help.
+**Why it's wrong:** Tooltips require hover (broken on touch). A tooltip library adds a dependency and a new interaction pattern. The compliance software is used on desktop browsers with full keyboard and mouse support, but the guidance content needs to be glanceable, not hidden behind hover.
+**Do this instead:** `HelpText` component with `inline` variant under form fields and `callout` variant for multi-sentence guidance blocks. Always visible, always readable, no interaction required.
 
-### Anti-Pattern 3: Server-Side Filter for Dashboard Search
+### Anti-Pattern 5: Turso/Postgres for v2.4
 
-**What people do:** Add `?name=`, `?fundingType=`, `?compliance=` query params to `GET /api/projects`, add WHERE clauses, write tests for each combination.
-
-**Why it's wrong:** A contractor's project list is small. Server-side filtering adds API surface, test complexity, and cache key fragmentation (every filter combo becomes a distinct cache entry).
-
-**Do this instead:** Fetch all projects once with `?status=active`, filter client-side with `useMemo`. Keep the API param surface minimal (only `?status=` is needed). Add a batch compliance summary endpoint only if compliance filtering is needed as a first-class feature.
-
-### Anti-Pattern 4: Auto-Clearing Submission Status on Entry Edit
-
-**What people do:** When a contractor edits any payroll entry on a submitted week, automatically clear `submitted_at`.
-
-**Why it's wrong:** Removes the audit trail without the contractor's explicit intent. The amendment workflow handles correction of submitted weeks.
-
-**Do this instead:** Submitted weeks are read-only for entry edits. The "Amend" action creates a new week for corrections. The original submitted week is preserved immutably once `submitted_at` is set.
-
-### Anti-Pattern 5: Rate Snapshots Re-fetched During Copy
-
-**What people do:** When copying a prior week's entries to a new week, look up the current wage determination rate for each worker's classification and use that as the snapshot.
-
-**Why it's wrong:** The copy is a template. If the contractor copies week 3 to create week 4 and the rate changed in week 4, they need to know about it and update it intentionally. Silently updating rates during copy masks the change.
-
-**Do this instead:** Copy the prior week's `baseRateSnapshot` and `fringeRateSnapshot` verbatim. The contractor sees the carried-over rates on `PayrollEntryPage` and corrects them if needed before certifying.
+**What:** Migrate from SQLite to Turso or Postgres as part of the production deployment phase.
+**Why it's wrong:** Both require rewriting the Drizzle adapter and driver. `better-sqlite3` uses a synchronous API (`db.get()`, used in `stateWageAdapter.ts`); both alternatives are async-first. The migration risks breaking the 1,522-test suite and adds 2–3 days of work with no user-visible feature value.
+**Do this instead:** Volume mount on Fly.io. Read `DATABASE_PATH` from environment. Ship with the existing SQLite + `better-sqlite3` stack. Migrate to Turso when multi-device access or replication is a real requirement.
 
 ---
 
 ## Integration Points with Existing Patterns
 
-| Existing Pattern | How v2.3 Uses It |
+| Existing Pattern | How v2.4 Uses It |
 |-----------------|-----------------|
-| `assertProjectOwner()` local helper | Replicated in each new route following the established pattern. Do not refactor to shared module — each route file is self-contained by design. |
-| `upsertPayrollEntry()` | Copy-week and amendment reuse this function directly — no bulk insert shortcut needed given 8 workers/page as the ceiling. |
-| `complianceService.computeCompliance()` | Worker violations calls this per-week, no service changes. |
-| `Badge` component variants | Submitted: `variant="compliant"`. Amendment: `variant="warning"`. Archived: `variant="neutral"`. All existing variants cover v2.3 needs. |
-| `queryKey: ['payroll-week', weekId]` | Submission and amendment actions must invalidate this key in addition to the list key. |
-| `isFinal` flag on `payrollWeeks` | Amendments copy the source week's `isFinal` value unchanged. Not reset by the amendment workflow. |
-| Migration manual journal pattern | New migration must add a `_journal.json` entry with `idx: 5` (next after the current 0–4 sequence). |
-| `wh347Data.payrollNumber` string field | Already accepts strings — amended label `"3 (AMENDED 1)"` requires no type change to `Wh347Data`. |
+| `export.ts` route structure | State form route follows identical ownership-check-then-data-load-then-generate pattern. Copy the block from `/wh347/:weekId` as the starting template. |
+| `fillWh347()` in `wh347Generator.ts` | `fillCaDirForm()` and `fillWaLiForm()` mirror this signature exactly: `(data, templateBytes) => Promise<Uint8Array>`. Same pdf-lib coordinate overlay approach. |
+| `complianceRouter` route ordering | `/projects/summary` must be registered before `/:weekId` — same rule as existing `/project/:projectId` and `/worker/:workerId/history`. The comment at line 17 of `compliance.ts` documents why. |
+| `computeCompliance()` | Called per-week in `/projects/summary` — no service changes needed. Function already returns `hasViolations: boolean`. |
+| Fetch-driven Blob download in `PayrollWeekDetailPage` | State form buttons reuse this exact pattern: `fetch()` → `.blob()` → `URL.createObjectURL()` → click → `setTimeout(URL.revokeObjectURL, 100)`. `generatingRef` useRef double-click guard should also be replicated per button. |
+| `@theme` tokens in `index.css` | New design tokens extend the existing block. Never add `--color-*: initial` which wipes Tailwind's 33 component defaults (per the warning comment at line 1 of `index.css`). |
+| `Badge` component variants | No new variants needed for v2.4. Existing `compliant`, `violation`, `warning`, `neutral` cover all new status displays. |
+| `EmptyState` component | Update copy on DashboardPage and WorkersPage — no code changes to the component itself, only prop values at call sites. |
+| TanStack Query staleTime pattern | `complianceSummary` should use `staleTime: 60_000` — same value as `ProjectCard`'s compliance query, avoiding excessive refetches on navigate-back. |
 
 ---
 
 ## Sources
 
-- Direct codebase analysis: `src/server/db/schema.ts` — full table structure confirmed
-- Direct codebase analysis: `src/server/routes/payroll.ts`, `projects.ts`, `export.ts`, `reports.ts`
-- Direct codebase analysis: `src/server/services/payrollService.ts`, `complianceService.ts`, `reportsService.ts`, `wh347Generator.ts`
-- Direct codebase analysis: `src/client/pages/DashboardPage.tsx`, `PayrollListPage.tsx`, `PayrollWeekDetailPage.tsx`
-- Direct codebase analysis: `src/server/db/migrations/meta/_journal.json` — migration index sequence
-- `.planning/PROJECT.md` — confirmed constraints, key decisions, and existing status column
+- Direct codebase analysis: `src/server/routes/export.ts` — confirmed route pattern, ownership check, data load sequence, stream response shape
+- Direct codebase analysis: `src/server/routes/compliance.ts` — confirmed route ordering constraint (specific before wildcard), existing `/project/:projectId` and `/worker/:workerId/history` patterns
+- Direct codebase analysis: `src/server/services/complianceService.ts` — confirmed `computeCompliance()` signature, `hasViolations` field, `ComplianceResult` shape
+- Direct codebase analysis: `src/server/services/stateWageAdapter.ts` — confirmed CA/WA adapters already exist for wage lookup; state form generation is a separate concern
+- Direct codebase analysis: `src/client/index.css` — confirmed @theme token structure and the `--color-*: initial` danger warning
+- Direct codebase analysis: `src/server/index.ts` — confirmed `/api/export` and `/api/compliance` mount points
+- Direct codebase analysis: `src/server/db/schema.ts` — confirmed `projects.status`, `payrollWeeks` columns, cascade delete patterns
+- `.planning/PROJECT.md` — confirmed constraints: pdf-lib, no new UI frameworks, SQLite via Drizzle, JWT auth unchanged, add-only migrations
+- `.planning/research/ARCHITECTURE.md` (v2.3) — confirmed prior decisions on ProjectCard per-card compliance fetch, client-side useMemo filter pattern, batch compliance endpoint as deferred item
 
 ---
-*Architecture research for: HCC Prevailing Wage v2.3 — Contractor Workflow Efficiency + Audit Readiness*
-*Researched: 2026-03-23*
+*Architecture research for: HCC Prevailing Wage v2.4 — Ship-Ready + Design Elevation*
+*Researched: 2026-03-24*

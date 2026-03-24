@@ -1,7 +1,7 @@
 # Feature Research
 
 **Domain:** Prevailing wage compliance management — contractor-facing certified payroll submission tooling
-**Researched:** 2026-03-19 (functional features) / 2026-03-20 (UI design + landing page) / 2026-03-23 (v2.3 workflow efficiency + audit readiness)
+**Researched:** 2026-03-19 (functional features) / 2026-03-20 (UI design + landing page) / 2026-03-23 (v2.3 workflow efficiency + audit readiness) / 2026-03-24 (v2.4 state forms, contractor guidance, compliance filter, CSV export)
 **Confidence:** HIGH (regulatory requirements); MEDIUM-HIGH (design patterns via live competitor research)
 
 ---
@@ -635,3 +635,491 @@ Given the dependencies above, the correct phase ordering for the roadmap is:
 
 *Feature research for: HCC Prevailing Wage — v2.3 contractor workflow efficiency + audit readiness*
 *Researched: 2026-03-23*
+
+---
+---
+
+## Part 4: v2.4 State Forms, Contractor Guidance, Compliance Filter, CSV Export (2026-03-24)
+
+*This section covers 5 new feature areas for v2.4. All v2.3 features are shipped. Focus is on California DIR forms, Washington L&I forms, contractor guidance UX patterns, dashboard compliance status filter, and CSV export field specification.*
+
+**Confidence:** HIGH for CA DIR form fields (cross-referenced against official A-1-131 form and eCPR guidelines); MEDIUM for WA L&I form fields (statute verified, form field details from multiple secondary sources — official online portal is the authoritative source); MEDIUM for UX patterns (industry software behavior documented, not direct product access); HIGH for CSV export fields (grounded in existing compliance data model).
+
+---
+
+### Feature 1: California DIR State Certified Payroll Forms
+
+#### What California Actually Requires
+
+California public works contractors face **two separate filing obligations** that are often confused:
+
+**1. DAS-140 and DAS-142 — Apprenticeship Notification (NOT certified payroll forms)**
+
+These are apprenticeship committee notification forms, not certified payroll forms. They are unrelated to weekly payroll submission but are part of the broader California public works compliance picture.
+
+- **DAS-140** ("Public Works Contract Award Information"): Filed once within 10 days of contract award, before work begins. Notifies each relevant apprenticeship committee that the contractor will use apprentices on the project. One form per craft/trade. **Not a payroll form. Not part of the eCPR system.**
+- **DAS-142**: Filed at least 72 hours before apprentices are needed on-site. Requests dispatch of apprentice(s) from a specific apprenticeship program. Filed throughout the project as workforce needs change. **Not a payroll form.**
+
+**Verdict:** DAS-140 and DAS-142 are out of scope for this app's payroll compliance engine. They are apprentice coordination forms, not certified payroll records. The milestone context identifies DAS-140 alongside certified payroll — this is a common contractor confusion. The correct California certified payroll form is the A-1-131 / eCPR submission.
+
+**2. A-1-131 / eCPR — California's Actual Certified Payroll Form**
+
+The California certified payroll form is officially the **"Public Works Payroll Reporting Form" (A-1-131)**, issued by the Division of Labor Standards Enforcement (DLSE). Since SB 854 (effective August 2014), submission must be electronic via California DIR's **eCPR system** rather than paper for most public works projects.
+
+**Filing requirement:** Contractors submit at least monthly; weekly submission recommended as best practice and matches the DOL WH-347 cadence.
+
+**Submission pathway:** Electronic submission only, via the California DIR Public Works portal at efiling.dir.ca.gov/eCPR. Paper A-1-131 accepted only for projects exempt from eCPR electronic filing.
+
+**Fillable PDF:** The paper A-1-131 form exists (dir.ca.gov/dlse/forms/pw/dlseforma-1-131.pdf) but is not the standard submission vehicle. The app should generate a completed A-1-131 PDF that the contractor submits via the eCPR portal — the contractor does not mail a paper form.
+
+---
+
+#### California A-1-131 / eCPR — Field Specification
+
+**Project-Level Header Fields (appear once per submission):**
+
+| Field | Notes | Present on WH-347? |
+|-------|-------|--------------------|
+| Contractor/Employer Name | Legal entity name | Yes (Box 1) |
+| Contractor's CSLB License Number | California contractor license — NOT on federal WH-347 | CA-only |
+| Contractor Address | Street, city, state, zip | Yes |
+| Specialty License Number | For electrical (C-10), plumbing (C-36), HVAC (C-20), etc. — CA-only | CA-only |
+| Self-Insured Certificate Number | WC self-insurance certificate if applicable — CA-only | CA-only |
+| Workers' Compensation Policy Number | Active WC policy; required for CA prevailing wage compliance | CA-only |
+| Project Name / Description | Project name | Yes (Box 1) |
+| Project or Contract Number | Awarding agency contract ID | Yes (Box 1) |
+| Awarding Body Name and Address | Agency that awarded the contract | Yes (Box 1) |
+| Payroll Number | Sequential per project | Yes (Box 2) |
+| Week Ending Date | Saturday of the payroll week | Yes (Box 3) |
+| Prime / Subcontractor indicator | Whether this is prime or sub submission | Yes (indicated in Box 1) |
+
+**Worker Row Fields (one row per worker per week):**
+
+| Field | Notes | Present on WH-347? |
+|-------|-------|--------------------|
+| Employee Name | Full legal name | Yes |
+| Employee Address | Street address | Yes |
+| Social Security Number | Last 4 per privacy rules (verify against current DIR guidance before implementing) | Yes (last 4) |
+| Number of Withholding Exemptions | Federal/CA withholding allowances — not on WH-347 | CA-only |
+| Work Classification | Must match DIR wage determination classification | Yes |
+| Hours Worked Each Day | Sunday through Saturday (7 columns — WH-347 uses Mon-Sat only) | Partial — WH-347 omits Sunday |
+| Overtime Hours | Separate OT column | Yes |
+| Total Hours | Sum of all days | Yes |
+| Hourly Rate of Pay (Base) | Straight time base rate | Yes |
+| Fringe Benefits Rate | Hourly fringe credit | Yes (updated in Jan 2025 WH-347) |
+| Gross Amount Earned | Total gross wages for the week | Yes |
+| Federal Tax Deduction | Federal income tax withheld | Yes |
+| State Tax Deduction | California state income tax | Similar to WH-347 |
+| FICA / Social Security | | Yes |
+| SDI (State Disability Insurance) | CA-mandatory payroll deduction | CA-only |
+| Other Deductions | Voluntary/other deductions with itemized labels | Yes |
+| Net Wages Paid | Gross minus all deductions | Yes |
+| Journeyworker / Apprentice Indicator | J or RA designation | Yes (Jan 2025 WH-347 added this) |
+
+**California-Specific Fields Not on Federal WH-347 (summary):**
+1. **Contractor's CSLB License Number** — California contractor license; confirms contractor is licensed for the work
+2. **Specialty License Number** — Required for specialty trades (electrical, plumbing, HVAC, low-voltage, etc.)
+3. **Self-Insured Certificate Number** — If contractor self-insures workers' comp rather than carrying a policy
+4. **Workers' Compensation Policy Number** — Active WC policy for the contractor; CA requires proof of coverage on certified payroll
+5. **State Disability Insurance (SDI) deduction column** — CA-mandatory payroll deduction; no federal equivalent
+6. **Number of Withholding Exemptions** — W-4 exemption count; not on WH-347
+7. **Sunday column in hours-per-day grid** — WH-347 covers Mon-Sat; A-1-131 includes Sunday
+
+**Certification Statement (bottom of form):**
+Signer certifies under penalty of perjury that records are originals or true, full, and correct copies depicting actual disbursements of wages paid. Fields: signer's printed name, position/title, business name, signature, date.
+
+---
+
+#### What to Build for CA DIR Compliance
+
+**Primary deliverable:** PDF generation of the A-1-131 form using pdf-lib coordinate overlay (same pattern as WH-347).
+
+**Key implementation notes:**
+- Use the official paper A-1-131 PDF from DIR as the template (same approach as WH-347 coordinate overlay)
+- Five new data model fields required at project/contractor level: CSLB license number, specialty license number, WC policy number, self-insured cert number — none of these are per-worker
+- SDI deduction: add as a per-entry deduction field labeled "SDI" (accurate) or capture under "other deductions" with label (acceptable for v2.4 first iteration)
+- Number of Withholding Exemptions: add as worker-level field on worker profile
+- Sunday column: the payroll entry model already stores ST/OT hours per day (Mon-Sat); add a Sunday column to the hours entry model
+- The eCPR electronic filing system is a separate submission channel — the app generates the A-1-131 PDF; the contractor manually uploads it to DIR's eCPR portal. Do NOT attempt to integrate with eCPR's XML upload API in this milestone.
+
+**Confidence:** MEDIUM-HIGH. A-1-131 form structure confirmed from official CA DIR form PDF and multiple secondary sources. California-specific fields identified clearly. LOW confidence on one specific point: whether DIR currently requires full SSN vs. last-4 on A-1-131 (privacy rules have shifted since the form was designed; verify against current DIR guidance before implementing).
+
+---
+
+### Feature 2: Washington L&I Prevailing Wage Forms
+
+#### What Washington Actually Requires
+
+Washington state public works compliance requires **three filings** per contractor per project, managed through the online **PWIA (Prevailing Wage Intent and Affidavit) system** at secure.lni.wa.gov:
+
+1. **Statement of Intent to Pay Prevailing Wages** — Filed immediately after contract award, before work begins. Required from prime contractor AND every subcontractor independently.
+2. **Affidavit of Wages Paid** — Filed after all work under the contract is complete. Required from prime AND every subcontractor.
+3. **Certified Payroll Report (F700-065-000)** — Filed at least monthly (weekly recommended) throughout the project.
+
+**Critical workflow dependency:** The Intent to Pay must be **approved by L&I's Industrial Statistician** AND on file before the contractor can receive their first payment. Filing must happen before any payment disbursement, regardless of when work starts. This is a harder deadline than the federal WH-347 requirement.
+
+**Threshold note:** For contracts under $2,500, a combined Intent/Affidavit short form is available. For contracts over $10,000, the Intent must include the prevailing wage rate for each classification and the contractor's registration certificate number (RCW 39.12.040).
+
+**No offline PDF for Intent or Affidavit:** Both forms are submitted exclusively through the My L&I Contractor Portal (PWIA system). L&I does not distribute a downloadable PDF for current Intent/Affidavit submissions. The F700-065-000 certified payroll report does have a downloadable PDF.
+
+---
+
+#### Washington Statement of Intent — Field Specification
+
+Filed via PWIA system online. Required fields per RCW 39.12.040 and L&I documentation:
+
+| Field | Notes |
+|-------|-------|
+| Contractor Name | Legal entity name |
+| Contractor UBI (Unified Business Identifier) | Washington state business registration number |
+| Contractor Registration Certificate Number | L&I contractor registration; required for contracts >$10,000 |
+| Project Name and Description | Sufficient detail to identify the project |
+| Project Location / Address | Street, city, county, state |
+| Awarding Agency Name | Public agency that awarded the contract |
+| Awarding Agency Contact | Contact for the agency administering the contract |
+| Contract Number / Award Number | Agency-assigned contract identifier |
+| Contract Amount | Estimated contract value |
+| Project Start Date | Anticipated start of work |
+| Project Completion Date | Anticipated end of work |
+| Trade / Work Classification | Craft(s) to be employed; one Intent record per trade classification |
+| Prevailing Wage Rate | Applicable prevailing wage rate for each listed classification |
+| Fringe Benefit Rate | Hourly fringe rate for each classification |
+| Estimated Number of Workers | Per classification |
+| Workers' Compensation Account Number | L&I WC account; verifies active coverage |
+| Prime vs. Subcontractor | Whether filing as prime or sub; who is the prime if subcontractor |
+
+**Approval process:** After online submission, L&I's Industrial Statistician reviews and approves. Approval confirms wage rates are listed correctly for the classifications indicated — it does not certify whether the contractor's classification choice is appropriate for the work performed.
+
+---
+
+#### Washington Affidavit of Wages Paid — Field Specification
+
+Filed after all work under the contract is complete. Same PWIA portal.
+
+| Field | Notes |
+|-------|-------|
+| Reference to the approved Intent | Links back to the filed and approved Intent to Pay |
+| Contractor Name, UBI, Registration Number | Same identifiers as Intent |
+| Project Name, Number, Awarding Agency | Same as Intent |
+| Trade / Work Classification | Per classification (should match what was stated in Intent) |
+| Actual Wage Rate Paid | Straight-time rate actually paid (not the prevailing rate minimum) |
+| Actual Fringe Benefit Rate Paid | Fringe actually paid or provided |
+| Hours Worked per Classification | Total hours per trade for the full project duration |
+| Statement of Compliance | Contractor certifies wages were paid at or above prevailing rate |
+| Signature and Date | Under penalty of perjury |
+
+---
+
+#### Washington Certified Payroll Report (F700-065-000) — Field Specification
+
+Weekly/monthly payroll record form. This is the closest Washington analog to the federal WH-347.
+
+| Field | Notes |
+|-------|-------|
+| Project Name | |
+| Awarding Agency | |
+| Contract Number | |
+| Contractor Name, Address | |
+| Payroll Period | Week or month covered |
+| Employee Name | Full legal name |
+| Employee Address | Required to be retained; may appear on detailed version |
+| Trade / Occupation | Per worker per classification |
+| Straight Time Rate | Actual rate paid |
+| Overtime Rate | |
+| Hourly Rate of Usual Benefits (Fringe) | |
+| Hours Worked Each Day (ST and OT) | Per worker, per day |
+| Total Hours | |
+| All Itemized Deductions | Must be itemized from gross wages |
+| Net Wages | Gross minus deductions |
+| Certification Statement | Contractor certifies compliance with RCW 39.12 |
+
+**Washington-Specific Fields Not on Federal WH-347:**
+
+| Field | Purpose |
+|-------|---------|
+| UBI (Unified Business Identifier) | WA state business registration; required on Intent and Affidavit |
+| L&I Contractor Registration Certificate Number | Required on Intent for contracts >$10,000 |
+| Workers' Compensation Account Number | Active L&I WC account; required on Intent |
+| Awarding Agency Reference on Affidavit | Links payment disbursement to filed forms |
+
+---
+
+#### What to Build for WA L&I Compliance
+
+**Primary deliverables:**
+1. **F700-065-000 Certified Payroll PDF** — Use pdf-lib coordinate overlay on the official F700-065-000 form, same pattern as WH-347. This is the highest-priority WA deliverable because it maps directly from the existing payroll data model.
+2. **Statement of Intent reference PDF** — Generate a pre-filled summary document (not a submission artifact) that the contractor uses as a data entry guide when completing the PWIA portal online. Label it clearly: "Use this information to complete your online filing at secure.lni.wa.gov/pwia."
+3. **Affidavit of Wages Paid reference PDF** — Same approach: project-level wage summary for contractor reference; contractor files manually in My L&I portal.
+
+**Key implementation notes:**
+- New project-level fields needed: UBI, L&I Registration Certificate Number, WC Account Number — conditional display; only shown/required when project state = Washington
+- The Intent and Affidavit are NOT direct PDF submissions to L&I — the app generates reference documents, not submission artifacts
+- F700-065-000 is the form with the clearest data mapping to existing payroll records; build this first
+
+**Data source blocker (MEDIUM severity):** The SAM.gov WDOL API does not contain Washington L&I prevailing wage rates. Washington publishes its own prevailing wage schedules at lni.wa.gov/licensing-permits/public-works-projects/prevailing-wage-rates/ but these are not available via API. For v2.4: allow the contractor to manually enter the applicable WA prevailing wage rates at project creation for Washington projects. Full L&I rate table integration is a future milestone.
+
+**Confidence:** MEDIUM. Form field lists confirmed from RCW 39.12.040 and multiple L&I secondary sources. Portal-only filing for Intent/Affidavit confirmed (this is an important constraint — the app cannot generate submission-ready PDFs for these two forms). Data source blocker for WA wage rates is confirmed and must be addressed in requirements.
+
+---
+
+### Feature 3: Contractor Guidance UX
+
+#### Research Basis
+
+Direct research into competitor software UI (LCPtracker, Procore, Sage, B2GNow) yielded general capability descriptions but not specific UX documentation — these are closed SaaS products. Patterns below are grounded in: (a) LCPtracker contractor training materials and DOT agency guides, (b) established UX discipline on progressive disclosure and field-worker guidance, (c) prior research on compliance tool patterns.
+
+#### What Industry Compliance Tools Do for Contractor Guidance
+
+From LCPtracker contractor manuals and CODOT/DOT prime contractor training guides:
+
+**Pattern observed in LCPtracker:** Workflow-oriented navigation where each step (Data Entry → Certify → Submit) is only activated when the prior step is complete. The contractor cannot certify until payroll entries exist; cannot submit until certified. This enforced sequencing eliminates partial submissions. Every payroll week carries an explicit status: Data Entry / Certified / Approved / Rejected. Rejected submissions show inline rejection reasons. When a week is in Rejected status, a top-of-page callout reads: "This payroll was rejected by [Agency]. Reason: [reason]. Action required: correct and resubmit." The contractor never guesses what to do next.
+
+**Pattern observed:** Mathematical validation fires at entry time, not after form submission. When a wage entry falls below the prevailing rate, the system flags it inline before the entry is saved.
+
+#### Applicable UX Patterns for HCC App (5 concrete patterns)
+
+**Pattern 1: Inline contextual tooltips on compliance-sensitive fields**
+
+Where to apply: Rate entry, fringe benefit amount, OT classification, J/RA designation, deduction fields.
+
+What: An info icon next to the field label; hover/tap expands a 1-2 sentence explanation in a popover — not a modal, not a separate help page.
+
+Specific copy recommendations:
+- J/RA designation: "Select Journeyworker for fully qualified tradespeople. Select Registered Apprentice only for workers enrolled in a DOL-approved apprenticeship program — unenrolled workers must be paid journeyworker rates."
+- Fringe rate field: "Enter the hourly amount you contribute to health, pension, vacation, and other benefits. This is separate from the base wage and must meet the prevailing wage fringe rate for this trade."
+- OT threshold: "CWHSSA requires 1.5x overtime for all hours over 40 in a workweek on federal contracts. This applies regardless of any state overtime rules."
+- SSN last 4: "Last 4 digits only. Required on the WH-347 form for worker identification — do not enter the full Social Security number."
+
+**Pattern 2: Step-level status on payroll weeks (extends v2.3 submission tracking)**
+
+Already shipped: 4-step workflow indicator on Project Detail (Create → Workers → Payroll → WH-347). For v2.4: add a week-level status badge that evolves: Draft → Compliant / Has Violations → Submitted. This gives contractors immediate orientation on each week's state without clicking into the week.
+
+**Pattern 3: Instructional empty states with specific action guidance**
+
+Where: Every list view — project list, worker list, payroll week list, compliance history.
+
+What: When a list is empty, show (a) what this page is for, (b) the specific action to take, (c) why it matters. Do not reuse the same copy across different empty states — each has a different compliance purpose.
+
+Recommended copy per context:
+- No workers on a project: "Add your crew before entering payroll. Each worker needs a trade classification to match the prevailing wage rate for your project. Workers without a classification cannot be included on a WH-347."
+- No payroll weeks: "Create your first payroll week to begin tracking wages. Federal law requires a certified payroll submission for every week work is performed on a Davis-Bacon project — including weeks with no work."
+- No violations in compliance history: "No violations found. This worker's pay meets prevailing wage requirements across all projects on record."
+- No projects on dashboard: "Create your first project to get started. You'll need the project location, awarding agency, and contract start date to look up the correct prevailing wage rates."
+
+**Pattern 4: Positive compliance confirmation on preflight (extends existing preflight modal)**
+
+The existing preflight modal before WH-347 download shows violations. Add the positive branch: when all checks pass, show: "All compliance checks passed. This payroll meets prevailing wage requirements." A positive confirmation reduces anxiety for contractors new to compliance software who are uncertain whether a clean pass means the check ran correctly or was skipped.
+
+**Pattern 5: Contextual "what happens next" after key actions**
+
+After marking a payroll week submitted: "Marked as submitted to [Agency Name]. Keep a copy of the WH-347 in your project file — federal records retention requires 3 years after project completion."
+After archiving a project: "Project archived. You can restore it at any time from the project detail page."
+After generating a WH-347: "WH-347 downloaded. Submit it to the agency listed in your contract. Most agencies require submission within 7 days of the payroll period end."
+After flagging a violation: "Compliance flag found. Correct the issue before submitting this payroll — violations on submitted payrolls may trigger DOL back-wage liability."
+
+These can be implemented as brief toast notifications or inline callouts immediately below the action button, not persistent banners.
+
+#### Complexity by Pattern
+
+| Guidance Element | Complexity | Notes |
+|-----------------|------------|-------|
+| Inline field tooltips (info icon + popover) | LOW | Small Tooltip component; no external library; reusable across all forms |
+| Enhanced empty state copy | LOW | Copywriting + updating existing EmptyState component props; no data model changes |
+| Positive compliance confirmation on preflight | LOW | Conditional branch in existing preflight modal logic |
+| Post-action contextual toasts | LOW | Toast/notification component (simple); or inline callout in existing UI |
+| Week-level status badge on payroll list | LOW-MEDIUM | Badge logic already exists from v2.3 submission tracking; just needs display extension |
+
+#### Anti-Patterns to Avoid
+
+| Pattern | Why Problematic | Better Alternative |
+|---------|-----------------|-------------------|
+| Onboarding modal tour on first login | Dismissed immediately; blocks content; compliance users are task-focused | Instructional empty states at each entry point |
+| Generic "help" link opening external docs | Pulls user away from app mid-task | 1-2 sentence contextual tooltip at the field level |
+| Persistent warning banners after the issue is resolved | Creates compliance fatigue — contractors start ignoring all banners | Badges and callouts that clear as soon as data is corrected |
+| Long instruction paragraphs on form pages | Contractors don't read them; creates visual noise | 2-sentence max per tooltip; one sentence of action guidance per empty state |
+| Hard-blocking incomplete data when not legally required | Frustrates legitimate edge cases; creates "trapped" UX | Warn clearly with specific message; allow proceeding; document the warning was shown |
+
+---
+
+### Feature 4: Dashboard Compliance Status Filter
+
+#### What This Feature Is
+
+A filter on the project dashboard that lets the contractor see which projects have open violations vs. are compliant vs. have no payroll entered. Enables batch triage before a submission deadline.
+
+#### Standard Status Buckets
+
+Based on compliance software conventions and regulatory binary pass/fail logic:
+
+| Status | Definition | Badge Variant |
+|--------|------------|---------------|
+| Compliant | All payroll weeks with entries have no active violations | `compliant` (green) |
+| Has Violations | At least one payroll week has at least one unresolved violation | `violation` (red) |
+| No Payroll | Project exists; no payroll entries have been created yet | `neutral` (grey) |
+| Archived | Project is archived/completed | Muted secondary styling |
+
+**Why 4 discrete buckets, not a percentage health score:** Percentage scores (e.g., "83% compliant") are meaningless in a regulatory context — 1 violation on 1 entry is equally non-compliant as 50. Contractors evaluate projects by "does this need attention?" not by a health percentage. Binary pass/fail aligns with how DOL investigators assess compliance.
+
+#### Implementation Specifics
+
+**Batch compliance summary endpoint (new):**
+The current dashboard queries compliance per project card independently (N queries). A compliance status filter requires a single batch endpoint: `GET /api/projects/compliance-summary` returns `{ projectId, status: 'compliant' | 'has-violations' | 'no-payroll' }` for all active projects in one DB query. Implement as a SQL aggregation (GROUP BY project + CASE WHEN), not application-code looping.
+
+**Filter integration:**
+- Extends v2.3 dashboard search + filter (same filter bar, additive AND logic)
+- New dropdown: All / Compliant / Has Violations / No Payroll
+- URL persistence: `?compliance=has-violations` — consistent with existing filter URL pattern
+
+**Empty state when filter returns zero results:**
+"No [status] projects found." with "Clear filters" link. Distinct from the "no projects at all" empty state.
+
+**Project card badge update:**
+The compliance badge on project cards already exists (v2.0). For v2.4, ensure it reflects the same 4-bucket vocabulary consistently so the filter behavior and the card badge agree visually.
+
+**Performance note:** For 20 projects × 20 weeks × 8 workers, per-JS-loop compliance recalculation on dashboard load is a performance anti-pattern. The batch SQL aggregation must happen at the database level.
+
+---
+
+### Feature 5: CSV Export from Per-Worker Compliance History
+
+#### Purpose
+
+When WHD investigators arrive, they request payroll records for specific workers across all projects. The per-worker compliance history page (shipped v2.3) shows this data on-screen. CSV export converts that view into a file the contractor can email to the investigator or attach to their audit response.
+
+#### Field Specification (17 columns)
+
+All sourced from the existing v2.3 data model:
+
+| Column Header | Data Source | Notes |
+|---------------|------------|-------|
+| Worker Name | workers.name | Full legal name |
+| SSN Last 4 | workers.ssn_last4 | Partial SSN; sufficient for identity confirmation |
+| Trade Classification | payroll_entries.classification | Classification at time of entry (snapshot, not current) |
+| Project Name | projects.name | |
+| Project Contract Number | projects.contract_number | Omit column if field is not stored |
+| Week Ending Date | payroll_weeks.week_ending_date | ISO 8601 format: YYYY-MM-DD |
+| Payroll Number | payroll_weeks.payroll_number | Supports amendment suffixes (e.g., "15-1") |
+| Total Hours | payroll_entries.total_hours | Sum of all ST + OT hours for the week |
+| Base Rate Paid | payroll_entries.base_rate_snapshot | Rate locked at entry time |
+| Fringe Rate Paid | payroll_entries.fringe_rate_snapshot | Rate locked at entry time |
+| Gross Wages Paid | Computed: hours x (base + fringe) | Calculated from snapshots |
+| Required Base Rate | payroll_entries.required_rate | Prevailing wage rate from WD at time of entry |
+| Violation Type | compliance_flags.violation_type | under-wage / cwhssa-ot / apprentice-ratio / (empty if none) |
+| Dollar Delta | compliance_flags.dollar_delta | Underpayment amount; empty for apprentice-ratio |
+| Week Submission Status | payroll_weeks.submission_status | draft / submitted / amended |
+| Submitted To Agency | payroll_weeks.submitted_to_agency | Agency name; empty if draft |
+| Submitted Date | payroll_weeks.submitted_at | ISO 8601 date; empty if draft |
+
+#### Export Scope
+
+- Export the full filtered result set, not the current page (consistent with v2.3 per-worker history spec)
+- Apply all active filters (worker name search, violation type, project, date range) to the export
+- If no filters active, export all compliance history for the authenticated user
+
+#### CSV Formatting
+
+- Headers in row 1
+- Dates as YYYY-MM-DD (ISO 8601 — sorts correctly in Excel without locale confusion)
+- Dollar amounts as plain numbers with 2 decimal places, no currency symbols, no commas (clean for Excel import)
+- Empty cells where data is absent: empty string (not "N/A", not "null", not "0")
+- Encoding: UTF-8 with BOM (Windows Excel opens UTF-8 CSV without character corruption when BOM is present; special characters in worker names render correctly)
+- Filename: `compliance-history-[YYYY-MM-DD].csv` with the export date
+
+#### Implementation
+
+- Generate server-side in Node.js; stream as `text/csv` with `Content-Disposition: attachment`
+- Add `format=csv` query parameter to the existing compliance history endpoint — same query path, alternate response format
+- Do not create a separate route; extend the existing `/api/workers/:id/compliance-history` endpoint
+
+---
+
+### Feature Dependencies (v2.4)
+
+```
+California A-1-131 Form
+    └──requires──> New project/contractor fields: CSLB license, specialty license,
+                   WC policy number, self-insured cert number (project-level additions)
+    └──requires──> Sunday column on hourly entry grid (data model extension)
+    └──requires──> Withholding exemptions on worker profile (worker-level addition)
+    └──requires──> pdf-lib coordinate overlay (existing capability — same as WH-347)
+    └──independent of──> Washington L&I forms
+
+Washington L&I Forms
+    └──requires──> New project fields: UBI, L&I registration cert number, WC account number
+    └──BLOCKED by──> Washington prevailing wage data source
+                    (SAM.gov has no WA state rates — resolution: manual rate entry for WA projects)
+    └──F700-065-000 maps directly──> existing payroll data model (no new data required)
+    └──independent of──> California DIR forms
+
+Dashboard Compliance Status Filter
+    └──requires──> Batch compliance summary endpoint (new DB-level aggregation)
+    └──extends──> v2.3 dashboard search + filter (additive, same filter bar)
+    └──independent of──> state forms, CSV export, contractor guidance
+
+CSV Export from Compliance History
+    └──requires──> v2.3 compliance history page and endpoint (already shipped)
+    └──requires──> v2.3 submission tracking fields (submitted_at, submitted_to_agency, submission_status)
+    └──independent of──> state forms, compliance filter, contractor guidance
+
+Contractor Guidance UX
+    └──enhances──> all existing pages (additive — no new data model changes)
+    └──independent of──> state forms, CSV export, compliance filter
+```
+
+---
+
+### Anti-Features (v2.4)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Direct eCPR XML upload to CA DIR portal | One-click CA submission | DIR's eCPR XML schema has changed multiple times; API integration creates fragile dependency on a government system | Generate A-1-131 PDF; instruct contractor to upload to eCPR portal manually |
+| Direct PWIA submission to WA L&I | Same as above for WA | PWIA is a portal workflow with a human approval step — no API for automated submission | Generate WA reference PDFs; instruct contractor to file in My L&I |
+| Full SSN display in CSV export or PDF | "Auditors need SSN" | Full SSN is a PII risk; last 4 is sufficient for prevailing wage identity confirmation and is what WH-347 requires | Last 4 only everywhere — document that this is the regulatory standard |
+| Auto-pull WA prevailing wage rates from L&I | Eliminate manual entry | L&I's wage schedule is not available via public API; scraping is fragile and legally ambiguous | Manual rate entry per project for WA; batch WA rate seed table is a future milestone |
+| DAS-140 / DAS-142 form generation | Contractor asks "can I do my CA apprentice forms here?" | These are apprenticeship notification forms, not certified payroll — different data model, different recipients (apprenticeship committees not DIR), different compliance chain | Document clearly: DAS-140/142 are out of scope for a payroll tool; this app handles certified payroll only |
+| Combined CA+WA compliance enforcement | Build one rules engine that covers both states | California and Washington have materially different prevailing wage definitions, OT thresholds, and enforcement rules; a unified rules engine would produce incorrect state-specific compliance checks | Federal compliance engine (existing) for federal projects; state-specific compliance is a future milestone after state wage rates are properly integrated |
+
+---
+
+### Compliance Confidence Summary (v2.4)
+
+| Area | Confidence | Primary Source | Gaps |
+|------|------------|---------------|------|
+| CA DAS-140/142 identified as non-payroll forms | HIGH | Multiple sources: Miter, LumberFi, ABC SoCal, DIR FAQ | None |
+| CA A-1-131 project-level field list | HIGH | CA DIR official form (dlseforma-1-131.pdf) + multiple secondary sources | None at this level |
+| CA A-1-131 worker-level field list | MEDIUM-HIGH | Official form cross-referenced with secondary sources | Full SSN vs. last-4 not definitively confirmed in current DIR guidance; verify before implementing |
+| CA eCPR electronic filing requirement | HIGH | CA DIR official guidance; SB 854 statute | None |
+| WA Intent to Pay field list | MEDIUM | RCW 39.12.040 + L&I secondary sources | Portal-only — exact current field labels require PWIA portal access to verify |
+| WA Affidavit of Wages Paid field list | MEDIUM | RCW 39.12.040 + L&I secondary sources | Same gap as Intent |
+| WA F700-065-000 field list | MEDIUM | Multiple secondary sources (informedcontractors.com, points-north.com) | Official form PDF binary; field labels confirmed by cross-reference |
+| WA prevailing wage data source blocker | HIGH | Confirmed: SAM.gov does not serve WA state wages; L&I has no public API | Resolution identified: manual rate entry for v2.4 |
+| Contractor guidance UX patterns | MEDIUM | LCPtracker contractor training manuals; CODOT guides | No direct product access; patterns inferred from training docs and industry convention |
+| Dashboard compliance filter design | MEDIUM-HIGH | Industry convention + RAG status dashboard patterns | LCPtracker internal UI not accessible |
+| CSV export field list | HIGH | Grounded directly in v2.3 data model | No gaps; all 17 fields exist in current schema |
+
+---
+
+## v2.4 Sources
+
+- [California DIR — Certified Payroll Reporting](https://www.dir.ca.gov/public-works/certified-payroll-reporting.html) — eCPR system overview, SB 854 electronic filing requirement
+- [California DIR — eCPR FAQ (SB 854)](https://www.dir.ca.gov/Public-Works/ecprfaq.html) — Electronic filing mandate, exemptions
+- [California DIR — FAQ on Certified Payroll Reporting](https://www.dir.ca.gov/Public-Works/FAQ-certified-payroll-reporting.html) — Submission rules, corrections, monthly minimum
+- [California DIR — A-1-131 Form (official)](https://www.dir.ca.gov/dlse/forms/pw/dlseforma-1-131.pdf) — Official CA certified payroll form (paper version)
+- [Miter — DAS-140 and DAS-142 Guide](https://www.miter.com/post/das-140-142-forms-guide) — Confirms DAS-140/142 are apprenticeship notification forms, not CPR forms
+- [LumberFi — DAS-140 and DAS-142 Easy Guide](https://www.lumberfi.com/blog/das-140-and-142-forms-easy-guide-for-contractors) — Field descriptions confirming scope of both forms
+- [ABC SoCal — DAS-140 Contractors Guide](https://abcsocal.org/das-140-california-contractors-guide-to-apprentice-contract-award-notices/) — Submission timing and apprenticeship committee notification requirements
+- [Washington RCW 39.12.040](https://app.leg.wa.gov/RCW/default.aspx?cite=39.12.040) — Statutory required fields for Intent and Affidavit; contractor registration requirement for contracts >$10,000
+- [Washington L&I — Contractors/Employers](https://lni.wa.gov/licensing-permits/public-works-projects/contractors-employers/) — Intent/Affidavit filing requirements and timing
+- [Washington L&I — PWIA Step-by-Step Instructions](https://lni.wa.gov/licensing-permits/_docs/pwia-step-by-step-instructions.pdf) — PWIA portal filing workflow
+- [MRSC — Navigating Intents and Affidavits for Prevailing Wages (March 2025)](https://mrsc.org/stay-informed/mrsc-insight/march-2025/intents-affidavits-prevailing-wages) — Current WA compliance overview including payment dependency on Intent approval
+- [Points North — Washington Prevailing Wage](https://www.points-north.com/state-by-state-certified-payroll-reporting/washington) — WA certified payroll record requirements; F700-065-000 field details
+- [Procore — Washington Prevailing Wage](https://www.procore.com/library/prevailing-wages-washington) — WA compliance overview
+- [Informedcontractors.com — F700-065-000](https://www.informedcontractors.com/F700-065-000-washington-certified-payroll-report.html) — F700-065-000 form purpose and field list
+- [CODOT — LCPtracker Getting Started](https://www.codot.gov/business/civilrights/compliance/systems/lcp) — LCPtracker workflow roles and weekly submission requirement
+- [LCPtracker — Active Insights](https://lcptracker.com/active-insights) — Compliance dashboard and reporting capabilities (Power BI-based)
+- [RAG Status Dashboard Best Practices — Mastt](https://www.mastt.com/blogs/project-rag-status-dashboard) — Red/Amber/Green status pattern design; why discrete buckets outperform continuous scores
+
+---
+
+*Feature research for: HCC Prevailing Wage — v2.4 state forms, contractor guidance, compliance filter, CSV export*
+*Researched: 2026-03-24*

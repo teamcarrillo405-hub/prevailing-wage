@@ -1,422 +1,621 @@
-# Pitfalls Research
+# Domain Pitfalls: v2.4 New Features
 
-**Domain:** Davis-Bacon compliance payroll system — adding workflow efficiency + audit readiness features to existing app
-**Researched:** 2026-03-23
-**Confidence:** HIGH (direct codebase audit of schema, services, routes, tests; compliance-domain analysis; migration pattern review)
+**Domain:** Davis-Bacon compliance payroll system — adding state forms, guidance UX, UI overhaul, and production deployment to existing v2.3 app
+**Researched:** 2026-03-24
+**Confidence:** HIGH (official regulatory sources + platform docs verified; specific to this system's stack and deployment targets)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Copy Previous Week Carries Stale Rate Snapshots Instead of Current Live Rates
+### Pitfall 1: California Daily Overtime Is Structurally Different From the Federal Model
 
 **What goes wrong:**
 
-The copy operation queries the previous week's `payrollEntries` and clones them into a new week. If `baseRateSnapshot` and `fringeRateSnapshot` are copied as-is from the old entries, the new week's entries carry the rate from when the source week was entered — not the current prevailing wage rate. For auditors, each payroll week's certification asserts that workers were paid no less than the prevailing wage at the time of that week's work. If a wage determination was updated between the copied week and the new week, the copied snapshot is stale and the certification is incorrect.
+The existing compliance engine (`computeCompliance()`) operates on the federal CWHSSA model: overtime triggers after 40 hours in a workweek. California prevailing wage law (California Labor Code Sections 1810-1815) requires overtime after 8 hours in a single day, and double-time after 12 hours in a single day — regardless of the weekly total. A worker who works a single 10-hour day and no other hours that week has 2 OT hours under California law and zero OT hours under federal law.
 
-This is not a hypothetical. SAM.gov wage determinations are revised on 30-day cache cycles in this app (`wdolSync.ts`). A revision could have landed since the prior week. The copy feature makes it trivially easy to enter a month of payroll using a stale rate — and the compliance engine (`complianceService.ts`) will not flag it, because it only compares `grossWages` against the stored snapshots, never against live wage determinations.
+The A-1-131 form reports hours in a daily breakdown format precisely because California needs the per-day view to validate the daily overtime threshold. Reusing the existing `ST`/`OT` hour columns without a `DT` (double-time) column and daily-threshold logic will produce systematically incorrect California compliance checks and incorrect form population.
 
 **Why it happens:**
 
-The copy operation is a database clone. Every field that makes a payroll entry complete is in the source row. Developers naturally copy all fields. Rate snapshots look like metadata, not like fields with compliance meaning.
+The existing schema stores hours as `monSt`, `monOt` (straight/overtime per day) with no double-time columns. The compliance engine computes weekly totals, not daily totals. It is natural to reuse this structure for the CA form because the field names look similar to CA's reporting columns.
 
-**How to avoid:**
+**Consequences:**
 
-The copy route must NOT copy `baseRateSnapshot` or `fringeRateSnapshot`. Instead, the copy operation must perform a fresh rate lookup via `wageLookup.ts` for each worker's trade classification, using the project's locked WD identifier (`projects.wdIdentifier`). The new week's entries get fresh snapshots. If the rate lookup fails for any classification, that entry must be omitted from the pre-fill (not defaulted to zero or copied from the old week) and the UI must display a clear warning: "Rate not found for [classification] — enter manually."
+California form A-1-131 will show the wrong OT hours. The compliance engine will flag false-clean weeks (no violation when there should be one) for any day over 8 hours. Workers in LA County or under trades with day-length-specific rate schedules will have incorrect certified payroll submitted to DIR.
 
-**Warning signs:**
+**Prevention:**
 
-The copy endpoint returns 201 with entries that have identical `baseRateSnapshot` values to the prior week. The new week's compliance check passes even though the wage determination was updated the prior month. The test for copy passes but does not assert that rate snapshots were re-fetched.
+Before implementing the CA form, extend the payroll entry schema with `monDt`, `tueDt`, `wedDt`, `thuDt`, `friDt`, `satDt`, `sunDt` double-time columns via a Drizzle migration. Create a separate `computeCaliforniaCompliance()` function in a new `complianceCA.ts` module — do not modify `computeCompliance()`. The CA computation must read per-day hour buckets and apply: OT = hours 8-12 per day, DT = hours over 12 per day. Keep this calculation isolated from the federal engine. The federal engine must remain unmodified for WH-347 compliance.
 
-**Phase to address:** Phase for Copy Previous Week — the rate re-fetch must be in the first implementation. No copy-and-fix-later; stale snapshots corrupt the audit trail from the moment of copy.
+**Detection:**
+
+Generate a CA form for a worker who worked 13 hours on Monday. The A-1-131 should show: 8 ST hours, 4 OT hours, 1 DT hour on Monday. If it shows 8 ST + 5 OT with no DT column, the logic is wrong.
+
+**Phase to address:** State Forms phase — schema migration must precede any CA form generation code.
+
+**Confidence:** HIGH — California Labor Code Sections 1810-1815, DIR FAQ, and Caltrans labor compliance manual all confirm dual daily/weekly overtime thresholds.
+
+Sources: [California DIR Prevailing Wage FAQ](https://www.dir.ca.gov/dlse/FAQ_PrevailingWage.html), [Caltrans Labor Compliance Manual Chapter 10](https://dot.ca.gov/programs/construction/labor-compliance/labor-compliance-manual/chapter-10)
 
 ---
 
-### Pitfall 2: Copy Previous Week Copies Submitted or Locked Data — User Unknowingly Creates a New Submitted Week
+### Pitfall 2: CA DIR Fringe Benefits Must Not Appear in the Deductions Column on A-1-131
 
 **What goes wrong:**
 
-When WH-347 submission tracking is added, a payroll week will gain a `submittedAt` timestamp and `submissionAgency` field (or similar). If the copy operation does not explicitly exclude these fields, the new week is created already marked as submitted. The user opens the new week, sees "Submitted," assumes the prior week was referenced, and does not re-enter or verify the new week's hours. A week with copied hours and a fake submission timestamp goes unreported.
+The A-1-131 form has a "Total Deductions" column and a separate "Fringe Benefits" section. Employer contributions to bona fide benefit plans are not deductions from the worker's wages — they are employer costs. If the form-filling logic places fringe benefit plan contributions in the "Total Deductions" column (copying the pattern used for the federal WH-347 deductions), DIR will flag the submission as incorrect. The DIR has explicitly stated this causes unnecessary wage assignment authorization requests.
 
-Even without a `submittedAt` field being copied, there is a second risk: if the source week is locked for editing (a natural constraint on submitted weeks), the copy API must verify ownership and lock status of the source week before reading from it, not just the destination project.
+The existing `wh347Generator.ts` handles fringe benefit reporting with `fringeRateSnapshot` multiplied by hours. On the WH-347 this is reported in the "Fringe Benefits" section. The A-1-131 has the same conceptual split but different field positions and calculation expectations.
 
 **Why it happens:**
 
-The copy route reads the entire prior week record and its entries. A bulk insert of those fields into a new week row will include any status/submission fields added alongside the copy feature in the same milestone unless explicitly excluded.
+Developers porting the WH-347 PDF generation logic to A-1-131 see "deductions" on both forms and route fringe contributions there. The distinction between deductions (worker money) and employer fringe contributions (employer money) is not visible in the schema — both are numbers.
 
-**How to avoid:**
+**Consequences:**
 
-The copy operation must use a strict allowlist of fields to carry forward — never a `SELECT *` clone. Allowlisted fields: `workerId`, `classificationId`, daily hours (`monSt`…`sunOt`). Explicitly excluded: `id`, `payrollWeekId`, `grossWages`, `netPay`, `deductions`, any submission-related fields. Document the allowlist as a comment in the copy service function. Write a test asserting that the new week has `submittedAt: null` regardless of the source week's submission state.
+DIR rejects or flags the certified payroll. Employer contributions appear as worker deductions, making gross-to-net pay reconciliation impossible for auditors.
 
-**Warning signs:**
+**Prevention:**
 
-A newly created week via copy shows "Submitted" status. The payroll list shows two weeks with the same submission date. The compliance engine skips checking the new week because it appears already certified.
+The A-1-131 form filler must route:
+- Worker-paid deductions (taxes, union dues) → "Total Deductions" column
+- Employer fringe benefit contributions → "Fringe Benefits" section
 
-**Phase to address:** Phase for Copy Previous Week — coordinate with the WH-347 Submission Tracking phase to finalize which fields exist before the copy allowlist is written.
+Add a comment to the CA form generation function: "Fringe benefit contributions are EMPLOYER costs — do not populate Total Deductions with fringeRateSnapshot values." The `fringeRateSnapshot` on `payrollEntries` represents the per-hour employer contribution rate and belongs in the fringe section.
+
+**Detection:**
+
+Generate an A-1-131 for a worker with a $5/hr fringe rate and verify the "Total Deductions" column does not include the fringe contribution. The fringe section should show the per-hour rate and total.
+
+**Phase to address:** State Forms phase — verify this before testing the CA PDF output against the actual A-1-131 form.
+
+**Confidence:** HIGH — DIR XML guideline documentation and DIR certified payroll FAQ explicitly address this distinction.
+
+Sources: [DIR eCPR XML Guidelines](https://www.dir.ca.gov/public-works/eCPRXMLGuideline1.9.pdf), [CA DIR Certified Payroll FAQ](https://www.dir.ca.gov/Public-Works/FAQ-certified-payroll-reporting.html)
 
 ---
 
-### Pitfall 3: Submission Tracking Has No Edit Lock — Submitted Weeks Remain Editable
+### Pitfall 3: California Requires Electronic Submission via eCPR — A PDF Is Insufficient for Compliance
 
 **What goes wrong:**
 
-WH-347 submission tracking adds a `submittedAt` field to `payrollWeeks`. If the existing `PUT /api/payroll/entries/:id` route does not check for submission status, contractors can continue editing entries on submitted weeks. An auditor who received a WH-347 for Week 5 can be shown a different set of hours on the app's screen than what was submitted. This is a federal form falsification risk, not just a data integrity issue.
+The existing WH-347 workflow generates a PDF for download and manual submission. For California public works, SB 854 (effective 2014, still enforced) requires electronic certified payroll reporting via the DIR's eCPR portal — not a paper A-1-131. The eCPR portal accepts manual entry via iForm or XML file upload. A generated A-1-131 PDF is useful for the contractor's records and for manual iForm entry reference, but it does not constitute electronic submission to DIR.
 
-The existing `upsertPayrollEntry()` function in `payrollService.ts` has no gate: it accepts any `payrollWeekId` and upserts immediately. No check for week status, no check for whether the week is final.
+If the app presents an "A-1-131 Download" button alongside the WH-347 with no disclosure that the PDF must also be submitted electronically via eCPR, contractors may believe generating the PDF fulfills the CA requirement.
 
 **Why it happens:**
 
-The submission tracking feature is implemented as a status column, and developers assume "visible status" is sufficient. The enforcement — blocking writes on submitted weeks — is a separate, easy-to-miss step that lives in the route layer, not in the UI.
+The WH-347 workflow is entirely download-based. The state form is added using the same pattern. The electronic submission requirement is a policy fact about California law, invisible from the PDF generation implementation.
 
-**How to avoid:**
+**Consequences:**
 
-Add a `checkWeekEditable()` guard in `payrollService.ts` or as middleware on the payroll entry routes. This function checks `payrollWeeks.submittedAt IS NULL` and throws a 409 Conflict if the week is submitted. The guard must fire on: `PUT /api/payroll/entries/:id`, `POST /api/payroll/entries`, and any future amendment routes before the amendment flow is established. The UI edit form must also be disabled/hidden when the week is submitted, but the server-side guard is non-negotiable — UI state is not a security boundary.
+Contractor submits to the federal awarding agency but not to California DIR. DIR compliance gap creates liability. Contractor believes they are compliant because the app generated a form.
 
-**Warning signs:**
+**Prevention:**
 
-Automated tests for entry upsert pass without a submitted-week fixture. The compliance check shows different data than what was included in the submitted PDF. Manual test: mark a week submitted, then call `PUT /api/payroll/entries/:id` directly — if it returns 200, the guard is missing.
+The CA form download must include a persistent UI warning: "California public works projects require electronic submission via the DIR eCPR portal. This PDF is for your records. You must submit directly at [link to eCPR portal]." The warning must appear on the preflight modal before download (parallel to the existing WH-347 violation preflight) and on the download confirmation. Do not generate a CA PDF without this disclosure visible.
 
-**Phase to address:** Phase for WH-347 Submission Tracking — the edit lock must ship in the same phase as the submission flag, not deferred to a later phase.
+**Detection:**
+
+Review the CA download flow with a contractor user — is the eCPR portal requirement visible without reading fine print?
+
+**Phase to address:** State Forms phase — write the eCPR disclosure copy before building the download button.
+
+**Confidence:** HIGH — California SB 854 and DIR public works page confirm mandatory electronic reporting requirement.
+
+Sources: [DIR Certified Payroll Reports](https://www.dir.ca.gov/public-works/certified-payroll-reporting.html), [Ogletree SB 854 overview](https://ogletree.com/insights-resources/blog-posts/california-public-works-contractors-will-be-required-to-submit-payroll-records-electronically-starting-august-1/)
 
 ---
 
-### Pitfall 4: Payroll Amendment Corrupts the Original Audit Trail
+### Pitfall 4: Washington L&I Uses Four-Letter Craft Codes — Mapping Trade Classifications Is Not 1:1 With Federal
 
 **What goes wrong:**
 
-The amendment workflow corrects a submitted week. The most dangerous implementation pattern is updating the original `payrollEntries` rows in place: the original snapshot is gone, and there is no record of what was submitted vs. what was corrected. DOL investigation procedures require the original certified payroll and the amendment to both be preserved, clearly labeled, and traceable to each other.
+Washington L&I's certified payroll form F700-065-000 requires trade codes (BOIL, CARP, ELEC, LABO, etc.) that do not directly map to the federal SAM.gov wage determination trade classification strings used in this app. A worker classified as "Carpenter - Cabinetwork (Excluding Millwright)" in the federal WD has a different name than what L&I expects. If the app inserts the federal classification string directly into the WA L&I trade code field, the form submission will fail L&I validation.
 
-A secondary corruption risk: if the amendment re-uses the original `payrollWeekId` with a flag like `isAmended: true`, any future query that joins on `payrollWeekId` may return the amended values in contexts where the original values are expected (e.g., the reports page showing the fringe benefit summary for the original submission period).
+Washington also requires that the classification is determined by the work performed, not the worker's job title or federal classification — these can differ from federal classifications.
 
 **Why it happens:**
 
-Updating in place is the simplest code path. `upsertPayrollEntry()` already uses `onConflictDoUpdate` — it is one call away from overwriting the original data.
+The existing `classifications` table stores the SAM.gov WD classification label verbatim. Reusing that label for the state form field is the path of least resistance. The developer does not know that L&I has its own trade code vocabulary.
 
-**How to avoid:**
+**Consequences:**
 
-Amendments must be a new `payrollWeeks` row, not an update to the existing row. The schema should have:
-- `payrollWeeks.amendedFromWeekId TEXT REFERENCES payroll_weeks(id)` — nullable; set on amendment weeks
-- `payrollWeeks.amendmentNumber INTEGER NOT NULL DEFAULT 0` — 0 for original, 1 for first amendment, etc.
+L&I form validation rejects or flags submissions with unrecognized trade codes. If the form is manually submitted, auditors see "Carpenter - Cabinetwork (Excluding Millwright)" where they expect "CARP."
 
-The original week row must be made read-only at the DB layer (via the edit lock guard from Pitfall 3) when an amendment exists. The amended week contains entirely new `payrollEntries` rows with fresh rate snapshots. The WH-347 generator reads from the amendment week and places "AMENDMENT" prominently on the form header. The original PDF artifact is never regenerated or replaced.
+**Prevention:**
 
-**Warning signs:**
+Build a mapping table from common SAM.gov classification strings to L&I four-letter trade codes. This does not need to be exhaustive at launch — cover the 15-20 most common trades (carpenter, laborer, electrician, ironworker, painter, plumber, roofer, operator). For classifications that have no mapping, display a dropdown on the WA form generation screen that lets the contractor select the correct L&I code before generating. Store the selected code per worker per project to avoid re-entry.
 
-The amendment flow calls `upsertPayrollEntry()` with the original `payrollWeekId`. After amendment, the original week's `grossWages` values differ from what was included in the submitted PDF. The reports page shows amended values for the original submission date.
+**Detection:**
 
-**Phase to address:** Phase for Payroll Amendment Workflow — design the amendment schema before any route implementation. Write a migration that adds `amendedFromWeekId` and `amendmentNumber` columns before any amendment logic is coded.
+Attempt to generate a WA form for a worker with a SAM.gov classification that includes a sub-specialty. Verify the output uses the correct L&I code or prompts for one.
+
+**Phase to address:** State Forms phase — build the mapping table before writing the PDF generation function.
+
+**Confidence:** HIGH — L&I Prevailing Wage Suite documentation and certified payroll form F700-065-000 confirm the four-letter code requirement.
+
+Sources: [Washington L&I Prevailing Wage Suite](https://secure.lni.wa.gov/wagelookup/), [Points North WA certified payroll](https://www.points-north.com/state-by-state-certified-payroll-reporting/washington)
 
 ---
 
-### Pitfall 5: Amendment Numbering Conflicts When Multiple Amendments Exist
+### Pitfall 5: Washington Apprentice Ratio Is 15% of Total Labor Hours — Different Metric Than the Federal 1:3 Ratio
 
 **What goes wrong:**
 
-If amendment numbering is computed at query time (`SELECT MAX(amendmentNumber) FROM payroll_weeks WHERE amendedFromWeekId = ?`) rather than enforced by a database constraint, two concurrent amendment creation requests (or a re-try on timeout) can both read `MAX = 0` and both insert `amendmentNumber = 1`. The result is two Amendment #1 rows for the same original week. The audit trail has a numbering conflict that cannot be resolved without knowing which amendment was filed with the agency.
+The existing compliance engine (COMP-03) enforces a 1:3 apprentice-to-journeyworker ratio per payroll week (the federal Davis-Bacon standard). Washington state law requires that 15% of total labor hours on a public works project be performed by apprentices. This is a project-level cumulative percentage, not a per-week ratio between worker types.
 
-For a single-user app (no concurrency from multiple sessions), this is low probability — but the amendment creation flow may include a user double-clicking the "Create Amendment" button, which is exactly the scenario the existing `useRef` double-click guard was built to prevent for WH-347 download.
+If the WA form generation code reuses `weekViolations[]` from COMP-03 to display apprentice ratio compliance for Washington projects, it will show the wrong metric. A project with 10 apprentice-hours in week 1 and 0 in weeks 2-8 may pass the weekly 1:3 check in some weeks but fail the cumulative 15% requirement.
 
 **Why it happens:**
 
-Developers compute the next amendment number in application code before insert, which is a read-then-write with no atomicity guarantee.
+COMP-03 is already implemented and the concept of "apprentice ratio" is familiar. Reusing it for WA appears to be a minor parameter change.
 
-**How to avoid:**
+**Consequences:**
 
-Add a database-level unique constraint: `UNIQUE(amendedFromWeekId, amendmentNumber)`. The insert will fail with a constraint error if a duplicate number is attempted. The route layer catches the constraint error and returns 409. The UI disables the "Create Amendment" button after first click, using the same `useRef` pattern already proven in `PayrollWeekDetailPage.tsx`.
+Washington project compliance status shows clean when the project is actually below the required apprentice utilization. The WA form does not surface apprentice hour totals in a way that reveals the cumulative percentage to the contractor.
 
-**Warning signs:**
+**Prevention:**
 
-Two rows with `amendedFromWeekId = 'abc123'` and `amendmentNumber = 1` exist in the database. The amendment list for a week shows "Amendment #1" twice. The WH-347 generator selects the wrong amendment to render because `ORDER BY amendmentNumber` returns ambiguous results.
+Create a separate `computeWashingtonApprenticeCoverage()` function that queries all payroll entries for the project to date and computes `totalApprenticeHours / totalLaborHours`. Display this as a project-level gauge on the WA form generation screen: "Apprentice coverage: 12% (required: 15%)." This is advisory, not a blocking violation — the contractor may still be on track if apprentices will be added in future weeks.
 
-**Phase to address:** Phase for Payroll Amendment Workflow — add the unique constraint to the migration, not as an afterthought.
+**Detection:**
+
+Build a project with 5 weeks of payroll where week 1 has 10% apprentice hours and all other weeks have 0. Verify the WA coverage display shows the cumulative running percentage, not a per-week ratio.
+
+**Phase to address:** State Forms phase — document the WA-specific apprentice rule before any compliance logic is written for the WA form.
+
+**Confidence:** HIGH — Washington State prevailing wage law and L&I documentation confirm the 15% labor hours requirement.
+
+Sources: [Washington Prevailing Wage Guide 2025](https://www.workyard.com/us-labor-laws/prevailing-wage-washington-state), [Points North Apprenticeship Ratios](https://www.points-north.com/trends-and-insights/apprenticeship-ratios-prevailing-wage-requirements)
 
 ---
 
-### Pitfall 6: Project Archive Breaks Dashboard Compliance Roll-Up
+### Pitfall 6: SQLite Database on Render/Fly.io Is Erased on Every Deploy Without a Persistent Volume
 
 **What goes wrong:**
 
-The dashboard currently fetches compliance status per project. If archived projects are soft-filtered client-side only (e.g., a React state toggle), every compliance query still runs for all projects including archived ones. The bigger risk: if archiving hard-deletes the project (or if a future cleanup script prunes `status = 'closed'` projects), all child records (`payrollWeeks`, `payrollEntries`, `workers`) are cascade-deleted because of the existing `ON DELETE CASCADE` foreign keys defined in `schema.ts`. The audit trail for a completed federal project is destroyed.
+Both Render.com and Fly.io have ephemeral container filesystems. Every new deployment overwrites the container image, including any SQLite file written into the container's local path. A SQLite database written to `/app/data/app.db` inside the container (with no persistent volume) will be empty after every deploy. All production data — projects, workers, payroll records, compliance history — is destroyed.
 
-For Davis-Bacon compliance, federal regulation (29 CFR Part 3) requires certified payroll records to be maintained for three years after project completion. Hard-deleting an archived project is a federal records retention violation.
+This is the most catastrophic production deployment mistake for this app. The compliance audit trail that the app is built to maintain is silently destroyed on each code push.
 
 **Why it happens:**
 
-The `status` field already exists on `projects` table (`'active' | 'closed'`). A developer implementing "archive" may assume that setting `status = 'closed'` is archive, not realizing the field exists but the filter does not, and then add a DELETE endpoint as an alternative. The cascade behavior is invisible unless the schema comment flags it.
+The app works in local development with a SQLite file at a relative path. Moving to a Docker container and deploying to Render or Fly.io preserves the build-time filesystem, which does not include runtime data. The app starts clean and appears to work fine — until a second deploy happens.
 
-**How to avoid:**
+**Consequences:**
 
-Archive is exclusively a status update: `UPDATE projects SET status = 'closed'`. No DELETE route should exist for projects. The `status = 'closed'` filter must be enforced server-side on the `GET /api/projects` route — not client-side — so that archived projects never appear in dashboard queries, compliance roll-ups, or the payroll list. Write a test asserting that a closed project does not appear in the projects list response. Add a comment to the projects route and schema: "Projects are NEVER deleted — status = 'closed' is the archive state. Federal records retention: 3 years post-completion."
+All user data is lost on every deploy. Federal records retention (29 CFR Part 3, 3 years) cannot be met. Data loss with no recovery path.
 
-**Warning signs:**
+**Prevention:**
 
-A DELETE endpoint for projects exists or is planned. The `GET /api/projects` route does not filter by `status`. Archived project compliance data appears in the dashboard badge count. The cascade behavior is exercised by any test that deletes a project.
+On Fly.io: create a persistent volume (`fly volumes create app_data --size 10`), mount it in `fly.toml` as `[mounts] source = "app_data" destination = "/data"`, and configure the SQLite file path to `/data/app.db`. On Render.com: add a Persistent Disk via the dashboard, set mount path to `/data`, and configure `DATABASE_URL` to point to `/data/app.db`. Verify persistence by deploying twice: deploy, create a test project, deploy again, confirm the test project is still present.
 
-**Phase to address:** Phase for Project Completion / Archive — server-side filter on projects list must be the first implementation step, before any UI toggle is built.
+On Railway: Railway does not natively support persistent disk for non-Postgres services on the free plan. If using Railway, use a Postgres database instead of SQLite, which requires a Drizzle adapter swap.
+
+**Detection:**
+
+Deploy the app, create a project, push a trivial code change to trigger a redeploy, confirm the project still exists. If it is gone, the volume mount is missing.
+
+**Phase to address:** Deployment phase — configure the persistent volume before any production data is created. This is the first deployment step, not a later optimization.
+
+**Confidence:** HIGH — Render persistent disk documentation, Fly.io SQLite documentation, and multiple community reports confirm this behavior.
+
+Sources: [Render Persistent Disks](https://render.com/docs/disks), [Fly.io SQLite docs](https://fly.io/docs/js/prisma/sqlite/), [Fly.io all-in on SQLite](https://fly.io/blog/all-in-on-sqlite-litestream/)
 
 ---
 
-### Pitfall 7: Archived Project With Active Violations Silently Disappears From Compliance View
+### Pitfall 7: Fly.io `release_command` Does Not Have Access to the Persistent Volume — Migrations Fail Silently
 
 **What goes wrong:**
 
-A project is archived with unresolved compliance violations (under-wage flags, CWHSSA OT mismatches). After archiving, the dashboard no longer shows the project. The violations exist in the database but are invisible. If a DOL investigator requests records for that project, the contractor has no awareness that violations were unresolved at archive time — and the app gave no warning.
+A common pattern for running database migrations on deploy is to add `release_command = "npm run db:migrate"` to `fly.toml`. Fly.io's release command runs in a temporary VM that has access to secrets and environment variables but NOT to persistent volumes. The SQLite database lives on the persistent volume. The migration command connects to the database path, finds no file (because the volume is not mounted), creates a new empty database at that path in the temporary VM, runs migrations against it, and exits. The temporary VM is discarded. The production database on the volume is never migrated.
+
+The application starts with the unmigrated production database. New columns from the migration are missing. The app crashes or silently returns incorrect data.
 
 **Why it happens:**
 
-The archive action is a status field update. No pre-condition check fires. The UI confirms "Project archived" without surfacing compliance state.
+The `release_command` pattern is the documented approach for Heroku, Railway (Postgres), and other platforms. The SQLite-on-volume constraint is Fly.io-specific and non-obvious.
 
-**How to avoid:**
+**Consequences:**
 
-The archive route must run a compliance check across all payroll weeks for the project before updating status. If any week has `hasViolations: true`, the API returns a 409 with a payload listing the weeks and violation counts. The UI presents a blocking modal: "This project has [N] compliance violations across [M] weeks. Archive anyway?" with an explicit acknowledgment checkbox. The archive proceeds only after the user confirms. The acknowledgment timestamp is stored on the project row (`archivedWithViolations: boolean`, `archivedAt: text`). This creates an explicit audit record that the contractor knowingly archived a project with open violations.
+Drizzle schema TypeScript types include new columns; the production SQLite tables do not. Runtime throws `no such column` errors. The migration appears to have succeeded (release command exit 0) but had no effect on the real database.
 
-**Warning signs:**
+**Prevention:**
 
-The archive endpoint does not call `computeCompliance()`. The archive confirmation dialog has no mention of open violations. Archiving a project with violation entries does not produce any warning.
+On Fly.io with SQLite, run migrations at application startup, not in the release command. In the Express server entry point (`server.ts`), add a startup migration call before `app.listen()`:
 
-**Phase to address:** Phase for Project Completion / Archive — implement the compliance pre-check before the archive action is user-accessible.
+```typescript
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+// Run before listen()
+migrate(db, { migrationsFolder: './src/server/db/migrations' });
+```
+
+This runs against the live database file on the mounted volume. Remove any `release_command` referencing migrations from `fly.toml`. Test by adding a new column migration locally, deploying to a fresh instance, and verifying the column exists in production.
+
+**Detection:**
+
+After deploying with a new migration, run `fly ssh console` and execute `sqlite3 /data/app.db ".schema payroll_weeks"` — confirm the new columns are present.
+
+**Phase to address:** Deployment phase — validate migration approach against the specific platform before deploying any schema changes.
+
+**Confidence:** HIGH — Fly.io community forum posts confirm this exact failure pattern with SQLite + release_command. Multiple language stacks affected.
+
+Sources: [Fly.io community: deploy sqlite with persistent volume not migrating](https://community.fly.io/t/deploy-sqlite-with-persistent-volume-not-migrating/18712), [SQLite3 Fly Docs](https://fly.io/docs/rails/advanced-guides/sqlite3/)
 
 ---
 
-### Pitfall 8: Per-Worker Compliance History Mixes Snapshot Data With Live Data
+### Pitfall 8: SQLite WAL Mode + Network Filesystem = Data Corruption
 
 **What goes wrong:**
 
-The per-worker compliance history view shows violations across all payroll weeks. Each violation record in `complianceService.ts` is computed by comparing `grossWages` against the snapshot-based expected wage. If the history view re-computes compliance at query time using a live wage lookup instead of the frozen snapshots, the displayed violation status will differ from the status at the time of the original payroll entry.
-
-For example: Week 5 had no violation at the time of entry because the prevailing rate was $28/hr. The rate was later updated to $31/hr. A live re-computation shows a violation for Week 5. The contractor now believes they have a violation that did not exist — or worse, a violation that existed is no longer shown because the rate dropped.
-
-Audit responses require point-in-time accuracy: "What was the compliance status when this payroll was certified?"
+SQLite WAL (Write-Ahead Logging) mode creates three files: `app.db`, `app.db-wal`, and `app.db-shm`. WAL mode requires reliable `fsync()` operations for journal integrity. Fly.io persistent volumes and Render persistent disks are NFS-backed network storage. NFS filesystems have inconsistent `fsync` semantics — writes may appear to succeed but not be durable. Under WAL mode, this can result in database corruption: the main database file is behind the WAL, the WAL is partially written, and the checkpoint cannot reconcile them.
 
 **Why it happens:**
 
-Developers writing a "history" query naturally use the most current data available. The distinction between snapshot-time compliance and current-rate compliance is non-obvious and undocumented in the route layer.
+WAL mode is universally recommended for production SQLite as it improves read concurrency and write throughput. Developers enable it without knowing that the recommendation applies to local disk, not network storage.
 
-**How to avoid:**
+**Consequences:**
 
-The per-worker compliance history must call `computeCompliance()` for each relevant week with the week's frozen entry data — exactly as `complianceService.ts` already does. It must never call `wageLookup.ts` or read from `wageDeterminations`. Add a comment to the compliance history route: "Compliance is always computed from snapshot data in payrollEntries — NEVER re-read from live wage determinations." Consider adding a `snapshotBaseRate`/`snapshotFringeRate` to the displayed violation record so auditors can see the exact rate that was used in the compliance check.
+SQLite database becomes corrupted. Payroll data is unrecoverable without a backup. The error often appears as `SQLITE_IOERR` or "database disk image is malformed" after a write-heavy period.
 
-**Warning signs:**
+**Prevention:**
 
-The worker history route imports `wageLookup.ts` or `wdolFetcher.ts`. The displayed violation status for a completed week changes when viewed on different dates. Test fixtures that hardcode rates and then check violation status fail intermittently.
+Option A (preferred): Disable WAL mode for cloud deployments. Use the default journal mode (DELETE) with `PRAGMA busy_timeout = 5000`. Single-user SQLite with sequential writes does not need WAL's concurrent reader benefit.
 
-**Phase to address:** Phase for Per-Worker Compliance History — establish the data source contract (snapshots only) before writing any query logic.
+Option B: Use Litestream for continuous replication to S3/R2. Litestream takes control of WAL journaling and handles the backup. If WAL is needed, Litestream mitigates the data-loss risk but does not solve the corruption risk on network filesystems.
+
+In `src/server/db/index.ts`, check whether `PRAGMA journal_mode=WAL` is currently set. If yes, remove it for the production deployment configuration. Use environment-conditional journal mode: WAL in local development (local disk), DELETE journal in production (network volume).
+
+**Detection:**
+
+Run a write-heavy test (batch insert 500 payroll entries) against the deployed instance and immediately check `PRAGMA integrity_check`.
+
+**Phase to address:** Deployment phase — configure journal mode before any production data is written.
+
+**Confidence:** MEDIUM — WAL + NFS issues are well-documented in SQLite internals documentation. Platform-specific behavior on Fly.io/Render volumes is not officially confirmed by those platforms; inferred from community reports.
+
+Sources: [Fly.io SQLite WAL internals](https://fly.io/blog/sqlite-internals-wal/), [SQLite locking documentation](https://sqlite.org/lockingv3.html)
 
 ---
 
-### Pitfall 9: Per-Worker History Has N+1 Query Problem at Scale
+### Pitfall 9: JWT httpOnly Cookie `SameSite=None` Requires `Secure=true` — Breaks on HTTP
 
 **What goes wrong:**
 
-A worker compliance history view that loads all payroll weeks for a worker, then runs a separate compliance query for each week, produces N+1 database queries. For a worker on a year-long project (52 weeks) working on two projects simultaneously (104 weeks total), this is 105+ SQLite queries per page load. SQLite is synchronous and single-threaded in this stack — this will block the server process for a noticeable duration.
-
-The existing compliance route already has a pattern that runs one compliance computation per week, which is acceptable for a single-week view. That pattern does not scale to a multi-week history view.
+The app uses JWT in an httpOnly cookie. In local development, the server runs on `localhost:4099` and the Vite dev server proxies API calls — same-origin, no cookie issues. In production on Render or Fly.io, if the API and static files are served from the same origin, `SameSite=Lax` works correctly. However, if the deployment architecture separates the frontend static files to a CDN or a different subdomain from the API (e.g., `app.example.com` frontend and `api.example.com` backend), cookies set with `SameSite=Lax` or `SameSite=Strict` will not be sent on the API calls. The fix — `SameSite=None` — requires `Secure=true` (HTTPS). If HTTPS is not configured (e.g., on a free Render tier using the default HTTP endpoint), `SameSite=None` cookies are silently rejected by the browser.
 
 **Why it happens:**
 
-The natural implementation loops over weeks and calls `computeCompliance(weekId)` for each one. It works in development with 3-5 weeks of test data and fails in production with 52+ weeks.
+The cookie auth works in development with the Vite proxy. Production deployment changes the origin structure. The auth appears to work in basic testing (same-origin) but fails when the architecture diverges.
 
-**How to avoid:**
+**Consequences:**
 
-The per-worker history query must fetch all relevant payroll entries in a single query, grouped by week. The compliance computation must be done in memory over the batched result set, not by calling `computeCompliance()` per week. Write the batch query first, before the computation loop. Add a test fixture with at least 20 weeks for the same worker and assert the response time is under 500ms. For the dashboard compliance roll-up (which already exists), verify it uses `staleTime: 60_000` caching (the `ProjectCard` pattern documented in PROJECT.md) — the same approach should be used for the worker history query.
+Users cannot log in on production. Every API request returns 401. The app appears broken for no obvious reason.
 
-**Warning signs:**
+**Prevention:**
 
-The worker history route calls `getPayrollWeek(weekId)` inside a loop. The response time for a worker with 20+ weeks is measurably slower than for a worker with 2 weeks. SQLite `EXPLAIN QUERY PLAN` shows repeated full-table scans on `payroll_entries`.
+Serve the built Vite frontend as static files from the same Express server that handles the API. This ensures a single origin and eliminates cross-origin cookie complexity. In the Express server, add static file serving after building:
 
-**Phase to address:** Phase for Per-Worker Compliance History — write the batch query before the computation logic.
+```typescript
+app.use(express.static(path.join(__dirname, '../../client/dist')));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../../client/dist/index.html')));
+```
+
+Configure the cookie in production: `secure: process.env.NODE_ENV === 'production'`, `sameSite: 'lax'`. Both Render and Fly.io terminate HTTPS before the app server, so the app receives HTTP internally — but the browser sees HTTPS. The `Secure` flag is safe to enable.
+
+**Detection:**
+
+Deploy to production, open browser devtools → Application → Cookies, log in, and confirm the `jwt` cookie has `Secure` checked and `SameSite: Lax`. Attempt a protected API call from a different browser session.
+
+**Phase to address:** Deployment phase — finalize the cookie configuration as the first auth-related deployment step.
+
+**Confidence:** HIGH — MDN Web Docs and multiple sources confirm `SameSite=None` requires `Secure`. Express cookie documentation confirms `secure` flag behavior behind reverse proxies.
+
+Sources: [MDN HTTP Cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies), [Wisp Blog JWT httpOnly cookies](https://www.wisp.blog/blog/ultimate-guide-to-securing-jwt-authentication-with-httponly-cookies)
 
 ---
 
-### Pitfall 10: Worker Disambiguation Is Ignored — Same Name Across Projects Creates History Confusion
+### Pitfall 10: `VITE_` Prefixed Environment Variables Expose Secrets to the Browser Bundle
 
 **What goes wrong:**
 
-The per-worker compliance history view is scoped to a worker record (`workers.id`). Workers are project-scoped in the schema: `workers.projectId` is not null. A contractor who works on two concurrent federal projects is entered as two separate worker records with the same name and SSN last 4. The history view for `workerId = 'abc'` on Project A has no relationship to `workerId = 'def'` on Project B.
+Vite's environment variable system exposes any variable prefixed `VITE_` to the client-side JavaScript bundle. Variables without the prefix are server-only. If the SAM.gov production API key, JWT secret, or database path is accidentally defined as `VITE_SAMGOV_KEY` or `VITE_JWT_SECRET` and used in the frontend code (even just for display), those secrets ship in the publicly downloadable JavaScript bundle.
 
-The UI feature is "per-worker compliance history across all projects." If the implementation queries by `workerId` only, it silently gives a project-scoped view while the UX implies a worker-scoped view. The contractor believes they are seeing Carlos Rivera's full compliance record; they are seeing only his record for one project.
+This app has at minimum: a SAM.gov API key, a JWT signing secret, and a database file path — all of which must never reach the browser.
 
 **Why it happens:**
 
-The worker entity in this schema is inherently project-scoped. There is no global worker identity table. A "across all projects" query requires joining on worker name + SSN last 4, not on worker ID.
+A developer sets up the `.env` file with `VITE_` prefix for everything, discovers the frontend cannot read non-`VITE_` variables, and assumes all vars need the prefix.
 
-**How to avoid:**
+**Consequences:**
 
-The per-worker history query must join `workers` records by `(name, ssnLast4, userId)` — matching the authenticated user's projects, the same worker name, and the same SSN last 4. This produces a cross-project view. The query must deduplicate and label entries by project name so the user can see that "Week 5, Project A" and "Week 3, Project B" belong to the same physical person. Document the join logic in a comment: "Workers are project-scoped; cross-project identity is matched on (name, ssnLast4)." Add a unique case: a test with the same worker on two projects confirms the history view includes both.
+SAM.gov API key is public. JWT secret is public — any user can forge tokens. Rate limit exhaustion from credential abuse.
 
-**Warning signs:**
+**Prevention:**
 
-The worker history route query uses `WHERE worker_id = ?` with a single ID. The history for a worker who appears on three projects only shows one project's data. There is no "project" label on each week row in the history view.
+Never prefix server-side secrets with `VITE_`. The frontend only needs: `VITE_API_BASE_URL` (if not using same-origin). All other configuration lives in server-side `process.env`. Add a `.env.example` file to the repository with blank values and a comment indicating which variables are server-only. Add a CI check: `grep -r "VITE_SAMGOV\|VITE_JWT\|VITE_DATABASE" src/client/` should return empty.
 
-**Phase to address:** Phase for Per-Worker Compliance History — define the cross-project join strategy before any route implementation.
+**Detection:**
+
+Build the production bundle (`npm run build`), open `dist/assets/*.js`, search for any known secret value. If found, that variable is being bundled.
+
+**Phase to address:** Deployment phase — audit env var prefixes before setting production secrets in the hosting platform.
+
+**Confidence:** HIGH — Vite documentation explicitly documents the `VITE_` exposure behavior.
+
+Sources: [Vite Environment Variables](https://vite.dev/guide/env-and-mode)
 
 ---
 
-### Pitfall 11: Dashboard Filter State Lost on Navigation — Users Lose Context Mid-Workflow
+## Moderate Pitfalls
+
+### Pitfall 11: Radix UI `TooltipProvider` Wrapping the App Causes Every Tooltip to Re-render on Hover
 
 **What goes wrong:**
 
-A contractor filters the dashboard to "violation only, federal funding" and clicks into a project to investigate a violation. When they press the browser back button, the dashboard resets to the unfiltered state. They must re-apply the filter to continue reviewing the other projects in the set. For a contractor reconciling payroll before a DOL audit, losing filter state on every navigation break means re-filtering 5-10 times per session — a friction point that increases the chance of missing a project.
+Radix UI `Tooltip` requires a `<TooltipProvider>` ancestor. The natural implementation wraps the entire app in `<TooltipProvider>` inside `App.tsx`. A known Radix UI issue (GitHub issue #2375) causes every tooltip instance to re-render whenever any tooltip is hovered or unhovered — even tooltips that are not visible. On a page with 15 contextual help tooltips (the guidance UX feature), hovering one tooltip triggers 15 re-renders.
 
-**Why it happens:**
+**Prevention:**
 
-React state for filters is local to the component and resets on unmount. The back navigation unmounts `DashboardPage` and remounts it with initial state.
+Scope `TooltipProvider` as close as possible to each tooltip group, not at the app root. For the guidance system, wrap individual sections (e.g., each form card) in their own `TooltipProvider`. Alternatively, use a single `TooltipProvider` with `delayDuration={300}` and `skipDelayDuration={0}` to reduce re-render frequency. If performance issues appear, use Floating UI directly (the underlying library Radix uses) with a custom `useTooltip` hook — this avoids the provider overhead entirely.
 
-**How to avoid:**
+**Detection:**
 
-Persist filter state via URL query parameters: `?status=violation&funding=federal`. React Router's `useSearchParams()` reads and writes these params. On mount, the filter state is initialized from the URL. Filter changes update the URL (no page navigation, just param update). When the user presses back from a project page, the dashboard URL restores its params and the filter re-applies automatically. This also makes the filtered view bookmarkable and shareable. Test: navigate to a project from a filtered dashboard, press back, assert filter params are preserved.
+React DevTools Profiler: hover a tooltip with profiler recording, confirm no unrelated tooltip components appear in the re-render flamegraph.
 
-**Warning signs:**
+**Phase to address:** Guidance UX phase — validate tooltip rendering performance before building the full guidance system.
 
-Filter state is managed with `useState`, not `useSearchParams`. The dashboard URL never includes query parameters when filters are active. Pressing back resets all filters.
+**Confidence:** HIGH — Radix UI GitHub issue #2375 and #3596 confirm this behavior. Status as of 2026: partially addressed in newer versions but not fully resolved.
 
-**Phase to address:** Phase for Dashboard Search + Filter — use URL params from the first implementation.
+Sources: [Radix UI Tooltip re-render issue #2375](https://github.com/radix-ui/primitives/issues/2375), [Radix UI Tooltip re-render issue #3596](https://github.com/radix-ui/primitives/issues/3596)
 
 ---
 
-### Pitfall 12: Dashboard Search Triggers a Query on Every Keystroke — Performance on Large Project Lists
+### Pitfall 12: Tooltips on Touch Devices Have No Activation Mechanism
 
 **What goes wrong:**
 
-A dashboard with 50+ projects that fetches a filtered list from the server on every character of a search input will send a query on every keypress. At 50 projects this is cosmetically acceptable but creates multiple in-flight requests that can resolve out of order (stale results rendering after fresh results). At 200 projects it creates server load spikes during typing.
-
-The existing dashboard already fetches compliance per ProjectCard with a `staleTime: 60_000` pattern. Search-triggered fetches bypass this cache.
+CSS `:hover` and pointer-enter events do not fire reliably on touch devices. A tooltip triggered by hover is invisible on mobile/tablet browsers. The app is positioned as "web-first; browser on tablet is sufficient" (PROJECT.md). A contractor using an iPad to review payroll has no access to the contextual help tooltips.
 
 **Why it happens:**
 
-The search input's `onChange` handler calls `refetch()` or modifies a query key directly. This is the natural pattern when discovering React Query.
+Tooltip libraries default to hover trigger because it is the desktop interaction model. Touch alternative (tap) is often not configured.
 
-**How to avoid:**
+**Consequences:**
 
-Debounce the search input: 300ms delay before the query key updates. Use `useDeferredValue()` from React 18 for the input value that feeds the query. For a project list at current scale (SQLite, single user), client-side filtering of the full project list fetch is simpler and avoids server round-trips entirely: fetch all projects once (with `staleTime: 60_000`), filter in memory. Server-side search is only needed if the project count exceeds ~500. Document which approach is in use and why.
+The guidance UX feature — a primary v2.4 goal — is entirely non-functional for the tablet use case.
 
-**Warning signs:**
+**Prevention:**
 
-Network tab shows a request per character typed. Multiple in-flight requests have overlapping response times. The project list flickers during typing as responses arrive out of order.
+Use `<Tooltip.Trigger asChild>` with an explicit `?` icon button alongside each tooltip target, rather than wrapping the entire form field. A button is keyboard accessible and touch-tappable. On tap: toggle tooltip open state. This gives desktop (hover), keyboard (focus), and touch (tap) access through a single component. Do not rely on hover-only tooltips for compliance-critical guidance text.
 
-**Phase to address:** Phase for Dashboard Search + Filter — decide client-side vs. server-side filtering at the start, before building the input component.
+**Detection:**
+
+Open the app on an iOS or Android browser (or Chrome DevTools mobile emulation), attempt to trigger a help tooltip without hovering, confirm it opens.
+
+**Phase to address:** Guidance UX phase — design the help icon + tap interaction before building tooltip components.
+
+**Confidence:** HIGH — fundamental browser behavior; confirmed by accessibility guidelines (WCAG 2.5.3).
 
 ---
 
-### Pitfall 13: Migration Not Registered in _journal.json — New Columns Are Invisible to Drizzle
+### Pitfall 13: Construction Photography as CSS Backgrounds Prints as Blank on Most Browsers
 
 **What goes wrong:**
 
-The project's migration workflow requires manual registration of new SQL migration files in `meta/_journal.json`. The existing journal has 5 entries mapping to 8 migration files (files 0005, 0006, 0007 are not in the journal — they appear to be applied directly or via another mechanism). If a new migration for v2.3 schema changes (submission tracking columns, amendment columns, archive columns) is written as a SQL file but not registered, Drizzle will not apply it on next startup. The schema TypeScript definitions will include the new columns; the actual SQLite tables will not. Runtime will throw column-not-found errors.
+CSS `background-image` properties are not printed by default in most browsers. Chrome and Safari both default to not printing background images unless the user enables "Background graphics" in the print dialog. The app has existing print CSS for the reports page (established in v2.2). Adding photography as a decorative background on the dashboard or project detail pages will produce blank white areas or missing dark gradient backgrounds when printed. More critically, if the dark background is used to create contrast for white text (gold-on-dark-photo pattern), removing the background leaves white text on white paper — illegible.
 
 **Why it happens:**
 
-The migration file is created and looks correct. The developer runs the app, sees it start, and assumes migrations ran. Drizzle only runs migrations registered in the journal.
+Print CSS was implemented for the reports page tables, which had no background images. Extending the design to photography introduces a new print rendering category that the existing print CSS does not handle.
 
-**How to avoid:**
+**Consequences:**
 
-Every new migration file must have a corresponding entry in `meta/_journal.json` with the correct `idx` (next sequential integer), `version: "6"`, `when` (current timestamp in ms), `tag` (filename without .sql extension), and `breakpoints: true`. After adding, restart the server and verify the new columns exist: `SELECT sql FROM sqlite_master WHERE name = 'payroll_weeks'` should include the new column names. Add a step to the definition of done for every phase that touches the schema: "Run column verification query, confirm new columns present."
+Reports and project detail pages sent to auditors via print-to-PDF will have broken layouts with invisible text.
 
-**Warning signs:**
+**Prevention:**
 
-Server starts without errors but `payrollWeeks.submittedAt` is undefined at runtime. Drizzle select on `payrollWeeks` does not include the new column in results. TypeScript types include the field but runtime values are always `undefined`.
+In the `@media print` CSS block, add explicit overrides for any container that uses photography as a background:
 
-**Phase to address:** Every phase that adds schema columns — establish the journal registration step as a checklist item in the phase definition.
+```css
+@media print {
+  .hero-section,
+  .dashboard-header-photo {
+    background-image: none !important;
+    background-color: white !important;
+    color: #1a1a1a !important;
+  }
+}
+```
+
+Photography backgrounds should only be used on sections that are non-functional decorations (hero banners, landing page sections). Never use photography as the background for data-containing cards or form areas that may be printed. Use solid color fallbacks for all text-bearing sections.
+
+**Detection:**
+
+Open the browser print preview for any page that uses a photography background. Confirm no text is white-on-white.
+
+**Phase to address:** UI/UX Overhaul phase — write print CSS overrides for every photography section before finalizing the visual design.
+
+**Confidence:** HIGH — print CSS behavior for backgrounds is a documented browser default. The issue is well-known in web development.
+
+Sources: [Print Styles pitfalls](https://blog.pixelfreestudio.com/print-styles-gone-wrong-avoiding-pitfalls-in-media-print-css/)
 
 ---
 
-### Pitfall 14: WH-347 Amendment PDF Prints "AMENDMENT" Incorrectly — DOL Form Requirements Not Met
+### Pitfall 14: Large Photography Assets Cause First-Load Performance Regression on Compliance Pages
 
 **What goes wrong:**
 
-The DOL WH-347 form has a specific header structure. For amendment submissions, DOL expects the certified payroll to be clearly marked as a correction. The existing `wh347Generator.ts` uses coordinate overlay on a flat PDF — there is no AcroForm field to check or uncheck. If the amendment marker is added as an overlay at approximate coordinates without measurement verification, it may print over existing form text, outside the printable area, or at a scale that is illegible.
-
-The existing `checkboxFinal` field at `{ page: 0, x: 39, y: 497 }` shows the coordinate precision required. An "AMENDMENT" marker at the wrong position invalidates the form for DOL submission.
+A high-resolution construction photograph used as a hero background (e.g., 3000 x 2000 px, 2-4 MB) will block the Largest Contentful Paint (LCP) if served without size reduction or modern format encoding. The dashboard, which contractors use daily, will load noticeably slowly on standard office broadband. More critically, the Vite build does not automatically optimize or compress images in the `/public` directory.
 
 **Why it happens:**
 
-The amendment PDF generation is treated as a "just add a label" task. The coordinate system requires measurement against the actual PDF grid, which was done once at the start of the project and not revisited.
+Images are added to the repository from a camera or stock library at original resolution. The Vite build copies them unchanged to the output bundle.
 
-**How to avoid:**
+**Consequences:**
 
-Before implementing amendment PDF generation: open `wh347-grid.pdf` (if it exists from the original coordinate measurement session) or create a new annotated grid for the amendment form area. Measure the exact coordinates for the amendment marker. The DOL WH-347 instructions say to mark "AMENDED" in the certified payroll number box or at the top of the form — identify the exact field this corresponds to in the coordinate map and add it as a named constant in `WH347_FIELDS`. Test by generating an amendment PDF and visually confirming the marker position does not overlap any existing field text.
+Dashboard LCP degrades from <1s (current, no images) to 5-8s (unoptimized hero photo). This is particularly noticeable on cloud hosting with cross-region latency.
 
-**Warning signs:**
+**Prevention:**
 
-The amendment PDF "AMENDMENT" label is visible in the PDF viewer but overlaps the payroll number or contractor name field. The label is clipped at the page margin. The label is rendered in the wrong font size relative to the surrounding form text.
+Before adding any photography asset:
+1. Resize to the maximum CSS render size (e.g., a 1440px wide hero needs at most a 1440px image, ideally 2880px for 2x DPR)
+2. Compress to WebP format (target: < 200 KB for a hero background)
+3. Use `loading="lazy"` for below-fold photos
+4. Use CSS `background-size: cover` with a solid color fallback that renders immediately while the image loads
 
-**Phase to address:** Phase for Payroll Amendment Workflow — coordinate measurement must precede any PDF generation code.
+For the landing page hero section, add `<link rel="preload" as="image" href="/hero-construction.webp">` in the `<head>` to start the download before the CSS is parsed.
 
----
+**Detection:**
 
-## Technical Debt Patterns
+Run Lighthouse on the deployed production URL after adding photography. LCP should stay under 2.5 seconds. A score below this indicates the images need further optimization.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Copy rate snapshots from source week instead of re-fetching | Copy endpoint is simpler, no rate lookup required | Stale rates in new weeks; compliance engine silently accepts incorrect snapshots; audit trail is compromised | Never — rate re-fetch is mandatory |
-| Enforce submission lock only in the UI (disabled form) | Faster to implement | Server routes remain writable; any API call (including tests, curl) bypasses the lock; submitted records are mutated | Never — server-side guard is required |
-| Store amendment as a flag on the original week (`isAmended: true`) | No new table rows or migration | Original entry data is overwritten; audit trail is destroyed; DOL compliance is violated | Never |
-| Filter archived projects client-side only | No server change needed | Archived projects still appear in compliance roll-up counts; dashboard badge counts are inflated | Never — server-side filter is required |
-| Compute worker cross-project history by name-string match with no SSN deduplication | Simpler join | Workers with identical names but different SSNs are merged; workers with different formatting of the same name are split | Never — SSN last 4 is required for disambiguation |
-| Use `useState` for dashboard filter instead of URL params | Simpler code | Filter state lost on navigation; back-button breaks workflow; URL is not shareable | Acceptable only if filter is a single toggle with low re-use frequency — not acceptable for a multi-filter dashboard |
-| Skip `_journal.json` registration and apply migrations manually in development | Faster iteration | Migration is not applied in any other environment; production startup fails | Never — always register |
+**Phase to address:** UI/UX Overhaul phase — size and compress images before adding them to the repository.
 
----
+**Confidence:** HIGH — Lighthouse LCP metrics are well-established. WebP compression ratios are documented.
 
-## Integration Gotchas
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| `upsertPayrollEntry()` for amendment creation | Calling `upsertPayrollEntry()` with the original `payrollWeekId` — the `onConflictDoUpdate` silently overwrites the original entry | Create a new `payrollWeeks` row with `amendedFromWeekId` set, then insert new `payrollEntries` rows for the new week |
-| `computeCompliance()` in worker history | Calling per-week in a loop, one DB round-trip per week | Batch-load all weeks' entries in a single query, run compliance computation in memory |
-| `wageLookup.ts` in copy route | Calling rate lookup per classification sequentially | Batch all classifications for the project in one lookup; fail gracefully per classification without blocking the copy |
-| `payrollWeeks.status` filter in existing route | `GET /api/payroll/projects/:projectId/weeks` does not filter by project status — returning weeks for archived projects | Add a project status check at the route level; or query-join `payrollWeeks` through `projects` and include `WHERE projects.status = 'active'` |
-| pdf-lib coordinate overlay for amendment marker | Using `page.drawText('AMENDMENT', { x: approx, y: approx })` without measurement | Measure against the actual form PDF grid at the specific position DOL expects; add to `WH347_FIELDS` as a named constant |
+Sources: [Image optimization for web performance](https://www.debugbear.com/blog/image-optimization-web-performance)
 
 ---
 
-## Performance Traps
+### Pitfall 15: TailwindCSS v4 `@theme` Background Image Registration for Photography Has Different Syntax Than v3
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| N+1 compliance computation in worker history | Page load time scales linearly with week count; 52 weeks = 52+ DB queries | Batch entry load + in-memory computation | Visible at 10+ weeks per worker; painful at 30+ |
-| Dashboard search on every keystroke with server fetch | Network tab shows a request per character; results flicker | 300ms debounce + client-side filtering for lists under 500 items | Immediately noticeable on any network latency |
-| Compliance roll-up for all projects including archived | Dashboard load time grows as project count grows | Server-side `WHERE status = 'active'` filter on projects list | Noticeable at 20+ archived projects |
-| Amendment history query without index on `amendedFromWeekId` | Amendment chain lookup is a full table scan on `payroll_weeks` | Add index: `CREATE INDEX idx_payroll_weeks_amended_from ON payroll_weeks(amended_from_week_id)` | Visible at 100+ weeks total |
+**What goes wrong:**
 
----
+In TailwindCSS v4, background images are registered in the `@theme` block as `--background-image-<key>: url(...)`, not as a `backgroundImage` key in `tailwind.config.js` (which no longer exists). If a developer attempts to register the photography hero background using v3 syntax (by creating a `tailwind.config.js` alongside the `@theme` setup), it will silently conflict with v4's CSS-first configuration. The result is either no background image or an import resolution error.
 
-## Security Mistakes
+**Why it happens:**
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| No server-side edit lock on submitted weeks | Any API caller (including automated scripts or test suites) can overwrite submitted payroll data; submitted certification is meaningless | `checkWeekEditable()` guard on all payroll entry write routes; returns 409 if `submittedAt IS NOT NULL` |
-| Project ownership not checked on amendment source week | A user could submit a `POST /api/payroll/amendments` with a `sourceWeekId` from another user's project and read/copy that project's entries | `assertProjectOwner()` must be called on the source week's `projectId`, not just the destination project |
-| Amendment creation not idempotent — double-submit creates two amendment rows | Two Amendment #1 records exist; audit trail is ambiguous | Unique constraint on `(amendedFromWeekId, amendmentNumber)` + `useRef` double-click guard in the UI |
-| Submission timestamp is client-supplied | Client sends `submittedAt: "2025-01-01"` (backdated submission) — creates a false audit timestamp | `submittedAt` must be set server-side as `new Date().toISOString()` — never accepted from the request body |
+The v3 → v4 migration for this project was completed in v2.1, but documentation and examples online are still predominantly v3-syntax. New photography assets are added by developers who find a v3 tutorial.
 
----
+**Prevention:**
 
-## UX Pitfalls
+Register photography backgrounds in `src/client/index.css` inside the existing `@theme` block:
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| "Mark Submitted" is a single click with no confirmation | Contractors click it accidentally mid-edit; week is locked; they must file an amendment to correct a premature submission | Require a confirmation modal with the submission date and agency name before marking submitted |
-| Submission status is only visible on the week detail page | Contractor cannot see at a glance which weeks are submitted from the payroll list | Add a "Submitted" badge to each row in the payroll weeks list; include submission date in the list view |
-| Copy Previous Week shows a success state but does not warn about workers with no rates | Contractor starts the new week with missing entries; discovers the gap on payday | Copy result response must include `{ copied: N, skipped: M, skippedWorkers: [...] }` and the UI must show a dismissible warning if any workers were skipped |
-| Archive confirmation has no record count summary | Contractor archives a project without realizing it had 30 weeks of payroll records that are now hidden | Archive confirmation modal must show: "This will archive [N] payroll weeks and [M] workers. Records are preserved and accessible via [link]." |
-| Per-worker history shows violations without the snapshot rate used | Contractor cannot explain to an auditor why a violation was flagged — was the rate $28 or $31? | Display `baseRateSnapshot` and `fringeRateSnapshot` alongside each violation record in the history view |
+```css
+@theme {
+  --background-image-hero-construction: url('/hero-construction.webp');
+}
+```
+
+Then use `bg-hero-construction` class in JSX. Do not create a `tailwind.config.js` file. Do not use the v3 `backgroundImage` configuration key.
+
+**Phase to address:** UI/UX Overhaul phase — add a comment to `index.css` documenting the image registration pattern before adding photography.
+
+**Confidence:** HIGH — TailwindCSS v4 documentation confirms CSS-first configuration and the `--background-image-*` custom property pattern.
+
+Sources: [TailwindCSS v4.0 announcement](https://tailwindcss.com/blog/tailwindcss-v4), [TailwindCSS background-image docs](https://tailwindcss.com/docs/background-image)
 
 ---
 
-## "Looks Done But Isn't" Checklist
+### Pitfall 16: Drizzle Migration Journal Must Still Be Manually Updated for Double-Time Schema Columns
 
-- [ ] **Copy Previous Week:** New week's entries have `baseRateSnapshot` and `fringeRateSnapshot` values that differ from the source week when a rate update occurred between the two weeks — verify this case explicitly in tests
-- [ ] **Copy Previous Week:** New week has `submittedAt: null` regardless of source week submission state — assert in the copy test
-- [ ] **Submission Tracking:** Call `PUT /api/payroll/entries/:id` directly on a submitted week and confirm a 409 response — do not rely on the UI being disabled
-- [ ] **Amendment Workflow:** After creating an amendment, read the original week's entries and confirm they are unchanged — assert original snapshots match pre-amendment values
-- [ ] **Amendment Numbering:** Create two amendments for the same source week via two rapid API calls and confirm only one succeeds (constraint error on second)
-- [ ] **Project Archive:** Call `DELETE /api/projects/:id` (if endpoint exists) — confirm it returns 405 Method Not Allowed or 404
-- [ ] **Project Archive:** Archive a project, then call `GET /api/projects` — confirm the archived project does not appear in the response
-- [ ] **Archive With Violations:** Archive a project with an unresolved violation week — confirm the API returns a warning/confirmation prompt, not a silent 200
-- [ ] **Worker History Cross-Project:** Add the same worker (same name, same SSN last 4) to two projects, enter payroll on both — confirm the history view shows weeks from both projects
-- [ ] **Dashboard Filter URL Params:** Apply a filter, navigate to a project, press back — confirm filter params are present in the URL and filter is re-applied
-- [ ] **Migration Registration:** Run `SELECT sql FROM sqlite_master WHERE name = 'payroll_weeks'` after startup and confirm new v2.3 columns are present in the output
+**What goes wrong:**
+
+This was documented as a critical pitfall in v2.3 (PITFALLS.md on file, Pitfall 13). It remains relevant for v2.4: the California A-1-131 implementation requires adding `monDt` through `sunDt` double-time columns and potentially a `stateFormType` column to the `payrollEntries` table. These are add-only migrations in the `src/server/db/migrations/` directory that must also be registered in `meta/_journal.json` with the correct sequential `idx`. Drizzle silently skips unregistered files.
+
+**Prevention:**
+
+Before writing any CA/WA form generation code, run the schema migration and verify:
+```sql
+SELECT sql FROM sqlite_master WHERE name = 'payroll_entries';
+```
+New columns must be visible before any form code is written.
+
+**Phase to address:** State Forms phase — this is the first step before any form logic.
+
+**Confidence:** HIGH — observed in this codebase's v2.3 implementation.
+
+---
+
+## Minor Pitfalls
+
+### Pitfall 17: pdf-lib Coordinate System Origin Is Bottom-Left — CA and WA State Forms Have Different Dimensions Than WH-347
+
+**What goes wrong:**
+
+The WH-347 form is a specific PDF size. California A-1-131 and Washington F700-065-000 are different forms with different page dimensions and different coordinate layouts. The existing `fillWh347()` function uses hardcoded coordinate constants (e.g., `WH347_FIELDS.checkboxFinal = { page: 0, x: 39, y: 497 }`). If a developer attempts to build the CA form by modifying these constants without re-measuring against the actual state form PDFs, fields will print in wrong positions.
+
+pdf-lib measures from the bottom-left corner of the page. The y=0 origin is the bottom of the page. A form that visually shows a field "near the top" will have a high y value. This is counterintuitive and causes off-by-significant-amounts errors when guessing coordinates.
+
+**Prevention:**
+
+For each state form: open the official PDF in Adobe Acrobat or Acrobat Reader, enable "Show cursor coordinates" in preferences, and measure the actual position of each field. Create a separate constants file `wh347Fields.ts` → `dirA1131Fields.ts` → `waF700Fields.ts`. Never reuse WH-347 coordinate constants for state forms.
+
+**Phase to address:** State Forms phase — measure coordinates before writing any form fill code.
+
+**Confidence:** HIGH — documented in the pdf-lib GitHub issues and the project's own WH-347 implementation history.
+
+---
+
+### Pitfall 18: Express Static File Serving Order — API Routes Must Be Registered Before the SPA Catch-All
+
+**What goes wrong:**
+
+The Express production setup serves the Vite build as static files with a catch-all `GET *` handler that returns `index.html` for client-side routing. If the catch-all is registered before the API routes, every API call (`GET /api/projects`) matches the catch-all first and returns HTML. The frontend receives HTML where it expects JSON, produces a parse error, and appears broken.
+
+**Why it happens:**
+
+The static serving setup is often added to the bottom of `server.ts` without checking the route registration order. The catch-all route is registered before the API route setup.
+
+**Prevention:**
+
+Register in this order:
+1. All API routers (`app.use('/api', ...)`)
+2. Static file serving (`app.use(express.static(...))`)
+3. SPA catch-all (`app.get('*', ...)`)
+
+The catch-all must be the last route registered. Add a comment: "SPA catch-all must be last — after all API routes."
+
+**Detection:**
+
+After adding static serving, make a direct `curl` call to `GET /api/projects` and confirm the response is JSON, not HTML.
+
+**Phase to address:** Deployment phase.
+
+**Confidence:** HIGH — documented Express pattern. This is a common mistake.
+
+---
+
+### Pitfall 19: CSV Export Column Order Must Match WH-347 Field Order for Auditor Usability
+
+**What goes wrong:**
+
+The CSV export from the compliance history page is a new v2.4 feature. If columns are ordered by database schema column order (which is implementation order, not logical audit order), the exported CSV will be confusing for a DOL auditor who expects: worker name, SSN last 4, trade, week ending, hours by day, gross wages, deductions, net pay, compliance status. A CSV that starts with internal IDs and has columns ordered randomly creates friction during an audit review.
+
+**Prevention:**
+
+Define the CSV column order explicitly in the export function. Map the column spec to the WH-347 field order as a reference. Add a descriptive header row (not just database field names).
+
+**Phase to address:** Dashboard/CSV export phase.
+
+**Confidence:** MEDIUM — based on auditor usability best practices; no official column order mandate found.
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| CA State Form | Daily OT schema missing — CA requires per-day DT hours | Add `monDt`-`sunDt` columns before writing any CA form logic |
+| CA State Form | Fringe contributions placed in deductions column | Separate form-filler logic keeps fringe in fringe section only |
+| CA State Form | PDF download implies full compliance — eCPR portal submission still required | Bake eCPR portal disclosure into the download preflight modal |
+| WA State Form | SAM.gov trade classification strings ≠ L&I four-letter craft codes | Build a mapping table; provide UI dropdown for unmapped classifications |
+| WA State Form | Reusing COMP-03 ratio logic for WA 15% apprentice hours requirement | New `computeWashingtonApprenticeCoverage()` function, project-level cumulative |
+| Guidance UX | Radix TooltipProvider at app root → all tooltips re-render on any hover | Scope provider close to tooltip groups; use `?` icon buttons for touch |
+| Guidance UX | Hover-only tooltips invisible on iPad (tablet use case) | All tooltips triggered by a tappable icon button, not just hover |
+| UI/UX Overhaul | Photography backgrounds disappear when printing; dark background leaves white text on white paper | `@media print` overrides for all photo backgrounds before finalizing design |
+| UI/UX Overhaul | Uncompressed photography assets slow dashboard LCP | WebP, max 200 KB per asset, preload hint for hero images |
+| UI/UX Overhaul | v3-style `backgroundImage` config key conflicts with v4 `@theme` | Register background images in `@theme` block in `index.css` only |
+| Production Deployment | SQLite database erased on redeploy — no persistent volume | First deployment step: configure and verify persistent volume mount |
+| Production Deployment | Fly.io `release_command` skips persistent volume — migrations don't apply | Run Drizzle `migrate()` at Express startup, not in fly.toml release command |
+| Production Deployment | WAL mode + network filesystem (NFS volume) → potential corruption | Use DELETE journal mode in production; WAL only on local disk |
+| Production Deployment | JWT cookie breaks if API and frontend on different origins | Serve frontend as static files from same Express server; `SameSite=Lax` works |
+| Production Deployment | `VITE_`-prefixed secrets exposed in browser bundle | Never prefix SAM.gov key, JWT secret, or DB path with `VITE_` |
+| CSV Export | Column order doesn't match auditor expectations | Define explicit column map ordered by WH-347 field convention |
+| Schema Changes | New OT/DT columns not registered in Drizzle journal | Manual `_journal.json` registration + post-migration schema verification |
 
 ---
 
@@ -424,46 +623,46 @@ The amendment PDF "AMENDMENT" label is visible in the PDF viewer but overlaps th
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Stale rate snapshots copied into new week | HIGH | Identify all weeks created via copy; for each, determine the correct rate at the week-ending date; issue amendment weeks with correct rates; regenerate WH-347s; notify affected agencies |
-| Original entry data overwritten by amendment | HIGH | Restore from database backup if available; if no backup, reconstruct from the submitted PDF (if saved); manually re-enter original values into a corrected audit log |
-| Submitted week edited without lock | HIGH | Cross-reference against the submitted WH-347 PDF; determine which changes occurred post-submission; file amendments for any affected weeks |
-| Hard-deleted project data | HIGH | No recovery without backup; SQLite WAL file may have pre-delete state if caught quickly; otherwise data is gone — enforce the no-delete rule before this scenario occurs |
-| Worker history shows wrong cross-project data | MEDIUM | Re-query with corrected join logic; no data was mutated, only displayed incorrectly; fix the query and re-render |
-| Dashboard filter lost on navigation | LOW | Add URL param persistence; no data affected, pure UX fix |
-| Migration not registered in journal | LOW | Add journal entry, restart server, columns appear; no data loss if caught before production use |
-
----
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Stale rate snapshots in copy | Copy Previous Week phase | Test: copy a week after updating the project WD; new week entries have different snapshot values than source week |
-| Submission flags copied to new week | Copy Previous Week phase (coordinate with Submission Tracking) | Test: copy a submitted week; new week has `submittedAt: null` |
-| No edit lock on submitted weeks | WH-347 Submission Tracking phase | Integration test: PUT on submitted week returns 409 |
-| Amendment corrupts original audit trail | Payroll Amendment Workflow phase — migration first | Test: original week entries are unchanged after amendment creation |
-| Amendment numbering conflict | Payroll Amendment Workflow phase — unique constraint in migration | Test: double-submit amendment creation returns constraint error |
-| Hard-delete of archived projects | Project Completion / Archive phase | Test: no DELETE route exists; GET /projects omits closed projects |
-| Archive with open violations — no warning | Project Completion / Archive phase | Test: archive a project with violation week returns 409 or warning payload |
-| Mixed snapshot/live data in worker history | Per-Worker Compliance History phase | Code review: history route imports must not include wageLookup.ts |
-| N+1 queries in worker history | Per-Worker Compliance History phase | Test fixture with 20 weeks; assert response time < 500ms |
-| Worker disambiguation across projects | Per-Worker Compliance History phase | Test: same worker on two projects appears in history with both project labels |
-| Filter state lost on navigation | Dashboard Search + Filter phase | Test: apply filter, navigate, back-button, assert URL params preserved |
-| Per-keystroke search requests | Dashboard Search + Filter phase | Network tab shows single request per debounce period, not per character |
-| Migration not registered in journal | Every schema-change phase | Post-migration: `SELECT sql FROM sqlite_master` shows new columns |
-| Amendment PDF coordinate mismatch | Payroll Amendment Workflow phase | Visual review of generated amendment PDF against DOL form layout |
+| DB wiped on redeploy (no persistent volume) | HIGH — data loss | Restore from Litestream backup if configured; otherwise manual re-entry; implement persistent volume immediately |
+| Migrations run against temp VM (Fly.io release_command) | MEDIUM — schema out of sync | SSH into prod container, run `sqlite3 /data/app.db` manually, apply migration SQL; switch to startup-time migration |
+| CA form fringe in wrong column | LOW — submission rejected | Regenerate form after fixing form-filler logic; resubmit to eCPR portal |
+| CA form missing DT hours | MEDIUM — incorrect certified payroll submitted | Identify affected weeks; regenerate with corrected logic; resubmit to DIR via eCPR; notify awarding agency |
+| Photography asset causes LCP > 4s | LOW — performance only | Replace with WebP-compressed version; update URL reference |
+| Tooltip inaccessible on tablet | LOW — UX gap | Wrap tooltip in icon button trigger; no data affected |
+| `VITE_` secret in bundle | HIGH — credential exposure | Rotate the exposed credential immediately; redeploy with corrected env var prefix; audit all `VITE_` variables |
+| WAL mode corruption on NFS volume | HIGH — data loss | Restore from most recent Litestream replica; if no backup, data is lost; switch to DELETE journal mode |
 
 ---
 
 ## Sources
 
-- Direct codebase audit: `src/server/db/schema.ts`, `src/server/services/payrollService.ts`, `src/server/services/complianceService.ts`, `src/server/services/wh347Generator.ts`, `src/server/routes/payroll.ts`, `src/server/db/migrations/meta/_journal.json` (2026-03-23)
-- `.planning/PROJECT.md` — key decisions, stack constraints, migration workflow documentation
-- Test suite structure: `tests/routes/compliance.test.ts`, `tests/routes/payroll.test.ts`, `tests/services/complianceService.test.ts` — fixture patterns used to identify test coverage gaps
-- 29 CFR Part 3 — Contractors and Subcontractors on Public Building or Public Work Financed in Whole or in Part by Loans or Grants from the United States (3-year records retention requirement)
-- DOL WH-347 Instructions (January 2025 revision) — amendment marking requirements
-- Drizzle ORM migration documentation — journal registration requirement for SQLite migrations
+- [California DIR Certified Payroll Reporting FAQ](https://www.dir.ca.gov/Public-Works/FAQ-certified-payroll-reporting.html)
+- [California DIR Prevailing Wage FAQ](https://www.dir.ca.gov/dlse/FAQ_PrevailingWage.html)
+- [DIR eCPR XML Guidelines v1.9](https://www.dir.ca.gov/public-works/eCPRXMLGuideline1.9.pdf)
+- [DIR Public Works Certified Payroll Reporting](https://www.dir.ca.gov/public-works/certified-payroll-reporting.html)
+- [Caltrans Labor Compliance Manual Chapter 10](https://dot.ca.gov/programs/construction/labor-compliance/labor-compliance-manual/chapter-10)
+- [Ogletree: California SB 854 eCPR requirement](https://ogletree.com/insights-resources/blog-posts/california-public-works-contractors-will-be-required-to-submit-payroll-records-electronically-starting-august-1/)
+- [LCPtracker: CA Prevailing Wage Q&A](https://lcptracker.com/blog-post/qa-california-prevailing-wage-and-certified-payroll-requirements/)
+- [Washington L&I Prevailing Wage Suite](https://secure.lni.wa.gov/wagelookup/)
+- [MRSC: Navigating Intents and Affidavits (March 2025)](https://mrsc.org/stay-informed/mrsc-insight/march-2025/intents-affidavits-prevailing-wages)
+- [Points North: Washington Certified Payroll Reporting](https://www.points-north.com/state-by-state-certified-payroll-reporting/washington)
+- [Points North: Apprenticeship Ratios and Prevailing Wage](https://www.points-north.com/trends-and-insights/apprenticeship-ratios-prevailing-wage-requirements)
+- [Workyard: Washington Prevailing Wage Guide 2025](https://www.workyard.com/us-labor-laws/prevailing-wage-washington-state)
+- [Render Persistent Disks documentation](https://render.com/docs/disks)
+- [Fly.io SQLite documentation (Node.js / Prisma)](https://fly.io/docs/js/prisma/sqlite/)
+- [Fly.io All-In on SQLite + Litestream](https://fly.io/blog/all-in-on-sqlite-litestream/)
+- [Fly.io community: SQLite migration with persistent volume](https://community.fly.io/t/deploy-sqlite-with-persistent-volume-not-migrating/18712)
+- [Fly.io SQLite WAL internals](https://fly.io/blog/sqlite-internals-wal/)
+- [Radix UI Tooltip re-render issue #2375](https://github.com/radix-ui/primitives/issues/2375)
+- [Radix UI Tooltip re-render issue #3596](https://github.com/radix-ui/primitives/issues/3596)
+- [TailwindCSS v4.0 announcement and CSS-first config](https://tailwindcss.com/blog/tailwindcss-v4)
+- [Vite environment variable documentation](https://vite.dev/guide/env-and-mode)
+- [MDN: HTTP Cookies (SameSite / Secure)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies)
+- [Print CSS background image pitfalls](https://blog.pixelfreestudio.com/print-styles-gone-wrong-avoiding-pitfalls-in-media-print-css/)
+- [DebugBear: image optimization for web performance](https://www.debugbear.com/blog/image-optimization-web-performance)
+- SQLite documentation: [File locking and WAL concurrency](https://sqlite.org/lockingv3.html)
 
 ---
-*Pitfalls research for: Davis-Bacon compliance payroll system — v2.3 contractor workflow efficiency + audit readiness features*
-*Researched: 2026-03-23*
+*Pitfalls research for: v2.4 — state forms, guidance UX, UI overhaul, production deployment*
+*Researched: 2026-03-24*
+*Previous PITFALLS.md (v2.3 features) archived in this overwrite — v2.3 pitfalls are resolved and shipped.*

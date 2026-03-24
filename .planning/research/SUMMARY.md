@@ -1,17 +1,20 @@
-# Project Research Summary
+# Research Summary — v2.4: Ship-Ready + Design Elevation
 
-**Project:** HCC Prevailing Wage — v2.3 Contractor Workflow Efficiency + Audit Readiness
-**Domain:** Davis-Bacon certified payroll compliance tooling — contractor-facing SaaS
-**Researched:** 2026-03-23
-**Confidence:** HIGH
+**Project:** HCC Prevailing Wage
+**Domain:** Davis-Bacon / state prevailing wage compliance — certified payroll generation and audit readiness
+**Milestone:** v2.4 — Ship-Ready + Design Elevation
+**Researched:** 2026-03-24
+**Confidence:** HIGH (all findings verified against official sources; MEDIUM on WA L&I portal-specific field details)
+
+---
 
 ## Executive Summary
 
-This is a v2.3 increment to an existing, fully-functional prevailing wage compliance application. The core features already shipped: WH-347 PDF generation (January 2025 revision), compliance checking against frozen rate snapshots, worker management, and a project dashboard. Version 2.3 adds six workflow efficiency and audit readiness features — copy previous payroll week, WH-347 submission tracking, payroll amendment workflow, project archiving, dashboard search/filter, and per-worker compliance history. All six are extensions of existing data shapes and patterns; no new libraries are required.
+v2.4 is an additive milestone on top of a fully-functional v2.3 codebase (1,522 passing tests). The scope breaks into four delivery areas: (1) state-specific certified payroll forms for California and Washington, (2) dashboard compliance status filter and CSV export for the audit-response workflow, (3) contractor guidance UX woven through existing pages, and (4) production deployment on Render.com with design elevation. The research confirms that none of these areas require new architectural patterns or a database engine change — the entire milestone is implementable with the existing stack, one new library (`csv-stringify` ^6.7.0), and new service files following patterns already proven in the codebase.
 
-The recommended implementation approach is additive and constraint-respecting: a single add-only DB migration (4 columns on `payrollWeeks`), new routes and service functions following established patterns, and UI additions to existing pages plus one new page for per-worker compliance history. The existing stack — React 19, Express, Drizzle/SQLite, TanStack Query, pdf-lib — covers every technical need. The `projects.status` column (`'active' | 'closed'`) already exists in `schema.ts`, meaning project archiving requires zero schema work. The amendment workflow's key architecture decision — extending `payrollWeeks` with `amendment_number` and `original_week_id` rather than creating a `payroll_amendments` table — is correct and protects all downstream consumers (compliance, export, reports) from join complexity.
+The most consequential finding concerns California compliance: the CA A-1-131 form requires a double-time (DT) hours schema migration before any form code can be written. California law imposes daily overtime thresholds (OT after 8 hours, DT after 12 hours per day) that are structurally different from the federal CWHSSA weekly model the current compliance engine implements. Attempting to build the CA form without the `monDt`-`sunDt` column additions and a separate `computeCaliforniaCompliance()` function will produce an incorrect certified payroll that exposes contractors to DIR penalty. This migration is the hard gate for all CA form work. For Washington, the primary risk is the SAM.gov WDOL API gap: Washington prevailing wage rates are published by L&I independently and are not available through the federal API, requiring manual rate entry for WA projects in v2.4.
 
-The primary risks are compliance and audit-trail risks, not technical risks. Three implementation patterns are non-negotiable and must not be deferred to later phases: (1) the copy route must re-fetch live wage rates per classification rather than cloning source snapshots, (2) submission tracking must include a server-side edit lock on submitted weeks — a UI disable alone is not a security boundary, and (3) amendments must create a new `payrollWeeks` row rather than updating entries in place. Violating any of these three compromises the certified payroll audit trail, which is a federal records falsification exposure under 29 CFR Part 3. All other pitfalls have lower stakes and clear, well-documented prevention strategies.
+Production deployment on Render.com has three non-negotiable prerequisites that must be validated before any production data is created: (1) a persistent disk must be mounted at `/var/data` and `DATABASE_URL` pointed there before first deploy, (2) WAL journal mode must be disabled in favor of DELETE mode for the network-backed volume, and (3) Drizzle migrations must run at Express startup time via `migrate()` in `server.ts`, not in a Render build step, because only the startup process has access to the mounted volume. Any deployment executed without these three items verified will result in silent data loss on the next redeploy. Auth requires no changes — serving the Vite build as static files from the same Express origin keeps `SameSite=Lax` functional.
 
 ---
 
@@ -19,185 +22,190 @@ The primary risks are compliance and audit-trail risks, not technical risks. Thr
 
 ### Recommended Stack
 
-No new dependencies are needed. All 6 features in v2.3 are CRUD operations, SQL aggregations, and client-side filtering on existing data shapes. The existing stack provides every capability required.
+The existing stack handles all v2.4 requirements. One new library is added. No database migration to Postgres or Turso is warranted — the volume-mounted SQLite pattern on Render.com is the correct production approach for a single-user app at this stage.
 
-**Core technologies and their v2.3 roles:**
-- **drizzle-orm ^0.45.1**: One add-only migration — 4 nullable/defaulted columns on `payrollWeeks` (`submitted_at`, `submitted_to`, `amendment_number`, `original_week_id`). Manual journal registration in `meta/_journal.json` required; next `idx` is 5.
-- **pdf-lib ^1.17.1**: Amended WH-347 label via string assembly in `export.ts` — the `payrollNumber` field already accepts strings; no coordinate changes needed.
-- **TanStack Query ^5.91.0**: `useMutation` for copy/submit/amend/archive actions; `invalidateQueries` for cache sync. Existing query key patterns apply directly.
-- **React 19 + TailwindCSS v4**: One new page (`WorkerViolationsPage`); extensions to 9 existing pages. Existing `Badge`, `Card`, `Button`, `PageHeader` components cover all UI needs.
-- **React Router DOM ^7.13.1**: One new route (`/workers/:workerId/violations`). Dashboard filter state must use `useSearchParams` — not `useState` — to survive back-navigation.
-- **better-sqlite3 ^12.8.0**: No changes. SQLite is appropriate for this single-user app; max dataset size is hundreds of rows.
+**Core technologies (existing, unchanged):**
+- Node.js + Express + TypeScript — API server; state form routes extend existing `export.ts` patterns
+- React 18 + Vite + TailwindCSS v4 — client; design tokens extended in `index.css` `@theme` block; no new UI frameworks
+- SQLite + Drizzle ORM (better-sqlite3) — volume-mounted at `/var/data` on Render; add-only migrations; synchronous driver stays
+- pdf-lib 1.17.1 — AcroForm field fill or coordinate overlay for CA A-1-131 and WA F700-065-000; no new PDF library needed
+- JWT httpOnly cookie auth — unchanged; served from same Express origin eliminates cross-origin cookie complexity
 
-**What NOT to add:** `@tanstack/react-table`, any date picker library, `immer`, `react-pdf`, pagination libraries, `lodash`. Each adds complexity without solving a real problem at this dataset scale.
+**New library (one only):**
+- `csv-stringify` ^6.7.0 — server-side CSV generation; natural extension of `csv-parse` (same monorepo, same version line) already installed; streaming-native for Express; ~42KB
 
----
+**New infrastructure:**
+- Render.com Starter plan ($7/mo) + persistent disk ($0.25/GB/mo) — SQLite mount at `/var/data`; total ~$7.25/month
 
 ### Expected Features
 
-**v2.3 scope (all 6 must ship):**
-- **Copy Previous Payroll Week** — pre-fill a new week from prior week's worker/hour data; requires live rate re-fetch (not snapshot copy) for compliance integrity; returns `{ copied, skipped, skippedWorkers }` with UI warning for omitted entries
-- **WH-347 Submission Tracking** — record `submitted_at`, `submitted_to`; add server-side edit lock (`checkWeekEditable()`) on submitted weeks; submission panel on PayrollWeekDetailPage; submitted badges on PayrollListPage
-- **Payroll Amendment Workflow** — create a new `payrollWeeks` row with `amendment_number` and `original_week_id`; "N (AMENDED M)" label in WH-347 payroll number string field; `UNIQUE(original_week_id, amendment_number)` constraint prevents double-submission
-- **Project Completion / Archive** — `status = 'closed'` via existing column; server-side `?status=` filter on `GET /api/projects`; compliance pre-check before archive confirmation (409 if open violations, with explicit user acknowledgment)
-- **Dashboard Search + Filter** — client-side `useMemo` filter on name + fundingType; URL params (`useSearchParams`) for filter state persistence; compliance filter deferred to v2.4 (requires batch summary endpoint)
-- **Per-Worker Compliance History** — cross-project view joined on `(name, ssnLast4, userId)`; batch entry load (not N+1 per week); snapshot-only compliance computation; new `WorkerViolationsPage` at `/workers/:workerId/violations`
+**Must have (table stakes for v2.4):**
+- CA DIR certified payroll form (A-1-131) — local PDF record generated via pdf-lib; contractor submits electronically via eCPR portal separately. Requires DT schema migration first.
+- WA L&I certified payroll form (F700-065-000) — pdf-lib coordinate overlay; WA prevailing wage rates entered manually (no WDOL API coverage)
+- Dashboard compliance status filter — `GET /api/compliance/projects/summary` endpoint batching all projects; client-side filter UI with 4 states: All / Compliant / Has Violations / No Payroll
+- CSV export from compliance history — client-side export of already-fetched violation data; no new API endpoint required
+- Invite-only registration — `crypto.randomBytes()` + `invitations` DB table; no new auth library
+- Production deployment on Render.com — persistent SQLite, env var hygiene, static file serving from Express
 
-**Explicitly deferred:**
-- Dashboard compliance filter (requires `GET /api/compliance/projects/summary` batch endpoint — not in v2.3 scope)
-- State-specific forms (CA DIR, WA L&I)
-- Auto-submit to agency portal
-- Payroll/QuickBooks integration
+**Should have (design elevation):**
+- UI/UX overhaul — dark gold gradient landing page, elevated `Card` shadow variant, photography via `public/` directory referenced in CSS (not Vite import)
+- Contractor guidance — `HelpText` primitive (inline + callout variants); contextual copy on 5 pages; instructional empty states updated; positive compliance confirmation on preflight modal
 
----
+**Defer to v3+:**
+- eCPR XML upload API integration (CA portal direct submission) — complex API, separate auth, out of scope
+- WA L&I Intent/Affidavit portal automation — portal-only filing; the app generates reference PDFs only
+- WA prevailing wage rate API integration — L&I publishes rates independently; API not available
+- Turso or Postgres migration — not warranted until multi-device access is a real requirement
+- Litestream replication — operational hardening for a future milestone; Render persistent disk is sufficient
+- Email delivery for invite links — SMTP complexity unnecessary for small user base; copy-paste URL from admin endpoint is sufficient
+
+**Critical form naming corrections (carried forward from research):**
+- CA form is **A-1-131** (Public Works Payroll Reporting Form). DAS-140 and DAS-142 are apprenticeship notification forms — not certified payroll, not in scope.
+- WA Intent to Pay and Affidavit of Wages Paid are filed via the PWIA portal only — the app generates **reference PDFs** for data-entry guidance, not submission artifacts. The F700-065-000 is the buildable weekly certified payroll form.
+- WA prevailing wage rates are **not on SAM.gov** — manual rate entry required for all WA projects.
 
 ### Architecture Approach
 
-The system is a React/Vite client communicating with an Express server over a REST API, backed by Drizzle ORM on SQLite. All v2.3 features fit within the existing three-layer boundary: client pages → server routes → services + ORM. No new layers, no new infrastructure.
+v2.4 extends the existing Express/React layered architecture with new service files following established patterns. The single parametric state form route (`GET /api/export/state-form/:weekId?form=ca-dir|wa-li`) reuses the ownership-check + data-load + generate pattern from `export.ts` without duplicating boilerplate. The compliance summary endpoint (`GET /api/compliance/projects/summary`) is registered before the `/:weekId` wildcard in `compliance.ts` per the existing route-ordering convention. Design elevation follows a tokens-first build order: extend `@theme` in `index.css`, then Card/Button component variants, then page-level application.
 
-**Major components and v2.3 changes:**
-1. **`schema.ts`** (MODIFIED) — 4 new columns on `payrollWeeks`; one migration file
-2. **`payrollService.ts`** (MODIFIED) — `copyPayrollWeek()` with live rate re-fetch; `createAmendedWeek()` as new row with bulk entry copy
-3. **`reportsService.ts`** (MODIFIED) — `getWorkerViolations(workerId, userId)` with cross-project join on `(name, ssnLast4)` and batch compliance computation
-4. **`routes/payroll.ts`** (MODIFIED) — `POST /weeks/copy`, `POST /weeks/:id/submit`, `DELETE /weeks/:id/submit`, `POST /weeks/:id/amend`; `checkWeekEditable()` guard on all entry write routes
-5. **`routes/projects.ts`** (MODIFIED) — `?status=` query param defaulting to `active`; compliance pre-check before archive
-6. **`routes/export.ts`** (MODIFIED) — amended payroll number label string assembly
-7. **`DashboardPage.tsx`** (MODIFIED) — search/filter bar, `useSearchParams`, archive toggle, `useMemo`-filtered list
-8. **`WorkerViolationsPage.tsx`** (NEW) — `/workers/:workerId/violations`, compliance history table with project/week context
+**Major components and changes:**
 
-**DB migration:** One file — `0009_payroll_week_submission_amendment.sql` — with 4 `ALTER TABLE` statements. Registered at `idx: 5` in `meta/_journal.json`. No migration needed for archive (`status` column exists), copy (no schema changes), or worker history (all data exists).
+1. `src/server/services/caDirGenerator.ts` (NEW) — mirrors `wh347Generator.ts`; `fillCaDirForm(data, templateBytes): Promise<Uint8Array>`; requires DT columns in schema before writing
+2. `src/server/services/waLiGenerator.ts` (NEW) — same pattern for WA F700-065-000; includes WA 4-letter trade code mapping table
+3. `src/server/routes/export.ts` (MODIFIED) — single `/state-form/:weekId?form=` handler appended
+4. `src/server/routes/compliance.ts` (MODIFIED) — `/projects/summary` registered before `/:weekId`
+5. `src/client/components/ui/HelpText.tsx` (NEW) — ~30-line display primitive; inline and callout variants; no state, no provider, no tooltip library
+6. `src/client/index.css` (MODIFIED) — new `@theme` tokens: dark surface, gold gradient, elevated shadow; never add `--color-*: initial` (wipes Tailwind defaults)
+7. `src/server/db/index.ts` (MODIFIED) — reads `DATABASE_URL` from env; fallback to local dev path
+8. `public/` directory (NEW) — Vite copies verbatim to `dist`; photography referenced via CSS `background-image`, not Vite import statements
 
----
+**Anti-patterns to explicitly avoid:**
+- Two separate state form routes per state (duplicates 30 lines of ownership/data-load boilerplate per new state)
+- Caching compliance status on the `projects` table (cache invalidation becomes more complex than the computation)
+- Importing photography via Vite `import` statement (hashes change on every swap, breaks CDN caching)
+- WAL journal mode on cloud deployment (NFS volumes have inconsistent `fsync` semantics; use DELETE journal)
+- `tailwind.config.js` alongside `@theme` setup (v3 syntax conflicts with v4's CSS-first configuration)
 
 ### Critical Pitfalls
 
-1. **Stale rate snapshots in copy operation** — The copy route must call `wageLookup.ts` for fresh rates per classification. Never clone `baseRateSnapshot`/`fringeRateSnapshot` from the source week. Entries where rate lookup fails must be omitted with a warning — not defaulted to zero. Recovery cost if violated: HIGH (requires amendment weeks + agency renotification).
+1. **CA daily overtime schema missing — blocks all CA form work.** The existing schema has `monSt`/`monOt` per day but no `monDt`-`sunDt` double-time columns. CA law requires OT after 8 hours/day and DT after 12 hours/day. A-1-131 reports all three buckets per day. Migrate first; build CA form logic after. Create `computeCaliforniaCompliance()` in a separate `complianceCA.ts` module — never modify the federal `computeCompliance()`.
 
-2. **No server-side edit lock on submitted weeks** — `checkWeekEditable()` is non-negotiable on `PUT /api/payroll/entries/:id` and `POST /api/payroll/entries`. Ships in the same phase as submission tracking — never deferred. A UI disable is not a security boundary; any API caller bypasses it.
+2. **SQLite database silently erased on every redeploy without a persistent volume.** Containers on Render have ephemeral filesystems. A DB written to the project root is wiped on every deploy — including all payroll records. Configure the Render persistent disk and verify it before creating any production data. Detection: deploy, create a test project, redeploy, confirm the project survives.
 
-3. **Amendment corrupts original audit trail** — `POST /weeks/:id/amend` must create a NEW `payrollWeeks` row. Never call `upsertPayrollEntry()` with the original `payrollWeekId`. The original row must become read-only once an amendment exists. 29 CFR Part 3 requires both original and amendment to be preserved.
+3. **WAL journal mode + NFS volume = potential database corruption.** Cloud-hosted volumes (Render, Fly.io) are NFS-backed with inconsistent `fsync`. WAL mode requires reliable `fsync` for journal integrity. Disable WAL in production; use DELETE journal mode. Audit `db/index.ts` for `PRAGMA journal_mode=WAL` before deploying.
 
-4. **Project hard-delete violates federal records retention** — No DELETE endpoint for projects. Archive is status-only: `UPDATE projects SET status = 'closed'`. Federal regulation requires certified payroll records for 3 years post-completion.
+4. **WA L&I uses 4-letter trade codes (CARP, ELEC, LABO) — SAM.gov classification strings are not 1:1.** Inserting federal classification strings directly into WA form fields will fail L&I validation. Build a mapping table for the 15-20 most common trades before writing the WA generator. For unmapped classifications, show a UI dropdown for the contractor to select the correct L&I code and store the selection per worker per project.
 
-5. **Worker history cross-project disambiguation** — Worker identity join must use `(name, ssnLast4, userId)` across projects, not `WHERE worker_id = ?`. A single-ID query silently gives a project-scoped view while the UX implies cross-project. Workers with identical names but different SSNs must not be merged.
+5. **CA form fringe contributions must go in the Fringe Benefits section, not Total Deductions.** Employer contributions to bona fide benefit plans are employer costs, not worker deductions. Placing `fringeRateSnapshot` values in the "Total Deductions" column (copying WH-347 deduction logic) causes DIR to flag the submission. The CA form filler must route these to the fringe section with a code comment documenting the distinction.
 
-6. **Migration not registered in `_journal.json`** — If the SQL migration file exists but is not in the journal, Drizzle silently skips it. TypeScript types include the new columns; runtime values are `undefined`. Verify post-migration: `SELECT sql FROM sqlite_master WHERE name = 'payroll_weeks'`.
+6. **CA PDF download implies submission — eCPR portal is still required.** SB 854 mandates electronic submission via California DIR's eCPR portal for most public works projects. The generated A-1-131 PDF is a local record and data-entry reference only. A persistent UI disclosure with a link to `efiling.dir.ca.gov/eCPR` must appear in the preflight modal before every CA form download.
+
+7. **`VITE_`-prefixed secrets are bundled into the public JavaScript.** SAM.gov API key, JWT secret, and database path must never use the `VITE_` prefix. Only `VITE_API_BASE_URL` belongs in the client build. Audit before setting production secrets in the Render dashboard.
+
+8. **Drizzle migration journal must be manually updated for every new migration.** Migration files not registered in `meta/_journal.json` are silently skipped. Current highest idx is 4 (tag `0008_program_name`); next idx is 5. Verify post-migration with `SELECT sql FROM sqlite_master WHERE name = 'payroll_entries'`.
 
 ---
 
 ## Implications for Roadmap
 
-Based on the combined research, 6 phases are recommended — each scoped to minimize re-work across shared files and ordered by hard dependencies.
+Based on dependencies discovered in the research, the recommended phase structure for v2.4 is 7 phases across 4 tracks. Phase A gates Phase B. Phases D-F are largely independent and can be parallelized with B-C if capacity allows. Phase G (deployment) comes last but infrastructure can be set up any time after Phase A.
 
----
+### Phase A: Schema Migration + Groundwork
 
-### Phase 1: DB Migration + Project Archive
+**Rationale:** The DT schema migration is the hard gate for all CA form work and must land before any CA generation code is written. The WA trade code mapping table should be built simultaneously before WA generation code begins. Both are add-only migrations that will not affect existing functionality. Sourcing official form PDFs (CA A-1-131 and WA F700-065-000) must also happen in this phase — PDF assets are required before coordinate calibration begins, and sourcing is the most likely scheduling constraint.
 
-**Rationale:** The migration is a prerequisite for submission tracking and amendments; it must be first. Project archive uses the already-existing `status` column and shares `DashboardPage.tsx` work with the search/filter phase — combining them in Phase 1 and 2 avoids touching the same file twice.
+**Delivers:** `monDt`-`sunDt` columns on `payrollEntries` (registered at idx 5 in `_journal.json`); `invitations` table for invite-only auth; WA 4-letter trade code mapping table; both official form PDFs bundled in `src/server/assets/forms/`
 
-**Delivers:** Migration `0009` with 4 new `payrollWeeks` columns; `GET /api/projects` filtered to `status=active` by default; archive/restore button on `ProjectDetailPage`; "Show Archived" toggle on `DashboardPage`; archived badge on `ProjectCard`; compliance pre-check before archive (409 if open violations).
+**Addresses:** CA OT schema gap (Pitfall 1); Drizzle journal registration (Pitfall 8); auth gate foundation
 
-**Addresses:** Feature 4 (project archive); migration prerequisite for Features 2 and 3.
+**Avoids:** Writing form logic against an incomplete schema
 
-**Avoids:** Pitfall 6 (hard-delete — no DELETE route for projects). Pitfall 7 (archive with open violations — pre-check required). Pitfall 13 (migration journal — verify columns immediately after migration).
+### Phase B: CA DIR A-1-131 Form Generation
+
+**Rationale:** CA form depends on Phase A schema. Build CA first because it is the higher-complexity state form (daily OT model, fringe column routing, eCPR disclosure). The CA-specific project-level fields (CSLB license, WC policy number) establish the pattern for WA project-level additions in Phase C.
+
+**Delivers:** `caDirGenerator.ts`; `GET /api/export/state-form/:weekId?form=ca-dir`; download button in `PayrollWeekDetailPage` (state === 'CA' only); eCPR disclosure in preflight modal; new CA-specific project fields
+
+**Addresses:** FEATURES Part 4 CA form spec; fringe/deductions column routing (Pitfall 5); eCPR disclosure requirement (Pitfall 6)
+
+**Research flag:** Measure all A-1-131 field coordinates against the official PDF before writing generation code (4-6 hours of calibration). Verify current DIR policy on SSN last-4 vs. full SSN on the form before implementing that field.
+
+### Phase C: WA L&I F700-065-000 Form Generation
+
+**Rationale:** Follows CA pattern. WA project additionally requires manual prevailing wage rate entry (SAM.gov gap). The Intent/Affidavit reference PDFs can be scoped as supplementary to the F700-065-000 if capacity is tight.
+
+**Delivers:** `waLiGenerator.ts`; WA form download button (state === 'WA' only); WA-specific project fields (UBI, L&I registration cert, WC account); PWIA portal disclosure for Intent/Affidavit reference documents; WA apprentice coverage advisory display (project-level cumulative %, not per-week)
+
+**Addresses:** WA 4-letter code mapping (Pitfall 4); WA 15% apprentice coverage display (advisory); manual WA rate entry UI
+
+**Research flag:** Measure F700-065-000 field coordinates. Confirm which fields have AcroForm entries vs. requiring coordinate overlay. Validate that the PWIA portal approach (reference PDF only) is correctly scoped.
+
+### Phase D: Dashboard Compliance Filter + CSV Export
+
+**Rationale:** Independent of state form work. The compliance summary endpoint and client-side filter are pure additive features. CSV export is client-only (no new API endpoint). Both are quick wins that deliver immediate auditor-response value.
+
+**Delivers:** `GET /api/compliance/projects/summary` registered before `/:weekId` in `compliance.ts`; compliance filter chips in `DashboardPage.tsx`; `complianceByProject` lookup map via `useMemo`; CSV export button and Blob download from `WorkerComplianceHistoryPage`
+
+**Addresses:** FEATURES Part 4 dashboard compliance filter spec; CSV column ordering for auditor usability (Pitfall 19 — columns ordered by WH-347 field convention, not schema order)
+
+**Avoids:** Caching compliance status in DB (compute on read via `computeCompliance()` is fast; a cache column creates sync problems on every entry change)
+
+**Research flag:** Standard patterns. Skip research-phase. Note: `computeCompliance()` is O(projects × weeks) — acceptable for single-user app; document for future pagination if contractor builds up hundreds of projects.
+
+### Phase E: Contractor Guidance UX
+
+**Rationale:** Depends only on `HelpText.tsx` primitive existing first. Applied across 5 pages in a single pass. Low complexity — copywriting and component placement, no data model changes.
+
+**Delivers:** `HelpText.tsx` primitive (inline + callout variants, ~30 lines); contextual callouts on `ProjectDetailPage`, `PayrollEntryPage`, `PayrollWeekDetailPage`; updated EmptyState copy on `DashboardPage` and `WorkersPage`; positive compliance confirmation on preflight modal
+
+**Addresses:** FEATURES Part 4 guidance UX patterns (inline help, positive preflight, post-action context)
+
+**Avoids:** Tooltip library installation — use `HelpText` callout instead (Radix `TooltipProvider` at app root causes all tooltips to re-render on any hover, Pitfall 11); hover-only guidance is invisible on iPad (Pitfall 12); no sidebar guidance panel (occupies permanent horizontal real estate for rarely-needed content)
 
 **Research flag:** Standard patterns. Skip research-phase.
 
----
+### Phase F: Design Elevation (UI/UX Overhaul)
 
-### Phase 2: Dashboard Search + Filter
+**Rationale:** Tokens must be finalized before Card/Button variants, and variants must exist before page-level application. Photography assets must be sourced, sized (WebP, <200KB), and compressed before being added to `public/`. Design work is largely isolated from server-side changes.
 
-**Rationale:** Shares `DashboardPage.tsx` with Phase 1 (archive toggle already touches this file). Client-side filter with `useMemo` is the simplest feature in v2.3 — zero server changes, immediate contractor-visible value.
+**Delivers:** New `@theme` tokens in `index.css` (dark surface `#1a1a1a`, gold gradient start/end, elevated shadow); `Card` `elevated` variant; `Button` `gold` variant (if needed for dark surface CTAs); `LandingPage` hero + gradient sections; `DashboardPage` elevated card styling; `public/hero-construction.webp` and optional `public/dashboard-bg.webp`
 
-**Delivers:** Search by name, filter by funding type, `useSearchParams`-based URL param persistence, zero-results EmptyState.
+**Addresses:** FEATURES Part 2 brand differentiation; HCC competitive visual advantage over blue-palette competitors (LCPtracker, Elation both use generic enterprise blue)
 
-**Addresses:** Feature 5.
+**Avoids:** `tailwind.config.js` creation alongside `@theme` (v3/v4 conflict, Pitfall 15); photography via Vite `import` statement (hash churn, Pitfall 14); uncompressed images causing LCP > 2.5s (Pitfall 14); missing `@media print` overrides for photo backgrounds — white text on white paper when printing (Pitfall 13)
 
-**Avoids:** Pitfall 11 (filter state lost on navigation — `useSearchParams` required from day one). Pitfall 12 (per-keystroke server queries — client-side filtering over cached data).
+**Research flag:** Standard patterns. Skip research-phase. Note: Use `<link rel="preload" as="image">` in `<head>` for hero image to avoid LCP blocking.
 
-**Research flag:** Standard patterns. Skip research-phase.
+### Phase G: Production Deployment
 
----
+**Rationale:** Last to ship but infrastructure can be set up ahead of time. Three non-negotiable validation steps must complete before any user data enters the system.
 
-### Phase 3: WH-347 Submission Tracking
+**Delivers:** Render.com Starter service linked to GitHub repo; persistent disk attached at `/var/data`; `DATABASE_URL`, `JWT_SECRET`, `SAM_GOV_API_KEY`, `NODE_ENV`, `ADMIN_SECRET` in Render runtime env; `VITE_API_BASE_URL` set as Render build-time env var; `process.env.PORT ?? 4099` in Express; `express.static('dist/')` + SPA catch-all registered after all API routes; `migrate(db, ...)` at startup in `server.ts`; `.env.example` committed; invite-only registration activated; `VITE_` env var audit completed
 
-**Rationale:** Depends on Phase 1 migration (new `submitted_at`, `submitted_to` columns). Establishes submission status as a prerequisite for the Amendment Workflow's "Amend" button trigger.
+**Addresses:** Persistent volume (Pitfall 2); WAL mode disabled (Pitfall 3); startup-time migrations instead of build-step (migration volume access); JWT `SameSite=Lax` with same-origin serving (Pitfall 9 equivalent); `VITE_` secret audit (Pitfall 7); Express catch-all route ordering (Pitfall 18)
 
-**Delivers:** `POST /submit` and `DELETE /submit` routes; submission panel (Card) on `PayrollWeekDetailPage`; submitted/not-submitted badges on `PayrollListPage`; server-side `checkWeekEditable()` guard on all payroll entry write routes; `PayrollWeek` TypeScript interface extended.
-
-**Addresses:** Feature 2.
-
-**Avoids:** Pitfall 3 (no edit lock — ships in same phase as submission tracking, never deferred). Security requirement: `submittedAt` set server-side only, never accepted from request body.
-
-**Research flag:** Standard patterns. Skip research-phase.
-
----
-
-### Phase 4: Copy Previous Payroll Week
-
-**Rationale:** The bulk entry copy logic validated here is reused by the Amendment Workflow in Phase 5. Building and testing it first ensures the pattern is correct before it is extended.
-
-**Delivers:** `POST /api/payroll/weeks/copy` route; live rate re-fetch per classification via `wageLookup.ts`; "Copy from previous week" option in `PayrollEntryPage` new-week form; copy response with `{ copied, skipped, skippedWorkers }`; UI warning for skipped entries; strict field allowlist (no submission flags, no rate snapshot carry-over).
-
-**Addresses:** Feature 1.
-
-**Avoids:** Pitfall 1 (stale rate snapshots — rate re-fetch is mandatory). Pitfall 2 (submission flags copied to new week — `submittedAt` must be null on copy output regardless of source week state).
-
-**Research flag:** Review `wageLookup.ts` before building the copy route. Confirm the per-classification lookup is batchable and that graceful per-classification failure (omit entry, not default to zero) is supported by the existing function signature.
-
----
-
-### Phase 5: Payroll Amendment Workflow
-
-**Rationale:** Depends on Phase 1 migration (`amendment_number`, `original_week_id` columns), Phase 3 submission tracking ("Amend" button only surfaces when `submittedAt` is not null), and Phase 4 copy-entries pattern (bulk entry creation reused for amendment).
-
-**Delivers:** `POST /api/payroll/weeks/:id/amend` route; new `payrollWeeks` row with `amendment_number + 1` and `original_week_id`; `UNIQUE(original_week_id, amendment_number)` DB constraint; "N (AMENDED M)" label in WH-347 via `export.ts` string assembly; amendment badge on `PayrollListPage`; "Amend This Week" button on `PayrollWeekDetailPage`.
-
-**Addresses:** Feature 3.
-
-**Avoids:** Pitfall 4 (in-place amendment — new row mandatory). Pitfall 5 (amendment numbering conflict — unique constraint in migration). Pitfall 14 (PDF coordinate mismatch — amendment label in `payrollNumber` string field, not a coordinate overlay).
-
-**Research flag:** Verify `wh347Data.payrollNumber` type accepts string values in `wh347Generator.ts` before implementing. Confirm `export.ts` amendment label assembly does not require `fillWh347()` changes.
-
----
-
-### Phase 6: Per-Worker Compliance History
-
-**Rationale:** Fully independent of all other features — read-only reporting with no schema changes. Placed last because it requires the most implementation care (cross-project join, batch compliance, N+1 avoidance, worker disambiguation).
-
-**Delivers:** `GET /api/reports/workers/:workerId/violations` route; `getWorkerViolations(workerId, userId)` in `reportsService.ts` using `(name, ssnLast4)` cross-project join and batch entry load; `WorkerViolationsPage` at `/workers/:workerId/violations`; "Compliance History" link per worker row on `WorkersPage`.
-
-**Addresses:** Feature 6.
-
-**Avoids:** Pitfall 8 (live rate re-computation instead of snapshot — history route must not import `wageLookup.ts`). Pitfall 9 (N+1 queries — batch all entries in one query, run compliance in memory, not per-week loop). Pitfall 10 (worker disambiguation — join on `(name, ssnLast4)`, not `worker_id`).
-
-**Research flag:** Review `complianceService.computeCompliance()` function signature before designing `getWorkerViolations()`. Confirm the batch-entries-then-compute-in-memory approach is compatible with the existing function's input contract.
-
----
+**Critical verification:** Deploy twice. Create a project after first deploy. Trigger a redeploy. Confirm the project survives. If it is gone, the volume mount is misconfigured.
 
 ### Phase Ordering Rationale
 
-- **Migration first** — submission tracking (Phase 3) and amendment (Phase 5) cannot start without the new columns
-- **Archive alongside migration** — zero schema work needed; shares `DashboardPage.tsx` with search/filter
-- **Search/filter immediately after archive** — both modify `DashboardPage.tsx`; combine the file touch into two sequential phases rather than revisiting
-- **Submission tracking before amendment** — "Amend" button is gated on `submittedAt` not null; Phase 3 must complete first
-- **Copy before amendment** — bulk entry copy pattern built in Phase 4 is reused in Phase 5; validate once, extend once
-- **Worker history last** — independent read-only feature; highest implementation complexity; no downstream dependencies
-
----
+- Phase A (schema + assets) gates Phase B (CA forms) — DT migration must precede generation code
+- Phase B gates Phase C — CA establishes the state-specific project field pattern that WA extends
+- Phase D is independent and can begin as soon as v2.3 is stable
+- Phase E should wait until Phase F design tokens are locked (HelpText uses brand token classes)
+- Phase F can run in parallel with B-D if design work is resourced separately
+- Phase G comes last for production launch but disk infrastructure can be configured at any time
 
 ### Research Flags
 
-Phases needing deeper review before implementation:
+**Needs per-phase research during planning:**
+- **Phase B (CA form):** Measure A-1-131 PDF field coordinates against the official form before writing generation code. Verify current DIR policy on SSN last-4 vs. full SSN. Confirm AcroForm field accessibility by name vs. coordinate fallback.
+- **Phase C (WA form):** Measure F700-065-000 field coordinates. Validate portal-only scope for Intent/Affidavit. Confirm contract value thresholds ($2,500 short form; $10,000 registration cert required).
+- **Phase G (deployment):** Audit `db/index.ts` for `PRAGMA journal_mode=WAL` before deploy. Validate persistent disk by deploying twice before any real user data.
 
-- **Phase 4 (Copy Previous Week):** Review `wageLookup.ts` — confirm the per-classification lookup supports graceful failure per entry (omit vs. default to zero). This is the highest-risk implementation decision in v2.3.
-- **Phase 5 (Amendment Workflow):** Verify `wh347Data.payrollNumber` type in `wh347Generator.ts` accepts string values. Confirm `export.ts` string assembly approach before writing any route code.
-- **Phase 6 (Per-Worker Compliance History):** Review `complianceService.computeCompliance()` input contract before designing the batch query. Write a 20-week test fixture before any implementation to catch N+1 regressions.
-
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (DB Migration + Archive):** Add-only migration; `status` column already exists. Standard Drizzle journal pattern.
-- **Phase 2 (Dashboard Search):** Client-side `useMemo` + `useSearchParams`. No novel patterns.
-- **Phase 3 (Submission Tracking):** PATCH route + status panel + edit lock guard. All established patterns in the codebase.
+**Standard patterns — skip research-phase:**
+- **Phase D:** Compliance summary endpoint is fully specified in ARCHITECTURE.md. TanStack Query filter pattern is established.
+- **Phase E:** Pure component and copy work. No data model changes. No external APIs.
+- **Phase F:** TailwindCSS v4 `@theme` extension pattern is documented. Photography sizing is standard.
 
 ---
 
@@ -205,49 +213,73 @@ Phases with standard patterns (skip research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All versions read directly from `package.json`. Feature-by-feature analysis confirms zero new library requirements. |
-| Features | HIGH | Regulatory requirements grounded in 29 CFR Part 3, Part 5, CWHSSA, and WH-347 Jan 2025 revision. v2.3 scope validated against shipped v2.0/v2.1/v2.2 functionality. |
-| Architecture | HIGH | Based on direct codebase analysis of schema, routes, services, client pages, and migration journal. No inference required — all affected files read directly. |
-| Pitfalls | HIGH | Derived from direct codebase audit (exact functions and routes at risk identified) plus federal regulatory analysis (29 CFR records retention). Recovery costs quantified. |
+| Stack | HIGH | Verified against live npm registry (csv-stringify 6.7.0), Render pricing page, official platform docs. One new library confirmed. |
+| Features | HIGH (regulatory); MEDIUM (WA form fields) | CA A-1-131 structure confirmed from official DIR PDF + eCPR XML guidelines v1.9. WA F700-065-000 confirmed from RCW 39.12.040 + secondary sources; PWIA portal field details from system descriptions, not direct access. DAS-140/142 confirmed as apprenticeship forms, not CPR. |
+| Architecture | HIGH | Research based on direct codebase analysis of `export.ts`, `compliance.ts`, `complianceService.ts`, `stateWageAdapter.ts`, and `index.css`. Patterns verified against working implementation, not inference. |
+| Pitfalls | HIGH | Regulatory pitfalls (CA daily OT, WA trade codes, fringe column routing) verified against official DIR and L&I docs. Deployment pitfalls (volume persistence, WAL mode, build-step migration failure) verified against platform docs and community reports. |
 
-**Overall confidence:** HIGH
+**Overall confidence:** HIGH — primary risks are known and preventable. The CA daily OT schema gap and the WA SAM.gov rate gap are the two structurally important findings that affect feature scope; both have clear documented mitigations.
 
-### Gaps to Address
+### Gaps to Address During Planning
 
-- **Rate re-fetch batch pattern:** `wageLookup.ts` was not read during research. The batch-per-classification approach and its failure mode (classification not found → omit, not default) need confirmation against the actual function signature before Phase 4 begins.
+- **CA SSN requirement on A-1-131:** Current DIR guidance on last-4 vs. full SSN on the paper form. Privacy rules have shifted since the form was designed. Verify before implementing the SSN field in the CA generator. MEDIUM confidence on the current requirement.
 
-- **`wh347Data.payrollNumber` type:** STACK.md asserts this field accepts string values. Verify in `wh347Generator.ts` type definitions at the start of Phase 5.
+- **CA CSLB license fields as required vs. optional:** CSLB license, specialty license, and WC policy number are not in the current project data model. Determine whether these are required at project creation (enforces compliance) or optional (reduces friction for first-time users) before building the CA project-field additions.
 
-- **`_journal.json` next index:** ARCHITECTURE.md states `idx: 5` is next. Verify at migration time — if any development migration was added since research, the index will differ.
+- **WAL mode in current codebase:** PITFALLS.md recommends auditing whether `PRAGMA journal_mode=WAL` is set in `db/index.ts` before deploying. This is a one-line code check that belongs at the start of Phase G planning.
 
-- **Dashboard compliance filter scope:** Explicitly deferred from v2.3. Requires a `GET /api/compliance/projects/summary?projectIds=...` batch endpoint. Name this as a v2.4 item during roadmap planning to prevent scope creep.
+- **WA Intent/Affidavit scope confirmation:** The current research recommendation is a reference PDF with a portal link. Validate this is the right scope vs. a form UI that walks contractors through portal fields. The reference PDF approach is simpler and sufficient for v2.4.
+
+---
+
+## Key Corrections Carried Forward
+
+The following corrections from the milestone briefing are integrated throughout this summary and must propagate to all planning and execution documents:
+
+| Incorrect | Correct | Impact |
+|-----------|---------|--------|
+| DAS-140 = CA certified payroll form | DAS-140 is an apprenticeship notification form; CA CPR form is A-1-131 | All CA form work targets A-1-131 only |
+| WA Intent/Affidavit are PDF-submittable | Intent/Affidavit are portal-only via PWIA; F700-065-000 is the buildable CPR form | WA scope = F700-065-000 PDF + reference docs for Intent/Affidavit |
+| WA wage rates on SAM.gov | WA rates are L&I-published only; not in WDOL API | Manual rate entry required for all WA projects |
+| CA form can reuse ST/OT schema | CA requires per-day DT hours; `monDt`-`sunDt` migration mandatory before CA form code | DT migration is the first step in Phase A |
+| WA classifications = SAM.gov strings | WA requires 4-letter L&I codes (CARP, ELEC, LABO, etc.) | Trade code mapping table required before WA generation code |
+| Render is one option among equals | Render.com is the confirmed hosting choice | All deployment docs target Render |
+| csv-stringify version unspecified | ^6.7.0 — current, matches csv-parse monorepo version line | `npm install csv-stringify` |
 
 ---
 
 ## Sources
 
-### Primary (HIGH confidence)
+### Primary (HIGH confidence — official sources, live verification)
+- CA DIR certified payroll reporting: `https://www.dir.ca.gov/public-works/certified-payroll-reporting.html`
+- CA DIR A-1-131 form PDF: `https://www.dir.ca.gov/dlse/forms/pw/dlseforma-1-131.pdf`
+- CA DIR eCPR XML Guidelines v1.9: `https://www.dir.ca.gov/public-works/eCPRXMLGuideline1.9.pdf`
+- CA DIR Prevailing Wage FAQ: `https://www.dir.ca.gov/dlse/FAQ_PrevailingWage.html`
+- California Labor Code Sections 1810-1815 (daily OT thresholds)
+- WA L&I PWIA system: `https://secure.lni.wa.gov`
+- WA RCW 39.12.040 (Intent/Affidavit requirements)
+- csv-stringify npm registry: `https://www.npmjs.com/package/csv-stringify` — version 6.7.0 confirmed
+- Render pricing: `https://render.com/pricing` — $7/mo service, $0.25/GB/mo disk
+- Render persistent disks: `https://render.com/docs/disks`
+- Vite env vars: `https://vite.dev/guide/env-and-mode`
+- TailwindCSS v4 docs: `https://tailwindcss.com/docs/background-image`
+- pdf-lib AcroForm API: `https://pdf-lib.js.org/docs/api/classes/pdfform`
+- DOL WH-347 form instructions (Rev. Jan 2025): `https://www.dol.gov/agencies/whd/forms/wh347`
+- California SB 854 eCPR mandate: Ogletree analysis confirmed active requirement
 
-- `package.json` — all installed library versions, read directly
-- `src/server/db/schema.ts` — full table structure; `projects.status` column confirmed existing at `'active' | 'closed'`
-- `src/server/db/migrations/meta/_journal.json` — migration sequence; next `idx` determined as 5
-- `src/server/routes/payroll.ts`, `projects.ts`, `export.ts`, `reports.ts` — existing route patterns confirmed
-- `src/server/services/payrollService.ts`, `complianceService.ts`, `reportsService.ts`, `wh347Generator.ts` — service function signatures
-- `src/client/pages/DashboardPage.tsx`, `PayrollListPage.tsx`, `PayrollWeekDetailPage.tsx` — existing component structure
-- `.planning/PROJECT.md` — stack constraints, key decisions, migration workflow, rate snapshot immutability rules
+### Secondary (MEDIUM confidence — verified against multiple sources)
+- WA F700-065-000 form fields: L&I documentation + Points North WA certified payroll guide
+- WA Intent/Affidavit online-only confirmation: MRSC March 2025 guide + LCPtracker CA Q&A
+- WA apprentice 15% labor hours requirement: Workyard WA prevailing wage guide 2025; Points North apprenticeship ratios
+- Fly.io/Render release_command volume access failure: community reports at `community.fly.io`
+- Radix UI TooltipProvider re-render issues: GitHub issues #2375, #3596
+- Print CSS background image suppression: documented browser default, `@media print` guidance
 
-### Secondary (MEDIUM-HIGH confidence)
-
-- DOL WH-347 Instructions (January 2025 revision) — amendment marking requirements, form field structure
-- 29 CFR Part 3 (Copeland Act) — 3-year records retention requirement post-project-completion
-- 29 CFR Part 5 (Davis-Bacon) — weekly certified payroll submission requirements, CWHSSA OT rules
-- Test suite analysis: `tests/routes/compliance.test.ts`, `tests/routes/payroll.test.ts` — identified test coverage gaps for new features
-
-### Tertiary (MEDIUM confidence)
-
-- STACK.md v2.1 prior research — `lucide-react` icons, `Badge`/`Card` primitives confirmed installed; used as corroborating reference
+### Tertiary (validated through direct codebase analysis)
+- `src/server/routes/export.ts`, `compliance.ts`, `complianceService.ts`, `stateWageAdapter.ts`, `index.css`, `db/schema.ts` — confirmed patterns, route ordering constraints, token architecture, and existing CA/WA adapter structures
+- `.planning/PROJECT.md` — stack constraints confirmed; migration workflow documented; next migration idx is 5
 
 ---
 
-*Research completed: 2026-03-23*
+*Research completed: 2026-03-24*
 *Ready for roadmap: yes*
