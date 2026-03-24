@@ -18,6 +18,7 @@ import { WorkersPage } from './pages/WorkersPage.js';
 import { PayrollWeekDetailPage } from './pages/PayrollWeekDetailPage.js';
 import { VarianceReportPageRoute } from './pages/VarianceReportPageRoute';
 import { ReportsPage } from './pages/ReportsPage';
+import { WorkerComplianceHistoryPage } from './pages/WorkerComplianceHistoryPage';
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="/projects/:projectId/payroll/:weekId" element={<PayrollWeekDetailPage />} />
               <Route path="/projects/:projectId/ot-scenarios" element={<OtScenarioPage />} />
               <Route path="/projects/:projectId/workers" element={<WorkersPage />} />
+              <Route path="/projects/:projectId/workers/:workerId/compliance-history" element={<WorkerComplianceHistoryPage />} />
               <Route path="/projects/:projectId/variance" element={<VarianceReportPageRoute />} />
               <Route path="/projects/:projectId/reports" element={<ReportsPage />} />
             </Route>

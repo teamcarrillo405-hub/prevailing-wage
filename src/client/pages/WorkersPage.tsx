@@ -1,7 +1,7 @@
 // src/client/pages/WorkersPage.tsx
 // Route: /projects/:projectId/workers
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
@@ -332,6 +332,12 @@ export function WorkersPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        <Link
+                          to={`/projects/${projectId}/workers/${w.id}/compliance-history`}
+                          className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                        >
+                          Compliance History
+                        </Link>
                         <button
                           onClick={() => { setEditingId(w.id); setEditForm(workerToEditForm(w)); setAddingClassFor(null); }}
                           className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
