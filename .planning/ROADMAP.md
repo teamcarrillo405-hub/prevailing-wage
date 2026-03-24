@@ -71,7 +71,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 ### v2.4 Ship-Ready + Design Elevation (Phases 23-28) — ACTIVE
 
-- [ ] **Phase 23: Dashboard Compliance Filter + CSV Export** - Batch compliance summary endpoint, dashboard filter chips, and CSV download from compliance history (DASH-05, AUD-03)
+- [x] **Phase 23: Dashboard Compliance Filter + CSV Export** - Batch compliance summary endpoint, dashboard filter chips, and CSV download from compliance history (DASH-05, AUD-03) (completed 2026-03-24)
 - [ ] **Phase 24: California DIR A-1-131 Form** - DT schema migration, CA-specific project fields, CA certified payroll PDF generation with daily OT/DT model and eCPR disclosure (CAL-01, CAL-02, CAL-03)
 - [ ] **Phase 25: Washington L&I F700-065-000 Form** - Manual rate entry for WA projects, WA trade code mapping, WA certified payroll PDF generation (WAL-01, WAL-02)
 - [ ] **Phase 26: Contractor Guidance System** - HelpText primitive, contextual help across all major pages, instructional empty states, inline compliance term tooltips (UX-05, UX-06, UX-07, UX-08)
@@ -176,8 +176,8 @@ Plans:
   5. The downloaded CSV opens correctly in Excel with columns aligned and no encoding artifacts
 **Plans**: 2 plans
 Plans:
-- [ ] 23-01-PLAN.md — Batch compliance summary endpoint + CSV export route + csv-stringify install + integration tests
-- [ ] 23-02-PLAN.md — Dashboard filter chips UI + CSV download button + browser verification
+- [x] 23-01-PLAN.md — Batch compliance summary endpoint + CSV export route + csv-stringify install + integration tests
+- [x] 23-02-PLAN.md — Dashboard filter chips UI + CSV download button + browser verification
 
 ### Phase 24: California DIR A-1-131 Form
 **Goal**: Contractors on California public works projects can generate a California DIR A-1-131 certified payroll PDF that correctly captures daily overtime and double-time hours per CA Labor Code requirements
@@ -259,7 +259,7 @@ Plans:
 | 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
-| 23. Dashboard Compliance Filter + CSV Export | v2.4 | 0/2 | Not started | - |
+| 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete   | 2026-03-24 |
 | 24. California DIR A-1-131 Form | v2.4 | 0/2 | Not started | - |
 | 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Not started | - |
 | 26. Contractor Guidance System | v2.4 | 0/2 | Not started | - |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Roadmap defined — ready to plan Phase 23
-stopped_at: ~
-last_updated: "2026-03-24T19:00:00.000Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 23-02-PLAN.md (all 3 tasks including browser verification)
+last_updated: "2026-03-24T20:46:10.769Z"
 progress:
-  total_phases: 6
-  completed_phases: 0
-  total_plans: 12
-  completed_plans: 0
+  total_phases: 12
+  completed_phases: 7
+  total_plans: 13
+  completed_plans: 13
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 23 — Dashboard Compliance Filter + CSV Export
+**Current focus:** Phase 23 — dashboard-compliance-filter-csv-export
 
 ## Current Position
 
-Phase: 23
-Plan: Not started
+Phase: 23 (dashboard-compliance-filter-csv-export) — EXECUTING
+Plan: 2 of 2
 
 ### Phase Structure
 
@@ -55,6 +55,9 @@ Plan: Not started
 | 20 | 2/2 | ✅ Complete |
 | 21 | 2/2 | ✅ Complete |
 | 22 | 2/2 | ✅ Complete |
+| Phase 23-dashboard-compliance-filter-csv-export P01 | 5min | 1 tasks | 4 files |
+| Phase 23-dashboard-compliance-filter-csv-export P02 | 3min | 2 tasks | 2 files |
+| Phase 23-dashboard-compliance-filter-csv-export P02 | 5min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -188,6 +191,10 @@ Plan: Not started
 - [Phase 22]: Client-side WorkerComplianceHistory interface mirrors server type — no cross-boundary import from src/server
 - [Phase 22]: Compliance History link uses React Router Link with direct className (same as Edit button) — not Button component which renders <button>
 - [Phase 22]: Badge variant: warning for apprentice-ratio, violation for under-wage and cwhssa-ot — matches severity hierarchy
+- [Phase 23]: Used DELETE /api/projects/:id (not PATCH /archive) to close project in archived test — matches existing soft-delete pattern
+- [Phase 23]: getBatchProjectCompliance() short-circuits on status=closed — no compliance computation needed for archived projects
+- [Phase 23-dashboard-compliance-filter-csv-export]: summaryData?.projects (not wrapped in data) — compliance summary endpoint returns {projects:[]} directly
+- [Phase 23-dashboard-compliance-filter-csv-export]: Download CSV button conditional on data.entries.length > 0 — no empty CSV for compliant workers
 
 ### Research Flags for v2.4
 
@@ -205,6 +212,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T19:00:00.000Z
-Stopped at: v2.4 roadmap created (Phases 23-28)
+Last session: 2026-03-24T20:46:10.764Z
+Stopped at: Completed 23-02-PLAN.md (all 3 tasks including browser verification)
 Resume file: None
