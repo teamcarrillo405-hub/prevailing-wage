@@ -34,6 +34,14 @@ const FUNDING_LABELS: Record<string, string> = {
   mixed: 'Mixed',
 };
 
+const COMPLIANCE_FILTER_OPTIONS = [
+  { value: '', label: 'All' },
+  { value: 'compliant', label: 'Compliant' },
+  { value: 'violations', label: 'Has Violations' },
+  { value: 'no-payroll', label: 'No Payroll' },
+  { value: 'archived', label: 'Archived' },
+];
+
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -43,6 +51,7 @@ export function DashboardPage() {
   // URL-persisted filter state — back button restores these automatically
   const searchQuery = searchParams.get('q') ?? '';
   const fundingFilter = searchParams.get('funding') ?? '';
+  const complianceFilter = searchParams.get('compliance') ?? '';
 
   // Local controlled-input state initialized from URL (avoids useSearchParams lag on keystroke)
   const [inputValue, setInputValue] = useState(() => searchParams.get('q') ?? '');
@@ -54,7 +63,23 @@ export function DashboardPage() {
     ),
   });
 
+  const { data: summaryData } = useQuery({
+    queryKey: ['compliance-summary-batch'],
+    queryFn: () => api.get<{ projects: Array<{ id: string; status: string }> }>(
+      '/compliance/projects/summary'
+    ),
+    staleTime: 60_000,
+  });
+
   const projects = data?.data?.projects ?? [];
+
+  const summaryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of (summaryData?.projects ?? [])) {
+      map.set(item.id, item.status);
+    }
+    return map;
+  }, [summaryData]);
 
   const filteredProjects = useMemo(() => {
     let result = projects;
@@ -65,8 +90,11 @@ export function DashboardPage() {
     if (fundingFilter) {
       result = result.filter(p => p.fundingType === fundingFilter);
     }
+    if (complianceFilter) {
+      result = result.filter(p => summaryMap.get(p.id) === complianceFilter);
+    }
     return result;
-  }, [projects, searchQuery, fundingFilter]);
+  }, [projects, searchQuery, fundingFilter, complianceFilter, summaryMap]);
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
@@ -94,6 +122,20 @@ export function DashboardPage() {
       return next;
     });
   }
+
+  function handleComplianceFilterChange(val: string) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val) {
+        next.set('compliance', val);
+      } else {
+        next.delete('compliance');
+      }
+      return next;
+    });
+  }
+
+  const complianceFilterLabel = COMPLIANCE_FILTER_OPTIONS.find(o => o.value === complianceFilter)?.label;
 
   return (
     <Layout>
@@ -139,6 +181,23 @@ export function DashboardPage() {
         </select>
       </div>
 
+      {/* Compliance filter chips — DASH-05 */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {COMPLIANCE_FILTER_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => handleComplianceFilterChange(opt.value)}
+            className={`text-xs px-3 py-1 rounded border transition-colors ${
+              complianceFilter === opt.value
+                ? 'bg-brand-gold text-white border-brand-gold'
+                : 'bg-surface-card text-text-primary border-border-default hover:border-brand-gold'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
@@ -173,10 +232,18 @@ export function DashboardPage() {
         <EmptyState
           heading="No matching projects"
           message={
-            searchQuery && fundingFilter
+            searchQuery && fundingFilter && complianceFilter
+              ? `No projects match "${searchQuery}" with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}" and compliance status "${complianceFilterLabel}".`
+              : searchQuery && complianceFilter
+              ? `No projects match "${searchQuery}" with compliance status "${complianceFilterLabel}".`
+              : fundingFilter && complianceFilter
+              ? `No projects with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}" and compliance status "${complianceFilterLabel}".`
+              : searchQuery && fundingFilter
               ? `No projects match "${searchQuery}" with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}".`
               : searchQuery
               ? `No projects match "${searchQuery}".`
+              : complianceFilter
+              ? `No projects with compliance status "${complianceFilterLabel}".`
               : `No projects with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}".`
           }
         />
