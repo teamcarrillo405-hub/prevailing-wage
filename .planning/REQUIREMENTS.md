@@ -1,64 +1,73 @@
-# Requirements: HCC Prevailing Wage v2.3
+# Requirements: HCC Prevailing Wage v2.4
 
-**Milestone:** v2.3 — Contractor Workflow Efficiency + Audit Readiness
-**Created:** 2026-03-23
+**Milestone:** v2.4 — Ship-Ready + Design Elevation
+**Created:** 2026-03-24
 **Status:** Active
 
 ---
 
 ## v1 Requirements
 
-### Payroll Efficiency (PAY)
+### Dashboard (DASH)
 
-- [x] **PAY-01**: User can copy a previous payroll week to pre-fill a new week with worker/hour data and live rate re-fetch per classification
-- [x] **PAY-02**: System shows which entries were skipped during copy (worker no longer active, rate lookup failed) before confirming
+- [x] **DASH-05**: User can filter the project dashboard by compliance status (Compliant / Has Violations / No Payroll / Archived) using a batch summary endpoint — no N+1 per-card fetches
 
-### Submission Tracking (SUB)
+### Compliance History Export (AUD)
 
-- [x] **SUB-01**: User can mark a payroll week as submitted with a date and agency name
-- [x] **SUB-02**: System prevents editing payroll entries on a submitted week (server-side lock)
-- [x] **SUB-03**: User can un-submit a week to clear its submission status
+- [x] **AUD-03**: User can download their per-worker compliance history as a CSV file (17 columns including project, week, worker, violation type, amounts — UTF-8 with BOM for Excel)
 
-### Amendment Workflow (AMD)
+### California DIR Forms (CAL)
 
-- [x] **AMD-01**: User can amend a submitted payroll week — creates a new week row with amendment number; original week preserved and read-only
-- [x] **AMD-02**: Amended WH-347 PDF shows payroll number in "N (AMENDED M)" format identifying the amendment sequence
-- [x] **AMD-03**: Amendment week entries are pre-filled from the original week's worker hours for editing
+- [ ] **CAL-01**: System captures CA-specific project fields (CSLB contractor license, WC policy number) on CA projects only
+- [ ] **CAL-02**: System generates a California A-1-131 certified payroll PDF (local record / eCPR draft) with CA-specific fields: Sun-Sat hours grid, double-time column, SDI deduction, CSLB license; UI discloses that official submission requires the eCPR portal
+- [ ] **CAL-03**: System captures and displays double-time (DT) hours alongside ST/OT for CA projects (schema migration required)
 
-### Project Lifecycle (PRJ)
+### Washington L&I Forms (WAL)
 
-- [x] **PRJ-01**: User can archive a project, removing it from the active dashboard view
-- [x] **PRJ-02**: User can toggle display of archived projects on the dashboard
-- [x] **PRJ-03**: System warns if a project has open compliance violations before archiving (advisory, not a hard block)
+- [ ] **WAL-01**: User can enter prevailing wage rates manually for WA projects (SAM.gov does not cover WA state wages)
+- [ ] **WAL-02**: System generates a Washington F700-065-000 certified payroll PDF (local record) with WA trade code mapping and WA-specific project fields (UBI number, L&I cert, WC account)
 
-### Dashboard UX (DASH)
+### Contractor Guidance (UX)
 
-- [x] **DASH-03**: User can search projects by name on the dashboard with URL-persisted filter state
-- [x] **DASH-04**: User can filter projects by funding type on the dashboard
+- [ ] **UX-05**: Homepage includes a plain-language explainer section: what the system is, who it's for, and a step-by-step "how it works" flow for contractors unfamiliar with Davis-Bacon compliance
+- [ ] **UX-06**: Each major page (Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail) has contextual help text explaining what to do at that step and why it matters
+- [ ] **UX-07**: Empty states on all pages include specific next-step instructions, not generic "no data" messages
+- [ ] **UX-08**: Compliance terms (Davis-Bacon, WH-347, prevailing wage, CWHSSA, WD) have inline `?` icon tooltips with plain-English definitions — accessible on desktop and iPad (tap, not hover-only)
 
-### Audit / Compliance History (AUD)
+### Design Elevation (DES)
 
-- [x] **AUD-01**: User can view a per-worker compliance history page showing all violations across all projects and weeks
-- [x] **AUD-02**: WorkersPage shows a "Compliance History" link per worker row
+- [ ] **DES-01**: App visual design elevated to match HCC website standard — construction photography in hero/dashboard areas, dark gold gradient overlays, card depth with shadows matching `0 2px 12px rgba(0,0,0,0.08)` / `0 8px 24px rgba(0,0,0,0.12)`
+- [ ] **DES-02**: Landing page hero features full-bleed construction photography with dark overlay, Oswald display headline (`clamp(56px, 8vw, 88px)`), and high-contrast CTA
+- [ ] **DES-03**: All pages use richer typography hierarchy — tighter letter-spacing on Oswald headlines, improved spacing rhythm matching HCC website
+
+### Operational (OPS)
+
+- [ ] **OPS-01**: App deployed to a live HTTPS URL on Render.com with SQLite on a persistent disk volume (`/var/data/prevailing-wage.db`); Drizzle migrations run at app startup
+- [ ] **OPS-02**: Registration requires a valid invitation code — open registration disabled in production
+- [ ] **OPS-03**: SAM.gov API key and all secrets configured via environment variables; `.env.example` documents every required variable
+- [ ] **OPS-04**: Vite production build served as static files by Express in production mode
 
 ---
 
 ## Future Requirements
 
-- Dashboard compliance status filter — requires `GET /api/compliance/projects/summary` batch endpoint (deferred to v2.4)
-- CSV export from per-worker compliance history page
-- State-specific prevailing wage forms (CA DIR, WA L&I)
-- Auto-submit to agency portal
-- Payroll provider integrations (QuickBooks, ADP)
+- CA eCPR XML export for direct portal upload (v2.5 — requires CA DIR API access)
+- WA Intent to Pay / Affidavit of Wages portal integration (v2.5 — WA PWIA API not confirmed)
+- Multi-user / team accounts (v3.0)
+- Payroll provider integrations (QuickBooks, ADP) — v3.0
+- Auto-submit to agency portal — v3.0
+- Dark mode toggle — deferred indefinitely
 
 ---
 
 ## Out of Scope
 
-- Hard-delete of projects or payroll weeks — 29 CFR Part 3 requires 3-year records retention; archive (status-only) is the only permitted removal
-- Compliance filter on dashboard in v2.3 — batch compliance summary endpoint adds scope complexity; deferred to v2.4
+- CA DAS-140 / DAS-142 — apprenticeship committee notification forms, not certified payroll forms; different system entirely
+- WA Intent to Pay / Affidavit of Wages as generated PDFs — these are portal-only submissions; no fillable PDF exists
+- Direct eCPR portal API submission for CA — XML upload path only; API integration is a separate project
 - Mobile native app — web-first; browser on tablet is sufficient
-- Multi-user / team accounts — single contractor user per account
+- Inline editing in payroll tables — audit trail risk; dedicated edit views are correct
+- Hard block on WH-347 with violations — advisory only; contractor must retain override authority
 
 ---
 
@@ -66,18 +75,21 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRJ-01 | Phase 17 | Complete |
-| PRJ-02 | Phase 17 | Complete |
-| PRJ-03 | Phase 17 | Complete |
-| DASH-03 | Phase 18 | Complete |
-| DASH-04 | Phase 18 | Complete |
-| SUB-01 | Phase 19 | Complete |
-| SUB-02 | Phase 19 | Complete |
-| SUB-03 | Phase 19 | Complete |
-| PAY-01 | Phase 20 | Complete |
-| PAY-02 | Phase 20 | Complete |
-| AMD-01 | Phase 21 | Complete |
-| AMD-02 | Phase 21 | Complete |
-| AMD-03 | Phase 21 | Complete |
-| AUD-01 | Phase 22 | Complete |
-| AUD-02 | Phase 22 | Complete |
+| DASH-05 | Phase 23 | Pending |
+| AUD-03 | Phase 23 | Pending |
+| CAL-01 | Phase 24 | Pending |
+| CAL-02 | Phase 24 | Pending |
+| CAL-03 | Phase 24 | Pending |
+| WAL-01 | Phase 25 | Pending |
+| WAL-02 | Phase 25 | Pending |
+| UX-05 | Phase 26 | Pending |
+| UX-06 | Phase 26 | Pending |
+| UX-07 | Phase 26 | Pending |
+| UX-08 | Phase 26 | Pending |
+| DES-01 | Phase 27 | Pending |
+| DES-02 | Phase 27 | Pending |
+| DES-03 | Phase 27 | Pending |
+| OPS-01 | Phase 28 | Pending |
+| OPS-02 | Phase 28 | Pending |
+| OPS-03 | Phase 28 | Pending |
+| OPS-04 | Phase 28 | Pending |
