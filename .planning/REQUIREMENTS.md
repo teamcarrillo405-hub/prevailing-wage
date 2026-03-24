@@ -21,9 +21,9 @@
 
 ### Amendment Workflow (AMD)
 
-- [ ] **AMD-01**: User can amend a submitted payroll week — creates a new week row with amendment number; original week preserved and read-only
-- [ ] **AMD-02**: Amended WH-347 PDF shows payroll number in "N (AMENDED M)" format identifying the amendment sequence
-- [ ] **AMD-03**: Amendment week entries are pre-filled from the original week's worker hours for editing
+- [x] **AMD-01**: User can amend a submitted payroll week — creates a new week row with amendment number; original week preserved and read-only
+- [x] **AMD-02**: Amended WH-347 PDF shows payroll number in "N (AMENDED M)" format identifying the amendment sequence
+- [x] **AMD-03**: Amendment week entries are pre-filled from the original week's worker hours for editing
 
 ### Project Lifecycle (PRJ)
 
@@ -76,8 +76,8 @@
 | SUB-03 | Phase 19 | Complete |
 | PAY-01 | Phase 20 | Complete |
 | PAY-02 | Phase 20 | Complete |
-| AMD-01 | Phase 21 | Pending |
-| AMD-02 | Phase 21 | Pending |
-| AMD-03 | Phase 21 | Pending |
+| AMD-01 | Phase 21 | Complete |
+| AMD-02 | Phase 21 | Complete |
+| AMD-03 | Phase 21 | Complete |
 | AUD-01 | Phase 22 | Pending |
 | AUD-02 | Phase 22 | Pending |
