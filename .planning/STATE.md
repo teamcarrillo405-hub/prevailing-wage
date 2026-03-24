@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Contractor Workflow Efficiency + Audit Readiness
-status: Ready to execute
-stopped_at: Completed 22-01-PLAN.md
-last_updated: "2026-03-24T17:25:06.729Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 22-02-PLAN.md
+last_updated: "2026-03-24T17:35:16.044Z"
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 11
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # State
@@ -61,6 +61,7 @@ Plan: 2 of 2
 | Phase 21-payroll-amendment-workflow P02 | 5min | 2 tasks | 2 files |
 | Phase 21 P02 | 15min | 3 tasks | 2 files |
 | Phase 22 P01 | 4min | 1 tasks | 3 files |
+| Phase 22 P02 | 30min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -188,6 +189,9 @@ Plan: 2 of 2
 - [Phase 22]: ssnLast4=null workers scoped to source project only — null identity cannot safely merge across projects
 - [Phase 22]: WorkerHistoryResult discriminated union return type (not throw) — route owns HTTP status, service stays pure
 - [Phase 22]: Route /worker/:workerId/history registered before /:weekId wildcard — consistent with /project/:projectId pattern
+- [Phase 22]: Client-side WorkerComplianceHistory interface mirrors server type — no cross-boundary import from src/server
+- [Phase 22]: Compliance History link uses React Router Link with direct className (same as Edit button) — not Button component which renders <button>
+- [Phase 22]: Badge variant: warning for apprentice-ratio, violation for under-wage and cwhssa-ot — matches severity hierarchy
 
 ### Research Flags for v2.3
 
@@ -205,6 +209,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T17:25:06.724Z
-Stopped at: Completed 22-01-PLAN.md
+Last session: 2026-03-24T17:35:16.038Z
+Stopped at: Completed 22-02-PLAN.md
 Resume file: None
