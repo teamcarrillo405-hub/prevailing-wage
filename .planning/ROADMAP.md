@@ -189,7 +189,11 @@ Plans:
   3. User can click "Download CA A-1-131" on a CA project's payroll week and receive a completed PDF with correct daily hour grid, fringe contributions in the fringe section (not deductions), and SDI deduction field
   4. The CA download preflight modal includes a persistent disclosure that electronic submission requires the DIR eCPR portal at efiling.dir.ca.gov/eCPR
   5. A WA or federal-only project has no CA form download button — the button is state-gated
-**Plans**: 2 plans
+**Plans**: 3 plans
+Plans:
+- [ ] 24-01-PLAN.md — PDF download + DB migrations (DT columns + CA project fields) + schema.ts + server Zod schemas + test stubs
+- [ ] 24-02-PLAN.md — CA-conditional project fields in ProjectForm + DT columns in PayrollWeekForm + turn CAL-01/CAL-03 tests GREEN
+- [ ] 24-03-PLAN.md — A-1-131 PDF generator + export route + state-gated download button + eCPR preflight modal + browser verification
 
 ### Phase 25: Washington L&I F700-065-000 Form
 **Goal**: Contractors on Washington public works projects can enter WA prevailing wage rates manually and generate a Washington L&I F700-065-000 certified payroll PDF with correct WA trade code mapping
@@ -260,7 +264,7 @@ Plans:
 | 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
 | 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete    | 2026-03-24 |
-| 24. California DIR A-1-131 Form | v2.4 | 0/2 | Not started | - |
+| 24. California DIR A-1-131 Form | v2.4 | 0/3 | Not started | - |
 | 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Not started | - |
 | 26. Contractor Guidance System | v2.4 | 0/2 | Not started | - |
 | 27. Design Elevation | v2.4 | 0/2 | Not started | - |
