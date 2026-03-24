@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Defining requirements
+status: Roadmap defined — ready to plan Phase 23
 stopped_at: ~
-last_updated: "2026-03-24T18:30:00.000Z"
+last_updated: "2026-03-24T19:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 12
   completed_plans: 0
 ---
 
@@ -19,49 +19,42 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 22 — per-worker-compliance-history
+**Current focus:** Phase 23 — Dashboard Compliance Filter + CSV Export
 
 ## Current Position
 
-Phase: 22
+Phase: 23
 Plan: Not started
 
 ### Phase Structure
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 15 | Compliance Engine Hardening + Independent Frontend | COMP-03, UX-04, RPT-01, RPT-02 | ✅ Complete |
-| 16 | WH-347 Submission UX | WH-01, WH-02 | ✅ Complete |
-| 17 | DB Migration + Project Archive | PRJ-01, PRJ-02, PRJ-03 | ✅ Complete |
-| 18 | Dashboard Search + Filter | DASH-03, DASH-04 | ✅ Complete |
-| 19 | WH-347 Submission Tracking | SUB-01, SUB-02, SUB-03 | ✅ Complete |
-| 20 | Copy Previous Payroll Week | PAY-01, PAY-02 | Not started |
-| 21 | Payroll Amendment Workflow | AMD-01, AMD-02, AMD-03 | Not started |
-| 22 | Per-Worker Compliance History | AUD-01, AUD-02 | Not started |
+| 23 | Dashboard Compliance Filter + CSV Export | DASH-05, AUD-03 | Not started |
+| 24 | California DIR A-1-131 Form | CAL-01, CAL-02, CAL-03 | Not started |
+| 25 | Washington L&I F700-065-000 Form | WAL-01, WAL-02 | Not started |
+| 26 | Contractor Guidance System | UX-05, UX-06, UX-07, UX-08 | Not started |
+| 27 | Design Elevation | DES-01, DES-02, DES-03 | Not started |
+| 28 | Production Deployment | OPS-01, OPS-02, OPS-03, OPS-04 | Not started |
 
 ## Performance Metrics
 
-**Velocity (v2.2):**
+**Velocity (v2.3):**
 
-- Total plans completed: 4
-- Total phases: 2
-- Shipped: 2026-03-23
+- Total plans completed: 11
+- Total phases: 6
+- Shipped: 2026-03-24
 
 **By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 15 | 3/3 | ✅ Complete |
-| 16 | 1/1 | ✅ Complete |
 | 17 | 2/2 | ✅ Complete |
 | 18 | 1/1 | ✅ Complete |
-| Phase 20 P01 | 4 | 1 tasks | 3 files |
-| Phase 20 P02 | 15 | 2 tasks | 1 files |
-| Phase 21 P01 | 5min | 2 tasks | 4 files |
-| Phase 21-payroll-amendment-workflow P02 | 5min | 2 tasks | 2 files |
-| Phase 21 P02 | 15min | 3 tasks | 2 files |
-| Phase 22 P01 | 4min | 1 tasks | 3 files |
-| Phase 22 P02 | 30min | 2 tasks | 3 files |
+| 19 | 2/2 | ✅ Complete |
+| 20 | 2/2 | ✅ Complete |
+| 21 | 2/2 | ✅ Complete |
+| 22 | 2/2 | ✅ Complete |
 
 ## Accumulated Context
 
@@ -83,6 +76,13 @@ Plan: Not started
 | Phase 15 P01 | 7min | 2 tasks | 3 files |
 | Phase 15-compliance-engine-hardening-independent-frontend P03 | 3 | 2 tasks | 1 files |
 | Phase 16-wh-347-submission-ux P01 | 2min | 2 tasks | 1 files |
+| Phase 20 P01 | 4 | 1 tasks | 3 files |
+| Phase 20 P02 | 15 | 2 tasks | 1 files |
+| Phase 21 P01 | 5min | 2 tasks | 4 files |
+| Phase 21-payroll-amendment-workflow P02 | 5min | 2 tasks | 2 files |
+| Phase 21 P02 | 15min | 3 tasks | 2 files |
+| Phase 22 P01 | 4min | 1 tasks | 3 files |
+| Phase 22 P02 | 30min | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -163,9 +163,6 @@ Plan: Not started
 - [Phase 16]: generatingRef (useRef) used as synchronous double-click guard — useState is async/batched and cannot prevent rapid duplicate download requests
 - [Phase 16]: hiddenAnchorRef placed outside modal JSX so anchor persists when modal unmounts during download initiation
 - [Phase 16]: Blob URL revoked after 100ms setTimeout to give browser time to initiate download before freeing object URL
-- [Phase 16]: generatingRef (useRef) used as synchronous double-click guard — useState cannot prevent rapid duplicate download requests
-- [Phase 16]: hiddenAnchorRef placed outside modal JSX so anchor persists when modal unmounts during download initiation
-- [Phase 16]: Blob URL revoked after 100ms setTimeout to give browser time to initiate download before freeing object URL
 - [Phase 17-01]: Multi-statement SQL migrations require --> statement-breakpoint between each ALTER TABLE (Drizzle breakpoints:true mode)
 - [Phase 17-01]: originalWeekId has no .references() in schema.ts — self-referencing FK is SQL-only to avoid AnySQLiteColumn import complexity
 - [Phase 17-01]: GET /api/projects defaults to active-only; ?status=all returns both active and closed projects
@@ -185,7 +182,6 @@ Plan: Not started
 - [Phase 21-01]: amendPayrollWeek() is dedicated (not copyPayrollWeek()) — copy re-fetches live rates, amendment clones snapshots per 29 CFR Part 3
 - [Phase 21-01]: rootWeekId = originalWeek.originalWeekId ?? originalWeek.id — chains always resolve to root week for sequential numbering
 - [Phase 21-02]: Amend This Week shown for any submitted week — service resolves root week, no UI distinction needed
-- [Phase 21-02]: Amend This Week shown for any submitted week — service resolves root week, no UI distinction needed
 - [Phase 22]: ssnLast4=null workers scoped to source project only — null identity cannot safely merge across projects
 - [Phase 22]: WorkerHistoryResult discriminated union return type (not throw) — route owns HTTP status, service stays pure
 - [Phase 22]: Route /worker/:workerId/history registered before /:weekId wildcard — consistent with /project/:projectId pattern
@@ -193,11 +189,11 @@ Plan: Not started
 - [Phase 22]: Compliance History link uses React Router Link with direct className (same as Edit button) — not Button component which renders <button>
 - [Phase 22]: Badge variant: warning for apprentice-ratio, violation for under-wage and cwhssa-ot — matches severity hierarchy
 
-### Research Flags for v2.3
+### Research Flags for v2.4
 
-- Phase 20: Review wageLookup.ts before building the copy route — confirm per-classification lookup supports graceful per-entry failure (omit vs. default to zero). Highest-risk implementation decision in v2.3.
-- Phase 21: Verify wh347Data.payrollNumber type in wh347Generator.ts accepts string values before writing any route code. Confirm export.ts string assembly approach for "N (AMENDED M)" label does not require fillWh347() coordinate changes.
-- Phase 22: Review complianceService.computeCompliance() input contract before designing the batch query. Write a 20-week test fixture before any implementation to catch N+1 regressions.
+- Phase 24 (CA form): Measure A-1-131 PDF field coordinates against official form before writing generation code. Verify current DIR policy on SSN last-4 vs. full SSN. Confirm whether CSLB license fields are required at project creation or optional.
+- Phase 25 (WA form): Measure F700-065-000 field coordinates. Confirm which fields have AcroForm entries vs. coordinate overlay. Validate portal-only scope for Intent/Affidavit vs. reference PDF approach.
+- Phase 28 (deployment): Audit db/index.ts for PRAGMA journal_mode=WAL before deploy (must disable for Render NFS volume). Validate persistent disk by deploying twice before any real user data.
 
 ### Pending Todos
 
@@ -209,6 +205,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T17:35:16.038Z
-Stopped at: Completed 22-02-PLAN.md
+Last session: 2026-03-24T19:00:00.000Z
+Stopped at: v2.4 roadmap created (Phases 23-28)
 Resume file: None

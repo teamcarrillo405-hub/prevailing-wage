@@ -7,6 +7,7 @@
 - ✅ **v2.1** Design Polish + Landing Page — Phases 10-14 (shipped 2026-03-22)
 - ✅ **v2.2** UX Completion + Compliance Hardening — Phases 15-16 (shipped 2026-03-23)
 - ✅ **v2.3** Contractor Workflow Efficiency + Audit Readiness — Phases 17-22 (shipped 2026-03-24)
+- 🔄 **v2.4** Ship-Ready + Design Elevation — Phases 23-28 (active)
 
 ## Phases
 
@@ -67,6 +68,15 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 </details>
+
+### v2.4 Ship-Ready + Design Elevation (Phases 23-28) — ACTIVE
+
+- [ ] **Phase 23: Dashboard Compliance Filter + CSV Export** - Batch compliance summary endpoint, dashboard filter chips, and CSV download from compliance history (DASH-05, AUD-03)
+- [ ] **Phase 24: California DIR A-1-131 Form** - DT schema migration, CA-specific project fields, CA certified payroll PDF generation with daily OT/DT model and eCPR disclosure (CAL-01, CAL-02, CAL-03)
+- [ ] **Phase 25: Washington L&I F700-065-000 Form** - Manual rate entry for WA projects, WA trade code mapping, WA certified payroll PDF generation (WAL-01, WAL-02)
+- [ ] **Phase 26: Contractor Guidance System** - HelpText primitive, contextual help across all major pages, instructional empty states, inline compliance term tooltips (UX-05, UX-06, UX-07, UX-08)
+- [ ] **Phase 27: Design Elevation** - Construction photography, dark gold gradient overlays, elevated card shadows, richer typography matching HCC website standard (DES-01, DES-02, DES-03)
+- [ ] **Phase 28: Production Deployment** - Render.com deployment with persistent SQLite disk, invite-only registration, environment variable hygiene, Vite static file serving (OPS-01, OPS-02, OPS-03, OPS-04)
 
 ## Phase Details
 
@@ -154,6 +164,76 @@ Plans:
 - [ ] 22-01-PLAN.md — getWorkerComplianceHistory() service + GET /worker/:workerId/history endpoint + multi-project integration tests (TDD)
 - [x] 22-02-PLAN.md — WorkerComplianceHistoryPage + "Compliance History" link on WorkersPage + route registration + browser verification
 
+### Phase 23: Dashboard Compliance Filter + CSV Export
+**Goal**: Contractors can filter the dashboard by compliance status across all projects using a single batch API call, and can download a worker's compliance history as a CSV for audit submission
+**Depends on**: Phase 22 (compliance history route must exist for CSV export to have data to export)
+**Requirements**: DASH-05, AUD-03
+**Success Criteria** (what must be TRUE):
+  1. User can click a filter chip on the dashboard (All / Compliant / Has Violations / No Payroll / Archived) and the project list updates instantly without additional per-card fetches
+  2. Selecting "Has Violations" shows only projects with at least one compliance violation across any payroll week
+  3. Selecting "Compliant" shows only projects where all payroll weeks pass all compliance checks
+  4. User can click "Download CSV" on the compliance history page and receive a UTF-8 BOM CSV file with 17 columns matching WH-347 field convention order
+  5. The downloaded CSV opens correctly in Excel with columns aligned and no encoding artifacts
+**Plans**: 2 plans
+
+### Phase 24: California DIR A-1-131 Form
+**Goal**: Contractors on California public works projects can generate a California DIR A-1-131 certified payroll PDF that correctly captures daily overtime and double-time hours per CA Labor Code requirements
+**Depends on**: Phase 23 (independent of filter/CSV work, but Phase 23 is sequenced first as a quick win)
+**Requirements**: CAL-01, CAL-02, CAL-03
+**Success Criteria** (what must be TRUE):
+  1. CA project creation form includes CSLB contractor license and WC policy number fields visible only when state is California
+  2. Payroll entry for a CA project shows separate ST / OT / DT hour columns per day (Sun-Sat), where DT applies after 12 hours/day
+  3. User can click "Download CA A-1-131" on a CA project's payroll week and receive a completed PDF with correct daily hour grid, fringe contributions in the fringe section (not deductions), and SDI deduction field
+  4. The CA download preflight modal includes a persistent disclosure that electronic submission requires the DIR eCPR portal at efiling.dir.ca.gov/eCPR
+  5. A WA or federal-only project has no CA form download button — the button is state-gated
+**Plans**: 2 plans
+
+### Phase 25: Washington L&I F700-065-000 Form
+**Goal**: Contractors on Washington public works projects can enter WA prevailing wage rates manually and generate a Washington L&I F700-065-000 certified payroll PDF with correct WA trade code mapping
+**Depends on**: Phase 24 (WA state form follows CA form pattern; CA establishes the state-specific project field and conditional download button pattern that WA reuses)
+**Requirements**: WAL-01, WAL-02
+**Success Criteria** (what must be TRUE):
+  1. WA project workers have a manual prevailing wage rate entry field (since SAM.gov does not cover WA rates), and the entered rate is used for compliance and PDF generation
+  2. User can click "Download WA F700-065-000" on a WA project's payroll week and receive a completed PDF with WA 4-letter trade codes (CARP, ELEC, LABO, etc.), UBI number, L&I certificate, and WC account fields populated
+  3. The WA download includes a disclosure that Intent to Pay and Affidavit of Wages filings must be submitted via the PWIA portal at secure.lni.wa.gov
+  4. WA trade codes not automatically matched show a dropdown allowing the contractor to select the correct L&I code per worker
+  5. A CA or federal-only project has no WA form download button — the button is state-gated
+**Plans**: 2 plans
+
+### Phase 26: Contractor Guidance System
+**Goal**: First-time contractors understand what to do at every step of the workflow without needing external documentation
+**Depends on**: Phase 27 (HelpText primitive uses design tokens that Phase 27 finalizes — sequence after design tokens are locked; however if design tokens are locked early, Phase 26 can run before Phase 27)
+**Requirements**: UX-05, UX-06, UX-07, UX-08
+**Success Criteria** (what must be TRUE):
+  1. The landing page includes a plain-language "how it works" section explaining Davis-Bacon compliance workflow in contractor terms, visible without scrolling below the hero
+  2. Each major page (Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail) shows a contextual help callout explaining what to do at that step and why it matters for compliance
+  3. Empty states on all pages give specific next-step instructions — a contractor who lands on an empty Workers page knows exactly what to do next, not just that there are no workers
+  4. Clicking or tapping a "?" icon next to terms like "Davis-Bacon," "WH-347," "prevailing wage," "CWHSSA," and "WD" shows a plain-English definition — works on both desktop hover and iPad tap
+**Plans**: 2 plans
+
+### Phase 27: Design Elevation
+**Goal**: The app visual design matches HCC website quality — construction photography, dark gold gradients, and elevated card depth that distinguishes HCC from generic compliance software
+**Depends on**: Phase 23 (independent of form generation work; can begin any time after v2.3 baseline)
+**Requirements**: DES-01, DES-02, DES-03
+**Success Criteria** (what must be TRUE):
+  1. The landing page hero features full-bleed construction photography with a dark overlay, Oswald display headline at clamp(56px, 8vw, 88px), and a high-contrast gold CTA button
+  2. Dashboard project cards use an elevated shadow variant (0 8px 24px rgba(0,0,0,0.12)) visually distinct from the flat card used in v2.3
+  3. All pages use tighter Oswald letter-spacing and improved vertical rhythm matching HCC website typography — no page uses a raw h1/h2 outside the PageHeader primitive
+  4. Photography assets are WebP format, under 200KB each, loaded via CSS background-image (not Vite import), with a print media override preventing dark overlays from printing on white paper
+**Plans**: 2 plans
+
+### Phase 28: Production Deployment
+**Goal**: The app is live at a public HTTPS URL on Render.com with persistent data storage, invite-only registration, and all secrets properly configured via environment variables
+**Depends on**: Phases 23-27 (all features complete; however Render service and disk infrastructure can be configured at any earlier phase)
+**Requirements**: OPS-01, OPS-02, OPS-03, OPS-04
+**Success Criteria** (what must be TRUE):
+  1. App is reachable at a public HTTPS URL and the landing page loads without errors
+  2. A project created after the first deploy survives a second redeploy — confirming the SQLite database is on the persistent disk at /var/data and not the ephemeral container filesystem
+  3. Attempting to register without a valid invitation code returns a clear error — open registration is disabled
+  4. All secrets (SAM.gov API key, JWT secret, database path) are set as Render runtime environment variables and are absent from the deployed JavaScript bundle — no VITE_-prefixed secrets exist
+  5. The Vite production build is served as static files by Express, and all React routes resolve correctly on hard refresh (SPA catch-all in place)
+**Plans**: 2 plans
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -176,3 +256,9 @@ Plans:
 | 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
+| 23. Dashboard Compliance Filter + CSV Export | v2.4 | 0/2 | Not started | - |
+| 24. California DIR A-1-131 Form | v2.4 | 0/2 | Not started | - |
+| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Not started | - |
+| 26. Contractor Guidance System | v2.4 | 0/2 | Not started | - |
+| 27. Design Elevation | v2.4 | 0/2 | Not started | - |
+| 28. Production Deployment | v2.4 | 0/2 | Not started | - |
