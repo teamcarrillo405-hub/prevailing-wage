@@ -6,10 +6,11 @@
 
 import { Router } from 'express';
 import { eq } from 'drizzle-orm';
+import { stringify } from 'csv-stringify/sync';
 import { requireAuth } from '../middleware/auth.js';
 import { getDb } from '../db/index.js';
 import * as schema from '../db/schema.js';
-import { computeCompliance, getWorkerComplianceHistory } from '../services/complianceService.js';
+import { computeCompliance, getWorkerComplianceHistory, getBatchProjectCompliance } from '../services/complianceService.js';
 import { listPayrollWeeks } from '../services/payrollService.js';
 
 export const complianceRouter = Router();
@@ -64,6 +65,81 @@ complianceRouter.get('/worker/:workerId/history', requireAuth, async (req, res) 
   }
 
   res.json(result);
+});
+
+// GET /api/compliance/projects/summary — MUST come before /:weekId
+// Returns batch compliance status for all projects owned by the authenticated user.
+// Eliminates N+1 per-card compliance fetches on the dashboard.
+complianceRouter.get('/projects/summary', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+  const statusMap = await getBatchProjectCompliance(db, userId);
+  const projects = Array.from(statusMap.entries()).map(([id, status]) => ({ id, status }));
+  res.json({ projects });
+});
+
+// GET /api/compliance/worker/:workerId/history/csv — MUST come before /:weekId
+// Returns a UTF-8 BOM CSV with 17 columns for audit-ready Excel-compatible download.
+complianceRouter.get('/worker/:workerId/history/csv', requireAuth, async (req, res) => {
+  const workerId = req.params.workerId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const result = await getWorkerComplianceHistory(db, userId, workerId);
+  if ('error' in result) {
+    if (result.error === 'forbidden') {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+    res.status(404).json({ error: 'Worker not found' });
+    return;
+  }
+
+  const rows = result.entries.map(e => ({
+    workerName: result.workerName,
+    ssnLast4: result.ssnLast4 ?? '',
+    projectName: e.projectName,
+    projectId: e.projectId,
+    weekEndingDate: e.weekEndingDate,
+    payrollNumber: e.payrollNumber,
+    violationType: e.violationType,
+    detail: e.detail ?? '',
+    expected: e.expected ?? '',
+    actual: e.actual ?? '',
+    delta: e.delta ?? '',
+    apprenticeHours: e.apprenticeHours ?? '',
+    journeyworkerHours: e.journeyworkerHours ?? '',
+    maxAllowedApprenticeHours: e.maxAllowedApprenticeHours ?? '',
+    weekId: e.weekId,
+    projectIdRaw: e.projectId,
+    exportedAt: new Date().toISOString(),
+  }));
+
+  const CSV_COLUMNS = [
+    { key: 'workerName', header: 'Worker Name' },
+    { key: 'ssnLast4', header: 'SSN Last 4' },
+    { key: 'projectName', header: 'Project Name' },
+    { key: 'projectId', header: 'Project ID' },
+    { key: 'weekEndingDate', header: 'Week Ending Date' },
+    { key: 'payrollNumber', header: 'Payroll Number' },
+    { key: 'violationType', header: 'Violation Type' },
+    { key: 'detail', header: 'Detail' },
+    { key: 'expected', header: 'Expected Wages' },
+    { key: 'actual', header: 'Actual Wages' },
+    { key: 'delta', header: 'Delta' },
+    { key: 'apprenticeHours', header: 'Apprentice Hours' },
+    { key: 'journeyworkerHours', header: 'Journeyworker Hours' },
+    { key: 'maxAllowedApprenticeHours', header: 'Max Allowed Apprentice Hours' },
+    { key: 'weekId', header: 'Week ID' },
+    { key: 'projectIdRaw', header: 'Source Project ID' },
+    { key: 'exportedAt', header: 'Exported At' },
+  ];
+
+  const csvString = stringify(rows, { header: true, columns: CSV_COLUMNS });
+  const workerNameSafe = result.workerName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="compliance-history-${workerNameSafe}.csv"`);
+  res.send('\uFEFF' + csvString);
 });
 
 complianceRouter.get('/:weekId', requireAuth, async (req, res) => {

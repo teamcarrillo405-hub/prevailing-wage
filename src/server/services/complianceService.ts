@@ -154,6 +154,47 @@ export async function computeCompliance(
   };
 }
 
+// ── Batch Project Compliance (DASH-05) ───────────────────────────────────
+
+export async function getBatchProjectCompliance(
+  db: BetterSQLite3Database<typeof schema>,
+  userId: string,
+): Promise<Map<string, 'archived' | 'violations' | 'compliant' | 'no-payroll'>> {
+  const allProjects = await db
+    .select()
+    .from(schema.projects)
+    .where(eq(schema.projects.userId, userId));
+
+  const result = new Map<string, 'archived' | 'violations' | 'compliant' | 'no-payroll'>();
+
+  for (const project of allProjects) {
+    if (project.status === 'closed') {
+      result.set(project.id, 'archived');
+      continue;
+    }
+
+    const weeks = await listPayrollWeeks(project.id);
+
+    if (weeks.length === 0) {
+      result.set(project.id, 'no-payroll');
+      continue;
+    }
+
+    let hasViolations = false;
+    for (const week of weeks) {
+      const compliance = await computeCompliance(db, week.id);
+      if (compliance?.hasViolations === true) {
+        hasViolations = true;
+        break;
+      }
+    }
+
+    result.set(project.id, hasViolations ? 'violations' : 'compliant');
+  }
+
+  return result;
+}
+
 // ── Per-Worker Compliance History (AUD-01) ────────────────────────────────
 
 export interface WorkerViolationHistoryEntry {

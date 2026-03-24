@@ -557,3 +557,168 @@ describe('GET /api/compliance/worker/:workerId/history', () => {
     expect(body.totalViolations).toBeGreaterThanOrEqual(1);
   });
 });
+
+// ── Batch project compliance summary tests ────────────────────────────────
+
+describe('GET /api/compliance/projects/summary', () => {
+  it('returns status array for authenticated user', async () => {
+    const cookie = await registerUser('batch-summary-1');
+    await seedFixture(cookie);
+
+    const res = await supertest(app)
+      .get('/api/compliance/projects/summary')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.projects)).toBe(true);
+    expect(res.body.projects.length).toBeGreaterThanOrEqual(1);
+    for (const entry of res.body.projects) {
+      expect(typeof entry.id).toBe('string');
+      expect(typeof entry.status).toBe('string');
+    }
+  });
+
+  it('returns violations for project with under-wage entry', async () => {
+    const cookie = await registerUser('batch-summary-2');
+    const { projectId } = await seedProjectWithViolation(cookie);
+
+    const res = await supertest(app)
+      .get('/api/compliance/projects/summary')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    const found = res.body.projects.find((p: { id: string; status: string }) => p.id === projectId);
+    expect(found).toBeDefined();
+    expect(found.status).toBe('violations');
+  });
+
+  it('returns no-payroll for project with no weeks', async () => {
+    const cookie = await registerUser('batch-summary-3');
+
+    const pRes = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'No-Payroll Project',
+        state: 'TX',
+        county: 'Travis',
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-03-01',
+        fundingType: 'federal',
+      });
+    const projectId = pRes.body.data?.project?.id as string;
+
+    const res = await supertest(app)
+      .get('/api/compliance/projects/summary')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    const found = res.body.projects.find((p: { id: string; status: string }) => p.id === projectId);
+    expect(found).toBeDefined();
+    expect(found.status).toBe('no-payroll');
+  });
+
+  it('returns archived for closed project', async () => {
+    const cookie = await registerUser('batch-summary-4');
+    const { projectId } = await seedProjectFixture(cookie);
+
+    // Archive the project via soft-delete (sets status to 'closed')
+    const archiveRes = await supertest(app)
+      .delete(`/api/projects/${projectId}`)
+      .set('Cookie', cookie);
+    expect(archiveRes.status).toBe(200);
+
+    const res = await supertest(app)
+      .get('/api/compliance/projects/summary')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    const found = res.body.projects.find((p: { id: string; status: string }) => p.id === projectId);
+    expect(found).toBeDefined();
+    expect(found.status).toBe('archived');
+  });
+
+  it('returns 401 when unauthenticated', async () => {
+    const res = await supertest(app)
+      .get('/api/compliance/projects/summary');
+
+    expect(res.status).toBe(401);
+  });
+});
+
+// ── CSV export tests ──────────────────────────────────────────────────────
+
+describe('GET /api/compliance/worker/:workerId/history/csv', () => {
+  it('returns 200 with Content-Type text/csv', async () => {
+    const cookie = await registerUser('csv-1');
+    const { projectId } = await seedProjectWithViolation(cookie);
+
+    const workersRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+    const workerId = workersRes.body.data?.workers?.[0]?.id as string;
+
+    const res = await supertest(app)
+      .get(`/api/compliance/worker/${workerId}/history/csv`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+  });
+
+  it('response body begins with UTF-8 BOM', async () => {
+    const cookie = await registerUser('csv-2');
+    const { projectId } = await seedProjectWithViolation(cookie);
+
+    const workersRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+    const workerId = workersRes.body.data?.workers?.[0]?.id as string;
+
+    const res = await supertest(app)
+      .get(`/api/compliance/worker/${workerId}/history/csv`)
+      .set('Cookie', cookie);
+
+    expect(res.text.charCodeAt(0)).toBe(0xFEFF);
+  });
+
+  it('CSV has header row with 17 column names', async () => {
+    const cookie = await registerUser('csv-3');
+    const { projectId } = await seedProjectWithViolation(cookie);
+
+    const workersRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+    const workerId = workersRes.body.data?.workers?.[0]?.id as string;
+
+    const res = await supertest(app)
+      .get(`/api/compliance/worker/${workerId}/history/csv`)
+      .set('Cookie', cookie);
+
+    // Strip BOM and get first line
+    const bodyWithoutBom = res.text.slice(1);
+    const firstLine = bodyWithoutBom.split('\n')[0];
+    const headers = firstLine.split(',');
+    expect(headers.length).toBe(17);
+    // csv-stringify quotes headers with commas; first column is plain "Worker Name"
+    expect(firstLine).toContain('Worker Name');
+  });
+
+  it('returns 403 for worker belonging to different user', async () => {
+    const ownerCookie = await registerUser('csv-4-owner');
+    const otherCookie = await registerUser('csv-4-other');
+
+    const { projectId } = await seedProjectWithViolation(ownerCookie);
+
+    const workersRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', ownerCookie);
+    const workerId = workersRes.body.data?.workers?.[0]?.id as string;
+
+    const res = await supertest(app)
+      .get(`/api/compliance/worker/${workerId}/history/csv`)
+      .set('Cookie', otherCookie);
+
+    expect(res.status).toBe(403);
+  });
+});
