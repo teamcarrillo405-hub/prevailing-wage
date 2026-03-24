@@ -25,6 +25,11 @@ import {
   type Wh347WorkerRow,
 } from '../services/wh347Generator.js';
 import {
+  fillA1131,
+  type A1131Data,
+  type A1131WorkerRow,
+} from '../services/a1131Generator.js';
+import {
   generateLcpTrackerCsv,
   generateEmarsCsv,
   mapEntriesToExportRows,
@@ -183,6 +188,122 @@ router.get('/wh347/:weekId', async (req, res) => {
   const filename = week.amendmentNumber != null
     ? `wh347-${week.payrollNumber}-amended-${week.amendmentNumber}.pdf`
     : `wh347-${week.payrollNumber}.pdf`;
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Length', filledPdf.length);
+  res.end(Buffer.from(filledPdf));
+});
+
+// ── GET /api/export/a1131/:weekId ─────────────────────────────────────────
+// California DIR A-1-131 — state-gated to CA projects only
+
+router.get('/a1131/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project ownership
+  const db = getDb();
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, week.projectId))
+    .limit(1);
+
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  if (project.userId !== userId) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  // 3. State gate — A-1-131 is CA-only
+  if (project.state !== 'CA') {
+    res.status(400).json({ error: 'A-1-131 is only available for California projects' });
+    return;
+  }
+
+  // 4. Load payroll entries
+  const entries = await getPayrollEntries(weekId);
+
+  // 5. Map entries to A1131WorkerRow[]
+  type EntryRow = (typeof entries)[number];
+  const workerRows: A1131WorkerRow[] = entries.map((row: EntryRow, index: number) => {
+    const e = row.entry;
+    const totalSt = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
+    const totalOt = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
+    const totalDt = (e.monDt || 0) + (e.tueDt || 0) + (e.wedDt || 0) + (e.thuDt || 0) + (e.friDt || 0) + (e.satDt || 0) + (e.sunDt || 0);
+    const totalHours = totalSt + totalOt + totalDt;
+    const baseRate = e.baseRateSnapshot;
+
+    return {
+      entryNo: index + 1,
+      workerName: row.workerName,
+      identifyingNo: '',  // SSN last-4 — privacy default
+      laborType: (row.laborType === 'foreman' ? 'journeyworker' : row.laborType) as 'journeyworker' | 'apprentice',
+      classification: row.tradeDescription,
+      sunSt: e.sunSt, sunOt: e.sunOt, sunDt: (e.sunDt || 0),
+      monSt: e.monSt, monOt: e.monOt, monDt: (e.monDt || 0),
+      tueSt: e.tueSt, tueOt: e.tueOt, tueDt: (e.tueDt || 0),
+      wedSt: e.wedSt, wedOt: e.wedOt, wedDt: (e.wedDt || 0),
+      thuSt: e.thuSt, thuOt: e.thuOt, thuDt: (e.thuDt || 0),
+      friSt: e.friSt, friOt: e.friOt, friDt: (e.friDt || 0),
+      satSt: e.satSt, satOt: e.satOt, satDt: (e.satDt || 0),
+      totalSt,
+      totalOt,
+      totalDt,
+      stRate: baseRate,
+      otRate: baseRate * 1.5,
+      dtRate: baseRate * 2.0,
+      grossWages: e.grossWages ?? 0,
+      federalTax: 0,    // user doesn't enter breakdown — zero for now
+      stateTax: 0,
+      sdi: 0,
+      otherDeductions: 0,
+      totalDeductions: e.deductions,
+      netPay: e.netPay ?? 0,
+      fringeCredit: e.fringeRateSnapshot * totalHours,
+    };
+  });
+
+  // 6. Build A1131Data
+  const wageDeterminationNo = project.wdIdentifier
+    ? `${project.wdIdentifier}${project.wdModNumber != null ? ` Mod ${project.wdModNumber}` : ''}`
+    : 'N/A';
+
+  const a1131Data: A1131Data = {
+    contractorName: project.name,
+    contractorAddress: `${project.county}, ${project.state}`,
+    cslbLicense: project.cslbLicense || '',
+    wcPolicyNumber: project.wcPolicyNumber || '',
+    projectName: project.name,
+    projectLocation: `${project.county}, ${project.state}`,
+    contractNo: project.wdIdentifier ?? '',
+    wageDeterminationNo,
+    weekEndingDate: formatDate(week.weekEndingDate),
+    payrollNumber: week.amendmentNumber != null && week.originalWeekId != null
+      ? `${week.payrollNumber} (AMENDED ${week.amendmentNumber})`
+      : String(week.payrollNumber),
+    workers: workerRows,
+  };
+
+  // 7. Load template + fill
+  const templatePath = path.join(process.cwd(), 'assets', 'a1131-official.pdf');
+  const templateBytes = readFileSync(templatePath);
+  const filledPdf = await fillA1131(a1131Data, templateBytes);
+
+  // 8. Stream as PDF download
+  const filename = week.amendmentNumber != null
+    ? `a1131-${week.payrollNumber}-amended-${week.amendmentNumber}.pdf`
+    : `a1131-${week.payrollNumber}.pdf`;
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Length', filledPdf.length);
