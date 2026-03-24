@@ -21,6 +21,8 @@ const CreateProjectSchema = z.object({
   fundingType: z.enum(['federal', 'state', 'mixed'], {
     error: () => ({ message: 'Select a funding type' }),
   }),
+  cslbLicense: z.string().max(50).optional(),
+  wcPolicyNumber: z.string().max(100).optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
@@ -37,8 +39,12 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ProjectFields>({ resolver: zodResolver(CreateProjectSchema) });
+
+  const stateValue = watch('state');
+  const isCA = stateValue?.toUpperCase() === 'CA';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
@@ -151,6 +157,36 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           )}
         </div>
       </div>
+
+      {isCA && (
+        <div className="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-800">California Project Fields</p>
+          <div>
+            <label htmlFor="cslbLicense" className="block text-sm font-medium text-gray-700">
+              CSLB Contractor License #
+            </label>
+            <input
+              id="cslbLicense"
+              type="text"
+              {...register('cslbLicense')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="e.g. 123456"
+            />
+          </div>
+          <div>
+            <label htmlFor="wcPolicyNumber" className="block text-sm font-medium text-gray-700">
+              Workers' Compensation Policy #
+            </label>
+            <input
+              id="wcPolicyNumber"
+              type="text"
+              {...register('wcPolicyNumber')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="e.g. WC-2026-789"
+            />
+          </div>
+        </div>
+      )}
 
       {apiError && (
         <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-sm text-red-700">
