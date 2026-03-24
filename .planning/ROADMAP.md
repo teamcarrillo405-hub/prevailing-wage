@@ -144,7 +144,10 @@ Plans:
   2. The violation list shows project name, payroll week, violation type, and the amounts involved for each entry
   3. A worker with no violations across any project shows a clear "no violations found" state
   4. Worker identity is correctly matched across projects using name and SSN last 4 (not project-scoped worker ID)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 22-01-PLAN.md — getWorkerComplianceHistory() service + GET /worker/:workerId/history endpoint + multi-project integration tests (TDD)
+- [ ] 22-02-PLAN.md — WorkerComplianceHistoryPage + "Compliance History" link on WorkersPage + route registration + browser verification
 
 ## Progress
 
@@ -167,4 +170,4 @@ Plans:
 | 19. WH-347 Submission Tracking | v2.3 | 1/2 | In Progress|  |
 | 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete    | 2026-03-23 |
 | 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete    | 2026-03-23 |
-| 22. Per-Worker Compliance History | v2.3 | 0/? | Not started | - |
+| 22. Per-Worker Compliance History | v2.3 | 0/2 | Not started | - |
