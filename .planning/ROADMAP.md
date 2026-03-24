@@ -175,6 +175,9 @@ Plans:
   4. User can click "Download CSV" on the compliance history page and receive a UTF-8 BOM CSV file with 17 columns matching WH-347 field convention order
   5. The downloaded CSV opens correctly in Excel with columns aligned and no encoding artifacts
 **Plans**: 2 plans
+Plans:
+- [ ] 23-01-PLAN.md — Batch compliance summary endpoint + CSV export route + csv-stringify install + integration tests
+- [ ] 23-02-PLAN.md — Dashboard filter chips UI + CSV download button + browser verification
 
 ### Phase 24: California DIR A-1-131 Form
 **Goal**: Contractors on California public works projects can generate a California DIR A-1-131 certified payroll PDF that correctly captures daily overtime and double-time hours per CA Labor Code requirements
