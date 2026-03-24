@@ -81,6 +81,14 @@ interface ComplianceResult {
   certAccuratePayroll: boolean;
 }
 
+interface ProjectData {
+  id: string;
+  state: string;
+  name: string;
+  cslbLicense: string | null;
+  wcPolicyNumber: string | null;
+}
+
 interface PayrollWeekDetailResponse {
   week: PayrollWeek;
   entries: PayrollEntryRow[];
@@ -100,6 +108,10 @@ export function PayrollWeekDetailPage() {
   const generatingRef = useRef(false);
   const amendingRef = useRef(false);
   const hiddenAnchorRef = useRef<HTMLAnchorElement>(null);
+
+  // CA-specific state
+  const [showCaDisclosure, setShowCaDisclosure] = useState(false);
+  const caGeneratingRef = useRef(false);
 
   const queryClient = useQueryClient();
   const [showSubmitForm, setShowSubmitForm] = useState(false);
@@ -147,6 +159,14 @@ export function PayrollWeekDetailPage() {
     enabled: !!weekId,
   });
 
+  const { data: projectData } = useQuery({
+    queryKey: ['project', weekData?.week.projectId],
+    queryFn: () =>
+      api.get<{ data: { project: ProjectData } }>(`/projects/${weekData!.week.projectId}`),
+    enabled: !!weekData?.week.projectId,
+  });
+  const isCA = projectData?.data?.project?.state === 'CA';
+
   const isLoading = weekLoading || complianceLoading;
   const isError = weekError || complianceError;
 
@@ -186,6 +206,32 @@ export function PayrollWeekDetailPage() {
     } finally {
       generatingRef.current = false;
       setGenerating(false);
+    }
+  }
+
+  // CA A-1-131 download handlers
+  function handleCaDownloadClick() {
+    // ALWAYS show disclosure — persistent regulatory notice, not conditional on violations
+    setShowCaDisclosure(true);
+  }
+
+  async function handleCaConfirmedDownload() {
+    if (caGeneratingRef.current) return;
+    caGeneratingRef.current = true;
+    setShowCaDisclosure(false);
+    try {
+      const res = await fetch(`/api/export/a1131/${weekId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      hiddenAnchorRef.current!.href = url;
+      hiddenAnchorRef.current!.download = `a1131-${weekData?.week.payrollNumber || weekId}.pdf`;
+      hiddenAnchorRef.current!.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err) {
+      console.error('CA A-1-131 download failed:', err);
+    } finally {
+      caGeneratingRef.current = false;
     }
   }
 
@@ -239,16 +285,27 @@ export function PayrollWeekDetailPage() {
               </h1>
             )}
           </div>
-          {weekId && (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={generating}
-              onClick={handleDownloadClick}
-            >
-              {generating ? 'Generating...' : 'Download WH-347'}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={generating}
+                onClick={handleDownloadClick}
+              >
+                {generating ? 'Generating...' : 'Download WH-347'}
+              </Button>
+            )}
+            {isCA && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCaDownloadClick}
+              >
+                Download CA A-1-131
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Loading state */}
@@ -461,6 +518,56 @@ export function PayrollWeekDetailPage() {
               </div>
             )}
           </Card>
+        )}
+
+        {/* CA eCPR disclosure modal — persistent, shown on every CA download click */}
+        {showCaDisclosure && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setShowCaDisclosure(false)}
+          >
+            <div
+              className="mx-4 max-w-md rounded-lg bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-headline font-bold text-gray-900">
+                California A-1-131 — Important Notice
+              </h3>
+              <div className="mt-3 space-y-3 text-sm text-gray-700">
+                <p>
+                  This PDF is a local reference copy of the DIR A-1-131 certified payroll form.
+                </p>
+                <p className="font-medium text-amber-800">
+                  Official electronic submission of certified payroll records for California
+                  public works projects is required through the DIR eCPR portal:
+                </p>
+                <a
+                  href="https://efiling.dir.ca.gov/eCPR"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center font-medium text-blue-600 underline hover:text-blue-800"
+                >
+                  efiling.dir.ca.gov/eCPR
+                </a>
+                {(!projectData?.data?.project?.cslbLicense || !projectData?.data?.project?.wcPolicyNumber) && (
+                  <p className="rounded bg-amber-50 p-2 text-amber-800">
+                    Warning: CSLB License or WC Policy number is missing. Edit the project to add them before official submission.
+                  </p>
+                )}
+              </div>
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowCaDisclosure(false)}
+                  className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <Button onClick={handleCaConfirmedDownload}>
+                  Download PDF
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Preflight compliance modal */}
