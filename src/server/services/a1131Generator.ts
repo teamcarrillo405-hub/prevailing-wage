@@ -2,21 +2,33 @@
 //
 // California DIR A-1-131 PDF fill implementation using coordinate-based text overlay.
 //
-// Field discovery note (2026-03-24):
-//   The official DIR A-1-131 is a FLAT PDF — coordinate overlay approach used
-//   (same as WH-347 generator). Page dimensions: 612 x 1008 pt (portrait legal 8.5"x14").
+// Field discovery note (2026-03-25):
+//   The official DIR A-1-131 is a FLAT PDF stored as portrait (612×1008) with
+//   page rotation=90° (CW). The viewer rotates the whole page 90° CW on display,
+//   producing a landscape (1008×612) form.
 //
-// Coordinate system: pdf-lib uses PDF origin at BOTTOM-LEFT.
-//   Page dimensions: 612 pts wide × 1008 pts tall.
+//   To draw text that appears horizontal on the landscape form, we apply a
+//   CTM (concat transformation matrix) of [0, 1, -1, 0, 612, 0] to the page
+//   content stream. This pre-rotates our drawing context 90° CCW, cancelling
+//   out the page's 90° CW display rotation.
 //
-// Key CA-specific differences from WH-347:
-//   - Day order: Sun, Mon, Tue, Wed, Thu, Fri, Sat (Sunday FIRST)
-//   - Three rows per worker: ST / OT / DT
-//   - SDI is a named deduction field (not generic "Other")
-//   - CSLB License and WC Policy in header section
-//   - Fringe contributions in a SEPARATE section — NOT included in totalDeductions
+//   After applying the CTM, ALL coordinates are in LANDSCAPE space:
+//     lx: 0–1008 (left=0, right=1008)
+//     ly: 0–612  (bottom=0, top=612)
+//
+//   The cert page (page 2) has /Rotate=0 and native portrait dimensions
+//   (612×1008). Its content stream ends with an active translation CTM
+//   "1 0 0 1 79.08 788.76 cm". drawText calls appended by pdf-lib are in
+//   that shifted user space, so coordinates = page_position − (79.08, 788.76).
 
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+  pushGraphicsState,
+  popGraphicsState,
+  concatTransformationMatrix,
+} from 'pdf-lib';
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -37,19 +49,17 @@ export interface A1131WorkerRow {
   totalSt: number;
   totalOt: number;
   totalDt: number;
-  stRate: number;      // base rate (1.0x)
-  otRate: number;      // 1.5x base
-  dtRate: number;      // 2.0x base
+  stRate: number;
+  otRate: number;
+  dtRate: number;
   grossWages: number;
-  // Deductions
   federalTax: number;
   stateTax: number;
-  sdi: number;         // CA State Disability Insurance
+  sdi: number;
   otherDeductions: number;
   totalDeductions: number;
   netPay: number;
-  // Fringe contributions (SEPARATE from deductions)
-  fringeCredit: number; // per-hour fringe rate * total hours
+  fringeCredit: number;
 }
 
 export interface A1131Data {
@@ -66,88 +76,74 @@ export interface A1131Data {
   workers: A1131WorkerRow[];
 }
 
-// ── Layout constants ─────────────────────────────────────────────────────────
+// ── Layout constants (ALL in LANDSCAPE space: lx 0–1008, ly 0–612) ──────────
 //
-// Page is 612 x 1008 pt (portrait legal).
-// Coordinates measured from bottom-left (pdf-lib convention).
-//
-// Header section occupies top ~180 pts of the page (y ≈ 828 to 1008).
-// Worker grid occupies the middle section.
-// Fringe/deductions summary at the bottom.
-//
-// Worker grid: ~5 workers per page, 3 rows each (ST/OT/DT).
-// Row height: ~40 pts per worker (3 sub-rows @ ~13 pts each + spacing).
+// Column positions verified via pdfminer text extraction from a1131-official.pdf.
+// pdfminer bbox for page 1 is (0,0,1008,612) — already in landscape coords
+// after applying /Rotate 90, so pdfminer x == lx directly.
 
-// Header field y-positions (from bottom of page, legal 8.5"x14"):
-// Top of page ≈ 1008, bottom ≈ 0.
-// Header area: y ~820-1000.
+// Header data field positions — where we draw the actual values
 const HEADER = {
-  // Row 1: Contractor name / address / CSLB / WC Policy
-  contractorName:    { x: 70,  y: 920 },
-  contractorAddress: { x: 70,  y: 905 },
-  cslbLicense:       { x: 370, y: 920 },
-  wcPolicyNumber:    { x: 370, y: 905 },
-  // Row 2: Project name / location
-  projectName:       { x: 70,  y: 882 },
-  projectLocation:   { x: 70,  y: 867 },
-  // Row 3: Contract no / WD no / Week ending / Payroll no
-  contractNo:        { x: 70,  y: 845 },
-  wageDeterminationNo: { x: 230, y: 845 },
-  weekEndingDate:    { x: 400, y: 845 },
-  payrollNumber:     { x: 520, y: 845 },
+  contractorName:    { lx: 315, ly: 535 },   // blank starts after "NAME OF CONTRACTOR:" label (x1≈314)
+  cslbLicense:       { lx: 618, ly: 535 },   // blank starts after "CONTRACTOR'S LICENSE NO.:" (x1≈616)
+  address:           { lx: 770, ly: 535 },   // blank starts after "ADDRESS:" label (x1≈768)
+  payrollNo:         { lx: 283, ly: 514 },   // blank starts after "PAYROLL NO.:" label (x1≈279)
+  weekEndingDate:    { lx: 454, ly: 514 },   // blank starts after "FOR WEEK ENDING:" label (x1≈446)
+  wcPolicyNumber:    { lx: 675, ly: 497 },   // blank starts after "WORKERS' COMPENSATION POLICY NO.:" (x1≈672)
+  projectNo:         { lx: 866, ly: 514 },   // blank starts after "PROJECT OR CONTRACT NO.:" (x1≈863)
+  projectLocation:   { lx: 856, ly: 497 },   // blank starts after "PROJECT AND LOCATION:" (x1≈853)
 } as const;
 
-// Worker grid column x-positions
-const WORKER_COLS = {
-  entryNo:        36,
-  workerName:     52,
-  identifyingNo:  135,
-  laborType:      168,
-  classification: 185,
-  // Hour columns (Sun first)
-  sunHours:       250,
-  monHours:       272,
-  tueHours:       294,
-  wedHours:       316,
-  thuHours:       338,
-  friHours:       360,
-  satHours:       382,
-  totalHours:     404,
-  // Rates
-  stRate:         424,
-  otRate:         448,
-  dtRate:         472,
-  grossWages:     496,
-  // Deductions
-  fedTax:         524,
-  stateTax:       548,
-  sdi:            572,
-  totalDeductions: 596,
-  netPay:         572,  // netPay uses same area as right side
+// Worker row column x-positions (landscape lx)
+// All positions from pdfminer extraction: lx == pdfminer x for page 1 (/Rotate 90).
+// CA A-1-131 column order: (1) Name | ID | J/RA | (3) Classification |
+//   (4) M T W TH F S S | (5) Total | (6) Rate | (7) Gross | Deductions | (8) Net | (9) Fringe
+const COL = {
+  entryNo:         205,   // Column (2) — NO. OF WITHHOLDING EXEMPTIONS, pdfminer "(2)" x0=205
+  workerName:       57,   // Column (1) left margin — pdfminer "NAME, ADDRESS AND" x0=56
+  identifyingNo:   228,   // SSN last 4
+  laborType:       252,   // J or RA
+  classification:  265,   // Column (3), label at pdfminer x0=257
+  // Day columns: Mon first — CA form shows M T W TH F S S
+  // pdfminer: M(325) T(344) W(357) TH(379) F(401) S(419) S(437)
+  monHours:        327,
+  tueHours:        344,
+  wedHours:        357,
+  thuHours:        379,
+  friHours:        401,
+  satHours:        419,
+  sunHours:        437,
+  totalHours:      462,   // Column (5), pdfminer label x0=459
+  hourlyRate:      499,   // Column (6), pdfminer label x0=496
+  grossWages:      540,   // Column (7) THIS PROJECT, pdfminer sub-label x0=537
+  fedTax:          638,   // pdfminer FED TAX x0=637
+  stateTax:        720,   // pdfminer STATE TAX x0=719
+  sdi:             761,   // pdfminer SDI x0=760
+  otherDeductions: 830,   // pdfminer HEALTH x0=829 (catch-all other deductions)
+  // totalDeductions drawn at stY-39 — matches pdfminer "TOTAL DEDUC-TIONS" label position
+  totalDeductions: 869,   // pdfminer TOTAL DEDUC-TIONS x0=869 (drawn at stY-39)
+  netPay:          912,   // pdfminer NET WGS x0=911
+  fringeCredit:    912,   // NET WGS column — employer fringe credit drawn at otY to avoid overlap with netPay
 } as const;
 
-// Workers per page and row Y positions
-// Page is legal (1008 pts), header takes ~200 pts, footer ~100 pts
-// Available for workers: ~708 pts, 5 workers × 3 rows each = 15 sub-rows
-// Each sub-row ≈ 13 pts, worker spacing ≈ 40 pts
 const ROWS_PER_PAGE = 5;
 
-// Y positions for each worker group (ST, OT, DT sub-rows)
-// Starting from top (high y) to bottom (low y), below header
-function getWorkerRowY(workerIdx: number): { st: number; ot: number; dt: number } {
-  // First worker starts at y ≈ 810, each worker group is ~42 pts apart
-  const baseY = 808;
-  const rowSpacing = 42;
-  const subRowSpacing = 14;
-  const stY = baseY - (workerIdx * rowSpacing);
+// Worker block Y positions (landscape ly, counted from top down).
+// From pdfminer: first worker S label at y0=391, S-to-S block spacing=92,
+// S-to-O sub-row spacing=47. Confirmed by 4 visible worker blocks in template.
+function getWorkerRowLY(workerIdx: number): { st: number; ot: number; dt: number } {
+  const baseY = 391;
+  const blockSpacing = 92;
+  const subRowSpacing = 47;
+  const stY = baseY - workerIdx * blockSpacing;
   return {
     st: stY,
     ot: stY - subRowSpacing,
-    dt: stY - (subRowSpacing * 2),
+    dt: stY - subRowSpacing * 2,
   };
 }
 
-// ── Helper functions ─────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDollar(n: number): string {
   return n > 0 ? n.toFixed(2) : '';
@@ -177,12 +173,9 @@ export async function fillA1131(
   for (let i = 0; i < data.workers.length; i += ROWS_PER_PAGE) {
     chunks.push(data.workers.slice(i, i + ROWS_PER_PAGE));
   }
-  // Always have at least 1 page set (even with 0 workers)
   const totalPageSets = chunks.length === 0 ? 1 : chunks.length;
 
-  // ── Step 2: Copy additional template pages BEFORE filling any content ───
-  // Template has 2 pages: [0] worker grid page, [1] certification page.
-  // For each additional page set beyond the first, append both template pages.
+  // ── Step 2: Copy additional template pages ───────────────────────────────
 
   for (let setIdx = 1; setIdx < totalPageSets; setIdx++) {
     const [extraWorkerPage] = await pdfDoc.copyPages(pdfDoc, [0]);
@@ -193,128 +186,160 @@ export async function fillA1131(
 
   const allPages = pdfDoc.getPages();
 
-  // ── Step 3: Fill header + workers on each worker-grid page ───────────────
+  // ── Step 3: Fill each worker-grid page ───────────────────────────────────
 
   for (let setIdx = 0; setIdx < totalPageSets; setIdx++) {
     const workerPage = allPages[setIdx * 2];
 
-    // Header fields
-    workerPage.drawText(data.contractorName,      { x: HEADER.contractorName.x,    y: HEADER.contractorName.y,    size: TEXT_SIZE, font, color: black, maxWidth: 280 });
-    workerPage.drawText(data.contractorAddress,   { x: HEADER.contractorAddress.x, y: HEADER.contractorAddress.y, size: TEXT_SIZE, font, color: black, maxWidth: 280 });
-    workerPage.drawText(data.cslbLicense,         { x: HEADER.cslbLicense.x,       y: HEADER.cslbLicense.y,       size: TEXT_SIZE, font, color: black, maxWidth: 220 });
-    workerPage.drawText(data.wcPolicyNumber,      { x: HEADER.wcPolicyNumber.x,    y: HEADER.wcPolicyNumber.y,    size: TEXT_SIZE, font, color: black, maxWidth: 220 });
-    workerPage.drawText(data.projectName,         { x: HEADER.projectName.x,       y: HEADER.projectName.y,       size: TEXT_SIZE, font, color: black, maxWidth: 530 });
-    workerPage.drawText(data.projectLocation,     { x: HEADER.projectLocation.x,   y: HEADER.projectLocation.y,   size: TEXT_SIZE, font, color: black, maxWidth: 530 });
-    workerPage.drawText(data.contractNo,          { x: HEADER.contractNo.x,        y: HEADER.contractNo.y,        size: TEXT_SIZE, font, color: black, maxWidth: 150 });
-    workerPage.drawText(data.wageDeterminationNo, { x: HEADER.wageDeterminationNo.x, y: HEADER.wageDeterminationNo.y, size: TEXT_SIZE, font, color: black, maxWidth: 160 });
-    workerPage.drawText(data.weekEndingDate,      { x: HEADER.weekEndingDate.x,    y: HEADER.weekEndingDate.y,    size: TEXT_SIZE, font, color: black });
-    workerPage.drawText(data.payrollNumber,       { x: HEADER.payrollNumber.x,     y: HEADER.payrollNumber.y,     size: TEXT_SIZE, font, color: black });
+    // Apply CTM so we draw in landscape coordinates.
+    // The page has rotation=90° (CW). Applying [0, 1, -1, 0, 612, 0] rotates
+    // our drawing context 90° CCW, cancelling the page rotation.
+    // After this, lx=0–1008 (left→right) and ly=0–612 (bottom→top).
+    workerPage.pushOperators(
+      pushGraphicsState(),
+      concatTransformationMatrix(0, 1, -1, 0, 612, 0),
+    );
 
-    // Page X of Y notation for multi-page
-    if (totalPageSets > 1) {
-      workerPage.drawText(`Page ${setIdx + 1} of ${totalPageSets}`, {
-        x: 540,
-        y: 845,
-        size: SMALL_SIZE,
-        font,
+    // Helper: draw text at landscape position
+    const dt = (text: string, lx: number, ly: number, opts?: { size?: number; bold?: boolean; maxWidth?: number }) => {
+      workerPage.drawText(text, {
+        x: lx,
+        y: ly,
+        size: opts?.size ?? TEXT_SIZE,
+        font: opts?.bold ? boldFont : font,
         color: black,
+        maxWidth: opts?.maxWidth,
       });
+    };
+
+    // Header fields
+    dt(data.contractorName,    HEADER.contractorName.lx,    HEADER.contractorName.ly,    { maxWidth: 380 });
+    dt(data.cslbLicense,       HEADER.cslbLicense.lx,       HEADER.cslbLicense.ly,       { maxWidth: 200 });
+    dt(data.contractorAddress, HEADER.address.lx,           HEADER.address.ly,           { maxWidth: 200 });
+    dt(data.payrollNumber,     HEADER.payrollNo.lx,         HEADER.payrollNo.ly);
+    dt(data.weekEndingDate,    HEADER.weekEndingDate.lx,    HEADER.weekEndingDate.ly);
+    dt(data.wcPolicyNumber,    HEADER.wcPolicyNumber.lx,    HEADER.wcPolicyNumber.ly,    { maxWidth: 280 });
+    dt(data.contractNo,        HEADER.projectNo.lx,         HEADER.projectNo.ly,         { maxWidth: 200 });
+    dt(data.projectLocation,   HEADER.projectLocation.lx,  HEADER.projectLocation.ly,   { maxWidth: 200 });
+
+    if (totalPageSets > 1) {
+      dt(`Page ${setIdx + 1} of ${totalPageSets}`, 940, 556);
     }
 
-    // ── Step 4: Fill worker rows ─────────────────────────────────────────
-
+    // Worker rows
     const chunk = chunks[setIdx] ?? [];
 
     for (let i = 0; i < chunk.length; i++) {
       const w = chunk[i];
-      const rowY = getWorkerRowY(i);
+      const rowY = getWorkerRowLY(i);
       const stY = rowY.st;
       const otY = rowY.ot;
       const dtY = rowY.dt;
 
-      // Entry number (on ST row)
-      workerPage.drawText(String(w.entryNo), { x: WORKER_COLS.entryNo, y: stY, size: SMALL_SIZE, font, color: black });
+      // Entry number
+      dt(String(w.entryNo), COL.entryNo, stY, { size: SMALL_SIZE });
 
-      // Worker name — split last/first if comma-separated
+      // Worker name
       let displayName = w.workerName;
       if (w.workerName.includes(',')) {
         const [last, rest] = w.workerName.split(',');
         displayName = `${(last ?? '').trim()}, ${(rest ?? '').trim()}`;
       }
-      workerPage.drawText(displayName, { x: WORKER_COLS.workerName, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 80 });
+      dt(displayName, COL.workerName, stY, { size: SMALL_SIZE, maxWidth: 43 });
 
       // Identifying No (SSN last 4)
-      workerPage.drawText(w.identifyingNo, { x: WORKER_COLS.identifyingNo, y: stY, size: SMALL_SIZE, font, color: black });
+      dt(w.identifyingNo, COL.identifyingNo, stY, { size: SMALL_SIZE });
 
-      // Labor type: J or RA (on ST row)
+      // Labor type: J or RA
       const laborLabel = w.laborType === 'journeyworker' ? 'J' : 'RA';
-      workerPage.drawText(laborLabel, { x: WORKER_COLS.laborType, y: stY, size: SMALL_SIZE, font: boldFont, color: black });
+      dt(laborLabel, COL.laborType, stY, { size: SMALL_SIZE, bold: true });
 
-      // Classification (on ST row)
-      workerPage.drawText(w.classification, { x: WORKER_COLS.classification, y: stY, size: SMALL_SIZE, font, color: black, maxWidth: 60 });
+      // Classification
+      dt(w.classification, COL.classification, stY, { size: SMALL_SIZE, maxWidth: 42 });
 
-      // Hours — ST row (Sun first)
-      workerPage.drawText(fmtHours(w.sunSt), { x: WORKER_COLS.sunHours, y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.monSt), { x: WORKER_COLS.monHours, y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.tueSt), { x: WORKER_COLS.tueHours, y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.wedSt), { x: WORKER_COLS.wedHours, y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.thuSt), { x: WORKER_COLS.thuHours, y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.friSt), { x: WORKER_COLS.friHours, y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.satSt), { x: WORKER_COLS.satHours, y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.totalSt), { x: WORKER_COLS.totalHours, y: stY, size: SMALL_SIZE, font, color: black });
+      // NOTE: S / O / DT labels are pre-printed on the form — do not draw them
 
-      // Rates (on ST row)
-      workerPage.drawText(fmtDollar(w.stRate), { x: WORKER_COLS.stRate, y: stY, size: SMALL_SIZE, font, color: black });
+      // ST hours (Mon first — CA form column order: M T W TH F S S)
+      dt(fmtHours(w.monSt), COL.monHours, stY, { size: SMALL_SIZE });
+      dt(fmtHours(w.tueSt), COL.tueHours, stY, { size: SMALL_SIZE });
+      dt(fmtHours(w.wedSt), COL.wedHours, stY, { size: SMALL_SIZE });
+      dt(fmtHours(w.thuSt), COL.thuHours, stY, { size: SMALL_SIZE });
+      dt(fmtHours(w.friSt), COL.friHours, stY, { size: SMALL_SIZE });
+      dt(fmtHours(w.satSt), COL.satHours, stY, { size: SMALL_SIZE });
+      dt(fmtHours(w.sunSt), COL.sunHours, stY, { size: SMALL_SIZE });
+      dt(fmtHours(w.totalSt), COL.totalHours, stY, { size: SMALL_SIZE });
+      dt(fmtDollar(w.stRate), COL.hourlyRate, stY, { size: SMALL_SIZE });
 
-      // Hours — OT row (Sun first)
-      workerPage.drawText(fmtHours(w.sunOt), { x: WORKER_COLS.sunHours, y: otY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.monOt), { x: WORKER_COLS.monHours, y: otY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.tueOt), { x: WORKER_COLS.tueHours, y: otY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.wedOt), { x: WORKER_COLS.wedHours, y: otY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.thuOt), { x: WORKER_COLS.thuHours, y: otY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.friOt), { x: WORKER_COLS.friHours, y: otY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.satOt), { x: WORKER_COLS.satHours, y: otY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.totalOt), { x: WORKER_COLS.totalHours, y: otY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtDollar(w.otRate), { x: WORKER_COLS.otRate, y: otY, size: SMALL_SIZE, font, color: black });
+      // OT hours
+      dt(fmtHours(w.monOt), COL.monHours, otY, { size: SMALL_SIZE });
+      dt(fmtHours(w.tueOt), COL.tueHours, otY, { size: SMALL_SIZE });
+      dt(fmtHours(w.wedOt), COL.wedHours, otY, { size: SMALL_SIZE });
+      dt(fmtHours(w.thuOt), COL.thuHours, otY, { size: SMALL_SIZE });
+      dt(fmtHours(w.friOt), COL.friHours, otY, { size: SMALL_SIZE });
+      dt(fmtHours(w.satOt), COL.satHours, otY, { size: SMALL_SIZE });
+      dt(fmtHours(w.sunOt), COL.sunHours, otY, { size: SMALL_SIZE });
+      dt(fmtHours(w.totalOt), COL.totalHours, otY, { size: SMALL_SIZE });
+      dt(fmtDollar(w.otRate), COL.hourlyRate, otY, { size: SMALL_SIZE });
 
-      // Hours — DT row (Sun first) — CA-specific
-      workerPage.drawText(fmtHours(w.sunDt), { x: WORKER_COLS.sunHours, y: dtY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.monDt), { x: WORKER_COLS.monHours, y: dtY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.tueDt), { x: WORKER_COLS.tueHours, y: dtY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.wedDt), { x: WORKER_COLS.wedHours, y: dtY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.thuDt), { x: WORKER_COLS.thuHours, y: dtY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.friDt), { x: WORKER_COLS.friHours, y: dtY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.satDt), { x: WORKER_COLS.satHours, y: dtY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtHours(w.totalDt), { x: WORKER_COLS.totalHours, y: dtY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtDollar(w.dtRate), { x: WORKER_COLS.dtRate, y: dtY, size: SMALL_SIZE, font, color: black });
+      // DT hours (CA-specific)
+      dt(fmtHours(w.monDt), COL.monHours, dtY, { size: SMALL_SIZE });
+      dt(fmtHours(w.tueDt), COL.tueHours, dtY, { size: SMALL_SIZE });
+      dt(fmtHours(w.wedDt), COL.wedHours, dtY, { size: SMALL_SIZE });
+      dt(fmtHours(w.thuDt), COL.thuHours, dtY, { size: SMALL_SIZE });
+      dt(fmtHours(w.friDt), COL.friHours, dtY, { size: SMALL_SIZE });
+      dt(fmtHours(w.satDt), COL.satHours, dtY, { size: SMALL_SIZE });
+      dt(fmtHours(w.sunDt), COL.sunHours, dtY, { size: SMALL_SIZE });
+      dt(fmtHours(w.totalDt), COL.totalHours, dtY, { size: SMALL_SIZE });
+      dt(fmtDollar(w.dtRate), COL.hourlyRate, dtY, { size: SMALL_SIZE });
 
-      // Gross wages, deductions, net pay (on ST row)
-      workerPage.drawText(fmtDollar(w.grossWages),      { x: WORKER_COLS.grossWages,    y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtDollar(w.federalTax),      { x: WORKER_COLS.fedTax,        y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtDollar(w.stateTax),        { x: WORKER_COLS.stateTax,      y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtDollar(w.sdi),             { x: WORKER_COLS.sdi,           y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtDollar(w.totalDeductions), { x: WORKER_COLS.totalDeductions, y: stY, size: SMALL_SIZE, font, color: black });
-      workerPage.drawText(fmtDollar(w.netPay),          { x: WORKER_COLS.netPay,        y: otY, size: SMALL_SIZE, font, color: black });
-
-      // Fringe credit — in separate section (below deductions area on same row)
-      // The A-1-131 has a fringe contributions section below each worker's deductions.
-      // Draw it on the DT row right side to distinguish from deductions.
-      workerPage.drawText(fmtDollar(w.fringeCredit),    { x: 548, y: dtY, size: SMALL_SIZE, font, color: black });
+      // Gross wages, deductions, net pay — on ST row
+      dt(fmtDollar(w.grossWages),      COL.grossWages,      stY, { size: SMALL_SIZE });
+      dt(fmtDollar(w.federalTax),      COL.fedTax,          stY, { size: SMALL_SIZE });
+      dt(fmtDollar(w.stateTax),        COL.stateTax,        stY, { size: SMALL_SIZE });
+      dt(fmtDollar(w.sdi),             COL.sdi,             stY, { size: SMALL_SIZE });
+      dt(fmtDollar(w.otherDeductions), COL.otherDeductions, stY, { size: SMALL_SIZE });
+      dt(fmtDollar(w.totalDeductions), COL.totalDeductions, stY - 39, { size: SMALL_SIZE });
+      dt(fmtDollar(w.netPay),          COL.netPay,          stY,  { size: SMALL_SIZE });
+      dt(fmtDollar(w.fringeCredit),    COL.fringeCredit,    otY,  { size: SMALL_SIZE });
     }
+
+    // Restore graphics state
+    workerPage.pushOperators(popGraphicsState());
   }
 
-  // ── Step 5: Fill certification page (page 2) for each page set ──────────
-  // The A-1-131 page 2 is the penalty of perjury statement / signature page.
-  // We fill contractor name, week ending, payroll number as identifiers.
+  // ── Step 4: Fill certification page ──────────────────────────────────────
+  // Page 2: /Rotate=0, mediabox 612×1008 (portrait).
+  //
+  // pdf-lib's normalize() wraps every page's existing template content with
+  // shared document-level q/Q streams:
+  //   [q_stream, template_stream(s), Q_stream, our_new_stream]
+  // The Q stream RESTORES graphics state to identity before our new stream
+  // runs — so the translation CTM "1 0 0 1 79.08 788.76 cm" inside the
+  // template stream is already undone. Draw at ABSOLUTE portrait coords.
+  //
+  // Blank positions (absolute portrait coords, y from bottom of 612×1008 page):
+  //   x=80,  y=630 — "[company name], certify under penalty of perjury..." blank
+  //   x=375, y=588 — "...consisting of [payroll description]" blank
+  //   x=108, y=451 — "Date: ___" blank
 
   for (let setIdx = 0; setIdx < totalPageSets; setIdx++) {
     const certPage = allPages[setIdx * 2 + 1];
 
-    // Basic identifier fields on certification page
-    certPage.drawText(data.contractorName,  { x: 70,  y: 920, size: TEXT_SIZE, font, color: black, maxWidth: 280 });
-    certPage.drawText(data.projectName,     { x: 70,  y: 890, size: TEXT_SIZE, font, color: black, maxWidth: 530 });
-    certPage.drawText(data.weekEndingDate,  { x: 400, y: 890, size: TEXT_SIZE, font, color: black });
-    certPage.drawText(data.payrollNumber,   { x: 520, y: 890, size: TEXT_SIZE, font, color: black });
+    // Business / contractor name on the "[company name], certify..." blank
+    certPage.drawText(data.contractorName, {
+      x: 80, y: 630,
+      size: TEXT_SIZE, font, color: black, maxWidth: 290,
+    });
+    // Payroll description in the "...consisting of [description]" blank
+    certPage.drawText(`Payroll #${data.payrollNumber} — ${data.projectLocation}`, {
+      x: 375, y: 588,
+      size: TEXT_SIZE, font, color: black, maxWidth: 160,
+    });
+    // Week ending date on the "Date: ___" blank
+    certPage.drawText(data.weekEndingDate, {
+      x: 108, y: 451,
+      size: TEXT_SIZE, font, color: black,
+    });
   }
 
   return pdfDoc.save();

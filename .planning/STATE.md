@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Ready to plan
-stopped_at: Completed 23-02-PLAN.md (all 3 tasks including browser verification)
-last_updated: "2026-03-24T20:56:08.316Z"
+status: Ready to execute
+stopped_at: "Phase 24 complete — ready for Phase 25"
+last_updated: "2026-03-25T15:45:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 7
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 16
+  completed_plans: 15
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 23 — dashboard-compliance-filter-csv-export
+**Current focus:** Phase 24 — california-dir-a-1-131-form
 
 ## Current Position
 
-Phase: 24
-Plan: Not started
+Phase: 24 (california-dir-a-1-131-form) — COMPLETE
+Phase: 25 (washington-li-f700-065-000-form) — NEXT
 
 ### Phase Structure
 
@@ -58,6 +58,8 @@ Plan: Not started
 | Phase 23-dashboard-compliance-filter-csv-export P01 | 5min | 1 tasks | 4 files |
 | Phase 23-dashboard-compliance-filter-csv-export P02 | 3min | 2 tasks | 2 files |
 | Phase 23-dashboard-compliance-filter-csv-export P02 | 5min | 3 tasks | 2 files |
+| Phase 24-california-dir-a-1-131-form P01 | 4min | 3 tasks | 10 files |
+| Phase 24-california-dir-a-1-131-form P02 | 8min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -195,6 +197,14 @@ Plan: Not started
 - [Phase 23]: getBatchProjectCompliance() short-circuits on status=closed — no compliance computation needed for archived projects
 - [Phase 23-dashboard-compliance-filter-csv-export]: summaryData?.projects (not wrapped in data) — compliance summary endpoint returns {projects:[]} directly
 - [Phase 23-dashboard-compliance-filter-csv-export]: Download CSV button conditional on data.entries.length > 0 — no empty CSV for compliant workers
+- [Phase 24-california-dir-a-1-131-form]: All DT fields on UpsertEntrySchema are optional() — existing WH-347 payloads do not include them; defaults to 0 at DB level
+- [Phase 24-california-dir-a-1-131-form]: cslbLicense and wcPolicyNumber are nullable TEXT — optional at project creation per CA DIR policy
+- [Phase 24-california-dir-a-1-131-form]: Both CA migrations registered in _journal.json at idx 6 and 7 — Drizzle silently skips unregistered SQL migrations (Phase 06 lesson)
+- [Phase 24-02]: isCA derived from watch('state') in ProjectForm - re-renders on every state keystroke, CA fields appear immediately
+- [Phase 24-02]: PayrollEntryPage adds second useQuery for project data to derive isCA and pass to PayrollWeekForm
+- [Phase 24-02]: payrollService: DT fields added to UpsertPayrollEntryInput type and persisted in upsertPayrollEntry (DB columns existed but service omitted them)
+- [Phase 24]: A-1-131 PDF page dimensions are 612x1008 pt (legal 8.5x14), not letter — coordinates calibrated accordingly
+- [Phase 24]: eCPR disclosure modal shown unconditionally on every CA download (regulatory, not violation-conditional)
 
 ### Research Flags for v2.4
 
@@ -212,6 +222,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T20:46:10.764Z
-Stopped at: Completed 23-02-PLAN.md (all 3 tasks including browser verification)
+Last session: 2026-03-24T22:02:40.311Z
+Stopped at: checkpoint:human-verify at Task 3 of 24-03-PLAN.md
 Resume file: None

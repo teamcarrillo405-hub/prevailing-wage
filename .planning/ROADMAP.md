@@ -72,7 +72,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 ### v2.4 Ship-Ready + Design Elevation (Phases 23-28) — ACTIVE
 
 - [x] **Phase 23: Dashboard Compliance Filter + CSV Export** - Batch compliance summary endpoint, dashboard filter chips, and CSV download from compliance history (DASH-05, AUD-03) (completed 2026-03-24)
-- [ ] **Phase 24: California DIR A-1-131 Form** - DT schema migration, CA-specific project fields, CA certified payroll PDF generation with daily OT/DT model and eCPR disclosure (CAL-01, CAL-02, CAL-03)
+- [x] **Phase 24: California DIR A-1-131 Form** - DT schema migration, CA-specific project fields, CA certified payroll PDF generation with daily OT/DT model and eCPR disclosure (CAL-01, CAL-02, CAL-03) (completed 2026-03-25)
 - [ ] **Phase 25: Washington L&I F700-065-000 Form** - Manual rate entry for WA projects, WA trade code mapping, WA certified payroll PDF generation (WAL-01, WAL-02)
 - [ ] **Phase 26: Contractor Guidance System** - HelpText primitive, contextual help across all major pages, instructional empty states, inline compliance term tooltips (UX-05, UX-06, UX-07, UX-08)
 - [ ] **Phase 27: Design Elevation** - Construction photography, dark gold gradient overlays, elevated card shadows, richer typography matching HCC website standard (DES-01, DES-02, DES-03)
@@ -191,8 +191,8 @@ Plans:
   5. A WA or federal-only project has no CA form download button — the button is state-gated
 **Plans**: 3 plans
 Plans:
-- [ ] 24-01-PLAN.md — PDF download + DB migrations (DT columns + CA project fields) + schema.ts + server Zod schemas + test stubs
-- [ ] 24-02-PLAN.md — CA-conditional project fields in ProjectForm + DT columns in PayrollWeekForm + turn CAL-01/CAL-03 tests GREEN
+- [x] 24-01-PLAN.md — PDF download + DB migrations (DT columns + CA project fields) + schema.ts + server Zod schemas + test stubs
+- [x] 24-02-PLAN.md — CA-conditional project fields in ProjectForm + DT columns in PayrollWeekForm + turn CAL-01/CAL-03 tests GREEN
 - [ ] 24-03-PLAN.md — A-1-131 PDF generator + export route + state-gated download button + eCPR preflight modal + browser verification
 
 ### Phase 25: Washington L&I F700-065-000 Form
@@ -264,7 +264,7 @@ Plans:
 | 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
 | 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete    | 2026-03-24 |
-| 24. California DIR A-1-131 Form | v2.4 | 0/3 | Not started | - |
+| 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress|  |
 | 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Not started | - |
 | 26. Contractor Guidance System | v2.4 | 0/2 | Not started | - |
 | 27. Design Elevation | v2.4 | 0/2 | Not started | - |
