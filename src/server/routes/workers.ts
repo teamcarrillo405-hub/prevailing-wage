@@ -34,6 +34,10 @@ const CreateClassificationSchema = z.object({
   laborType: z.enum(['journeyworker', 'apprentice', 'foreman']),
   apprenticePercent: z.number().int().min(0).max(100).optional(),
   programName: z.string().max(200).optional(),
+  // Phase 25 — WA manual prevailing wage rate (SAM.gov not used for WA state projects)
+  waManualRate: z.number().positive().optional(),
+  // Phase 25 — WA-specific 4-letter trade code override for F700-065-000
+  waTradeCode: z.string().max(10).optional(),
 }).refine(
   (data) => data.laborType !== 'apprentice' || data.apprenticePercent !== undefined,
   { message: 'apprenticePercent is required when laborType is apprentice', path: ['apprenticePercent'] }
@@ -280,6 +284,8 @@ router.post('/:projectId/workers/:workerId/classifications', validate(CreateClas
     apprenticePercent: body.apprenticePercent ?? null,
     programName: body.programName ?? null,
     isActive: true,
+    waManualRate: body.waManualRate ?? null,
+    waTradeCode: body.waTradeCode ?? null,
     createdAt: now,
   });
 

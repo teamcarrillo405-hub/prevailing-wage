@@ -57,6 +57,20 @@
       "when": 1774387951001,
       "tag": "0011_payroll_entries_double_time",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1774481700000,
+      "tag": "0012_wa_project_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1774481700001,
+      "tag": "0013_wa_manual_rate",
+      "breakpoints": true
     }
   ]
 }

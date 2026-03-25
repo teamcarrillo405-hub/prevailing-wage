@@ -31,6 +31,10 @@ export const projects = sqliteTable('projects', {
   // Phase 24 — California-specific fields
   cslbLicense: text('cslb_license'),
   wcPolicyNumber: text('wc_policy_number'),
+  // Phase 25 — Washington-specific fields
+  ubiNumber: text('ubi_number'),
+  lniCertificate: text('lni_certificate'),
+  wcAccount: text('wc_account'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -58,6 +62,10 @@ export const workerClassifications = sqliteTable('worker_classifications', {
   apprenticePercent: integer('apprentice_percent'),
   programName: text('program_name'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  // Phase 25 — WA manual prevailing wage rate (SAM.gov not used for WA)
+  waManualRate: real('wa_manual_rate'),
+  // Phase 25 — WA-specific 4-letter trade code override (for F700-065-000)
+  waTradeCode: text('wa_trade_code'),
   createdAt: text('created_at').notNull(),
 });
 
