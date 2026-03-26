@@ -109,15 +109,17 @@ router.get('/:projectId/workers', async (req, res) => {
     .where(eq(workers.projectId, projectId));
 
   // Attach classifications + rates to each worker
+  type WorkerRow = (typeof workerRows)[number];
   const result = await Promise.all(
-    workerRows.map(async (w) => {
+    workerRows.map(async (w: WorkerRow) => {
       const classifications = await db
         .select()
         .from(workerClassifications)
         .where(eq(workerClassifications.workerId, w.id));
+      type ClassificationRow = (typeof classifications)[number];
       return {
         ...w,
-        classifications: classifications.map((c) => ({
+        classifications: classifications.map((c: ClassificationRow) => ({
           ...c,
           baseRate: rateMap.get(c.tradeCode)?.baseRate ?? null,
           fringeRate: rateMap.get(c.tradeCode)?.fringeRate ?? null,
