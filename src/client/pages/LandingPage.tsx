@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FolderPlus, ClipboardList, FileCheck, Shield, CheckCircle, Clock, FileText, Database } from 'lucide-react';
+import { FolderPlus, ClipboardList, FileCheck, Shield, CheckCircle, Clock, FileText, Database, Users } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
@@ -95,19 +95,25 @@ function HowItWorksSection() {
       Icon: FolderPlus,
       title: 'Create Your Project',
       description:
-        'Enter your project name and location. We pull the correct Davis-Bacon wage determination from SAM.gov automatically.',
+        'Enter your project name and location. We pull the required prevailing wage rates from SAM.gov — the same source your contracting officer uses. No manual rate lookup.',
+    },
+    {
+      Icon: Users,
+      title: 'Add Your Workers',
+      description:
+        'Register every worker with their trade classification. Federal law requires each worker on a Davis-Bacon job to be documented — apprentices need their program name and registration number.',
     },
     {
       Icon: ClipboardList,
       title: 'Enter Weekly Payroll',
       description:
-        'Log hours, classifications, and fringe benefits for each worker. The system flags underpayments in real time.',
+        'Log hours and pay for each worker every week. The system checks rates against the prevailing wage and flags underpayments before you file — not after a DOL audit.',
     },
     {
       Icon: FileCheck,
-      title: 'Generate WH-347',
+      title: 'Generate and Submit Your WH-347',
       description:
-        'Download the January 2025 WH-347 form, pre-filled and ready to submit to the contracting officer.',
+        'Download the completed January 2025 WH-347 form, pre-filled with all required data. Submit it to your contracting officer each week to stay compliant.',
     },
   ];
 
@@ -118,9 +124,9 @@ function HowItWorksSection() {
           How It Works
         </h2>
         <p className="text-gray-400 mb-12">
-          Three steps from contract award to certified payroll
+          Four steps from contract award to certified payroll submission
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12 text-left">
           {steps.map(({ Icon, title, description }) => (
             <div key={title}>
               <Icon className="w-10 h-10 text-brand-gold mb-4" />
@@ -296,8 +302,8 @@ export function LandingPage() {
     <div className="min-h-screen">
       <LandingNav />
       <HeroSection />
-      <ProblemSection />
       <HowItWorksSection />
+      <ProblemSection />
       <FeatureHighlightsSection />
       <TrustSignalsSection />
       <CTACloseSection />
