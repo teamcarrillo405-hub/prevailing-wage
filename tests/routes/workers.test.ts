@@ -78,7 +78,101 @@ async function createApprenticeWithProgramName(
   return { workerId, res: cRes };
 }
 
+async function createWaProject(cookie: string) {
+  const res = await supertest(app)
+    .post('/api/projects')
+    .set('Cookie', cookie)
+    .send({
+      name: 'WA Workers Test Project',
+      state: 'WA',
+      county: 'King',
+      contractType: 'state-prevailing',
+      awardDate: '2025-01-01',
+      fundingType: 'state',
+    });
+  return res.body.data?.project?.id as string;
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────
+
+describe('waManualRate on classifications - WAL-01', () => {
+  it('accepts waManualRate on journeyworker classification for WA project', async () => {
+    const cookie = await registerAndLogin('wa-manual-rate-jw');
+    const projectId = await createWaProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'WA Worker One' });
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    const cRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+      .set('Cookie', cookie)
+      .send({
+        tradeCode: 'CARP',
+        tradeDescription: 'Carpenter',
+        laborType: 'journeyworker',
+        waManualRate: 52.75,
+      });
+
+    expect(cRes.status).toBe(201);
+    expect(cRes.body.data?.classification?.waManualRate).toBe(52.75);
+  });
+
+  it('stores waManualRate in the DB and returns it on GET workers', async () => {
+    const cookie = await registerAndLogin('wa-manual-rate-get');
+    const projectId = await createWaProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'WA Worker Two' });
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    await supertest(app)
+      .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+      .set('Cookie', cookie)
+      .send({
+        tradeCode: 'ELEC',
+        tradeDescription: 'Electrician',
+        laborType: 'journeyworker',
+        waManualRate: 68.50,
+      });
+
+    const getRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+
+    expect(getRes.status).toBe(200);
+    const workers = getRes.body.data?.workers ?? [];
+    const cls = workers[0]?.classifications?.[0];
+    expect(cls?.waManualRate).toBe(68.50);
+  });
+
+  it('waManualRate defaults to null when not provided', async () => {
+    const cookie = await registerAndLogin('wa-manual-rate-null');
+    const projectId = await createWaProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'WA Worker Three' });
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    const cRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+      .set('Cookie', cookie)
+      .send({
+        tradeCode: 'LABO',
+        tradeDescription: 'Laborer',
+        laborType: 'journeyworker',
+      });
+
+    expect(cRes.status).toBe(201);
+    expect(cRes.body.data?.classification?.waManualRate).toBeNull();
+  });
+});
 
 describe('POST /classifications programName', () => {
   it('accepts programName on apprentice classification and returns it in response', async () => {

@@ -87,6 +87,69 @@ async function createPayrollEntry(
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
+describe('GET /api/export/f700/:weekId - WAL-02', () => {
+  it('should return 400 for non-WA project', async () => {
+    const cookie = await registerUser('wa-non-wa');
+    const projectId = await createProject(cookie, 'TX');
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+
+    const res = await supertest(app)
+      .get(`/api/export/f700/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('Washington');
+  });
+
+  it('should return PDF for WA project', async () => {
+    const cookie = await registerUser('wa-pdf');
+    const projectId = await createProject(cookie, 'WA', {
+      ubiNumber: '123456789',
+      lniCertificate: 'HCCCO1234LI',
+      wcAccount: '234-56-7',
+    });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+
+    const res = await supertest(app)
+      .get(`/api/export/f700/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.body).toBeDefined();
+  });
+
+  it('should return 403 for unauthorized access', async () => {
+    const cookieA = await registerUser('wa-owner');
+    const projectId = await createProject(cookieA, 'WA');
+    const weekId = await createPayrollWeek(cookieA, projectId);
+
+    const cookieB = await registerUser('wa-intruder');
+    const res = await supertest(app)
+      .get(`/api/export/f700/${weekId}`)
+      .set('Cookie', cookieB);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('should return 404 for non-existent week', async () => {
+    const cookie = await registerUser('wa-notfound');
+    const res = await supertest(app)
+      .get('/api/export/f700/non-existent-week-id')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(404);
+  });
+
+  it('should return 401 when not authenticated', async () => {
+    const res = await supertest(app).get('/api/export/f700/some-week-id');
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('GET /api/export/a1131/:weekId - CAL-02', () => {
   it('should return 400 for non-CA project', async () => {
     const cookie = await registerUser('non-ca');

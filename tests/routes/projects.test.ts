@@ -387,6 +387,40 @@ describe('CA project fields - CAL-01', () => {
   });
 });
 
+describe('WA project fields - WAL-02', () => {
+  it('should persist ubiNumber, lniCertificate, and wcAccount on WA project creation', async () => {
+    const cookie = await registerUser(`wal02-with-fields-${Date.now()}@test.com`);
+    const res = await createProject(cookie, {
+      state: 'WA',
+      ubiNumber: '123456789',
+      lniCertificate: 'HCCCO1234LI',
+      wcAccount: '234-56-7',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.project?.ubiNumber).toBe('123456789');
+    expect(res.body.data?.project?.lniCertificate).toBe('HCCCO1234LI');
+    expect(res.body.data?.project?.wcAccount).toBe('234-56-7');
+  });
+
+  it('should allow WA project creation without WA fields (all optional)', async () => {
+    const cookie = await registerUser(`wal02-no-fields-${Date.now()}@test.com`);
+    const res = await createProject(cookie, { state: 'WA' });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.project?.ubiNumber).toBeNull();
+    expect(res.body.data?.project?.lniCertificate).toBeNull();
+    expect(res.body.data?.project?.wcAccount).toBeNull();
+  });
+
+  it('should return WA fields as null for non-WA project', async () => {
+    const cookie = await registerUser(`wal02-tx-${Date.now()}@test.com`);
+    const res = await createProject(cookie, { state: 'TX' });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.project?.ubiNumber).toBeNull();
+    expect(res.body.data?.project?.lniCertificate).toBeNull();
+    expect(res.body.data?.project?.wcAccount).toBeNull();
+  });
+});
+
 describe('POST /api/projects/:id/workers/:wid/classifications', () => {
   it('creates classification record and returns 201', async () => {
     const cookie = await registerUser(`classif-create-${Date.now()}@test.com`);

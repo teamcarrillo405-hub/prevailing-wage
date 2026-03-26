@@ -19,8 +19,13 @@ const CreateProjectSchema = z.object({
   contractType: z.enum(['federal-davis-bacon', 'state-prevailing', 'gsa-schedule', 'private']),
   awardDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'awardDate must be YYYY-MM-DD'),
   fundingType: z.enum(['federal', 'state', 'mixed']),
+  // Phase 24 — California-specific fields
   cslbLicense: z.string().max(50).optional(),
   wcPolicyNumber: z.string().max(100).optional(),
+  // Phase 25 — Washington-specific fields
+  ubiNumber: z.string().max(50).optional(),
+  lniCertificate: z.string().max(100).optional(),
+  wcAccount: z.string().max(100).optional(),
 });
 
 // Fields that MUST be rejected in PATCH — immutable by design (WD version lock)
@@ -51,6 +56,9 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
     status: 'active',
     cslbLicense: body.cslbLicense ?? null,
     wcPolicyNumber: body.wcPolicyNumber ?? null,
+    ubiNumber: body.ubiNumber ?? null,
+    lniCertificate: body.lniCertificate ?? null,
+    wcAccount: body.wcAccount ?? null,
     createdAt: now,
     updatedAt: now,
   });

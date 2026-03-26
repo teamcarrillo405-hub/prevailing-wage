@@ -30,6 +30,12 @@ import {
   type A1131WorkerRow,
 } from '../services/a1131Generator.js';
 import {
+  fillF700,
+  type F700Data,
+  type F700WorkerRow,
+  WA_TRADE_CODES,
+} from '../services/f700Generator.js';
+import {
   generateLcpTrackerCsv,
   generateEmarsCsv,
   mapEntriesToExportRows,
@@ -304,6 +310,115 @@ router.get('/a1131/:weekId', async (req, res) => {
   const filename = week.amendmentNumber != null
     ? `a1131-${week.payrollNumber}-amended-${week.amendmentNumber}.pdf`
     : `a1131-${week.payrollNumber}.pdf`;
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Length', filledPdf.length);
+  res.end(Buffer.from(filledPdf));
+});
+
+// ── GET /api/export/f700/:weekId ─────────────────────────────────────────
+// Washington L&I F700-065-000 — state-gated to WA projects only
+// PWIA disclosure is shown in the UI modal before calling this endpoint.
+
+router.get('/f700/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project ownership
+  const db = getDb();
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, week.projectId))
+    .limit(1);
+
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  if (project.userId !== userId) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  // 3. State gate — F700-065-000 is WA-only
+  if (project.state !== 'WA') {
+    res.status(400).json({ error: 'F700-065-000 is only available for Washington projects' });
+    return;
+  }
+
+  // 4. Load payroll entries
+  const entries = await getPayrollEntries(weekId);
+
+  // 5. Map entries to F700WorkerRow[]
+  type EntryRow = (typeof entries)[number];
+  const workerRows: F700WorkerRow[] = entries.map((row: EntryRow, index: number) => {
+    const e = row.entry;
+    const totalSt = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
+    const totalOt = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
+    const totalHours = totalSt + totalOt;
+    const baseRate = e.baseRateSnapshot;
+
+    // WA trade code: use waTradeCode override if set; otherwise try tradeCode as-is;
+    // fallback to the tradeCode even if not in WA_TRADE_CODES (advisory in PWIA modal)
+    const waTradeCode = (row as any).waTradeCode
+      ?? (WA_TRADE_CODES[row.tradeCode] ? row.tradeCode : row.tradeCode);
+
+    return {
+      entryNo: index + 1,
+      workerName: row.workerName,
+      identifyingNo: '',   // SSN last-4 — privacy default
+      laborType: (row.laborType === 'foreman' ? 'journeyworker' : row.laborType) as 'journeyworker' | 'apprentice',
+      waTradeCode,
+      classification: row.tradeDescription,
+      monSt: e.monSt, tueSt: e.tueSt, wedSt: e.wedSt, thuSt: e.thuSt,
+      friSt: e.friSt, satSt: e.satSt, sunSt: e.sunSt,
+      monOt: e.monOt, tueOt: e.tueOt, wedOt: e.wedOt, thuOt: e.thuOt,
+      friOt: e.friOt, satOt: e.satOt, sunOt: e.sunOt,
+      totalSt,
+      totalOt,
+      baseRate,
+      otRate: baseRate * 1.5,
+      grossWages: e.grossWages ?? 0,
+      deductions: e.deductions,
+      netPay: e.netPay ?? 0,
+      fringeCredit: e.fringeRateSnapshot * totalHours,
+    };
+  });
+
+  // 6. Build F700Data
+  const f700Data: F700Data = {
+    contractorName: project.name,
+    contractorAddress: `${project.county}, ${project.state}`,
+    ubiNumber: project.ubiNumber ?? '',
+    lniCertificate: project.lniCertificate ?? '',
+    wcAccount: project.wcAccount ?? '',
+    projectName: project.name,
+    projectLocation: `${project.county}, ${project.state}`,
+    contractNo: project.wdIdentifier ?? '',
+    weekEndingDate: formatDate(week.weekEndingDate),
+    payrollNumber: week.amendmentNumber != null && week.originalWeekId != null
+      ? `${week.payrollNumber} (AMENDED ${week.amendmentNumber})`
+      : String(week.payrollNumber),
+    workers: workerRows,
+  };
+
+  // 7. Load template + fill
+  const templatePath = path.join(process.cwd(), 'assets', 'f700-official.pdf');
+  const templateBytes = readFileSync(templatePath);
+  const filledPdf = await fillF700(f700Data, templateBytes);
+
+  // 8. Stream as PDF download
+  const filename = week.amendmentNumber != null
+    ? `f700-${week.payrollNumber}-amended-${week.amendmentNumber}.pdf`
+    : `f700-${week.payrollNumber}.pdf`;
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Length', filledPdf.length);
