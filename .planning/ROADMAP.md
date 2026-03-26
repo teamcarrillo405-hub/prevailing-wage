@@ -217,6 +217,9 @@ Plans:
   3. Empty states on all pages give specific next-step instructions — a contractor who lands on an empty Workers page knows exactly what to do next, not just that there are no workers
   4. Clicking or tapping a "?" icon next to terms like "Davis-Bacon," "WH-347," "prevailing wage," "CWHSSA," and "WD" shows a plain-English definition — works on both desktop hover and iPad tap
 **Plans**: 2 plans
+Plans:
+- [ ] 26-01-PLAN.md — HelpCallout + TermTooltip primitives, landing page 4-step rewrite, HelpCallout on all 5 pages + PayrollListPage migration
+- [ ] 26-02-PLAN.md — Empty state content updates with action buttons + TermTooltip inline placement across all pages
 
 ### Phase 27: Design Elevation
 **Goal**: The app visual design matches HCC website quality — construction photography, dark gold gradients, and elevated card depth that distinguishes HCC from generic compliance software
