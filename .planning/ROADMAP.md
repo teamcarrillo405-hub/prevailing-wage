@@ -73,7 +73,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 23: Dashboard Compliance Filter + CSV Export** - Batch compliance summary endpoint, dashboard filter chips, and CSV download from compliance history (DASH-05, AUD-03) (completed 2026-03-24)
 - [x] **Phase 24: California DIR A-1-131 Form** - DT schema migration, CA-specific project fields, CA certified payroll PDF generation with daily OT/DT model and eCPR disclosure (CAL-01, CAL-02, CAL-03) (completed 2026-03-25)
-- [ ] **Phase 25: Washington L&I F700-065-000 Form** - Manual rate entry for WA projects, WA trade code mapping, WA certified payroll PDF generation (WAL-01, WAL-02)
+- [x] **Phase 25: Washington L&I F700-065-000 Form** - Manual rate entry for WA projects, WA trade code mapping, WA certified payroll PDF generation (WAL-01, WAL-02) (completed 2026-03-26)
 - [ ] **Phase 26: Contractor Guidance System** - HelpText primitive, contextual help across all major pages, instructional empty states, inline compliance term tooltips (UX-05, UX-06, UX-07, UX-08)
 - [ ] **Phase 27: Design Elevation** - Construction photography, dark gold gradient overlays, elevated card shadows, richer typography matching HCC website standard (DES-01, DES-02, DES-03)
 - [ ] **Phase 28: Production Deployment** - Render.com deployment with persistent SQLite disk, invite-only registration, environment variable hygiene, Vite static file serving (OPS-01, OPS-02, OPS-03, OPS-04)
@@ -265,7 +265,7 @@ Plans:
 | 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
 | 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete    | 2026-03-24 |
 | 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress|  |
-| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Planned    |  |
+| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete    | 2026-03-26 |
 | 26. Contractor Guidance System | v2.4 | 0/2 | Not started | - |
 | 27. Design Elevation | v2.4 | 0/2 | Not started | - |
 | 28. Production Deployment | v2.4 | 0/2 | Not started | - |
