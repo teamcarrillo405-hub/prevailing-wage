@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '../ui/Badge';
+import { cn } from '../../lib/utils';
 
 interface Project {
   id: string;
@@ -15,6 +16,7 @@ interface Project {
 
 interface ProjectCardProps {
   project: Project;
+  className?: string;
 }
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
@@ -30,7 +32,7 @@ const FUNDING_TYPE_LABELS: Record<string, string> = {
   mixed: 'Mixed',
 };
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, className }: ProjectCardProps) {
   const navigate = useNavigate();
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -46,7 +48,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <button
       onClick={() => navigate(`/projects/${project.id}`)}
-      className={`w-full text-left bg-white border border-gray-200 rounded-lg p-5 hover:border-brand-gold hover:shadow-md transition-all group${project.status === 'closed' ? ' opacity-70' : ''}`}
+      className={cn(
+        'w-full text-left bg-white border border-gray-200 rounded-lg p-5 hover:border-brand-gold transition-all group',
+        project.status === 'closed' && 'opacity-70',
+        className
+      )}
     >
       {project.status === 'closed' && (
         <div className="mb-2">

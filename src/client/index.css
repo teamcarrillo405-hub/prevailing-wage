@@ -33,6 +33,7 @@
 
   /* Shadow */
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  --shadow-card-elevated: 0 8px 24px rgba(0,0,0,0.12);
 }
 
 @layer base {
@@ -42,5 +43,16 @@
   }
   h1, h2, h3, h4 {
     font-family: var(--font-headline);
+  }
+}
+
+@media print {
+  .hero-bg,
+  .dashboard-bg {
+    background-image: none !important;
+  }
+  .hero-bg .absolute,
+  .dashboard-bg .absolute {
+    display: none !important;
   }
 }
