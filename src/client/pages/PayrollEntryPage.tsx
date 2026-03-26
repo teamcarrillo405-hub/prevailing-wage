@@ -1,7 +1,7 @@
 // src/client/pages/PayrollEntryPage.tsx
 // Route: /projects/:projectId/payroll/new
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ClipboardList } from 'lucide-react';
 import { api } from '../lib/api';
@@ -113,11 +113,14 @@ export function PayrollEntryPage() {
         {!isLoading && !isError && workerRows.length === 0 && !useMock && (
           <EmptyState
             heading="No workers assigned yet"
-            message="Add workers to this project first, or run a quick check with sample data to preview calculations."
+            message="Add workers to this project before entering payroll. Each worker must have a trade classification on file for WH-347 compliance."
             action={
-              <Button onClick={() => setUseMock(true)}>
-                Try with sample workers
-              </Button>
+              <Link
+                to={`/projects/${projectId}/workers`}
+                className="inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent text-sm px-4 py-2"
+              >
+                Add Workers
+              </Link>
             }
           />
         )}

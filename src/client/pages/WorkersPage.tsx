@@ -12,6 +12,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
+import { EmptyState } from '../components/ui/EmptyState';
 
 interface WageClassification {
   id: string;
@@ -284,6 +285,24 @@ export function WorkersPage() {
 
         {isLoading && <LoadingSpinner />}
         {isError && <p className="text-sm text-red-600">Failed to load workers.</p>}
+
+        {!isLoading && !isError && workers.length === 0 && (
+          <EmptyState
+            heading="No workers on this project yet"
+            message="Add every worker before entering payroll. Federal Davis-Bacon rules require all workers to be classified and logged — even if they worked only one day."
+            action={
+              <button
+                onClick={() => {
+                  const nameInput = document.querySelector<HTMLInputElement>('input[placeholder="Full Name"]');
+                  if (nameInput) nameInput.focus();
+                }}
+                className="inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent text-sm px-4 py-2"
+              >
+                Add First Worker
+              </button>
+            }
+          />
+        )}
 
         {/* Worker list */}
         {workers.length > 0 && (

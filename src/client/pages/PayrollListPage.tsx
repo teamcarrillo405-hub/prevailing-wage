@@ -9,6 +9,7 @@ import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
+import { EmptyState } from '../components/ui/EmptyState';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 
@@ -208,15 +209,18 @@ export function PayrollListPage() {
         )}
 
         {!isLoading && !isError && weeks.length === 0 && (
-          <div className="text-center py-16 text-gray-500">
-            <p className="text-sm">No payroll weeks yet.</p>
-            <Link
-              to={`/projects/${projectId}/payroll/new`}
-              className="mt-3 inline-block text-sm font-medium text-gray-900 underline"
-            >
-              Create the first week
-            </Link>
-          </div>
+          <EmptyState
+            heading="No payroll weeks yet"
+            message="Create a payroll week to begin entering hours. You'll need to add workers first."
+            action={
+              <Link
+                to={`/projects/${projectId}/payroll/new`}
+                className="inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent text-sm px-4 py-2"
+              >
+                Create First Payroll Week
+              </Link>
+            }
+          />
         )}
 
         {weeks.length > 0 && (

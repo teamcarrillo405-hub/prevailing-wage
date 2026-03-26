@@ -229,30 +229,19 @@ export function DashboardPage() {
       {!isLoading && !isError && projects.length === 0 && (
         <EmptyState
           heading="No projects yet"
-          message='Click "New Project" to create your first prevailing wage project.'
+          message="Create your first project to start tracking certified payroll. You'll need your project location to pull prevailing wage rates from SAM.gov."
           action={
-            <Button onClick={() => setShowForm(true)}>New Project</Button>
+            <Button onClick={() => setShowForm(true)}>Create Your First Project</Button>
           }
         />
       )}
 
       {!isLoading && !isError && projects.length > 0 && filteredProjects.length === 0 && (
         <EmptyState
-          heading="No matching projects"
-          message={
-            searchQuery && fundingFilter && complianceFilter
-              ? `No projects match "${searchQuery}" with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}" and compliance status "${complianceFilterLabel}".`
-              : searchQuery && complianceFilter
-              ? `No projects match "${searchQuery}" with compliance status "${complianceFilterLabel}".`
-              : fundingFilter && complianceFilter
-              ? `No projects with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}" and compliance status "${complianceFilterLabel}".`
-              : searchQuery && fundingFilter
-              ? `No projects match "${searchQuery}" with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}".`
-              : searchQuery
-              ? `No projects match "${searchQuery}".`
-              : complianceFilter
-              ? `No projects with compliance status "${complianceFilterLabel}".`
-              : `No projects with funding type "${FUNDING_LABELS[fundingFilter] ?? fundingFilter}".`
+          heading="No projects match this filter"
+          message="Try clearing the filter or searching by a different name."
+          action={
+            <Button variant="secondary" onClick={() => { setInputValue(''); setSearchParams({}); }}>Clear Filters</Button>
           }
         />
       )}
