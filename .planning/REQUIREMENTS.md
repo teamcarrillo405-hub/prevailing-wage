@@ -18,19 +18,19 @@
 
 ### California DIR Forms (CAL)
 
-- [ ] **CAL-01**: System captures CA-specific project fields (CSLB contractor license, WC policy number) on CA projects only
-- [ ] **CAL-02**: System generates a California A-1-131 certified payroll PDF (local record / eCPR draft) with CA-specific fields: Sun-Sat hours grid, double-time column, SDI deduction, CSLB license; UI discloses that official submission requires the eCPR portal
-- [ ] **CAL-03**: System captures and displays double-time (DT) hours alongside ST/OT for CA projects (schema migration required)
+- [x] **CAL-01**: System captures CA-specific project fields (CSLB contractor license, WC policy number) on CA projects only
+- [x] **CAL-02**: System generates a California A-1-131 certified payroll PDF (local record / eCPR draft) with CA-specific fields: Sun-Sat hours grid, double-time column, SDI deduction, CSLB license; UI discloses that official submission requires the eCPR portal
+- [x] **CAL-03**: System captures and displays double-time (DT) hours alongside ST/OT for CA projects (schema migration required)
 
 ### Washington L&I Forms (WAL)
 
-- [ ] **WAL-01**: User can enter prevailing wage rates manually for WA projects (SAM.gov does not cover WA state wages)
-- [ ] **WAL-02**: System generates a Washington F700-065-000 certified payroll PDF (local record) with WA trade code mapping and WA-specific project fields (UBI number, L&I cert, WC account)
+- [x] **WAL-01**: User can enter prevailing wage rates manually for WA projects (SAM.gov does not cover WA state wages)
+- [x] **WAL-02**: System generates a Washington F700-065-000 certified payroll PDF (local record) with WA trade code mapping and WA-specific project fields (UBI number, L&I cert, WC account)
 
 ### Contractor Guidance (UX)
 
-- [ ] **UX-05**: Homepage includes a plain-language explainer section: what the system is, who it's for, and a step-by-step "how it works" flow for contractors unfamiliar with Davis-Bacon compliance
-- [ ] **UX-06**: Each major page (Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail) has contextual help text explaining what to do at that step and why it matters
+- [x] **UX-05**: Homepage includes a plain-language explainer section: what the system is, who it's for, and a step-by-step "how it works" flow for contractors unfamiliar with Davis-Bacon compliance
+- [x] **UX-06**: Each major page (Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail) has contextual help text explaining what to do at that step and why it matters
 - [ ] **UX-07**: Empty states on all pages include specific next-step instructions, not generic "no data" messages
 - [ ] **UX-08**: Compliance terms (Davis-Bacon, WH-347, prevailing wage, CWHSSA, WD) have inline `?` icon tooltips with plain-English definitions — accessible on desktop and iPad (tap, not hover-only)
 
@@ -75,15 +75,15 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DASH-05 | Phase 23 | Pending |
-| AUD-03 | Phase 23 | Pending |
-| CAL-01 | Phase 24 | Pending |
-| CAL-02 | Phase 24 | Pending |
-| CAL-03 | Phase 24 | Pending |
-| WAL-01 | Phase 25 | Pending |
-| WAL-02 | Phase 25 | Pending |
-| UX-05 | Phase 26 | Pending |
-| UX-06 | Phase 26 | Pending |
+| DASH-05 | Phase 23 | Complete |
+| AUD-03 | Phase 23 | Complete |
+| CAL-01 | Phase 24 | Complete |
+| CAL-02 | Phase 24 | Complete |
+| CAL-03 | Phase 24 | Complete |
+| WAL-01 | Phase 25 | Complete |
+| WAL-02 | Phase 25 | Complete |
+| UX-05 | Phase 26 | Complete |
+| UX-06 | Phase 26 | Complete |
 | UX-07 | Phase 26 | Pending |
 | UX-08 | Phase 26 | Pending |
 | DES-01 | Phase 27 | Pending |

@@ -218,7 +218,7 @@ Plans:
   4. Clicking or tapping a "?" icon next to terms like "Davis-Bacon," "WH-347," "prevailing wage," "CWHSSA," and "WD" shows a plain-English definition — works on both desktop hover and iPad tap
 **Plans**: 2 plans
 Plans:
-- [ ] 26-01-PLAN.md — HelpCallout + TermTooltip primitives, landing page 4-step rewrite, HelpCallout on all 5 pages + PayrollListPage migration
+- [x] 26-01-PLAN.md — HelpCallout + TermTooltip primitives, landing page 4-step rewrite, HelpCallout on all 5 pages + PayrollListPage migration
 - [ ] 26-02-PLAN.md — Empty state content updates with action buttons + TermTooltip inline placement across all pages
 
 ### Phase 27: Design Elevation
@@ -269,6 +269,6 @@ Plans:
 | 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete    | 2026-03-24 |
 | 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress|  |
 | 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete    | 2026-03-26 |
-| 26. Contractor Guidance System | v2.4 | 0/2 | Not started | - |
+| 26. Contractor Guidance System | v2.4 | 1/2 | In Progress|  |
 | 27. Design Elevation | v2.4 | 0/2 | Not started | - |
 | 28. Production Deployment | v2.4 | 0/2 | Not started | - |

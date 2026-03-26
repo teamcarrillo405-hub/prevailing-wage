@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Ready to plan
-stopped_at: Completed 25-02-PLAN.md
-last_updated: "2026-03-26T00:09:37.257Z"
+status: Ready to execute
+stopped_at: Completed 26-01-PLAN.md
+last_updated: "2026-03-26T22:56:39.746Z"
 progress:
   total_phases: 12
   completed_phases: 9
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 20
+  completed_plans: 19
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 25 — washington-l-i-f700-065-000-form
+**Current focus:** Phase 26 — contractor-guidance-system
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
+Phase: 26 (contractor-guidance-system) — EXECUTING
+Plan: 2 of 2
 
 ### Phase Structure
 
@@ -62,6 +62,7 @@ Plan: Not started
 | Phase 24-california-dir-a-1-131-form P02 | 8min | 2 tasks | 6 files |
 | Phase 25 P01 | 13 | 5 tasks | 13 files |
 | Phase 25 P02 | 45 | 5 tasks | 3 files |
+| Phase 26-contractor-guidance-system P01 | 13 | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -212,6 +213,9 @@ Plan: Not started
 - [Phase 25]: PWIA disclosure modal always fires on WA download — not conditional on violations (regulatory notice, not compliance gate)
 - [Phase 25]: waGeneratingRef is a new independent ref isolated from generatingRef and caGeneratingRef to prevent cross-contamination of synchronous guards
 - [Phase 25]: WA manual rate stored per classification (waManualRate) because SAM.gov wage data does not cover Washington State
+- [Phase 26]: HelpCallout is always-visible static card (no dismiss) — reduces cognitive load for first-time contractors
+- [Phase 26]: TermTooltip uses dual activation onMouseEnter+onClick for desktop/iPad coverage
+- [Phase 26]: PayrollListPage HelpCallout uses contextual 'Your Payroll Weeks' copy (not 'Review Before You Submit')
 
 ### Research Flags for v2.4
 
@@ -229,6 +233,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-26T00:02:38.472Z
-Stopped at: Completed 25-02-PLAN.md
+Last session: 2026-03-26T22:56:39.743Z
+Stopped at: Completed 26-01-PLAN.md
 Resume file: None
