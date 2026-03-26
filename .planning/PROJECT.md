@@ -110,8 +110,8 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ CSV export from per-worker compliance history page (17 cols, UTF-8 BOM) — v2.4 Phase 23
 - Contractor guidance: homepage explainer, step-by-step cues, contextual help text, inline tooltips, instructional empty states
 - UI/UX overhaul: construction photography, dark gold gradients, card depth/shadows matching HCC website standard
-- California DIR prevailing wage form
-- Washington L&I prevailing wage form
+- ✓ California A-1-131 certified payroll form (CA-gated, eCPR modal, CSLB/WC fields) — v2.4 Phase 24
+- ✓ Washington F700-065-000 certified payroll form (WA-gated, PWIA modal, UBI/L&I cert/WC fields, manual rate entry, WA trade codes) — v2.4 Phase 25 (NOTE: PDF field coordinates are placeholder until official LNI form is obtained)
 - Operational: cloud hosting, SQLite persistence, controlled auth, SAM.gov production key
 
 ### Out of Scope
