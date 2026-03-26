@@ -31,8 +31,8 @@
 
 - [x] **UX-05**: Homepage includes a plain-language explainer section: what the system is, who it's for, and a step-by-step "how it works" flow for contractors unfamiliar with Davis-Bacon compliance
 - [x] **UX-06**: Each major page (Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail) has contextual help text explaining what to do at that step and why it matters
-- [ ] **UX-07**: Empty states on all pages include specific next-step instructions, not generic "no data" messages
-- [ ] **UX-08**: Compliance terms (Davis-Bacon, WH-347, prevailing wage, CWHSSA, WD) have inline `?` icon tooltips with plain-English definitions — accessible on desktop and iPad (tap, not hover-only)
+- [x] **UX-07**: Empty states on all pages include specific next-step instructions, not generic "no data" messages
+- [x] **UX-08**: Compliance terms (Davis-Bacon, WH-347, prevailing wage, CWHSSA, WD) have inline `?` icon tooltips with plain-English definitions — accessible on desktop and iPad (tap, not hover-only)
 
 ### Design Elevation (DES)
 
@@ -84,8 +84,8 @@
 | WAL-02 | Phase 25 | Complete |
 | UX-05 | Phase 26 | Complete |
 | UX-06 | Phase 26 | Complete |
-| UX-07 | Phase 26 | Pending |
-| UX-08 | Phase 26 | Pending |
+| UX-07 | Phase 26 | Complete |
+| UX-08 | Phase 26 | Complete |
 | DES-01 | Phase 27 | Pending |
 | DES-02 | Phase 27 | Pending |
 | DES-03 | Phase 27 | Pending |

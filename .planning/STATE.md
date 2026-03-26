@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Ready to execute
-stopped_at: Completed 26-01-PLAN.md
-last_updated: "2026-03-26T22:56:39.746Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 26-02-PLAN.md
+last_updated: "2026-03-26T23:05:19.968Z"
 progress:
   total_phases: 12
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # State
@@ -63,6 +63,7 @@ Plan: 2 of 2
 | Phase 25 P01 | 13 | 5 tasks | 13 files |
 | Phase 25 P02 | 45 | 5 tasks | 3 files |
 | Phase 26-contractor-guidance-system P01 | 13 | 3 tasks | 9 files |
+| Phase 26-contractor-guidance-system P02 | 15 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -216,6 +217,8 @@ Plan: 2 of 2
 - [Phase 26]: HelpCallout is always-visible static card (no dismiss) — reduces cognitive load for first-time contractors
 - [Phase 26]: TermTooltip uses dual activation onMouseEnter+onClick for desktop/iPad coverage
 - [Phase 26]: PayrollListPage HelpCallout uses contextual 'Your Payroll Weeks' copy (not 'Review Before You Submit')
+- [Phase 26-contractor-guidance-system]: HelpCallout body and EmptyState message changed to React.ReactNode — widening type only, existing string props still valid, enables TermTooltip embedding
+- [Phase 26-contractor-guidance-system]: TermTooltip definition constants defined at module level (DB_DEF, WH347_DEF, etc.) — avoids long inline strings in JSX, keeps components readable
 
 ### Research Flags for v2.4
 
@@ -233,6 +236,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-26T22:56:39.743Z
-Stopped at: Completed 26-01-PLAN.md
+Last session: 2026-03-26T23:05:19.965Z
+Stopped at: Completed 26-02-PLAN.md
 Resume file: None
