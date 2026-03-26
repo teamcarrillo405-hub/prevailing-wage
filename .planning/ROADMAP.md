@@ -231,6 +231,9 @@ Plans:
   3. All pages use tighter Oswald letter-spacing and improved vertical rhythm matching HCC website typography — no page uses a raw h1/h2 outside the PageHeader primitive
   4. Photography assets are WebP format, under 200KB each, loaded via CSS background-image (not Vite import), with a print media override preventing dark overlays from printing on white paper
 **Plans**: 2 plans
+Plans:
+- [ ] 27-01-PLAN.md — Shadow-card-elevated token + print CSS + PageHeader tracking-tight + ProjectCard className prop + HelpCallout shadow + h1 migration (7 pages)
+- [ ] 27-02-PLAN.md — Placeholder WebP photos + hero section rewrite (photo overlay, floating nav, clamp headline) + dashboard photo background strip + visual checkpoint
 
 ### Phase 28: Production Deployment
 **Goal**: The app is live at a public HTTPS URL on Render.com with persistent data storage, invite-only registration, and all secrets properly configured via environment variables
