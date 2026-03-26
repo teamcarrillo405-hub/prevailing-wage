@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Ready to execute
-stopped_at: "Phase 24 complete — ready for Phase 25"
-last_updated: "2026-03-25T15:45:00.000Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 25-02-PLAN.md
+last_updated: "2026-03-26T00:02:38.478Z"
 progress:
   total_phases: 12
-  completed_phases: 7
-  total_plans: 16
-  completed_plans: 15
+  completed_phases: 8
+  total_plans: 18
+  completed_plans: 16
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 24 — california-dir-a-1-131-form
+**Current focus:** Phase 25 — washington-l-i-f700-065-000-form
 
 ## Current Position
 
-Phase: 24 (california-dir-a-1-131-form) — COMPLETE
-Phase: 25 (washington-li-f700-065-000-form) — NEXT
+Phase: 25 (washington-l-i-f700-065-000-form) — EXECUTING
+Plan: 2 of 2
 
 ### Phase Structure
 
@@ -60,6 +60,8 @@ Phase: 25 (washington-li-f700-065-000-form) — NEXT
 | Phase 23-dashboard-compliance-filter-csv-export P02 | 5min | 3 tasks | 2 files |
 | Phase 24-california-dir-a-1-131-form P01 | 4min | 3 tasks | 10 files |
 | Phase 24-california-dir-a-1-131-form P02 | 8min | 2 tasks | 6 files |
+| Phase 25 P01 | 13 | 5 tasks | 13 files |
+| Phase 25 P02 | 45 | 5 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -205,6 +207,11 @@ Phase: 25 (washington-li-f700-065-000-form) — NEXT
 - [Phase 24-02]: payrollService: DT fields added to UpsertPayrollEntryInput type and persisted in upsertPayrollEntry (DB columns existed but service omitted them)
 - [Phase 24]: A-1-131 PDF page dimensions are 612x1008 pt (legal 8.5x14), not letter — coordinates calibrated accordingly
 - [Phase 24]: eCPR disclosure modal shown unconditionally on every CA download (regulatory, not violation-conditional)
+- [Phase 25]: assets/f700-official.pdf is a placeholder — official LNI form behind TAM auth; replace in Plan 25-02
+- [Phase 25]: waTradeCode added alongside waManualRate in 0013 migration — persistent DB storage avoids query-param complexity
+- [Phase 25]: PWIA disclosure modal always fires on WA download — not conditional on violations (regulatory notice, not compliance gate)
+- [Phase 25]: waGeneratingRef is a new independent ref isolated from generatingRef and caGeneratingRef to prevent cross-contamination of synchronous guards
+- [Phase 25]: WA manual rate stored per classification (waManualRate) because SAM.gov wage data does not cover Washington State
 
 ### Research Flags for v2.4
 
@@ -222,6 +229,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T22:02:40.311Z
-Stopped at: checkpoint:human-verify at Task 3 of 24-03-PLAN.md
+Last session: 2026-03-26T00:02:38.472Z
+Stopped at: Completed 25-02-PLAN.md
 Resume file: None

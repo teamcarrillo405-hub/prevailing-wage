@@ -265,7 +265,7 @@ Plans:
 | 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
 | 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete    | 2026-03-24 |
 | 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress|  |
-| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Not started | - |
+| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Planned    |  |
 | 26. Contractor Guidance System | v2.4 | 0/2 | Not started | - |
 | 27. Design Elevation | v2.4 | 0/2 | Not started | - |
 | 28. Production Deployment | v2.4 | 0/2 | Not started | - |
