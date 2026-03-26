@@ -7,6 +7,9 @@ import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
+import { TermTooltip } from '../components/ui/TermTooltip';
+
+const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -161,7 +164,7 @@ export function ProjectDetailPage() {
           <HelpCallout
             icon={Workflow}
             title="Your Project Workflow"
-            body="Complete all four steps before generating your WH-347. Submitting an incomplete certified payroll can trigger a DOL audit."
+            body={<>Complete all four steps before generating your <TermTooltip term="WH-347" definition={WH347_DEF} />. Submitting an incomplete certified payroll can trigger a DOL audit.</>}
           />
 
           <WorkflowProgress steps={steps} />

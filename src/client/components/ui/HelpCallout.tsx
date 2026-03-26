@@ -5,7 +5,7 @@ import type { LucideIcon } from 'lucide-react';
 interface HelpCalloutProps {
   icon: LucideIcon;
   title: string;
-  body: string;
+  body: React.ReactNode;
   className?: string;
 }
 

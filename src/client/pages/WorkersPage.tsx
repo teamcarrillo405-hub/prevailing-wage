@@ -13,6 +13,9 @@ import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { EmptyState } from '../components/ui/EmptyState';
+import { TermTooltip } from '../components/ui/TermTooltip';
+
+const DB_DEF = "A federal law requiring contractors on federal or federally funded construction projects to pay workers the locally prevailing wage for their trade. Wages are set by the Department of Labor and published on SAM.gov.";
 
 interface WageClassification {
   id: string;
@@ -262,7 +265,7 @@ export function WorkersPage() {
         <HelpCallout
           icon={Users}
           title="Register Your Workers"
-          body="Federal law requires every worker on a Davis-Bacon project to be logged with their classification and pay rate. Add all workers before entering payroll."
+          body={<>Federal law requires every worker on a <TermTooltip term="Davis-Bacon" definition={DB_DEF} /> project to be logged with their classification and pay rate. Add all workers before entering payroll.</>}
         />
 
         {/* WD status */}
@@ -289,7 +292,7 @@ export function WorkersPage() {
         {!isLoading && !isError && workers.length === 0 && (
           <EmptyState
             heading="No workers on this project yet"
-            message="Add every worker before entering payroll. Federal Davis-Bacon rules require all workers to be classified and logged — even if they worked only one day."
+            message={<>Add every worker before entering payroll. Federal <TermTooltip term="Davis-Bacon" definition={DB_DEF} /> rules require all workers to be classified and logged — even if they worked only one day.</>}
             action={
               <button
                 onClick={() => {

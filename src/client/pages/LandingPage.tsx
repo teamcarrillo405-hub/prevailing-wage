@@ -2,6 +2,13 @@ import { Link } from 'react-router-dom';
 import { FolderPlus, ClipboardList, FileCheck, Shield, CheckCircle, Clock, FileText, Database, Users } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { TermTooltip } from '../components/ui/TermTooltip';
+
+const DB_DEF = "A federal law requiring contractors on federal or federally funded construction projects to pay workers the locally prevailing wage for their trade. Wages are set by the Department of Labor and published on SAM.gov.";
+const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
+const PW_DEF = "The minimum hourly pay rate for each trade and location, determined by the DOL based on what most workers in that area earn. Paying below this rate is a federal violation.";
+const CWHSSA_DEF = "The Contract Work Hours and Safety Standards Act. It requires overtime pay (1.5x base rate) for all hours over 40 in a week on federal contracts exceeding $100,000.";
+const WD_DEF = "Wage Determination — the specific DOL document that lists the prevailing wage rates for a given trade in a given county. Each project is assigned a WD number tied to its location.";
 
 function LandingNav() {
   return (
@@ -90,30 +97,26 @@ function ProblemSection() {
 }
 
 function HowItWorksSection() {
-  const steps = [
+  const steps: { Icon: React.ElementType; title: string; description: React.ReactNode }[] = [
     {
       Icon: FolderPlus,
       title: 'Create Your Project',
-      description:
-        'Enter your project name and location. We pull the required prevailing wage rates from SAM.gov — the same source your contracting officer uses. No manual rate lookup.',
+      description: <>Enter your project name and location. We pull the required <TermTooltip term="prevailing wage" definition={PW_DEF} /> rates from SAM.gov — the same source your contracting officer uses. No manual rate lookup.</>,
     },
     {
       Icon: Users,
       title: 'Add Your Workers',
-      description:
-        'Register every worker with their trade classification. Federal law requires each worker on a Davis-Bacon job to be documented — apprentices need their program name and registration number.',
+      description: <>Register every worker with their trade classification. Federal law requires each worker on a <TermTooltip term="Davis-Bacon" definition={DB_DEF} /> job to be documented — apprentices need their program name and registration number.</>,
     },
     {
       Icon: ClipboardList,
       title: 'Enter Weekly Payroll',
-      description:
-        'Log hours and pay for each worker every week. The system checks rates against the prevailing wage and flags underpayments before you file — not after a DOL audit.',
+      description: <>Log hours and pay for each worker every week. The system checks rates against the <TermTooltip term="prevailing wage" definition={PW_DEF} /> and flags underpayments before you file — not after a DOL audit.</>,
     },
     {
       Icon: FileCheck,
       title: 'Generate and Submit Your WH-347',
-      description:
-        'Download the completed January 2025 WH-347 form, pre-filled with all required data. Submit it to your contracting officer each week to stay compliant.',
+      description: <>Download the completed January 2025 <TermTooltip term="WH-347" definition={WH347_DEF} /> form, pre-filled with all required data. Submit it to your contracting officer each week to stay compliant.</>,
     },
   ];
 
@@ -212,10 +215,10 @@ function FeatureHighlightsSection() {
 }
 
 function TrustSignalsSection() {
-  const trustStatements = [
-    'Davis-Bacon and Related Acts (DBRA) compliance for all federal contracts over $2,000',
-    'CWHSSA overtime detection for contracts over $100,000 with 40-hour workweeks',
-    'SAM.gov wage determination data — the same source contracting officers use',
+  const trustStatements: React.ReactNode[] = [
+    <><TermTooltip term="Davis-Bacon" definition={DB_DEF} /> and Related Acts (DBRA) compliance for all federal contracts over $2,000</>,
+    <><TermTooltip term="CWHSSA" definition={CWHSSA_DEF} /> overtime detection for contracts over $100,000 with 40-hour workweeks</>,
+    <>SAM.gov <TermTooltip term="WD" definition={WD_DEF} /> data — the same source contracting officers use</>,
   ];
 
   return (
@@ -227,12 +230,12 @@ function TrustSignalsSection() {
               Current as of January 2025
             </h2>
             <p className="text-gray-300 leading-relaxed">
-              The January 2025 WH-347 form revision is the only version accepted by the Department of Labor. HCC Prevailing Wage generates this exact form — not a generic PDF approximation.
+              The January 2025 <TermTooltip term="WH-347" definition={WH347_DEF} /> form revision is the only version accepted by the Department of Labor. HCC Prevailing Wage generates this exact form — not a generic PDF approximation.
             </p>
           </div>
           <div className="space-y-4">
-            {trustStatements.map((statement) => (
-              <div key={statement} className="flex items-start gap-3">
+            {trustStatements.map((statement, i) => (
+              <div key={i} className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-brand-gold flex-shrink-0 mt-0.5" />
                 <p className="text-gray-300 text-sm leading-relaxed">{statement}</p>
               </div>

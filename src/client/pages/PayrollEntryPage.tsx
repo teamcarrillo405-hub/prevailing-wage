@@ -13,6 +13,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
+import { TermTooltip } from '../components/ui/TermTooltip';
+
+const PW_DEF = "The minimum hourly pay rate for each trade and location, determined by the DOL based on what most workers in that area earn. Paying below this rate is a federal violation.";
+const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 
 interface WorkerClassification {
   id: string;
@@ -99,7 +103,7 @@ export function PayrollEntryPage() {
         <HelpCallout
           icon={ClipboardList}
           title="Enter This Week's Hours"
-          body="Log straight-time, overtime, and fringe benefits for each worker. The system checks rates against the prevailing wage — fix any flags before downloading your WH-347."
+          body={<>Log straight-time, overtime, and fringe benefits for each worker. The system checks rates against the <TermTooltip term="prevailing wage" definition={PW_DEF} /> — fix any flags before downloading your <TermTooltip term="WH-347" definition={WH347_DEF} />.</>}
         />
 
         {isLoading && <LoadingSpinner />}

@@ -8,6 +8,9 @@ import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { HelpCallout } from '../components/ui/HelpCallout';
+import { TermTooltip } from '../components/ui/TermTooltip';
+
+const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -357,7 +360,7 @@ export function PayrollWeekDetailPage() {
         <HelpCallout
           icon={FileCheck}
           title="Review Before You Submit"
-          body="Verify all hours and rates are correct. Once you download the WH-347, it becomes your certified payroll record. Violations shown here must be corrected or documented."
+          body={<>Verify all hours and rates are correct. Once you download the <TermTooltip term="WH-347" definition={WH347_DEF} />, it becomes your certified payroll record. Violations shown here must be corrected or documented.</>}
         />
 
         {/* Loading state */}

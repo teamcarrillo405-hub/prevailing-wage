@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils';
 
 interface EmptyStateProps {
   heading: string;
-  message: string;
+  message: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
 }

@@ -10,6 +10,9 @@ import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { EmptyState } from '../components/ui/EmptyState';
+import { TermTooltip } from '../components/ui/TermTooltip';
+
+const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 
@@ -197,7 +200,7 @@ export function PayrollListPage() {
         <HelpCallout
           icon={FileCheck}
           title="Your Payroll Weeks"
-          body="Each week records your workers' hours and pay. Create a new payroll week for each reporting period. Download the WH-347 when all entries are complete."
+          body={<>Each week records your workers' hours and pay. Create a new payroll week for each reporting period. Download the <TermTooltip term="WH-347" definition={WH347_DEF} /> when all entries are complete.</>}
         />
 
         {isLoading && <LoadingSpinner />}
