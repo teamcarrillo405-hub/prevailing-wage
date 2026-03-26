@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Workflow } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
+import { HelpCallout } from '../components/ui/HelpCallout';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -154,6 +156,12 @@ export function ProjectDetailPage() {
           <PageHeader
             title={project.name}
             subtitle={`${project.state} — ${project.county}`}
+          />
+
+          <HelpCallout
+            icon={Workflow}
+            title="Your Project Workflow"
+            body="Complete all four steps before generating your WH-347. Submitting an incomplete certified payroll can trigger a DOL audit."
           />
 
           <WorkflowProgress steps={steps} />

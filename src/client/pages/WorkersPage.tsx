@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Users } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -10,6 +11,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
+import { HelpCallout } from '../components/ui/HelpCallout';
 
 interface WageClassification {
   id: string;
@@ -255,6 +257,12 @@ export function WorkersPage() {
           &larr; Back to Project
         </button>
         <PageHeader title="Workers" />
+
+        <HelpCallout
+          icon={Users}
+          title="Register Your Workers"
+          body="Federal law requires every worker on a Davis-Bacon project to be logged with their classification and pay rate. Add all workers before entering payroll."
+        />
 
         {/* WD status */}
         {wdLoading && (

@@ -3,9 +3,11 @@
 import { useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { FileCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { HelpCallout } from '../components/ui/HelpCallout';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -298,7 +300,7 @@ export function PayrollWeekDetailPage() {
         <a ref={hiddenAnchorRef} className="hidden" />
 
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(`/projects/${projectId}/payroll`)}
@@ -351,6 +353,12 @@ export function PayrollWeekDetailPage() {
             )}
           </div>
         </div>
+
+        <HelpCallout
+          icon={FileCheck}
+          title="Review Before You Submit"
+          body="Verify all hours and rates are correct. Once you download the WH-347, it becomes your certified payroll record. Violations shown here must be corrected or documented."
+        />
 
         {/* Loading state */}
         {isLoading && <LoadingSpinner />}

@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { FileCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { PageHeader } from '../components/ui/PageHeader';
+import { HelpCallout } from '../components/ui/HelpCallout';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 
@@ -171,23 +174,30 @@ export function PayrollListPage() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <button
+          onClick={() => navigate(`/projects/${projectId}`)}
+          className="text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4 inline-block"
+        >
+          &larr; Back to Project
+        </button>
+
+        <PageHeader
+          title="Payroll Weeks"
+          action={
             <button
-              onClick={() => navigate(`/projects/${projectId}`)}
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+              onClick={handleNewWeekClick}
+              className="bg-brand-gold text-nav-dark font-semibold hover:bg-brand-gold/90 border border-transparent inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 text-sm px-4 py-2"
             >
-              &larr; Back to Project
+              + New Week
             </button>
-            <h1 className="text-2xl font-headline text-gray-900">Payroll Weeks</h1>
-          </div>
-          <button
-            onClick={handleNewWeekClick}
-            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors"
-          >
-            + New Week
-          </button>
-        </div>
+          }
+        />
+
+        <HelpCallout
+          icon={FileCheck}
+          title="Your Payroll Weeks"
+          body="Each week records your workers' hours and pay. Create a new payroll week for each reporting period. Download the WH-347 when all entries are complete."
+        />
 
         {isLoading && <LoadingSpinner />}
 

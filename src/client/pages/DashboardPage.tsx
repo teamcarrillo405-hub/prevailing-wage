@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { LayoutDashboard } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -9,6 +10,7 @@ import { ProjectForm } from '../components/projects/ProjectForm';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
+import { HelpCallout } from '../components/ui/HelpCallout';
 
 interface Project {
   id: string;
@@ -147,6 +149,12 @@ export function DashboardPage() {
             New Project
           </Button>
         }
+      />
+
+      <HelpCallout
+        icon={LayoutDashboard}
+        title="Your Active Projects"
+        body="Each project tracks a separate federal job. Add workers and enter payroll weekly to keep your certified payroll current and DOL-ready."
       />
 
       <div className="flex items-center gap-2 mb-4">

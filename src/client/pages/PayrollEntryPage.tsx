@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { ClipboardList } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -11,6 +12,7 @@ import { SamplePayrollForm } from '../components/SamplePayrollForm';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
+import { HelpCallout } from '../components/ui/HelpCallout';
 
 interface WorkerClassification {
   id: string;
@@ -93,6 +95,12 @@ export function PayrollEntryPage() {
           &larr; Back to Payroll Weeks
         </button>
         <PageHeader title="New Payroll Week" />
+
+        <HelpCallout
+          icon={ClipboardList}
+          title="Enter This Week's Hours"
+          body="Log straight-time, overtime, and fringe benefits for each worker. The system checks rates against the prevailing wage — fix any flags before downloading your WH-347."
+        />
 
         {isLoading && <LoadingSpinner />}
 
