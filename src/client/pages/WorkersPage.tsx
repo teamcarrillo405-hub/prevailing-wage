@@ -51,6 +51,12 @@ const LABOR_TYPES = [
   { value: 'foreman', label: 'Foreman' },
 ];
 
+interface ProjectInfo {
+  id: string;
+  state: string;
+  name: string;
+}
+
 function blankWorkerForm() {
   return {
     name: '',
@@ -61,6 +67,8 @@ function blankWorkerForm() {
     laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman',
     apprenticePercent: '',
     programName: '',
+    waManualRate: '',
+    waTradeCode: '',
   };
 }
 
@@ -88,7 +96,7 @@ export function WorkersPage() {
 
   // Add-extra-classification state
   const [addingClassFor, setAddingClassFor] = useState<string | null>(null);
-  const [extraClass, setExtraClass] = useState({ tradeCode: '', laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman', apprenticePercent: '', programName: '' });
+  const [extraClass, setExtraClass] = useState({ tradeCode: '', laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' });
   const [extraError, setExtraError] = useState('');
 
   // Delete confirmation
@@ -98,6 +106,12 @@ export function WorkersPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['workers', projectId],
     queryFn: () => api.get<{ data: { workers: Worker[] } }>(`/projects/${projectId}/workers`),
+    enabled: !!projectId,
+  });
+
+  const { data: projectData } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => api.get<{ data: { project: ProjectInfo } }>(`/projects/${projectId}`),
     enabled: !!projectId,
   });
 
@@ -115,6 +129,7 @@ export function WorkersPage() {
   const workers = data?.data?.workers ?? [];
   const selectedTrade = wageClassifications.find(wc => wc.tradeCode === form.tradeCode);
   const selectedExtraTrade = wageClassifications.find(wc => wc.tradeCode === extraClass.tradeCode);
+  const isWA = projectData?.data?.project?.state === 'WA';
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const addWorker = useMutation({
@@ -127,12 +142,15 @@ export function WorkersPage() {
       });
       const workerId = workerRes.data.worker.id;
       if (f.tradeCode && selectedTrade) {
+        const waRate = parseFloat(f.waManualRate);
         await api.post(`/projects/${projectId}/workers/${workerId}/classifications`, {
           tradeCode: selectedTrade.tradeCode,
           tradeDescription: selectedTrade.tradeDescription,
           laborType: f.laborType,
           ...(f.laborType === 'apprentice' ? { apprenticePercent: parseInt(f.apprenticePercent, 10) } : {}),
           ...(f.laborType === 'apprentice' && f.programName.trim() ? { programName: f.programName.trim() } : {}),
+          ...(isWA && waRate > 0 ? { waManualRate: waRate } : {}),
+          ...(isWA && f.waTradeCode ? { waTradeCode: f.waTradeCode } : {}),
         });
       }
     },
@@ -176,18 +194,22 @@ export function WorkersPage() {
   });
 
   const addClassification = useMutation({
-    mutationFn: ({ workerId }: { workerId: string }) =>
-      api.post(`/projects/${projectId}/workers/${workerId}/classifications`, {
+    mutationFn: ({ workerId }: { workerId: string }) => {
+      const waRate = parseFloat(extraClass.waManualRate);
+      return api.post(`/projects/${projectId}/workers/${workerId}/classifications`, {
         tradeCode: selectedExtraTrade!.tradeCode,
         tradeDescription: selectedExtraTrade!.tradeDescription,
         laborType: extraClass.laborType,
         ...(extraClass.laborType === 'apprentice' ? { apprenticePercent: parseInt(extraClass.apprenticePercent, 10) } : {}),
         ...(extraClass.laborType === 'apprentice' && extraClass.programName.trim() ? { programName: extraClass.programName.trim() } : {}),
-      }),
+        ...(isWA && waRate > 0 ? { waManualRate: waRate } : {}),
+        ...(isWA && extraClass.waTradeCode ? { waTradeCode: extraClass.waTradeCode } : {}),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workers', projectId] });
       setAddingClassFor(null);
-      setExtraClass({ tradeCode: '', laborType: 'journeyworker', apprenticePercent: '', programName: '' });
+      setExtraClass({ tradeCode: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' });
       setExtraError('');
     },
     onError: (e: Error) => setExtraError(e.message),
@@ -346,7 +368,7 @@ export function WorkersPage() {
                         </button>
                         {hasWd && (
                           <button
-                            onClick={() => { setAddingClassFor(addingClassFor === w.id ? null : w.id); setExtraError(''); setExtraClass({ tradeCode: '', laborType: 'journeyworker', apprenticePercent: '', programName: '' }); setEditingId(null); }}
+                            onClick={() => { setAddingClassFor(addingClassFor === w.id ? null : w.id); setExtraError(''); setExtraClass({ tradeCode: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' }); setEditingId(null); }}
                             className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
                           >
                             + Trade
@@ -443,6 +465,53 @@ export function WorkersPage() {
                                 onChange={e => setExtraClass(s => ({ ...s, programName: e.target.value }))}
                                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-hidden"
                               />
+                            </div>
+                          )}
+                          {isWA && (
+                            <div className="col-span-2 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                              <p className="text-xs font-medium text-blue-800">Washington Prevailing Wage</p>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  WA Prevailing Rate ($/hr)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  placeholder="e.g. 58.25"
+                                  value={extraClass.waManualRate}
+                                  onChange={(e) => setExtraClass(s => ({ ...s, waManualRate: e.target.value }))}
+                                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  WA Trade Code
+                                </label>
+                                <select
+                                  value={extraClass.waTradeCode}
+                                  onChange={(e) => setExtraClass(s => ({ ...s, waTradeCode: e.target.value }))}
+                                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
+                                >
+                                  <option value="">Select WA trade code</option>
+                                  <option value="BOIL">BOIL — Boilermakers</option>
+                                  <option value="CARP">CARP — Carpenters</option>
+                                  <option value="ELEC">ELEC — Electricians (Inside)</option>
+                                  <option value="ELCO">ELCO — Electricians (Outside/Line)</option>
+                                  <option value="GLAZ">GLAZ — Glaziers</option>
+                                  <option value="IRON">IRON — Ironworkers</option>
+                                  <option value="LABO">LABO — Laborers</option>
+                                  <option value="MASO">MASO — Masons</option>
+                                  <option value="OPER">OPER — Operating Engineers</option>
+                                  <option value="PAIN">PAIN — Painters</option>
+                                  <option value="PFRT">PFRT — Pile Drivers</option>
+                                  <option value="PLAS">PLAS — Plasterers</option>
+                                  <option value="PLUM">PLUM — Plumbers and Pipefitters</option>
+                                  <option value="ROOF">ROOF — Roofers</option>
+                                  <option value="SHEE">SHEE — Sheet Metal Workers</option>
+                                  <option value="TEAM">TEAM — Teamsters</option>
+                                </select>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -551,6 +620,53 @@ export function WorkersPage() {
                         onChange={e => setForm(f => ({ ...f, programName: e.target.value }))}
                         className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-hidden"
                       />
+                    </div>
+                  )}
+                  {isWA && (
+                    <div className="col-span-2 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                      <p className="text-xs font-medium text-blue-800">Washington Prevailing Wage</p>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          WA Prevailing Rate ($/hr)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g. 58.25"
+                          value={form.waManualRate}
+                          onChange={(e) => setForm(f => ({ ...f, waManualRate: e.target.value }))}
+                          className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          WA Trade Code
+                        </label>
+                        <select
+                          value={form.waTradeCode}
+                          onChange={(e) => setForm(f => ({ ...f, waTradeCode: e.target.value }))}
+                          className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
+                        >
+                          <option value="">Select WA trade code</option>
+                          <option value="BOIL">BOIL — Boilermakers</option>
+                          <option value="CARP">CARP — Carpenters</option>
+                          <option value="ELEC">ELEC — Electricians (Inside)</option>
+                          <option value="ELCO">ELCO — Electricians (Outside/Line)</option>
+                          <option value="GLAZ">GLAZ — Glaziers</option>
+                          <option value="IRON">IRON — Ironworkers</option>
+                          <option value="LABO">LABO — Laborers</option>
+                          <option value="MASO">MASO — Masons</option>
+                          <option value="OPER">OPER — Operating Engineers</option>
+                          <option value="PAIN">PAIN — Painters</option>
+                          <option value="PFRT">PFRT — Pile Drivers</option>
+                          <option value="PLAS">PLAS — Plasterers</option>
+                          <option value="PLUM">PLUM — Plumbers and Pipefitters</option>
+                          <option value="ROOF">ROOF — Roofers</option>
+                          <option value="SHEE">SHEE — Sheet Metal Workers</option>
+                          <option value="TEAM">TEAM — Teamsters</option>
+                        </select>
+                      </div>
                     </div>
                   )}
                 </div>

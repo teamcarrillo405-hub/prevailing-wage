@@ -23,6 +23,10 @@ const CreateProjectSchema = z.object({
   }),
   cslbLicense: z.string().max(50).optional(),
   wcPolicyNumber: z.string().max(100).optional(),
+  // Phase 25 — Washington-specific fields
+  ubiNumber: z.string().max(20).optional(),
+  lniCertificate: z.string().max(50).optional(),
+  wcAccount: z.string().max(50).optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
@@ -45,6 +49,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
 
   const stateValue = watch('state');
   const isCA = stateValue?.toUpperCase() === 'CA';
+  const isWA = stateValue?.toUpperCase() === 'WA';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
@@ -183,6 +188,48 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               {...register('wcPolicyNumber')}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="e.g. WC-2026-789"
+            />
+          </div>
+        </div>
+      )}
+
+      {isWA && (
+        <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm font-medium text-blue-800">Washington Project Fields</p>
+          <div>
+            <label htmlFor="ubiNumber" className="block text-sm font-medium text-gray-700">
+              UBI Number
+            </label>
+            <input
+              id="ubiNumber"
+              type="text"
+              {...register('ubiNumber')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="9-digit UBI, e.g. 123456789"
+            />
+          </div>
+          <div>
+            <label htmlFor="lniCertificate" className="block text-sm font-medium text-gray-700">
+              L&amp;I Contractor Certificate #
+            </label>
+            <input
+              id="lniCertificate"
+              type="text"
+              {...register('lniCertificate')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="e.g. RAINIC*123AB"
+            />
+          </div>
+          <div>
+            <label htmlFor="wcAccount" className="block text-sm font-medium text-gray-700">
+              Workers' Compensation Account #
+            </label>
+            <input
+              id="wcAccount"
+              type="text"
+              {...register('wcAccount')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="L&I industrial insurance account number"
             />
           </div>
         </div>

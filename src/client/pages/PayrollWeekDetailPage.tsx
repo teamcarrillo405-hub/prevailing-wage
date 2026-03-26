@@ -87,6 +87,10 @@ interface ProjectData {
   name: string;
   cslbLicense: string | null;
   wcPolicyNumber: string | null;
+  // Phase 25 — WA fields
+  ubiNumber: string | null;
+  lniCertificate: string | null;
+  wcAccount: string | null;
 }
 
 interface PayrollWeekDetailResponse {
@@ -112,6 +116,10 @@ export function PayrollWeekDetailPage() {
   // CA-specific state
   const [showCaDisclosure, setShowCaDisclosure] = useState(false);
   const caGeneratingRef = useRef(false);
+
+  // WA-specific state — mirrors CA pattern; separate from caGeneratingRef
+  const [showWaDisclosure, setShowWaDisclosure] = useState(false);
+  const waGeneratingRef = useRef(false);  // MUST be new ref — do not reuse generatingRef or caGeneratingRef
 
   const queryClient = useQueryClient();
   const [showSubmitForm, setShowSubmitForm] = useState(false);
@@ -166,6 +174,7 @@ export function PayrollWeekDetailPage() {
     enabled: !!weekData?.week.projectId,
   });
   const isCA = projectData?.data?.project?.state === 'CA';
+  const isWA = projectData?.data?.project?.state === 'WA';
 
   const isLoading = weekLoading || complianceLoading;
   const isError = weekError || complianceError;
@@ -232,6 +241,32 @@ export function PayrollWeekDetailPage() {
       console.error('CA A-1-131 download failed:', err);
     } finally {
       caGeneratingRef.current = false;
+    }
+  }
+
+  // WA F700-065-000 download handlers
+  // PWIA disclosure is ALWAYS shown — not conditional on violations (critical rule)
+  function handleWaDownloadClick() {
+    setShowWaDisclosure(true);  // always show — no compliance condition check
+  }
+
+  async function handleWaConfirmedDownload() {
+    if (waGeneratingRef.current) return;
+    waGeneratingRef.current = true;
+    setShowWaDisclosure(false);
+    try {
+      const res = await fetch(`/api/export/f700/${weekId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      hiddenAnchorRef.current!.href = url;
+      hiddenAnchorRef.current!.download = `f700-${weekData?.week.payrollNumber || weekId}.pdf`;
+      hiddenAnchorRef.current!.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err) {
+      console.error('WA F700-065-000 download failed:', err);
+    } finally {
+      waGeneratingRef.current = false;
     }
   }
 
@@ -303,6 +338,15 @@ export function PayrollWeekDetailPage() {
                 onClick={handleCaDownloadClick}
               >
                 Download CA A-1-131
+              </Button>
+            )}
+            {isWA && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleWaDownloadClick}
+              >
+                Download WA F700-065-000
               </Button>
             )}
           </div>
@@ -565,6 +609,58 @@ export function PayrollWeekDetailPage() {
                 <Button onClick={handleCaConfirmedDownload}>
                   Download PDF
                 </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* WA PWIA disclosure modal — persistent, shown on every WA download click */}
+        {showWaDisclosure && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setShowWaDisclosure(false)}
+          >
+            <div
+              className="mx-4 max-w-md rounded-lg bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-headline font-bold text-gray-900">
+                Washington F700-065-000 — Important Notice
+              </h3>
+              <div className="mt-3 space-y-3 text-sm text-gray-700">
+                <p>
+                  This PDF is a local reference copy of the L&amp;I F700-065-000 certified payroll
+                  record for Washington State public works projects.
+                </p>
+                <p className="font-medium text-blue-800">
+                  Official electronic submission of certified payroll records for Washington State
+                  public works projects is required through the L&amp;I PWIA portal:
+                </p>
+                <a
+                  href="https://lni.wa.gov/licensing-permits/public-works-projects/prevailing-wage/public-works-information-access-pwia"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center font-medium text-blue-600 underline hover:text-blue-800"
+                >
+                  L&amp;I PWIA Portal
+                </a>
+                {(!projectData?.data?.project?.ubiNumber ||
+                  !projectData?.data?.project?.lniCertificate ||
+                  !projectData?.data?.project?.wcAccount) && (
+                  <p className="rounded bg-blue-50 p-2 text-blue-800">
+                    Warning: UBI Number, L&amp;I Certificate, or WC Account is missing. Edit the
+                    project to add them before official submission.
+                  </p>
+                )}
+              </div>
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowWaDisclosure(false)}
+                  className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <Button onClick={handleWaConfirmedDownload}>Download PDF</Button>
               </div>
             </div>
           </div>
