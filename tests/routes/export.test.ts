@@ -34,7 +34,11 @@ async function createProject(cookie: string, state: string, extra?: Record<strin
   return res.body.data?.project?.id as string;
 }
 
-async function createWorkerWithClassification(cookie: string, projectId: string) {
+async function createWorkerWithClassification(
+  cookie: string,
+  projectId: string,
+  extra?: { waTradeCode?: string },
+) {
   const wRes = await supertest(app)
     .post(`/api/projects/${projectId}/workers`)
     .set('Cookie', cookie)
@@ -48,6 +52,7 @@ async function createWorkerWithClassification(cookie: string, projectId: string)
       tradeCode: 'CARP',
       tradeDescription: 'Carpenter',
       laborType: 'journeyworker',
+      ...(extra?.waTradeCode ? { waTradeCode: extra.waTradeCode } : {}),
     });
   const classificationId = cRes.body.data?.classification?.id as string;
 
@@ -211,5 +216,82 @@ describe('GET /api/export/a1131/:weekId - CAL-02', () => {
   it('should return 401 when not authenticated', async () => {
     const res = await supertest(app).get('/api/export/a1131/some-week-id');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/export/wa-cpr-xml/:weekId', () => {
+  it('returns 403 for unauthorized user', async () => {
+    // Create user1 project, then request as user2
+    const cookie1 = await registerUser('user1-wa');
+    const proj1Id = await createProject(cookie1, 'WA', { county: 'King' });
+    const week1Id = await createPayrollWeek(cookie1, proj1Id);
+    const cookie2 = await registerUser('user2-wa');
+    const res = await supertest(app)
+      .get(`/api/export/wa-cpr-xml/${week1Id}`)
+      .set('Cookie', cookie2);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 for non-WA project', async () => {
+    const cookie = await registerUser('wa-nonwa');
+    const projId = await createProject(cookie, 'CA');
+    const weekId = await createPayrollWeek(cookie, projId);
+    const res = await supertest(app)
+      .get(`/api/export/wa-cpr-xml/${weekId}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('Washington');
+  });
+
+  it('returns 400 when intentId missing from project', async () => {
+    const cookie = await registerUser('wa-nointent');
+    const projId = await createProject(cookie, 'WA', { county: 'King' });
+    const weekId = await createPayrollWeek(cookie, projId);
+    const res = await supertest(app)
+      .get(`/api/export/wa-cpr-xml/${weekId}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('Intent ID');
+  });
+
+  it('returns 422 when worker has null waTradeCode', async () => {
+    const cookie = await registerUser('wa-notrade');
+    const projId = await createProject(cookie, 'WA', { county: 'King' });
+    // Persist intentId on project
+    await supertest(app)
+      .patch(`/api/projects/${projId}`)
+      .set('Cookie', cookie)
+      .send({ pwiaIntentId: '99999' });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projId);
+    const weekId = await createPayrollWeek(cookie, projId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+    const res = await supertest(app)
+      .get(`/api/export/wa-cpr-xml/${weekId}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(422);
+    expect(res.body.error).toContain('trade code');
+  });
+
+  it('returns XML for valid WA project with intentId and trade codes', async () => {
+    const cookie = await registerUser('wa-valid');
+    const projId = await createProject(cookie, 'WA', { county: 'King' });
+    await supertest(app)
+      .patch(`/api/projects/${projId}`)
+      .set('Cookie', cookie)
+      .send({ pwiaIntentId: '12345' });
+    const { workerId, classificationId } = await createWorkerWithClassification(
+      cookie,
+      projId,
+      { waTradeCode: 'CARP' },
+    );
+    const weekId = await createPayrollWeek(cookie, projId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+    const res = await supertest(app)
+      .get(`/api/export/wa-cpr-xml/${weekId}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/xml');
+    expect(res.text).toContain('<WaPWCPR>');
+    expect(res.text).toContain('<intentId>12345</intentId>');
   });
 });
