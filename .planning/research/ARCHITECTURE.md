@@ -1,899 +1,648 @@
 # Architecture Research
 
-**Domain:** State-portal export integration — CA eCPR XML and WA PWIA submission assist (v2.5)
-**Researched:** 2026-03-26
-**Confidence:** HIGH — existing code directly inspected; CA CPR.xsd and WA xmlschema.xsd fetched from official portals
+**Domain:** Multi-user team + payroll import + SSN encryption + agency auto-submit, integrated into existing SQLite/Express/React prevailing-wage app
+**Researched:** 2026-03-27
+**Confidence:** HIGH (decisions grounded in existing schema + confirmed agency portal constraints)
 
 ---
 
-## v2.5 Integration Architecture
+## Existing Architecture Baseline
 
-### System Overview
+The current system structure (v2.5):
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  React Client (PayrollWeekDetailPage.tsx)                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
-│  │ CA eCPR      │  │ WA Submit    │  │ Existing PDF buttons   │  │
-│  │ XML button   │  │ Assist button│  │ WH-347, A-1-131, F700  │  │
-│  └──────┬───────┘  └──────┬───────┘  └────────────────────────┘  │
-│         │  updated CA     │  new WA                               │
-│         ▼  disclosure     ▼  assist modal                         │
-│  handleCaEcprDownload  handleWaAssistClick                        │
-│  → fetch /api/export/  → fetch /api/export/                       │
-│    ecpr-xml/:weekId      wa-assist/:weekId                        │
-└──────────────────────┬───────────────────────────────────────────┘
-                       │ HTTP (fetch→Blob→anchor for XML;
-                       │       fetch→JSON→setState for WA assist)
-┌──────────────────────▼───────────────────────────────────────────┐
-│  Express  src/server/routes/export.ts  (existing router)         │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │ GET /api/export/ecpr-xml/:weekId   NEW — CA XML download │    │
-│  │ GET /api/export/wa-assist/:weekId  NEW — WA JSON prefill │    │
-│  │ GET /api/export/wh347/:weekId      existing              │    │
-│  │ GET /api/export/a1131/:weekId      existing              │    │
-│  │ GET /api/export/f700/:weekId       existing              │    │
-│  └───────────────────┬──────────────────────────────────────┘    │
-│                      │                                           │
-│  ┌───────────────────▼──────────────────────────────────────┐    │
-│  │  Services (src/server/services/)                         │    │
-│  │  ecprXmlGenerator.ts  NEW — pure XML builder             │    │
-│  │  waAssistFormatter.ts NEW — pure PWIA data assembler     │    │
-│  │  a1131Generator.ts    existing — NOT modified            │    │
-│  │  f700Generator.ts     existing — NOT modified            │    │
-│  └───────────────────┬──────────────────────────────────────┘    │
-│                      │                                           │
-└──────────────────────┼───────────────────────────────────────────┘
-                       │ Drizzle ORM
-┌──────────────────────▼───────────────────────────────────────────┐
-│  SQLite                                                          │
-│  payroll_entries  workers  worker_classifications  projects       │
-│  No schema changes required — all fields already present         │
-└──────────────────────────────────────────────────────────────────┘
+React SPA (Vite + TailwindCSS v4)
+  └── React Query (server state)
+  └── Protected/Public routing
+
+Express REST API (TypeScript)
+  └── JWT httpOnly cookie auth
+  └── Route guards: userId match on every resource
+  └── Service layer (pdf-lib, xmlbuilder2, compliance engine)
+
+SQLite (Drizzle ORM)
+  └── Persistent disk on Render.com (/var/data)
+  └── Add-only migrations (never drop columns)
+  └── Single owner model: projects.userId = the one user
 ```
 
-### Component Responsibilities
-
-| Component | Responsibility | Integrates With |
-|-----------|---------------|-----------------|
-| `ecprXmlGenerator.ts` (NEW) | Build CA eCPR v1.3 XML string from typed EcprData — pure function, no I/O | `export.ts` route |
-| `waAssistFormatter.ts` (NEW) | Assemble WA PWIA prefill data object — pure function, returns typed JSON | `export.ts` route |
-| `export.ts` route (MODIFIED) | Two new GET handlers following identical 8-step ownership/load/generate/respond pattern | Both services, `payrollService` |
-| `payrollService.ts` (MODIFIED) | Add `getPayrollEntriesWithWorkerDetails()` — extends join to include `ssnLast4`, `address`, `waTradeCode`, `tradeCode` | Both new routes |
-| `PayrollWeekDetailPage.tsx` (MODIFIED) | CA: new XML download handler + updated CA modal; WA: new assist button + prefill panel modal | TanStack Query / fetch |
+Every project is owned by exactly one `userId`. All routes guard via
+`WHERE projects.user_id = :authUserId`. This is the central invariant
+that v3.0 must extend without breaking.
 
 ---
 
-## Recommended Project Structure
+## Feature 1: Multi-User Team Accounts
+
+### Decision: `project_members` Join Table (NOT `organizations`)
+
+**Recommendation: `project_members` join table.**
+
+Rationale: The requirement is explicitly "flat model — all members see
+all projects." There is no concept of an organization as a separate
+entity with its own lifecycle, billing, settings, or sub-grouping.
+An `organizations` table would introduce:
+
+- A new top-level entity requiring its own CRUD, invite flows, settings
+  pages, and owner-transfer logic
+- A 3-table join on every project query (users -> organizations -> projects)
+- Future migration complexity if org-level settings are ever added
+
+`project_members` is simpler, fits the flat requirement exactly, and
+maps cleanly onto the existing schema.
+
+### New Table: `project_members`
 
 ```
-src/
-├── server/
-│   ├── routes/
-│   │   └── export.ts              # ADD: /ecpr-xml/:weekId, /wa-assist/:weekId
-│   └── services/
-│       ├── ecprXmlGenerator.ts    # NEW: CA eCPR v1.3 XML builder
-│       ├── waAssistFormatter.ts   # NEW: WA PWIA submission data assembler
-│       ├── payrollService.ts      # ADD: getPayrollEntriesWithWorkerDetails()
-│       ├── a1131Generator.ts      # UNCHANGED
-│       └── f700Generator.ts       # UNCHANGED
-└── client/
-    └── pages/
-        └── PayrollWeekDetailPage.tsx  # MODIFY: CA XML button, WA assist modal
+project_members
+  id           TEXT PK
+  project_id   TEXT NOT NULL  -> projects.id  (no cascade -- explicit delete only)
+  user_id      TEXT NOT NULL  -> users.id
+  role         TEXT NOT NULL   ('owner' | 'member')
+  invited_by   TEXT            -> users.id (nullable -- null for original owner)
+  invited_at   TEXT NOT NULL
+  accepted_at  TEXT            (null = pending invite)
+  created_at   TEXT NOT NULL
+  UNIQUE (project_id, user_id)
+  INDEX on (project_id, user_id)  -- required for auth guard performance
 ```
 
-No new route files. No new pages. No DB migrations.
+**SQLite FK note:** SQLite does not enforce foreign keys by default.
+Add `PRAGMA foreign_keys = ON` to the DB init if not already present.
+Do NOT rely on `onDelete: 'cascade'` here; soft-delete semantics are
+safer for audit trails on prevailing-wage data.
 
-### Structure Rationale
+### New Columns on `users`
 
-- **ecprXmlGenerator.ts as a sibling service:** Follows the same pattern as `a1131Generator.ts`. The PDF generator does PDF rendering; the XML generator does XML building. Same module boundary, different output format. Both are pure functions testable without Express.
-- **waAssistFormatter.ts separate from f700Generator.ts:** F700 is a PDF form renderer. PWIA submission assist is a data assembly task — it returns a JSON-serializable object, not file bytes. Mixing these concerns into one file would require two different import shapes in the route.
-- **No new router file:** All export endpoints share auth middleware and the ownership guard pattern already in `export.ts`. Adding ~150 lines to an existing 510-line file is appropriate. Splitting into a new router adds an `index.ts` import for minimal benefit.
-- **getPayrollEntriesWithWorkerDetails() in payrollService.ts:** Both new routes need fields not selected by the existing `getPayrollEntries()`. Adding a new exported function is cleaner than the `(row as any).waTradeCode` cast already in the F700 handler — and this is the moment to resolve that existing hack as a side effect.
+```
+users
+  invite_token      TEXT  (nullable; SHA-256 hashed; cleared after first use)
+  invite_token_exp  TEXT  (nullable; ISO 8601 expiry -- 72 hours recommended)
+```
+
+Invite flow: owner triggers invite -> server generates token ->
+email contains `/accept-invite?token=<raw>` -> server hashes and
+compares -> creates `project_members` row + clears token.
+
+### Authorization Change: From `userId` to Member Check
+
+**Current guard pattern (every route):**
+
+```typescript
+const project = await db.query.projects.findFirst({
+  where: eq(projects.userId, authUserId)
+});
+```
+
+**New guard pattern:**
+
+```typescript
+// projects.userId still tracks the original creator (do not remove -- audit trail)
+// Authorization now checks project_members
+const membership = await db.query.projectMembers.findFirst({
+  where: and(
+    eq(projectMembers.projectId, projectId),
+    eq(projectMembers.userId, authUserId),
+    isNotNull(projectMembers.acceptedAt)
+  )
+});
+if (!membership) throw new ForbiddenError();
+```
+
+This is a targeted change to authorization middleware only. The
+`projects.userId` column stays as the original-owner record and is
+never used for auth decisions in v3.0+.
+
+### New vs Modified Components
+
+| Component | Type | Change |
+|-----------|------|--------|
+| `project_members` table | New | Join table for flat team membership |
+| `users.invite_token` + `users.invite_token_exp` | New columns | Support invite-by-email flow |
+| authMiddleware / project route guards | Modified | Replace `userId` check with `projectMembers` lookup |
+| `POST /projects/:id/invite` | New route | Owner sends email invite |
+| `POST /invites/accept` | New route | Token exchange -> member row |
+| `GET /projects/:id/members` | New route | List team for owner management |
+| `DELETE /projects/:id/members/:userId` | New route | Owner removes member |
+| `TeamSettingsPanel` (React) | New component | Invite form + member list on Project Detail |
+| `InviteAcceptPage` (React) | New component | `/accept-invite` route handler |
 
 ---
 
-## New vs Modified Files — Explicit List
+## Feature 2: Payroll Provider Import (QuickBooks + ADP)
 
-### New Files
+### Decision: Server-Side CSV Parsing
 
-| File | Purpose |
-|------|---------|
-| `src/server/services/ecprXmlGenerator.ts` | CA eCPR v1.3 XML builder — `generateEcprXml(data: EcprData): string` |
-| `src/server/services/waAssistFormatter.ts` | WA PWIA prefill assembler — `formatWaAssistData(input: WaAssistInput): WaAssistOutput` |
+**Recommendation: Parse CSV on the server.**
 
-### Modified Files
+Rationale:
+- The mapping logic (CSV columns -> `payrollEntries` schema) is business
+  logic -- it belongs in the service layer, not the browser
+- Server-side parsing means the mapping rules are tested, versioned,
+  and auditable
+- Rate snapshots must be fetched at import time (same rule as
+  `copyPayrollWeek`) -- this requires DB access, which only the server has
+- The preview-then-commit pattern (already used by `copyPayrollWeek`)
+  applies cleanly to imports
 
-| File | Change |
-|------|--------|
-| `src/server/routes/export.ts` | Add `GET /ecpr-xml/:weekId` (~75 lines) and `GET /wa-assist/:weekId` (~60 lines) after existing F700 handler |
-| `src/server/services/payrollService.ts` | Add `getPayrollEntriesWithWorkerDetails()` — same join as `getPayrollEntries()` plus `workers.ssnLast4`, `workers.address`, `workerClassifications.waTradeCode`, `workerClassifications.tradeCode` |
-| `src/client/pages/PayrollWeekDetailPage.tsx` | Add CA XML download handler + `caEcprGeneratingRef`; update CA disclosure modal to offer XML option; add WA assist button + `showWaAssistModal` state + prefill panel |
+**Client responsibility:** File picker UI, preview of parsed rows
+before commit (same UX pattern as copy-week modal).
 
-### No Changes Required
+### CSV Format Reality
 
-| File | Why untouched |
-|------|--------------|
-| `src/server/services/a1131Generator.ts` | CA eCPR XML is a different output — A-1-131 PDF is unaffected |
-| `src/server/services/f700Generator.ts` | WA submission assist is separate from F700 PDF rendering |
-| `src/server/index.ts` | `exportRouter` already mounted at `/api/export` — no new mount needed |
-| `src/server/db/schema.ts` | All required fields already present as of v2.4 |
+Neither QuickBooks nor ADP has a single canonical export format.
+
+**QuickBooks Desktop / QB Online:** Payroll Summary Report export.
+Typical columns: Employee Name, SSN (sometimes masked), Pay Period
+dates, Regular Hours, Overtime Hours, Gross Pay, deductions. Column
+names vary by QB version and report type.
+
+**ADP Workforce Now:** `PRcccEPI.csv` format. Columns include:
+`Co Code`, `Batch ID`, `File #` (employee ID), `Reg Hours`, `O/T Hours`,
+additional `Hours N Code` + `Hours N Amount` pairs for custom earning
+codes. No daily breakdown -- weekly totals only.
+
+**Implication:** The import cannot assume a fixed schema. The
+architecture must be a two-step mapping pipeline:
+
+```
+Step 1: Auto-detect provider (column signature match)
+Step 2: Map detected columns -> payrollEntry fields
+        (unmappable columns flagged for manual review in preview)
+```
+
+### Mapping Gap: No Daily Breakdown
+
+ADP and QuickBooks export weekly totals (Reg Hours, OT Hours) -- not
+Mon/Tue/Wed/Thu/Fri/Sat/Sun breakdowns. The `payrollEntries` schema
+stores daily ST/OT per the existing column layout.
+
+**Resolution:** When importing, distribute weekly totals across
+weekdays proportionally (default: equal split Mon-Fri for regular hours,
+Fri bias for OT if total > 8). Flag in the preview UI that daily
+distribution is estimated. User adjusts before committing. The audit
+trail shows the user confirmed the import.
+
+### New vs Modified Components
+
+| Component | Type | Change |
+|-----------|------|--------|
+| `POST /projects/:id/payroll-weeks/:weekId/import` | New route | Accepts multipart CSV, returns preview |
+| `POST /projects/:id/payroll-weeks/:weekId/import/commit` | New route | Commits previewed import to DB |
+| `importService.ts` | New service | Provider detection, column mapping, preview generation |
+| `qbMapper.ts` | New module | QuickBooks CSV -> `PayrollEntryImport[]` |
+| `adpMapper.ts` | New module | ADP Workforce Now CSV -> `PayrollEntryImport[]` |
+| `PayrollImportModal` (React) | New component | File upload -> preview table -> confirm commit |
+| `payroll_imports` table | New | Audit log of import sessions |
+
+### `payroll_imports` Audit Table
+
+```
+payroll_imports
+  id           TEXT PK
+  project_id   TEXT NOT NULL
+  week_id      TEXT NOT NULL
+  imported_by  TEXT NOT NULL  -> users.id
+  provider     TEXT NOT NULL  ('quickbooks' | 'adp' | 'unknown')
+  row_count    INTEGER NOT NULL
+  skipped      INTEGER NOT NULL DEFAULT 0
+  imported_at  TEXT NOT NULL
+  raw_filename TEXT
+```
+
+Store the filename but not the raw CSV content -- raw files may
+contain full SSNs that must not be persisted.
+
+---
+
+## Feature 3: SSN Encryption (AES-256)
+
+### Decision: Service Layer Encryption, Env Var Key
+
+**Recommendation: Encrypt/decrypt in the service layer. Store key in
+environment variable.**
+
+**Service layer vs DB layer:**
+- SQLite has no native column-level encryption. DB-layer encryption
+  requires SQLCipher -- a significant deployment change on Render.com
+  persistent disk that risks breaking the existing Drizzle setup
+- Service layer encryption is transparent to Drizzle ORM and requires
+  no migration tooling changes
+- The encrypt/decrypt functions use Node.js built-in `node:crypto` --
+  zero new dependencies
+
+**Env var vs KMS:**
+- The app runs on Render.com with a small contractor user base. A KMS
+  (AWS KMS, HashiCorp Vault) adds meaningful operational complexity and
+  cost for marginal security gain at this scale
+- Render.com environment variables are injected at runtime and are not
+  stored in the codebase -- standard practice for this deployment tier
+- KMS becomes the right answer at SOC 2 compliance scale; flag as a
+  future milestone item
+
+**Algorithm: AES-256-GCM** (not CBC). GCM provides authenticated
+encryption -- it detects tampered ciphertext. CBC does not. Node.js
+`node:crypto` supports GCM natively with no additional packages.
+
+### Storage Pattern: Single Column, Concatenated Encoding
+
+Do not store the IV as a separate column. Store `iv:authTag:ciphertext`
+as a single concatenated hex string in one column.
+
+```
+workers
+  ssn_encrypted  TEXT  (nullable; format: "<iv_hex>:<tag_hex>:<ciphertext_hex>")
+  ssn_last4      TEXT  (keep as-is -- used for WH-347 display and
+                        cross-project worker identity; not encrypted)
+```
+
+`ssn_last4` is NOT encrypted -- it is already non-identifying by
+design and is used in the compliance engine's cross-project worker
+identity matching.
+
+### New vs Modified Components
+
+| Component | Type | Change |
+|-----------|------|--------|
+| `workers.ssn_encrypted` column | New column | AES-256-GCM ciphertext of full SSN |
+| `cryptoService.ts` | New service | `encryptSsn()` / `decryptSsn()` using `node:crypto` |
+| `POST /workers` + `PATCH /workers/:id` | Modified routes | Accept `ssn` field, encrypt before DB write |
+| CA eCPR XML export + WA PWIA XML export | Modified services | Decrypt SSN only at XML generation time |
+| `AddWorkerForm` / `EditWorkerForm` (React) | Modified | Accept full SSN input (masked display) |
+| `ENV: SSN_ENCRYPTION_KEY` | New env var | 32-byte hex string (256 bits) |
+
+### Decrypt-on-Demand Policy
+
+SSN is decrypted only at the moment it is written into a CA eCPR XML
+export or WA PWIA XML. It is never included in API responses to the
+client, never logged, and never included in any CSV export. This is
+enforced in the service layer -- the React client never sees plaintext
+SSN.
+
+### Key Rotation (flag for future milestone)
+
+If the encryption key must be rotated: select all rows with non-null
+`ssn_encrypted`, decrypt with old key, re-encrypt with new key, update.
+This is a maintenance script. The current schema supports it without any
+schema change.
+
+---
+
+## Feature 4: Agency Portal Auto-Submit
+
+### API Availability Finding
+
+**Confidence: MEDIUM** (confirmed via official DIR and L&I documentation,
+no REST API spec found after search of official portals).
+
+**CA DIR eCPR:** No public REST API. The system supports two submission
+modes: (1) web form at `efiling.dir.ca.gov` and (2) XML file upload via
+the same portal. The XML schema is documented (CPR XML schema V1.3,
+published by DIR at `dir.ca.gov`). There is no programmatic submission
+endpoint that a third-party application can POST to.
+
+**WA L&I PWIA:** No public REST API for direct submission as of
+2026-03. The system supports XML file upload into the PWIA portal via
+My L&I. L&I has improved XML validation and error messaging in 2025
+but has not published a machine-to-machine API.
+
+**Conclusion: Direct API auto-submit is not achievable for either CA
+or WA at this time.** The correct architecture is export-assist:
+generate the agency-required XML and provide a guided checklist for
+manual portal upload. This is already partially implemented in v2.5
+(CA eCPR XML export in Phase 29, WA PWIA assist in Phase 30). v3.0
+extends this with submission status tracking.
+
+### What IS Buildable: Submission Status Tracking
+
+The `payrollWeeks.submittedAt` + `payrollWeeks.submittedTo` columns
+(Phase 17/23) already support WH-347 submission tracking. The same
+pattern should extend to CA eCPR and WA PWIA.
+
+**No async job queue is needed for the non-API path.** XML generation
+is synchronous (xmlbuilder2 is fast). If a future real API submission
+becomes available, a lightweight SQLite-backed job table is the correct
+approach -- not BullMQ/Redis (which would require adding Redis to the
+Render.com deployment).
+
+### New Columns on `payroll_weeks`
+
+```
+payroll_weeks
+  ca_ecpr_submitted_at  TEXT  (nullable; ISO 8601; set when user marks CA submitted)
+  wa_lni_submitted_at   TEXT  (nullable; ISO 8601; set when user marks WA submitted)
+```
+
+### Async Submission Table (future-ready, design now)
+
+If CA or WA publish a public API, this table supports retry logic without
+a Redis dependency:
+
+```
+agency_submissions
+  id            TEXT PK
+  project_id    TEXT NOT NULL
+  week_id       TEXT NOT NULL
+  agency        TEXT NOT NULL  ('ca-dir' | 'wa-li')
+  status        TEXT NOT NULL  ('pending' | 'processing' | 'submitted' | 'failed' | 'rejected')
+  attempt_count INTEGER NOT NULL DEFAULT 0
+  last_attempt  TEXT
+  next_retry    TEXT
+  response_body TEXT           (agency API response; nullable)
+  error_message TEXT
+  submitted_at  TEXT           (set when status = 'submitted')
+  created_at    TEXT NOT NULL
+  updated_at    TEXT NOT NULL
+```
+
+A polling loop queries:
+`SELECT * FROM agency_submissions WHERE status = 'pending' AND next_retry <= datetime('now')`
+
+### New vs Modified Components
+
+| Component | Type | Change |
+|-----------|------|--------|
+| `agency_submissions` table | New (future-ready) | Status tracking for agency submits |
+| `payrollWeeks.caEcprSubmittedAt` + `waLniSubmittedAt` | New columns | Track per-agency submit events |
+| CA eCPR modal (Phase 29) | Modified | Add "Mark as Submitted to DIR" action after export |
+| WA PWIA assist panel (Phase 30) | Modified | Add "Mark as Submitted to L&I" action after export |
+| `SubmissionStatusBadge` (React) | New component | Show CA/WA submission state on Payroll Week Detail |
+
+---
+
+## System Overview: v3.0 Layer Map
+
+```
++-----------------------------------------------------------------------+
+|                          React SPA                                     |
+|  TeamSettingsPanel   PayrollImportModal  AddWorkerForm  SubmissionBadge|
+|  InviteAcceptPage    ImportPreviewTable  (SSN input masked)            |
++-------------------------------+---------------------------------------+
+                                | React Query (JWT cookie)
++-------------------------------v---------------------------------------+
+|                       Express REST API                                 |
+|  /projects/:id/invite          /workers (encrypt SSN on write)        |
+|  /invites/accept               /workers/:id (decrypt gated)           |
+|  /projects/:id/members         /payroll-weeks/:id/import              |
+|  /agency-submissions           /payroll-weeks/:id/import/commit       |
++----------+---------------------+------------------+-------------------+
+           |                     |                  |
++----------v---------+  +--------v--------+  +------v------------------+
+| authService.ts     |  | importService   |  |   cryptoService.ts      |
+| (member check)     |  | qbMapper.ts     |  | encryptSsn/decryptSsn   |
+| inviteService.ts   |  | adpMapper.ts    |  | AES-256-GCM node:crypto |
++----------+---------+  +--------+--------+  +------+------------------+
+           |                     |                  |
++----------v---------------------v------------------v-------------------+
+|                         SQLite (Drizzle ORM)                          |
+|  project_members    payroll_imports     workers.ssn_encrypted         |
+|  users.invite_*     agency_submissions  payrollWeeks.ca/waSubmittedAt |
++-----------------------------------------------------------------------+
+```
+
+---
+
+## Recommended Build Order (Feature Dependencies)
+
+```
+1. SSN encryption foundation
+   No dependencies. Purely additive column + service.
+   Must land before any CA eCPR / WA PWIA improvements that use full SSN.
+
+2. Multi-user: DB schema + auth middleware
+   project_members table + authMiddleware change.
+   Must land before invite flow (invite routes reference the table).
+   projects.userId stays as-is; only auth guard changes.
+
+3. Multi-user: invite flow + React team UI
+   Depends on step 2 (table must exist).
+   New routes + InviteAcceptPage + TeamSettingsPanel.
+
+4. Agency submission status tracking
+   Depends on nothing new. Additive columns + SubmissionStatusBadge.
+   agency_submissions table is future-ready (no active use yet).
+
+5. Payroll import: server pipeline
+   importService.ts + mappers + preview/commit routes.
+   Depends on nothing except existing payrollEntries schema.
+
+6. Payroll import: React UI
+   PayrollImportModal depends on step 5 routes existing.
+```
 
 ---
 
 ## Architectural Patterns
 
-### Pattern 1: New Route Handler in Existing export.ts
+### Pattern 1: Preview-Then-Commit (existing, extend to import)
 
-**What:** Each new export follows the identical 8-step pattern already established by `/a1131/:weekId` and `/f700/:weekId`:
-1. Load payroll week by `weekId`
-2. Verify project ownership (`project.userId === req.user.userId`)
-3. State gate (`project.state === 'CA'` or `'WA'`)
-4. Load entries with extended join
-5. Map to typed data object
-6. Call generator/formatter function
-7. Set response headers
-8. Send response
+**What:** Return a dry-run preview from the server before any DB write.
+User confirms. Second request commits.
+**When to use:** Any bulk operation that could create many rows or
+overwrite existing data.
+**Trade-offs:** Two round-trips. The existing codebase already uses this
+for `copyPayrollWeek` -- applying it to CSV import is consistent and
+requires no new UX paradigm.
 
-**When to use:** Any new export that shares this auth + ownership model — always true for payroll exports.
+### Pattern 2: Service Layer Encryption
 
-**Trade-offs:** Handlers are 60-80 lines each. All duplication is in the auth/guard preamble, which is intentional — the ownership check must not be abstracted away in a way that makes it easy to skip.
+**What:** `cryptoService.ts` is the single entry point for all
+encrypt/decrypt operations. Routes never call `node:crypto` directly.
+**When to use:** Any field requiring at-rest encryption.
+**Trade-offs:** Slight latency per call (AES-GCM is microseconds at
+this scale -- negligible). Key isolation benefit is significant: rotating
+the key means changing one service, not hunting call sites.
 
-**Example (eCPR XML handler shape):**
-```typescript
-router.get('/ecpr-xml/:weekId', async (req, res) => {
-  const weekId = req.params.weekId as string;
-  const userId = req.user!.userId;
-  const week = await getPayrollWeek(weekId);
-  if (!week) { res.status(404).json({ error: 'Payroll week not found' }); return; }
-  const db = getDb();
-  const [project] = await db.select().from(projects).where(eq(projects.id, week.projectId)).limit(1);
-  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
-  if (project.userId !== userId) { res.status(403).json({ error: 'Access denied' }); return; }
-  if (project.state !== 'CA') { res.status(400).json({ error: 'eCPR XML is only available for California projects' }); return; }
-  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
-  const ecprData: EcprData = mapToEcprData(week, project, entries);
-  const xmlString = generateEcprXml(ecprData);
-  res.setHeader('Content-Type', 'application/xml');
-  res.setHeader('Content-Disposition', `attachment; filename="ecpr-${week.payrollNumber}.xml"`);
-  res.end(xmlString);
-});
-```
+### Pattern 3: Member-Scoped Auth Guard
 
-### Pattern 2: Pure Service — ecprXmlGenerator.ts
+**What:** All project-scoped routes check `project_members` for active
+(accepted) membership instead of `projects.userId`.
+**When to use:** Every protected project route in v3.0+.
+**Trade-offs:** One extra lookup per request. At SQLite scale with a
+small team, this is not measurable. Index on `(project_id, user_id)`
+in the migration is required.
 
-**What:** `generateEcprXml(data: EcprData): string` — builds a CA eCPR v1.3 XML document as a string. No PDF library needed. Uses template literals or simple string concatenation — the XSD has no conditional nesting; all 500 possible employee records are structurally identical.
+### Pattern 4: Export-Assist (not auto-submit)
 
-**Why server-side (not client-side):** (1) SSN data — even the 4-digit placeholder — must not be sent to the client. (2) All existing exports are server-side — consistency. (3) XSD validation belongs server-side. The client already omits `ssnLast4` from its `PayrollWeekDetailResponse`.
-
-**Trade-offs:** String concatenation is brittle but the CA eCPR schema is shallow (3 levels max). A library like `xmlbuilder2` would be cleaner but violates the "no new libraries" constraint. The schema is fixed by DIR — it does not change frequently enough to justify a builder dependency.
-
-**CA eCPR v1.3 data mapping (from CPR.xsd, fetched 2026-03-26):**
-
-| eCPR XML Element | DB Source | Gap |
-|-----------------|-----------|-----|
-| `contractorName` | `projects.name` | — |
-| `contractorFEIN` | Not in DB | Gap #1 |
-| `contractorPWCR` | Not in DB (output "NA") | Gap #1 |
-| `contractorLicense.licenseNum` | `projects.cslbLicense` | — |
-| `contractorLicense.licenseType` | "CSLB" | — |
-| `insuranceNum` | `projects.wcPolicyNumber` | — |
-| `contractorEmail` | Not in DB (output empty string) | Gap #1 |
-| `contractorAddress.street/city/state/zip` | `projects.county + state` (partial) | Gap #1 |
-| `contractAgency` | Not in DB — must be user-entered | Gap #1 |
-| `projectID` | Not in DB — DIR-assigned numeric ID | Gap #1 |
-| `forWeekEnding` | `payrollWeeks.weekEndingDate` (YYYY-MM-DD) | — |
-| `payrollNum` | `payrollWeeks.payrollNumber` | — |
-| `statementOfNP` | "false" (always — this route only runs if entries exist) | — |
-| `employee.ssn` | `workers.ssnLast4` as "000000XXX" placeholder | Gap #2 |
-| `employee.address.street` | `workers.address` (full string, truncate to 40 chars) | partial |
-| `employee.workClass` | `workerClassifications.tradeDescription` | — |
-| `employee.numWithholdingExemp` | "0" — not collected | Gap #3 |
-| `payroll.hrsWorkedEachDay.day[1-7].date` | derive from `weekEndingDate` — 7 days back | — |
-| `payroll.hrsWorkedEachDay.day[n].straightTime` | `payrollEntries.monSt`...`sunSt` | — |
-| `payroll.hrsWorkedEachDay.day[n].overtime` | `payrollEntries.monOt`...`sunOt` | — |
-| `payroll.hrsWorkedEachDay.day[n].doubletime` | `payrollEntries.monDt`...`sunDt` | — |
-| `payroll.totHrs.totHrsStraightTime` | sum of daily ST | — |
-| `payroll.totHrs.totHrsOvertime` | sum of daily OT | — |
-| `payroll.totHrs.totHrsDoubletime` | sum of daily DT | — |
-| `payroll.hrlyPayRate.hrlyPayRateStraightTime` | `payrollEntries.baseRateSnapshot` | — |
-| `payroll.hrlyPayRate.hrlyPayRateOvertime` | `baseRateSnapshot * 1.5` | — |
-| `payroll.hrlyPayRate.hrlyPayRateDoubletime` | `baseRateSnapshot * 2.0` | — |
-| `payroll.grossAmountEarned.thisProject` | `payrollEntries.grossWages ?? 0` | — |
-| `payroll.grossAmountEarned.allWork` | same as thisProject (single-project app) | — |
-| `payroll.deductionsContribPay.fedTax` | 0 — not collected | Gap #3 |
-| `payroll.deductionsContribPay.FICA` | 0 | Gap #3 |
-| `payroll.deductionsContribPay.stateTax` | 0 | Gap #3 |
-| `payroll.deductionsContribPay.SDI` | 0 | Gap #3 |
-| `payroll.deductionsContribPay.total` | `payrollEntries.deductions` | — |
-| `payroll.netWagePaidWeek` | `payrollEntries.netPay ?? 0` | — |
-| `payroll.checkNum` | "DIRECT DEPOSIT" — default | — |
-
-### Pattern 3: WA Submission Assist as JSON Response
-
-**What:** `GET /api/export/wa-assist/:weekId` returns JSON (not a file). The client renders a read-only prefill panel inside a modal — the contractor copies values into the PWIA portal manually. No Blob download needed.
-
-**Why JSON rather than a downloadable XML file:** The WA PWIA XML upload path (`xmlschema.xsd`) requires a full 9-digit SSN, a previously-filed `intentId`, and separately-parsed address components. These gaps (Gap #2, Gap #4) make a valid uploadable XML impossible with current data. A JSON prefill guide is honest about what the app can supply and what the contractor must provide.
-
-**WA PWIA data mapping (from xmlschema.xsd, fetched 2026-03-26):**
-
-| PWIA XML Field | DB Source | Gap |
-|---------------|-----------|-----|
-| `intentId` | Not in DB — contractor must supply their PWIA intent filing number | Gap #4 |
-| `endOfWeekDate` | `payrollWeeks.weekEndingDate` | — |
-| `employee.firstName/lastName` | `workers.name` (split on last space) | — |
-| `employee.ssn` | `workers.ssnLast4` shown as "XXX-XX-XXXX" masked — user must supply full SSN in portal | Gap #2 |
-| `employee.address1` | `workers.address` (truncate) | partial |
-| `employee.city/state/zip` | Not parsed from address string | partial |
-| `employee.grossPay` | `payrollEntries.grossWages ?? 0` | — |
-| `tradeHoursWage.trade` | `workerClassifications.waTradeCode ?? workerClassifications.tradeCode` | — |
-| `tradeHoursWage.county` | `projects.county` (must match WA county enum — already stored as entered) | — |
-| `tradeHoursWage.regularHourRateAmt` | `payrollEntries.baseRateSnapshot` | — |
-| `tradeHoursWage.overtimeHourRateAmt` | `baseRateSnapshot * 1.5` | — |
-| `tradeHoursWage.regularDay1-7Hours` | `payrollEntries.monSt`...`sunSt` | — |
-| `tradeHoursWage.overtimeDay1-7Hours` | `payrollEntries.monOt`...`sunOt` | — |
-| `tradeHoursWage.hourlyPensionRateAmt` | `payrollEntries.fringeRateSnapshot` (mapped to pension; can't split fringe by type) | partial |
-| `tradeHoursWage.hourlyMedicalAmt` | 0 — fringe not broken down | partial |
-| `tradeHoursWage.apprenticeFlg` | `workerClassifications.laborType === 'apprentice'` | — |
-| `tradeHoursWage.apprenticeId` | `workerClassifications.programName` (program name, not individual reg ID) | Gap #5 |
-| `ubiNumber` (project-level) | `projects.ubiNumber` | — |
-| `lniCertificate` (project-level) | `projects.lniCertificate` | — |
-| `wcAccount` (project-level) | `projects.wcAccount` | — |
+**What:** Generate the agency-required XML and surface a guided
+checklist + "mark submitted" button. Do not POST to agency portals.
+**When to use:** CA DIR eCPR and WA L&I PWIA -- neither has a public
+API as of 2026-03.
+**Trade-offs:** Less automation than "auto-submit" implies. But
+attempting browser-based portal automation would be brittle, likely
+violate portal ToS, and impossible on Render.com. Export-assist is
+the correct honest scope.
 
 ---
 
 ## Data Flow
 
-### CA eCPR XML Export Flow
+### SSN Write Flow
 
 ```
-User clicks "Download CA eCPR XML"
-    ↓
-handleCaEcprDownload() [new handler in PayrollWeekDetailPage.tsx]
-    ↓ (uses updated CA disclosure modal — adds XML option alongside PDF button)
-if (caEcprGeneratingRef.current) return;  ← double-click guard (same as existing)
-caEcprGeneratingRef.current = true;
-    ↓
-fetch('/api/export/ecpr-xml/' + weekId, { credentials: 'include' })
-    ↓
-export.ts: GET /ecpr-xml/:weekId
-  1. getPayrollWeek(weekId)
-  2. verify project.userId === req.user.userId
-  3. project.state === 'CA' or 400
-  4. getPayrollEntriesWithWorkerDetails(weekId)
-  5. mapToEcprData(week, project, entries) → EcprData
-  6. generateEcprXml(ecprData) → string
-  7. Content-Type: application/xml
-  8. res.end(xmlString)
-    ↓
-Client: res.blob() → URL.createObjectURL → hiddenAnchorRef.current.download = 'ecpr-N.xml'
-→ hiddenAnchorRef.current.click() → setTimeout(revokeObjectURL, 100)
-← Same hiddenAnchorRef used by all existing downloads — no second anchor element
+AddWorkerForm (SSN input, masked display)
+  -> POST /workers { ssn: "123-45-6789", ssnLast4: "6789", ... }
+  -> workerService.createWorker()
+       -> cryptoService.encryptSsn("123-45-6789")  -> "<iv>:<tag>:<ciphertext>"
+       -> db.insert(workers, { ssnLast4: "6789", ssnEncrypted: "...", ssn: undefined })
+  -> Response: worker object (no ssn, no ssnEncrypted in response body)
 ```
 
-### WA Submission Assist Flow
+### SSN Read Flow (CA eCPR XML export only)
 
 ```
-User clicks "WA Submission Assist" button (new, alongside existing "Download WA F700")
-    ↓
-handleWaAssistClick() → setShowWaAssistModal(true)
-    ↓ (modal opens immediately; fetch happens inside modal on mount or button confirm)
-fetch('/api/export/wa-assist/' + weekId, { credentials: 'include' })
-    ↓
-export.ts: GET /wa-assist/:weekId
-  1. getPayrollWeek(weekId)
-  2. verify ownership
-  3. project.state === 'WA' or 400
-  4. getPayrollEntriesWithWorkerDetails(weekId)
-  5. formatWaAssistData(week, project, entries) → WaAssistOutput
-  6. res.json(assistOutput)
-    ↓
-Client: setWaAssistData(json)
-→ modal renders prefill panel:
-    - Project fields (UBI, L&I cert, WA account, county)
-    - Per-worker rows: name, trade code, hours by day (Mon-Sun), rates, gross pay, fringe
-    - Gap warnings: SSN masked, intentId must be supplied, address components
-→ No file download — contractor copies values into PWIA portal manually
+POST /export/ecpr-xml/:weekId
+  -> ecprXmlGenerator.generate()
+       -> db.select workers (includes ssnEncrypted)
+       -> cryptoService.decryptSsn(worker.ssnEncrypted)  -> "123-45-6789"
+       -> xmlbuilder2 inserts plaintext SSN into XML
+       -> plaintext SSN goes out of scope after XML generation
+  -> Response: XML file download (plaintext SSN never stored or logged)
 ```
 
-### Extended Join — getPayrollEntriesWithWorkerDetails
+### Payroll Import Flow
 
-The existing `getPayrollEntries()` at `payrollService.ts` line 226 selects:
 ```
-entry, workerName, tradeDescription, laborType, programName
+PayrollImportModal (file picker)
+  -> POST /projects/:id/payroll-weeks/:weekId/import  multipart/form-data
+  -> importService.preview(file)
+       -> detectProvider(headers)  -> 'quickbooks' | 'adp'
+       -> mapper.map(rows)  -> PayrollEntryPreview[]
+       -> fetchRateSnapshots(workers, weekId)  -> snapshots
+  -> Response: { preview: PayrollEntryPreview[], unmapped: string[], provider }
+
+User reviews preview, confirms
+  -> POST /projects/:id/payroll-weeks/:weekId/import/commit { importId }
+  -> importService.commit(importId)
+       -> db.insert payrollEntries (with rate snapshots)
+       -> db.insert payroll_imports (audit log)
+  -> Response: { inserted: N, skipped: M }
 ```
 
-The new `getPayrollEntriesWithWorkerDetails()` adds:
-```
-ssnLast4: workers.ssnLast4
-workerAddress: workers.address
-tradeCode: workerClassifications.tradeCode
-waTradeCode: workerClassifications.waTradeCode
-```
+### Team Invite Flow
 
-This also resolves the `(row as any).waTradeCode` cast hack currently in the F700 handler (export.ts line 371) as a side effect — the F700 handler can be updated to use the typed version.
+```
+TeamSettingsPanel (owner enters email)
+  -> POST /projects/:id/invite { email }
+  -> inviteService.createInvite(projectId, email, invitedBy)
+       -> crypto.randomBytes(32)  -> raw token
+       -> SHA-256 hash  -> stored token
+       -> upsert users row (or find existing by email)
+       -> insert project_members (acceptedAt: null)
+       -> set users.inviteToken = hash, users.inviteTokenExp = now+72h
+       -> send email (link: /accept-invite?token=<raw>)
+  -> Response: { status: 'invited' }
+
+Invitee clicks link -> InviteAcceptPage
+  -> POST /invites/accept { token }
+  -> inviteService.accept(token)
+       -> SHA-256 hash incoming token
+       -> find user WHERE invite_token = hash AND invite_token_exp > now()
+       -> set project_members.acceptedAt = now()
+       -> clear invite token fields on users
+  -> Redirect to /dashboard
+```
 
 ---
 
-## Identified Gaps (with mitigations)
+## SQLite-Specific Constraints
 
-### Gap #1: Missing CA eCPR required fields — FEIN, PWCR, contractAgency, projectID
-
-The CA CPR.xsd requires `contractorFEIN` (9-digit), `contractorPWCR` (DIR registration, 10-digit or "NA"), `contractAgency` (awarding body name), and `projectID` (DIR-assigned numeric ID). None are in the `projects` table.
-
-**v2.5 mitigation:** Collect the three most critical fields (`contractorFEIN`, `contractAgency`, `projectID`) in the CA disclosure modal at download time as a one-time form — no DB change. Output `contractorPWCR = "NA"` (schema allows). Add prominent modal warning that these fields must be filled correctly before uploading to the DIR portal. The contractor must edit `contractorFEIN` in the downloaded XML if supplying a real FEIN is required.
-
-**Future enhancement:** Add `contractorFein`, `dirContractAgency`, `dirProjectId` as optional columns on `projects` (add-only migration) so they persist across downloads.
-
-### Gap #2: Full SSN not stored — blocks validated XML upload to both portals
-
-Both CA eCPR and WA PWIA XML schemas require 9-digit SSN. The app stores only `ssnLast4`. This is intentional.
-
-**v2.5 mitigation:** In CA XML: output `000000XXX` where XXX = `ssnLast4`. In WA assist JSON: show `XXX-XX-XXXX` masked display. Both are accompanied by a disclosure warning that contractors must supply full SSNs manually before uploading to the portal. Do not collect full SSNs in v2.5 — this requires a privacy review and encrypted storage at rest.
-
-### Gap #3: Deduction breakdown not captured — eCPR wants itemized deductions
-
-CA eCPR schema has 13 itemized deduction fields (fedTax, FICA, stateTax, SDI, vacationHoliday, healthWelfare, pension, training, fundAdmin, dues, travelSubs, savings, other). The app stores one `deductions` total.
-
-**v2.5 mitigation:** Output 0 for all line items except `other` (set to `deductions` total) and `total` (set to `deductions`). Add disclosure in modal that itemized breakdown is not available and contractor should verify before uploading.
-
-### Gap #4: WA intentId not stored — required for PWIA XML upload
-
-The PWIA XML schema root requires `intentId` — the ID from the contractor's previously-filed Statement of Intent to Pay Prevailing Wages. Not in DB.
-
-**v2.5 mitigation:** Display `intentId` as a prominently labeled blank field in the WA assist panel with instructions on where to find it. Future: add `waIntentId` as optional column on `projects`.
-
-### Gap #5: WA apprentice registration ID not stored
-
-PWIA XML `apprenticeId` (individual apprentice program registration number) differs from `programName`. App stores `programName` only.
-
-**v2.5 mitigation:** In WA assist panel, show `programName` as the apprentice program field with a label clarifying the PWIA portal needs the individual apprentice registration number from the approved apprenticeship program. Leave the `apprenticeId` assist field blank with an inline note.
+| Constraint | Impact on v3.0 | Mitigation |
+|------------|---------------|------------|
+| Foreign keys off by default | `project_members` FK to projects/users not enforced automatically | Add `PRAGMA foreign_keys = ON` to DB init |
+| No RIGHT/FULL OUTER JOIN | Auth queries use LEFT JOIN + null check pattern | Use `LEFT JOIN project_members ON ... WHERE pm.accepted_at IS NOT NULL` |
+| Single writer (WAL mode) | Import commits are synchronous; no concurrent bulk writes | WAL mode (already on Render); single-session writes are fine |
+| Add-only migrations | Cannot drop `projects.userId` | Keep it; use only for original-owner display. Auth moves to `project_members` |
+| No native encryption | Column-level crypto not possible at DB layer | Service-layer AES-256-GCM via `node:crypto` |
+| No cascade enforcement | `onDelete: 'cascade'` in Drizzle schema does not fire unless FK pragma is on | Enable FK pragma OR add explicit delete logic in service layer |
 
 ---
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Extending a1131Generator.ts to produce XML
+### Anti-Pattern 1: Organizations Table for a Flat Team
 
-**What people do:** Add XML output to the existing CA export service since it's already CA-specific.
-**Why it's wrong:** `a1131Generator.ts` is a pdf-lib PDF renderer with coordinate constants. Mixing in XML string generation creates a module with two unrelated responsibilities and different import shapes. The PDF generator imports pdf-lib; the XML generator imports nothing. They have zero code overlap.
-**Do this instead:** `ecprXmlGenerator.ts` as a sibling service file.
+**What people do:** Add an `organizations` table because "that's how
+SaaS works," then force every project into an org and every user into
+an org.
+**Why it's wrong:** The requirement is "flat -- all members see all
+projects." An org table adds a third entity, complicates every query,
+and front-loads scope the product does not need.
+**Do this instead:** `project_members` join table. If org-level features
+are needed in v4.0, migrate then with a real requirements spec.
 
-### Anti-Pattern 2: Client-side XML generation
+### Anti-Pattern 2: Storing Plaintext SSN at Rest
 
-**What people do:** Use the payroll data already in TanStack Query cache on the client to build the XML in the browser.
-**Why it's wrong:** (1) The client data shape intentionally omits `ssnLast4` and `address`. (2) XSD validation is a server concern. (3) All 5 existing exports are server-side — breaking that pattern without a strong reason is a maintenance liability. (4) Content-Disposition and Content-Type headers must come from the server for reliable browser download behavior.
-**Do this instead:** Server-side generation, identical download UX (fetch → Blob → anchor) as all existing exports.
+**What people do:** Store full SSN in a column "just temporarily" for
+the import or pre-fill use case, intending to encrypt later.
+**Why it's wrong:** SQLite on a shared disk is a flat file. Any breach
+exposes all records. "Temporary" plaintext columns become permanent.
+**Do this instead:** Encrypt at the service layer before the INSERT.
+Never pass plaintext SSN through an API response.
 
-### Anti-Pattern 3: Full PWIA XML upload as the v2.5 WA feature
+### Anti-Pattern 3: Returning Plaintext SSN in API Responses
 
-**What people do:** Build a complete PWIA XML upload route because the XSD is available.
-**Why it's wrong:** Requires full SSN (Gap #2), `intentId` (Gap #4), and individual `apprenticeId` (Gap #5). None are in the DB. Generating a structurally valid but data-invalid XML file (with placeholder SSNs) and presenting it as ready for upload creates compliance risk. A contractor who uploads it without replacing SSNs submits invalid certified payroll records.
-**Do this instead:** "Submission assist" — a JSON prefill guide. The contractor has all the data in front of them to enter into the PWIA portal manually. XML upload is a v3+ feature dependent on the privacy review for full SSN storage.
+**What people do:** Return `{ ssn: decryptedSsn }` from `GET /workers/:id`
+to let the frontend pre-fill an edit form.
+**Why it's wrong:** The plaintext SSN travels over the wire and into
+React state. Browser devtools, logging middleware, and React Query's
+cache all become SSN stores.
+**Do this instead:** For the edit form, require re-entry on edit, or
+use a dedicated "reveal SSN" endpoint that returns a single-use,
+short-lived response and is not cached by React Query.
 
-### Anti-Pattern 4: Reusing caGeneratingRef for the eCPR XML download
+### Anti-Pattern 4: Parsing CSV in the Browser
 
-**What people do:** Reuse the existing `caGeneratingRef` (which guards the A-1-131 PDF download) for the eCPR XML download.
-**Why it's wrong:** If a user clicks both CA buttons in rapid succession, the shared ref will block one download mid-flight. Each download button must have its own `useRef` guard — as established by the comment in `PayrollWeekDetailPage.tsx` line 128 ("MUST be new ref — do not reuse generatingRef or caGeneratingRef").
-**Do this instead:** `const caEcprGeneratingRef = useRef(false)` — a third ref dedicated to the XML download.
+**What people do:** Use PapaParse in React to parse the CSV and send
+JSON to the server.
+**Why it's wrong:** The mapping logic is business logic that needs
+tests and versioning. The rate snapshot fetch requires DB access.
+Browser-parsed data arrives at the server unvalidated.
+**Do this instead:** Send the raw file as multipart. Parse and map
+server-side in `importService.ts`.
 
----
+### Anti-Pattern 5: Browser Automation for Agency Submit
 
-## Download UX Pattern (confirmed from PayrollWeekDetailPage.tsx)
-
-The established pattern for all file downloads — to be followed identically for CA eCPR XML:
-
-```typescript
-// 1. Dedicated useRef for double-click guard
-const caEcprGeneratingRef = useRef(false);
-
-// 2. Handler
-async function handleCaEcprDownload() {
-  if (caEcprGeneratingRef.current) return;
-  caEcprGeneratingRef.current = true;
-  try {
-    const res = await fetch(`/api/export/ecpr-xml/${weekId}`, { credentials: 'include' });
-    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    hiddenAnchorRef.current!.href = url;
-    hiddenAnchorRef.current!.download = `ecpr-${weekData?.week.payrollNumber || weekId}.xml`;
-    hiddenAnchorRef.current!.click();
-    setTimeout(() => URL.revokeObjectURL(url), 100);
-  } catch (err) {
-    console.error('CA eCPR XML download failed:', err);
-  } finally {
-    caEcprGeneratingRef.current = false;
-  }
-}
-```
-
-The WA submission assist fetch pattern is different — JSON response, render in-page:
-
-```typescript
-const [waAssistData, setWaAssistData] = useState(null);
-
-async function fetchWaAssist() {
-  const res = await fetch(`/api/export/wa-assist/${weekId}`, { credentials: 'include' });
-  if (!res.ok) return;
-  const data = await res.json();
-  setWaAssistData(data);
-}
-```
-
-No `hiddenAnchorRef` needed for WA assist. No file is downloaded.
+**What people do:** Attempt Puppeteer/Playwright to "auto-submit" by
+filling the DIR or L&I portal form programmatically.
+**Why it's wrong:** Render.com does not support headless browsers.
+Portal ToS prohibit automation. Portal UI changes break the automation
+silently. CA DIR already accepts XML uploads -- the correct integration
+is XML generation plus a checklist.
+**Do this instead:** Export-assist pattern: generate the XML, surface
+a checklist, let the user upload manually, mark submitted in the app.
 
 ---
 
-## Build Order (v2.5 specific)
+## Integration Points Summary
 
-| Step | Work | Dependency |
-|------|------|-----------|
-| 1 | Add `getPayrollEntriesWithWorkerDetails()` to `payrollService.ts` | None — pure DB layer |
-| 2 | Build `ecprXmlGenerator.ts` with unit tests against CPR.xsd structure | Step 1 types |
-| 3 | Add `GET /api/export/ecpr-xml/:weekId` to `export.ts` | Steps 1-2 |
-| 4 | Update CA disclosure modal — add XML download button and gap disclosures | Step 3 (route must exist to test) |
-| 5 | Build `waAssistFormatter.ts` with unit tests against xmlschema.xsd field list | Step 1 types |
-| 6 | Add `GET /api/export/wa-assist/:weekId` to `export.ts` | Step 5 |
-| 7 | Add WA assist button + prefill panel modal to `PayrollWeekDetailPage.tsx` | Step 6 |
-
-Steps 2-4 (CA) and 5-7 (WA) can proceed in parallel after Step 1.
+| Feature | Touches Existing Code | New Tables/Columns | New Routes | New React Components |
+|---------|-----------------------|--------------------|------------|----------------------|
+| Multi-user | authMiddleware (every project route) | `project_members`, `users.invite_token`, `users.invite_token_exp` | 4 invite/member routes | TeamSettingsPanel, InviteAcceptPage |
+| Payroll import | None (new parallel flow) | `payroll_imports` | 2 import routes | PayrollImportModal |
+| SSN encryption | `POST /workers`, `PATCH /workers/:id`, CA/WA XML exports | `workers.ssn_encrypted` | None new | AddWorkerForm/EditWorkerForm (SSN field) |
+| Agency status | CA eCPR modal (Phase 29), WA assist panel (Phase 30) | `payrollWeeks.caEcprSubmittedAt`, `payrollWeeks.waLniSubmittedAt`, `agency_submissions` | None new | SubmissionStatusBadge |
 
 ---
 
 ## Sources
 
-- CA CPR.xsd (v1.3): [https://www.dir.ca.gov/Public-Works/CPR/CPR.xsd](https://www.dir.ca.gov/Public-Works/CPR/CPR.xsd) — HIGH confidence (fetched directly 2026-03-26, full schema extracted)
-- CA eCPR XML Guidelines: [https://www.dir.ca.gov/Public-Works/CPR/eCPRXMLGuideline.pdf](https://www.dir.ca.gov/Public-Works/CPR/eCPRXMLGuideline.pdf) — HIGH confidence
-- WA PWIA xmlschema.xsd: [https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd](https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd) — HIGH confidence (fetched directly 2026-03-26, all elements and types extracted)
-- Existing codebase — directly inspected: `export.ts`, `a1131Generator.ts`, `f700Generator.ts`, `payrollService.ts`, `PayrollWeekDetailPage.tsx`, `schema.ts`, `index.ts`
+- California DIR eCPR XML Upload User Guide:
+  https://www.dir.ca.gov/Public-Works/documents/CPR-XML-Upload-User-Guide.pdf
+- California DIR Certified Payroll Reporting page:
+  https://www.dir.ca.gov/Public-Works/Certified-Payroll-Reporting.html
+- Washington L&I PWIA step-by-step instructions (XML submission confirmed):
+  https://lni.wa.gov/licensing-permits/_docs/pwia-step-by-step-instructions.pdf
+- ADP Workforce Now CSV export format:
+  https://kb.7shifts.com/hc/en-us/articles/4417520074387-ADP-Workforce-Now-US-Payroll-Export
+- Node.js AES-256-GCM implementation reference:
+  https://gist.github.com/rjz/15baffeab434b8125ca4d783f4116d81
+- SQLite-native background job system (no Redis pattern):
+  https://jasongorman.uk/writing/sqlite-background-job-system/
+- Existing schema: src/server/db/schema.ts (read directly)
+- Project context: .planning/PROJECT.md (read directly)
 
 ---
 
-*Architecture research for: CA eCPR XML export and WA PWIA submission assist (v2.5)*
-*Researched: 2026-03-26*
-
----
----
-
-# Prior Architecture Research (v2.4 — preserved for reference)
-
-**Domain:** HCC Prevailing Wage v2.4 — Ship-Ready + Design Elevation
-**Researched:** 2026-03-24
-**Confidence:** HIGH — based on direct codebase analysis of all affected files
-
----
-
-## System Overview (as of v2.3)
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                         React Client (Vite)                             │
-│  ┌──────────────┐  ┌──────────────────┐  ┌────────────────────────┐   │
-│  │ DashboardPage│  │PayrollWeekDetail  │  │ WorkerCompliance       │   │
-│  │  (+ compliance│  │  (+ PDF generate) │  │ HistoryPage            │   │
-│  │   status filt)│  │                  │  │  (+ CSV export)        │   │
-│  └──────┬───────┘  └────────┬─────────┘  └──────────┬─────────────┘  │
-│         │                   │                        │                 │
-│  ┌──────┴───────────────────┴────────────────────────┴──────────────┐ │
-│  │              TanStack Query (cache + invalidation)                │ │
-│  └──────────────────────────────┬───────────────────────────────────┘ │
-└─────────────────────────────────┼──────────────────────────────────────┘
-                                  │ fetch /api/*
-┌─────────────────────────────────┼──────────────────────────────────────┐
-│                          Express Server                                 │
-│  ┌───────────────┐  ┌──────────────────┐  ┌──────────────────────────┐ │
-│  │/api/export    │  │/api/compliance   │  │/api/projects             │ │
-│  │  /wh347/:id   │  │  /project/:id    │  │  GET /?status=           │ │
-│  │  /csv/lcp/:id │  │  /worker/:id/    │  │  PATCH /:id              │ │
-│  │  /csv/emars/:id│  │    history       │  │                          │ │
-│  │  [+ state PDFs]│  │  /:weekId        │  │                          │ │
-│  │               │  │  [+ /projects/   │  │                          │ │
-│  │               │  │    summary]      │  │                          │ │
-│  └───────┬───────┘  └────────┬─────────┘  └────────────┬─────────────┘ │
-│          │                   │                          │               │
-│  ┌───────┴───────────────────┴──────────────────────────┴────────────┐ │
-│  │   Services: payrollService, complianceService, wh347Generator,    │ │
-│  │             stateFormGenerator (NEW), csvExporter                  │ │
-│  └──────────────────────────────┬────────────────────────────────────┘ │
-└─────────────────────────────────┼──────────────────────────────────────┘
-                                  │ Drizzle ORM
-┌─────────────────────────────────┼──────────────────────────────────────┐
-│  SQLite                                                                 │
-│  projects (status, userId, state, county, fundingType, ...)            │
-│  payrollWeeks (submitted_at, submitted_to, amendment_number, ...)      │
-│  payrollEntries (baseRateSnapshot, fringeRateSnapshot, grossWages,...) │
-│  workers │ workerClassifications │ wageDeterminations                  │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Q1: State Form Route Design
-
-### Recommendation: Single parametric route with a form-type enum
-
-Register one route:
-
-```
-GET /api/export/state-form/:weekId?form=ca-dir|wa-li
-```
-
-This sits alongside the existing routes in `export.ts`:
-
-```typescript
-// Existing:
-router.get('/wh347/:weekId', ...)
-router.get('/csv/lcptracker/:weekId', ...)
-router.get('/csv/emars/:weekId', ...)
-
-// New:
-router.get('/state-form/:weekId', ...)
-```
-
-**Why one route, not two separate routes:**
-
-The ownership check, week/project load, and entry fetch are identical for both CA DIR and WA L&I. The only difference between them is which generator function is called and which PDF filename is returned. A form-type query param keeps that differentiation at the generation layer without duplicating 30 lines of auth/data-loading boilerplate.
-
-The alternative — `/api/export/ca-dir/:weekId` and `/api/export/wa-li/:weekId` — would produce two routes that are structurally identical up to the generator call. The `?form=` param makes the branching point explicit and leaves room for future state forms (NY DOL, etc.) without adding a new route per form.
-
-**Implementation shape:**
-
-```typescript
-// routes/export.ts — new handler at end of file before export
-router.get('/state-form/:weekId', async (req, res) => {
-  const weekId = req.params.weekId as string;
-  const formType = req.query.form as string;
-  const userId = req.user!.userId;
-
-  if (!['ca-dir', 'wa-li'].includes(formType)) {
-    res.status(400).json({ error: 'Invalid form type. Use: ca-dir or wa-li' });
-    return;
-  }
-
-  // Same ownership check + data load as /wh347/:weekId
-  // ...
-
-  // Branch on formType:
-  if (formType === 'ca-dir') {
-    const pdf = await fillCaDirForm(data, templateBytes);
-    res.setHeader('Content-Disposition', `attachment; filename="ca-dir-${weekId}.pdf"`);
-    res.end(Buffer.from(pdf));
-  } else {
-    const pdf = await fillWaLiForm(data, templateBytes);
-    res.setHeader('Content-Disposition', `attachment; filename="wa-li-${weekId}.pdf"`);
-    res.end(Buffer.from(pdf));
-  }
-});
-```
-
-**New files (server-side):**
-
-- `src/server/services/caDirGenerator.ts` (NEW) — mirrors `wh347Generator.ts` structure: exports `fillCaDirForm(data, templateBytes): Promise<Uint8Array>`, uses `pdf-lib` coordinate overlay on the CA DIR official template
-- `src/server/services/waLiGenerator.ts` (NEW) — same pattern for WA L&I form
-- `assets/ca-dir-official.pdf` (NEW) — CA DIR PWC 100 or equivalent official template
-- `assets/wa-li-official.pdf` (NEW) — WA L&I Certified Payroll Report template
-
-**Modified files (server-side):**
-
-- `src/server/routes/export.ts` (MODIFIED) — add single `/state-form/:weekId` handler
-
-**Client trigger:** Add "Download CA DIR" / "Download WA L&I" buttons in `PayrollWeekDetailPage.tsx` using the same fetch-driven Blob download pattern as the existing WH-347 button (confirmed working pattern from v2.2). Only show the button when the project's `state` matches the form's jurisdiction (`project.state === 'CA'` for CA DIR, `project.state === 'WA'` for WA L&I).
-
-**State data note:** `stateWageAdapter.ts` already defines `CaDirAdapter` and `WaLiAdapter` for wage lookups. The CA/WA states are fully supported in the wage determination layer. State form generation is a new output concern only.
-
----
-
-## Q2: Contractor Guidance System Architecture
-
-### Recommendation: HelpText primitive + inline prose. No sidebar, no feature tour.
-
-The existing UI primitive set (`Card`, `Button`, `Badge`, `PageHeader`, `EmptyState`) already handles the structural layer. The guidance system needs only one new primitive.
-
-**New primitive: `HelpText.tsx`**
-
-```typescript
-// src/client/components/ui/HelpText.tsx
-// Renders contextual guidance inline with form fields or section headers.
-// Two variants:
-//   inline — small muted text below a form field label
-//   callout — slightly elevated block with an icon, for multi-sentence guidance
-
-interface HelpTextProps {
-  children: React.ReactNode;
-  variant?: 'inline' | 'callout';
-}
-```
-
-This is a dumb display component — no state, no context, no provider. That is the correct call for this scope.
-
-**Pattern: guidance is co-located with the feature it describes.**
-
-Do not use a context provider, a help sidebar, or a tooltip system. Those patterns assume the guidance content is decoupled from the UI element — appropriate for multi-user SaaS with role-based help. For a single-user compliance workflow tool, the guidance lives on the page near the action it explains.
-
-Specific application per page:
-
-| Page | Guidance type | Where |
-|------|--------------|-------|
-| `LandingPage.tsx` | Prose explainer (already has sections) | Existing marketing sections — no new component needed |
-| `ProjectDetailPage.tsx` | `HelpText` callout on 4-step workflow indicator | Below step labels, explaining what each step requires |
-| `PayrollEntryPage.tsx` | `HelpText` inline under classification selector | Explains rate snapshot behavior, fringe credit |
-| `WorkersPage.tsx` | `EmptyState` with action (already exists) | Update message copy to explain why workers come first |
-| `PayrollWeekDetailPage.tsx` | `HelpText` callout above WH-347 download | Explains what the form is and when to submit |
-| `DashboardPage.tsx` | `EmptyState` with action (already exists) | Update action label to "Create Your First Project" with subtitle |
-
-**Tooltips: use sparingly, only for icon-only controls.**
-
-Tooltips require hover, which is problematic on touch devices. The existing compliance badges have enough visual affordance. Use `title` attribute for brief hover labels on icon buttons where no text label fits — do not introduce a tooltip library.
-
-**No sidebar guidance panel.** A sidebar would occupy permanent horizontal real estate on every page to serve content a contractor only needs the first three times. The compliance software is used repeatedly by trained users. Guidance should fade into the background, not be permanently prominent.
-
-**New files:**
-- `src/client/components/ui/HelpText.tsx` (NEW) — single primitive, ~30 lines
-
-**Modified files:**
-- `src/client/pages/ProjectDetailPage.tsx` — add callout HelpText under workflow steps
-- `src/client/pages/PayrollEntryPage.tsx` — add inline HelpText under key fields
-- `src/client/pages/PayrollWeekDetailPage.tsx` — add callout HelpText above WH-347 download
-- `src/client/pages/DashboardPage.tsx` — update EmptyState message copy
-- `src/client/pages/WorkersPage.tsx` — update EmptyState message copy
-
----
-
-## Q3: UI/UX Overhaul Build Order
-
-### Recommendation: tokens → components → pages. Photography via CSS custom property, loaded from `public/`.
-
-**Build order and rationale:**
-
-1. **Design tokens first (`src/client/index.css`)**
-
-   Add new tokens to the existing `@theme` block. The existing token architecture is correct — this is an extension, not a replacement:
-
-   ```css
-   /* New tokens for v2.4 */
-   --color-surface-dark: #1a1a1a;        /* full dark surface */
-   --color-surface-dark-alt: #242424;    /* card on dark background */
-   --color-brand-gold-dim: #c9a10e;      /* hover state for gold buttons */
-   --color-gold-gradient-start: #F5C518;
-   --color-gold-gradient-end: #c9a10e;
-   --shadow-card-elevated: 0 4px 12px 0 rgb(0 0 0 / 0.12), 0 2px 4px -1px rgb(0 0 0 / 0.08);
-   ```
-
-   Do not hardcode gradient values in JSX. Define them as CSS custom properties and reference them in component styles. This preserves the existing constraint: all brand values via `@theme` tokens.
-
-2. **Update `Card.tsx` and `Button.tsx` for depth/shadow variants**
-
-   The Card component needs an `elevated` variant that applies `shadow-card-elevated` and slightly stronger border. Do not change existing variant behavior — add the new variant alongside.
-
-   The Button component may need a `gold` variant (filled gold background, dark text) for primary CTAs on dark surfaces. Verify against current `primary` variant behavior before adding.
-
-3. **Pages last — apply tokens and photograph backgrounds page by page**
-
-   Start with `LandingPage.tsx` (highest visual impact, not behind auth). Then `DashboardPage.tsx`. Auth pages last (least visible to returning users).
-
-**Photography integration: `public/` directory + CSS background-image**
-
-There is currently no `public/` directory. Create it. Vite serves `public/` at the root path with no bundling — the correct approach for large static assets like photographs.
-
-```
-/public/
-  hero-construction.jpg      (LandingPage hero section)
-  dashboard-bg.jpg           (DashboardPage header band, optional)
-```
-
-Reference in CSS, not in JSX:
-
-```css
-/* In index.css or a page-specific <style> block */
-.hero-section {
-  background-image: url('/hero-construction.jpg');
-  background-size: cover;
-  background-position: center;
-}
-```
-
-Do not import images via `import heroImg from './hero-construction.jpg'` in React components unless you need Vite's asset hashing (which is not needed for manually managed brand photography). Direct `/public` paths are simpler, cacheable, and swappable without a rebuild.
-
-**Dark gold gradient pattern:**
-
-```css
-.gradient-gold {
-  background: linear-gradient(135deg, var(--color-gold-gradient-start), var(--color-gold-gradient-end));
-}
-```
-
-Applied as a Tailwind utility via `@layer utilities` in `index.css`, not as an inline style. This keeps the constraint: no hardcoded hex in JSX.
-
-**New files:**
-- `public/` directory (NEW)
-- `public/hero-construction.jpg` (NEW — sourced externally)
-- Potentially `public/dashboard-bg.jpg` (NEW — optional)
-
-**Modified files:**
-- `src/client/index.css` — new tokens, new utility classes
-- `src/client/components/ui/Card.tsx` — elevated variant
-- `src/client/components/ui/Button.tsx` — verify if gold variant needed
-- `src/client/pages/LandingPage.tsx` — apply hero background, gradient sections
-- `src/client/pages/DashboardPage.tsx` — apply elevated card styling
-
----
-
-## Q4: Dashboard Compliance Status Filter Endpoint
-
-### Recommendation: `GET /api/compliance/projects/summary` returns per-project status keyed by projectId.
-
-**Route design:**
-
-Add to `src/server/routes/compliance.ts` — must be registered before `/:weekId` to avoid wildcard capture (the existing file already documents this pattern and applies it for `/project/:projectId` and `/worker/:workerId/history`):
-
-```
-GET /api/compliance/projects/summary
-Response: {
-  projects: Array<{
-    projectId: string,
-    status: 'compliant' | 'violations' | 'no-payroll'
-  }>
-}
-```
-
-The three status values map cleanly to the filter UI:
-- `compliant` — at least one week exists, no violations found in any week
-- `violations` — at least one week has `hasViolations: true`
-- `no-payroll` — `listPayrollWeeks(projectId)` returns empty array
-
-**Why this shape (not `badge: string`):**
-
-The existing `/api/compliance/project/:projectId` returns `{ badge: 'violations' | 'clean', weekCount, lastWeekNumber }`. That endpoint is per-project and called inside `ProjectCard`. The summary endpoint is dashboard-level and batches all projects at once. Using `status` instead of `badge` avoids confusion between the two endpoints and gives the filter the clean enum it needs.
-
-**Server implementation sketch:**
-
-```typescript
-// In compliance.ts — before /:weekId handler
-complianceRouter.get('/projects/summary', requireAuth, async (req, res) => {
-  const userId = req.user!.userId;
-  const db = getDb();
-
-  // Fetch all active projects for this user
-  const userProjects = await db.select()
-    .from(schema.projects)
-    .where(eq(schema.projects.userId, userId));
-
-  const results = await Promise.all(
-    userProjects.map(async (project) => {
-      const weeks = await listPayrollWeeks(project.id);
-      if (weeks.length === 0) {
-        return { projectId: project.id, status: 'no-payroll' as const };
-      }
-      for (const week of weeks) {
-        const result = await computeCompliance(db, week.id);
-        if (result?.hasViolations) {
-          return { projectId: project.id, status: 'violations' as const };
-        }
-      }
-      return { projectId: project.id, status: 'compliant' as const };
-    })
-  );
-
-  res.json({ projects: results });
-});
-```
-
-**Performance note:** `computeCompliance()` is fast (reads snapshots, no live lookups) but it is called per-week per-project. For a contractor with 20 projects × 30 weeks each, this is 600 synchronous computations. Use `Promise.all` across projects (as shown) to parallelize at the project level. Document this as a known O(projects × weeks) operation — acceptable for a single-user app. If a contractor builds up hundreds of projects over years, add a `?projectIds=` param to allow the client to batch only visible projects.
-
-**Client-side filter integration in `DashboardPage.tsx`:**
-
-```typescript
-// Fetch summary once on mount alongside project list
-const { data: complianceSummary } = useQuery({
-  queryKey: ['compliance-summary'],
-  queryFn: () => fetch('/api/compliance/projects/summary').then(r => r.json()),
-  staleTime: 60_000,
-});
-
-// Build a lookup map
-const complianceByProject = useMemo(() =>
-  Object.fromEntries(
-    (complianceSummary?.projects ?? []).map(p => [p.projectId, p.status])
-  ), [complianceSummary]);
-
-// Add compliance filter state
-const [complianceFilter, setComplianceFilter] = useState<'all' | 'compliant' | 'violations' | 'no-payroll'>('all');
-
-// Extend existing filteredProjects useMemo
-const filteredProjects = useMemo(() =>
-  projects
-    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter(p => fundingTypeFilter === 'all' || p.fundingType === fundingTypeFilter)
-    .filter(p => complianceFilter === 'all' || complianceByProject[p.id] === complianceFilter),
-  [projects, searchTerm, fundingTypeFilter, complianceFilter, complianceByProject]
-);
-```
-
-This does not pass the compliance badge as a prop to `ProjectCard` — `ProjectCard` continues to fetch its own compliance badge via its existing `useQuery` for display purposes. The summary endpoint is only for filter gating in `DashboardPage`. This avoids prop threading through `ProjectCard`.
-
-**Modified files:**
-- `src/server/routes/compliance.ts` (MODIFIED) — add `/projects/summary` before `/:weekId`
-- `src/client/pages/DashboardPage.tsx` (MODIFIED) — add compliance filter state + useMemo extension
-
----
-
-## Q5: Production Deployment — SQLite Persistence
-
-### Recommendation: Volume mount on Railway or Fly.io. Do not migrate to Postgres. Do not use Turso yet.
-
-**Decision: volume mount is the right call for a single-user app at this stage.**
-
-The three options evaluated:
-
-| Option | Pros | Cons | Verdict |
-|--------|------|------|---------|
-| Volume mount (Railway/Fly.io) | Zero code change, SQLite stays, simple ops | Volume must be configured manually, container restarts can lose ephemeral state if volume path misconfigured | USE THIS |
-| Turso (libSQL cloud) | Replicated, no volume needed, branching for dev/prod | Requires replacing `better-sqlite3` with `@libsql/client`, rewriting Drizzle config, async driver vs sync driver mismatch | Defer to v3 if multi-device needed |
-| Postgres (Neon/Supabase) | Standard production DB, no volume management | Full migration of all Drizzle schema and queries, JSON/text type differences, `better-sqlite3` removed, full test suite re-run | Out of scope |
-
-**Why Postgres migration is wrong for v2.4:**
-
-The app has 1,522 passing tests as of v2.3. A Postgres migration would require rewriting the Drizzle schema (`sqliteTable` → `pgTable`), auditing every raw query, updating the test setup, and re-validating all tests. This is a 2–3 day effort that produces no user-visible value. The Postgres migration is a future milestone, not a v2.4 item.
-
-**Why Turso is premature:**
-
-Turso requires switching from `better-sqlite3` (synchronous) to `@libsql/client` (async). Drizzle supports both drivers but the adapter is different. All `db.get()` calls in the codebase (there are several in `stateWageAdapter.ts`) use the synchronous API. This is a non-trivial driver swap. Worth doing when multi-device or collaborative access is needed. Not now.
-
-**Volume mount implementation:**
-
-```
-# Railway: attach a persistent volume to /app/data
-# Set environment variable:
-DATABASE_PATH=/app/data/prevailing-wage.sqlite
-
-# In src/server/db/index.ts — read from env:
-const dbPath = process.env.DATABASE_PATH ?? './prevailing-wage.sqlite';
-```
-
-The current `getDb()` likely uses a hardcoded path. The only required code change is making the path configurable via environment variable.
-
-**Fly.io is the preferred host over Railway for volume stability.** Railway's volume mount is newer and has documented edge cases around IOPS limits. Fly.io volumes are mature and well-documented for SQLite workloads. Either works; Fly.io is lower risk.
-
-**Env config required for production:**
-
-```
-DATABASE_PATH=/app/data/prevailing-wage.sqlite
-JWT_SECRET=<strong random value>
-SAM_GOV_API_KEY=<production key>
-NODE_ENV=production
-PORT=4099
-```
-
-**Auth hardening note:** The existing JWT-in-httpOnly-cookie pattern is correct for production. The constraint from `PROJECT.md` ("do not change auth model") is right. The only hardening needed is ensuring `JWT_SECRET` is a strong value from environment, not a hardcoded fallback.
-
----
-
-## Component Map: New vs. Modified (v2.4)
-
-| File | Status | Change |
-|------|--------|--------|
-| `src/server/routes/export.ts` | MODIFIED | Add `GET /state-form/:weekId?form=` handler |
-| `src/server/routes/compliance.ts` | MODIFIED | Add `GET /projects/summary` before `/:weekId` |
-| `src/server/services/caDirGenerator.ts` | NEW | CA DIR form filler using pdf-lib coordinate overlay |
-| `src/server/services/waLiGenerator.ts` | NEW | WA L&I form filler using pdf-lib coordinate overlay |
-| `src/server/db/index.ts` | MODIFIED | Read `DATABASE_PATH` from env |
-| `src/client/components/ui/HelpText.tsx` | NEW | Inline and callout guidance primitive |
-| `src/client/components/ui/Card.tsx` | MODIFIED | Add `elevated` shadow variant |
-| `src/client/components/ui/Button.tsx` | MODIFIED | Verify/add gold variant for dark surface CTAs |
-| `src/client/index.css` | MODIFIED | New @theme tokens (dark surface, gold gradient, elevated shadow), new utility classes |
-| `src/client/pages/DashboardPage.tsx` | MODIFIED | Compliance status filter, complianceSummary fetch, filter useMemo extension |
-| `src/client/pages/PayrollWeekDetailPage.tsx` | MODIFIED | State form download buttons (conditional on project.state), HelpText callout |
-| `src/client/pages/LandingPage.tsx` | MODIFIED | Hero photography, gradient sections |
-| `src/client/pages/ProjectDetailPage.tsx` | MODIFIED | HelpText callouts on workflow steps |
-| `src/client/pages/PayrollEntryPage.tsx` | MODIFIED | HelpText inline on key fields |
-| `src/client/pages/WorkersPage.tsx` | MODIFIED | EmptyState copy update |
-| `src/client/pages/WorkerComplianceHistoryPage.tsx` | MODIFIED | CSV export button |
-| `assets/ca-dir-official.pdf` | NEW | CA DIR official form template |
-| `assets/wa-li-official.pdf` | NEW | WA L&I official form template |
-| `public/hero-construction.jpg` | NEW | Hero photography asset |
-
----
-
-*Architecture research for: HCC Prevailing Wage v2.4 — Ship-Ready + Design Elevation*
-*Researched: 2026-03-24*
+*Architecture research for: HCC Prevailing Wage v3.0 -- Team & Integration milestone*
+*Researched: 2026-03-27*

@@ -1420,3 +1420,384 @@ Verify each against current schema before writing migrations. Use add-only migra
 
 *Feature research for: HCC Prevailing Wage -- v2.5 CA eCPR XML export and WA PWIA submission assist*
 *Researched: 2026-03-26*
+
+---
+---
+
+## Part 7: v3.0 Feature Research — Team Accounts, Payroll Import, SSN Encryption, Agency Portal Auto-Submit (2026-03-27)
+
+**Milestone context:** Subsequent milestone adding multi-user team access, QuickBooks/ADP import, AES-256 SSN encryption at rest, and agency portal direct submission (research-gated). All existing single-user payroll, compliance, project, and form generation features are already shipped in v2.5.
+
+**Confidence:** HIGH for team invite patterns (standard SaaS, well-documented); HIGH for CA DIR API non-existence (confirmed via official DIR FAQ + vendor documentation); HIGH for WA L&I API non-existence (confirmed: XML upload is portal-only, no programmatic endpoint); MEDIUM for QuickBooks import field mapping (general CSV fields documented, exact column names vary by export type); MEDIUM for ADP import (field-level documentation requires ADP Developer access; external adapter pattern confirmed); HIGH for AES-256 column encryption pattern (Node.js crypto module, standard pattern).
+
+---
+
+### Category 1: Multi-User Team Accounts
+
+#### What This Is
+
+An owner account can invite additional users by email. All invited members share full access to all projects under that account. No per-project permission tiers — flat model.
+
+#### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Invite user by email | Standard SaaS team feature; any collaborative tool ships with email invite | MEDIUM | Requires invite token table, expiry logic, email send, accept flow |
+| Accept invite via tokenized link | Industry standard for team invites; single-use token prevents replay | LOW | Token stored server-side; invalidated on acceptance |
+| Invitee registration via invite link | Invited users create an account through the invite URL; no pre-registration needed | LOW | Accept page pre-fills email from token; user sets password |
+| All members see all projects | Flat model aligns with the owner's intent and avoids per-project scoping complexity | LOW | Scoping is at the `account_id` level, not per-project |
+| Owner sees team member list | Owner needs to know who has access; basic management view | LOW | Simple list of users by account |
+| Revoke team member access | Compliance software handles sensitive payroll data; access removal is a must | LOW | Soft-delete team membership; do not destroy user record |
+| Pending invite status | Owner needs to know if an invite was accepted or is still outstanding | LOW | Invite table stores `status: pending | accepted | revoked` |
+
+#### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Invite expiry with resend | Invite links expire after 7 days (industry standard); owner can resend | LOW | Cron or on-read expiry check; resend endpoint regenerates token |
+| Role differentiation: owner vs member | Owner can invite/revoke; members can only view and edit payroll data | LOW | Single additional `role` column on team membership; only two values needed |
+| Audit trail for team actions | Compliance software: "who submitted this payroll" matters for DOL investigations | LOW | Already partially present via `submitted_by` column; extend to cover team actions |
+
+#### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Per-project permissions | "Alice should only see Project X" | Creates significant access-control complexity; increases DB query complexity everywhere; contradicts flat model decision | Flat model; if per-project scoping is needed, defer to v4.0 as a dedicated milestone |
+| RBAC with granular permission objects | Enterprise access control | Massive complexity for a two-role system (owner, member); permission tables, middleware updates across all routes | Two-role model: `owner` and `member`; document that this is a deliberate simplification |
+| SSO / SAML / OAuth provider login | Enterprise identity management | Out of scope for a small contractor tool; adds auth vendor dependency | JWT + email/password; documented as the planned auth stack |
+| Self-serve org deletion | "I want to close my account" | Destroys all payroll records; 3-year retention requirement (29 CFR 3.9) prevents this | Contact-to-delete flow; preserve records even if owner cancels |
+
+#### Data Model Requirements
+
+New table: `team_invites`
+- `id` — primary key
+- `account_id` — FK to accounts/users table (the owner's account)
+- `invited_email` — email address of invitee
+- `token` — cryptographically random, single-use
+- `expires_at` — timestamp (7 days from creation)
+- `status` — enum: `pending | accepted | revoked`
+- `created_at`
+
+New column on `users` table (or new `team_memberships` table):
+- `account_id` (FK) — which account this user belongs to
+- `role` — enum: `owner | member`
+
+**Account scoping impact:** Every existing query that fetches projects, workers, payroll data must be scoped to `account_id`. This is the highest-complexity part of the team feature — not the invite flow itself. Every existing Express route handler must check `req.user.accountId` rather than (or in addition to) `req.user.id`.
+
+**Existing JWT model:** Current JWT contains `userId`. For team accounts, JWT must also encode `accountId` and `role`. This is a breaking change to the auth middleware and token payload — must be coordinated with all existing route guards.
+
+---
+
+### Category 2: Payroll Provider Import (QuickBooks + ADP)
+
+#### What This Is
+
+The contractor exports payroll data from QuickBooks or ADP in CSV format, then uploads that file into the app. The app parses it and pre-populates the weekly payroll entry form. The contractor reviews and corrects before saving. Manual entry remains the final step — import is pre-population only, not auto-save.
+
+#### Why "Pre-populate, not auto-save" Is the Correct Model
+
+Federal certified payroll is a legal certification. The contractor signs (via Statement of Compliance) that the data is accurate. Auto-saving import data without review removes that deliberate certification step and creates liability if the source data was wrong. Every competing compliance tool (LCPtracker, Points North, eMars) that integrates with payroll providers requires the contractor to review the imported data before submission.
+
+#### What QuickBooks Actually Exports (Confirmed)
+
+QuickBooks exports several report types. For certified payroll import, the relevant ones are:
+
+**Payroll Summary Report (CSV export from Reports > Employees & Payroll > Payroll Summary):**
+- Employee name
+- Pay period (start/end date)
+- Wage type (Regular, Overtime, Holiday, etc.)
+- Hours by wage type (total for the period — NOT broken down by day)
+- Rate per hour
+- Gross wages
+- Deductions (taxes, garnishments, union dues)
+
+**QuickBooks Time Activity CSV (time tracking integration):**
+- Employee name
+- Date of time entry (day-level)
+- Hours for that day
+- Customer/Job (maps to project)
+- Service item (maps to trade classification)
+
+**Critical gap — no daily hours breakdown in Payroll Summary:** The Payroll Summary report provides total hours per pay period by wage type. It does NOT provide hours broken down by day of week. The HCC app's payroll entry model requires daily hours (Mon/Tue/Wed/Thu/Fri/Sat/Sun × ST/OT). This gap means a Payroll Summary CSV import can only pre-populate total hours, not the per-day breakdown. The contractor must either: (a) provide a Time Activity export alongside the Payroll Summary, or (b) manually fill in the daily breakdown after import.
+
+**Recommended import UX:** Two-step — import populates total hours and worker match by name, and the contractor manually distributes hours across days. This is the pattern used by Points North (confirmed: "imports employee data, hours by project, fringe benefit details... into formatted compliance reports" — Points North requires user review before generating WH-347).
+
+#### What ADP Actually Exports (Confirmed)
+
+ADP Workforce Now exports include:
+
+**ADP Export (PRcccEPI.csv format for ADP WFN):**
+- Employee first name, last name
+- SSN (full — present in ADP exports but app must not store it)
+- Pay period end date
+- Cost number (maps to project/job code)
+- Hourly rate
+- Regular hours, overtime hours (total for period)
+- Various deduction fields
+
+**ADP Marketplace certified payroll integration:** Points North's ADP integration (confirmed via ADP Marketplace listing) pulls "employee data, hours by day, project information, paycheck values" — suggesting ADP data contains day-level detail when time tracking is used within ADP WFN. However, this integration uses ADP's private API (not a public CSV). For a CSV-based import, the field set matches the WFN export format above.
+
+**Critical gap — SSN in ADP export:** ADP exports contain the full SSN. The app must never store or persist the full SSN from an import file. Import parsing must discard the SSN field entirely (or if the v3.0 SSN encryption feature is shipped, store only the encrypted full SSN per Category 3 below).
+
+#### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| CSV file upload UI with format validation | Contractors expect a file picker; rejected files need a clear error | LOW | File input + MIME/extension check before parse |
+| Column mapping screen | QuickBooks and ADP export different column names; user maps "Employee Name" → worker name field | MEDIUM | Per-import-source template + fallback manual mapping |
+| Worker name matching to existing workers | Import must link to an existing worker on the project; fuzzy match by name | MEDIUM | Case-insensitive exact match first; then Levenshtein-distance fuzzy match for typos |
+| Pre-populated entry form for review | Show what was imported; contractor edits before saving | LOW | Presents existing PayrollEntry form pre-filled from import data |
+| Unmatched worker warning | If import contains a worker not on the project, flag it (do not silently skip) | LOW | Warning list of unmatched names; user can add worker first, then re-import |
+
+#### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| QuickBooks-specific column template | Pre-built mapping for common QB export format removes manual column mapping step | LOW | Hard-code column names from QB Payroll Summary; allow override |
+| ADP-specific column template | Same for ADP WFN export format | LOW | Hard-code PRcccEPI.csv column layout |
+| Import history / last imported date | Shows contractor when data was last imported; prevents double-import confusion | LOW | `import_events` table: source, imported_at, week_id |
+| Trade classification match from import | If ADP/QB export contains job code or cost number, attempt to match to project classification | MEDIUM | Requires job code → classification mapping table per project |
+
+#### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Auto-save import without review | "Less clicking" | Removes deliberate certification step; legal risk | Always present for review; never auto-save certified payroll data |
+| Store full SSN from import file | "The ADP file has it, use it" | PII exposure; not required for certified payroll (last 4 is sufficient for WH-347) | Discard full SSN on import; store only last 4 (or encrypted full SSN if Category 3 is shipped) |
+| QuickBooks API (OAuth) integration | "Pull data directly from QB" | Requires Intuit developer app registration, OAuth flow, API quota management; scope explosion for a CSV import feature | CSV upload; document that QB export is a 2-minute operation |
+| ADP API integration | Same as QB API | ADP API requires ADP Marketplace app approval; enterprise-tier pricing; not feasible for a small contractor tool | CSV upload from ADP WFN export |
+| Import deductions automatically | Reduce rekeying | Deductions vary weekly and include garnishments, taxes, union dues — auto-imported values produce incorrect net pay if payroll period doesn't align exactly to WH-347 week | Import hours and rates only; deductions require manual entry |
+
+#### Data Model Requirements
+
+No new persistent tables required for the import feature itself. Import is a parse-and-pre-fill operation:
+1. CSV parsed in memory server-side
+2. Results returned to client as a JSON pre-fill payload
+3. Client populates the existing payroll entry form
+4. Contractor saves via the existing `POST /api/payroll-entries` endpoint
+
+Optional: `import_events` table for import history (small scope, low value in v3.0).
+
+**Existing payroll entry model compatibility:** The existing `payroll_entries` schema (with `baseRateSnapshot`, `fringeRateSnapshot`, daily hours columns) is the target. Import must map to these fields. The rate snapshot must still come from the DOL wage determination (not the QB/ADP rate) to ensure compliance — import provides hours and gross, rate snapshot comes from WD fetch as always.
+
+---
+
+### Category 3: AES-256 SSN Encryption at Rest
+
+#### What This Is
+
+Encrypt the full Social Security Number at rest in SQLite using AES-256. Decrypt only at export time, specifically when generating CA eCPR XML (which technically requires full SSN) or WA XML (same). The WH-347 form shows only last 4 — SSN is not decrypted for PDF generation.
+
+#### Why This Is Needed Now
+
+The v2.5 CA eCPR XML and WA PWIA XML technically require full SSN fields. Currently the app stores only `ssn_last4`. For v3.0, the full SSN can be collected and stored encrypted, enabling proper XML generation without exposing PII in the database.
+
+#### Confirmed Implementation Pattern (Node.js + SQLite)
+
+**Column-level AES-256-CBC encryption using Node.js built-in `crypto` module:**
+
+- No new npm package required — `crypto` is a Node.js built-in
+- Algorithm: `aes-256-cbc` (256-bit key, CBC mode, random IV per encryption)
+- Key management: environment variable (`SSN_ENCRYPTION_KEY`) — 32-byte hex string; never committed to source
+- Per-record IV: Generate `crypto.randomBytes(16)` per encrypt call; store as `iv_hex:ciphertext_hex` in the DB column
+- Column name: `ssn_encrypted` (text) — new column alongside existing `ssn_last4`; `ssn_last4` is retained and used everywhere except CA/WA XML export
+
+**Encrypt on write (worker creation / edit):**
+```
+plaintext SSN → crypto.createCipheriv('aes-256-cbc', key, iv) → iv_hex:ciphertext stored in ssn_encrypted
+```
+
+**Decrypt on read (export only):**
+```
+ssn_encrypted → split on ':' → iv + ciphertext → crypto.createDecipheriv → plaintext SSN
+```
+
+**Where decryption is called:** Only in the CA eCPR XML generator and WA CPR XML generator, immediately before writing the SSN element. The plaintext SSN is never assigned to a variable that escapes the XML generation function.
+
+#### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| AES-256 column encryption for full SSN | PII best practice; required to support CA/WA XML without storing plaintext SSN | MEDIUM | Node.js crypto module; add `ssn_encrypted` column; update worker create/edit |
+| Decryption only at XML export time | Full SSN surfaces only when technically needed (CA/WA XML) | LOW | Localize decrypt calls to XML generator functions; never pass plaintext through API responses |
+| Retain `ssn_last4` everywhere else | WH-347 only needs last 4; compliance history, UI, PDF generation should not change | LOW | No changes to existing WH-347, reports, UI — only add encrypted full SSN as separate column |
+| Environment variable key management | Key must not be in source code or DB | LOW | `SSN_ENCRYPTION_KEY` in `.env`; validated on startup |
+| Migration: add `ssn_encrypted` column | Add-only migration; existing rows get NULL default; prompt to re-enter on next edit | LOW | Standard Drizzle add-only migration |
+
+#### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Key rotation support | Encrypt a new key alongside old; re-encrypt on next access | HIGH | Significant complexity; defer to post-v3.0 |
+| Audit log for SSN decrypt calls | Record when full SSN was accessed, by whom, for what purpose | LOW | Log entry on each decrypt call: userId, purpose, timestamp |
+
+#### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Full database encryption (SQLCipher) | "Encrypt everything" | Requires replacing the SQLite driver with `@journeyapps/sqlcipher`; breaks existing `better-sqlite3` setup; migrations become complex; deployment on Render.com requires native build support | Column-level encryption for SSN only; `better-sqlite3` unchanged |
+| Display full SSN in UI after entry | "Contractor needs to verify SSN" | Full SSN display in browser is a PII exposure vector; once encrypted, should not be displayable | Show "SSN: ***-**-XXXX" (last 4 only) in UI; allow re-entry if correction needed |
+| Store full SSN in JWT or API response | "API consumer needs it" | Never transmit full SSN through the API layer; it is only needed in the server-side XML generator | Decrypt in-process on the server; never in API response body |
+
+#### Data Model Requirements
+
+New column on `workers` table:
+- `ssn_encrypted` — text, nullable (existing workers have NULL; new workers optionally provide full SSN)
+
+No changes to `ssn_last4` column — it remains the primary SSN field for all UI, PDF, and compliance features.
+
+**Key storage:** `SSN_ENCRYPTION_KEY` environment variable on Render.com (persistent disk deployment). If key is lost, encrypted SSNs cannot be recovered — document this clearly in ops notes.
+
+---
+
+### Category 4: Agency Portal Auto-Submit — API Existence Research
+
+#### Research Question
+
+Do CA DIR eCPR and WA L&I PWIA portals expose public REST APIs for direct programmatic submission from third-party software? Or is XML file upload the only non-manual method?
+
+#### Finding: CA DIR eCPR — NO PUBLIC API (HIGH CONFIDENCE)
+
+**Official source (CA DIR FAQ, confirmed 2025):** "Contractors have two (2) options within the eCPR system to submit CPRs: 1) using the manual iForm and/or 2) uploading via XML."
+
+No REST API, no OAuth endpoint, no developer API key program, no webhook — these are not mentioned anywhere in official DIR documentation.
+
+**Vendor confirmation (Sunburst Software Solutions, 2024–2025):** The process for third-party software is: generate XML file → user logs into DIR portal → user manually uploads XML file through the browser. Sunburst describes the portal as "NOT pretty or easy" and reported that since the June 2024 DIR website overhaul, the portal has had severe reliability issues requiring contractors to fall back to paper.
+
+**Quantum Software (2024–2025):** Same workflow confirmed — software generates XML, user uploads manually. Quantum's updates addressed portal compatibility issues, not API integration (there is no API to integrate with).
+
+**Conclusion:** CA DIR eCPR has no public API. The v3.0 "agency portal auto-submit" feature for CA is **not buildable as direct submission**. The existing v2.5 approach (generate CA eCPR XML → contractor uploads manually to portal) is correct and complete for CA.
+
+#### Finding: WA L&I PWIA — NO PUBLIC API (HIGH CONFIDENCE)
+
+**Official source (WA L&I XML Payroll Upload Guide):** The PWIA system accepts XML uploads through the SecureAccess Washington (SAW) portal. The submission workflow requires: login to secure.lni.wa.gov → select project → upload XML file through browser.
+
+**No programmatic submission endpoint is documented.** The L&I developer documentation does not exist in a form accessible without portal login. The XML schema is publicly available (`lni.wa.gov/licensing-permits/_docs/xmlschema.xsd`) but it is a schema definition for file validation, not an API endpoint.
+
+**LCPtracker (industry leader) pattern:** LCPtracker's WA L&I integration (per their CODOT guide) involves generating compliant XML and having the contractor upload it. There is no mention in any LCPtracker documentation of automated direct submission to WA L&I — the human portal step is required.
+
+**Additional constraint:** WA L&I PWIA involves two separate actions — Intent to Pay (before work begins) and Affidavit of Wages Paid (after completion). Both require portal interaction and L&I review/approval. The Intent approval step is a human process that cannot be automated regardless of API availability.
+
+**Conclusion:** WA L&I PWIA has no public API for programmatic submission. The v3.0 "agency portal auto-submit" feature for WA is **not buildable as direct submission**. The existing v2.5 approach (generate WA CPR XML + submission guide panel → contractor files in My L&I) is correct and complete for WA.
+
+#### Verdict: Agency Auto-Submit is NOT Buildable for Either Portal
+
+| Portal | Public API? | Evidence | Confidence |
+|--------|-------------|----------|------------|
+| CA DIR eCPR | NO | Official DIR FAQ: "two options: iForm or XML upload"; confirmed by Sunburst, Quantum vendor reports | HIGH |
+| WA L&I PWIA | NO | Official XML upload guide requires browser portal; no API docs exist; no vendor reports any programmatic submission | HIGH |
+
+**Recommendation:** The v3.0 milestone should formally remove "agency portal auto-submit" from scope and document this finding. The research gate was the correct decision — the gate answer is NO for both portals. The v2.5 XML generation + manual upload guidance approach is the industry-standard pattern and is already fully shipped.
+
+#### What IS Buildable (If In-Scope)
+
+Not a replacement for auto-submit, but enhancements that reduce friction around the manual upload step:
+
+| Enhancement | What It Does | Complexity |
+|-------------|--------------|------------|
+| XML validation before download | Run the CA CPR XML schema (v1.3) and WA XSD against generated output before the contractor downloads it | LOW — xmlbuilder2 + schema validation |
+| Portal link shortcut | "Open CA DIR Portal" and "Open WA My L&I" buttons on the download success screen | LOW — static URLs, no API |
+| Submission checklist (already in v2.5) | Step-by-step portal instructions shown after XML download | Already shipped in v2.5 |
+| Upload confirmation tracking | Contractor marks "Uploaded to CA DIR" with date; stored on the week record | LOW — extends v2.3 submission tracking; no portal interaction |
+
+---
+
+### Feature Dependencies (v3.0)
+
+```
+Multi-User Team Accounts
+    └──requires──> account_id on all existing tables (projects, workers, payroll_weeks, payroll_entries)
+                       └──this is the largest scope item in v3.0 — all existing queries need account scoping
+    └──requires──> team_invites table (new)
+    └──requires──> JWT payload update: add accountId + role
+                       └──breaking change: all existing route middleware must be updated
+    └──independent of──> payroll import, SSN encryption, portal features
+
+Payroll Provider Import
+    └──requires──> existing payroll entry data model (already in v2.5 -- no new schema needed)
+    └──benefits from──> SSN encryption (Category 3) -- if importing ADP data that includes full SSN,
+                         encryption must be in place before persisting it
+    └──independent of──> team accounts, portal features
+
+SSN Encryption
+    └──requires──> ssn_encrypted column migration on workers table
+    └──enhances──> CA eCPR XML (full SSN now available for the <ssn> element)
+    └──enhances──> WA CPR XML (same)
+    └──independent of──> team accounts, payroll import
+
+Agency Portal Auto-Submit
+    └──BLOCKED: no public API for CA DIR eCPR (HIGH confidence)
+    └──BLOCKED: no public API for WA L&I PWIA (HIGH confidence)
+    └──Recommendation: remove from v3.0 scope; research gate returns NO for both portals
+```
+
+### Dependency Notes
+
+- **Account scoping is the highest-risk item in v3.0.** Adding `account_id` to every query sounds mechanical but touches every route handler, every Drizzle query, and the JWT middleware. A missed scope on one query means one team member can accidentally read another account's data. Requires a systematic audit pass, not opportunistic edits.
+- **Build SSN encryption before payroll import.** If ADP import ships without encryption and the contractor uploads an ADP file containing full SSNs, those SSNs would be silently discarded or logged somewhere. Encryption must be in place first to give the import a safe place to put the SSN field.
+- **JWT payload change must be coordinated.** Adding `accountId` and `role` to the JWT means existing issued JWTs are invalid after deployment. If the app is live on Render.com with active users, a forced re-login or token migration is needed. Plan this carefully.
+- **Portal auto-submit is off the table.** Do not defer to v3.1 — it is not a timing question, it is a capability question. The portals do not have APIs. Document this as a closed finding.
+
+---
+
+### Build Order Recommendation for v3.0
+
+Given the dependencies and risk profile:
+
+1. **SSN Encryption** — Lowest risk, standalone, enables import to be safe for ADP files. `ssn_encrypted` column migration + encrypt/decrypt functions + update worker create/edit. Also immediately improves CA/WA XML generators (can now emit real SSN instead of masked placeholder).
+2. **Payroll Provider Import** — Builds on existing payroll entry model. No new DB tables required. QuickBooks and ADP CSV parsers + column mapping UI + worker name matching.
+3. **Multi-User Team Accounts** — Highest risk (account scoping touches everything). Build last so SSN encryption and import are already stable before the large middleware refactor. Requires: team_invites table, JWT update, account_id on all queries, invite/accept email flow.
+4. **Agency Portal Auto-Submit** — Remove from scope. Research gate returns NO for both portals. v2.5 XML export + manual upload guidance is the confirmed industry-standard approach.
+
+---
+
+### Anti-Features (v3.0)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Per-project team permissions | "Subcontractor should only see their project" | Doubles access-control complexity; contradicts flat model decision | Flat model in v3.0; per-project scoping is a future milestone if demand is confirmed |
+| QuickBooks OAuth API integration | "Pull directly from QB, no export needed" | Intuit developer registration, OAuth flow, API quota, scope management — months of work for a marginal UX improvement over 2-minute CSV export | CSV upload only |
+| ADP direct API | Same rationale as QB | ADP Marketplace app approval, enterprise pricing | CSV upload from ADP WFN export |
+| CA DIR eCPR direct API submission | "One-click submission" | No public API exists (confirmed); building a screen-scraper would violate DIR ToS and break on every portal update | Generate XML → contractor uploads; v2.5 already handles this correctly |
+| WA L&I PWIA direct API submission | Same as CA | No public API exists (confirmed); Intent approval requires human L&I review regardless | Generate XML + submission guide; v2.5 already handles this correctly |
+| Full SSN visible in UI | "Verify what was entered" | PII exposure in browser; once encrypted, should not be displayed | Show last 4 only; re-entry if correction needed |
+| SQLCipher full-DB encryption | "Encrypt everything" | Replaces better-sqlite3 driver; breaks existing deployment; disproportionate complexity for what is essentially one PII field | AES-256 column encryption for ssn_encrypted only |
+
+---
+
+### Compliance Confidence Summary (v3.0)
+
+| Area | Confidence | Primary Source | Gaps |
+|------|------------|---------------|------|
+| CA DIR eCPR has no public API | HIGH | Official DIR FAQ (2025): "two options: iForm or XML upload"; Sunburst/Quantum vendor confirmation | None — this is a closed finding |
+| WA L&I PWIA has no public API | HIGH | Official WA L&I XML upload guide; no API docs found anywhere; LCPtracker pattern uses browser upload | None — this is a closed finding |
+| QuickBooks CSV field mapping | MEDIUM | QB Community docs; Points North integration description; QuickBooks Time Activity export format | Daily hours breakdown not available in Payroll Summary; QB API field-level spec requires developer access |
+| ADP CSV field mapping | MEDIUM | ADP WFN export format (PRcccEPI.csv); Points North ADP Marketplace listing | ADP API field-level detail requires ADP Marketplace developer access; field-for-field CSV spec requires hands-on export |
+| AES-256 column encryption pattern | HIGH | Node.js crypto module docs; standard encrypt-on-write/decrypt-on-read pattern; multiple confirmed implementations | None |
+| Team invite pattern | HIGH | Standard SaaS multi-tenant pattern; extensively documented across Node.js SaaS boilerplates | None — industry-standard, well-understood |
+| Account scoping complexity | HIGH (risk) | Multi-tenant SaaS architecture guidance; confirmed risk from WorkOS, Logto, Frontegg documentation | Every existing route needs audit — no shortcut |
+
+---
+
+## v3.0 Sources
+
+- [CA DIR eCPR FAQ (SB 854) — Official](https://www.dir.ca.gov/Public-Works/ecprfaq.html) — Confirmed: two submission options only (iForm, XML upload); no API
+- [CA DIR Certified Payroll Reporting — Official](https://www.dir.ca.gov/Public-Works/Certified-Payroll-Reporting.html) — XML schema v1.3; submission method confirmation
+- [Sunburst Software Solutions — 2024 CA DIR eCPR Changes](https://www.sunburstsoftwaresolutions.com/2024-ca-dir.htm) — Vendor confirmation: XML file → manual portal upload; no API integration
+- [Quantum Software — CA DIR eCPR New Site](https://www.quantumss.com/CADIReCPRnewsite.htm) — Vendor confirmation: same browser-upload-only workflow
+- [WA L&I XML Payroll Upload Guide (PDF)](https://lni.wa.gov/licensing-permits/_docs/xml%20payroll%20guide.pdf) — Portal-based XML upload; no API endpoint
+- [WA L&I PWIA Step-by-Step Instructions](https://lni.wa.gov/licensing-permits/_docs/pwia-step-by-step-instructions.pdf) — Human portal workflow confirmed
+- [WA L&I XML Schema (XSD)](https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd) — Schema definition only; not an API endpoint
+- [AGC of Washington — L&I Improvements to Prevailing Wage System](https://app.agcwa.com/posts/l-i-announces-improvements-to-prevailing-wage-online-system) — Portal messaging improvements; no API announced
+- [Points North — QuickBooks Integration](https://www.points-north.com/quickbooks) — Employee data, wages, hours by project transferred via QB integration; review-before-submit pattern confirmed
+- [Points North — ADP Marketplace (ADP Workforce Now)](https://apps.adp.com/en-US/apps/248331/points-north-certified-payroll-reporting-for-adp-workforce-now/features) — ADP export fields: employee data, hours by day, project info, paycheck values
+- [QuickBooks Community — CSV Payroll Export](https://quickbooks.intuit.com/learn-support/en-us/employees-and-payroll/csv-file-export-for-payroll/00/700576) — Payroll Summary report export; hours by wage type (not by day)
+- [QuickBooks Time Activity Import/Export](https://tprosupport.rightworks.com/kb/article/439-import-time-activities-into-quickbooks-online/) — Day-level hours available from Time Activities, not Payroll Summary
+- [Node.js AES-256-CBC Encryption Pattern](https://dev.to/jobizil/encrypt-and-decrypt-data-in-nodejs-using-aes-256-cbc-2l6d) — Confirmed pattern: crypto module, IV per record, column-level storage
+- [Build Multi-Tenant SaaS: Team Invite Pattern — Logto](https://blog.logto.io/build-multi-tenant-saas-application) — Invite token pattern; single-use, time-limited, JWT tenant scoping
+- [SaaS Team Invitation Email Best Practices — Sequenzy](https://www.sequenzy.com/blog/how-to-create-team-invitation-emails-saas) — 7-day expiry standard; single-use token; resend pattern
+
+---
+
+*Feature research for: HCC Prevailing Wage — v3.0 team accounts, payroll import, SSN encryption, agency portal auto-submit*
+*Researched: 2026-03-27*

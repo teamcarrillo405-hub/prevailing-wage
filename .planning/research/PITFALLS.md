@@ -1,216 +1,309 @@
 # Pitfalls Research
 
-**Domain:** Prevailing wage compliance app (v2.5) — adding CA eCPR XML export and WA PWIA submission assist to existing system
-**Researched:** 2026-03-26
-**Confidence:** HIGH (CA eCPR XSD obtained directly from dir.ca.gov/Public-Works/CPR/CPR.xsd; WA PWIA XSD obtained directly from lni.wa.gov/licensing-permits/_docs/xmlschema.xsd; portal failure patterns from United Contractors, Sunburst Software, CA DIR official communications)
+**Domain:** Prevailing wage compliance app — v3.0 Team & Integration milestone
+**Researched:** 2026-03-27
+**Confidence:** HIGH (system-specific analysis from source code review of routes, schema, middleware) / MEDIUM (external integration patterns from official docs and community sources)
+
+> Note: The previous version of this file covered v2.5 CA eCPR / WA PWIA pitfalls. That content is
+> preserved in git history. This file covers v3.0 Team & Integration pitfalls specifically.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: CA eCPR Requires Full 9-Digit SSN — Existing System Stores Only Last 4
+### Pitfall 1: IDOR Auth Bypass After Adding project_members — The Scattered Ownership Check Problem
 
 **What goes wrong:**
-
-The existing app stores `ssnLast4` (4 digits) for each worker, which is sufficient for the federal WH-347 and the CA A-1-131 PDF forms. The CA DIR eCPR XML schema (CPR.xsd v1.3) requires the full 9-digit SSN in the `<ssn>` element with pattern `[0-9]{9}`, and the same value must appear in the `name` element's `id` attribute formatted as `SSN::NAME`. There is no partial-SSN accommodation in the schema.
+Today every route independently checks `project.userId !== req.user!.userId`. When v3.0 adds a
+`project_members` table (flat model — all members see all projects), this check must change from
+a single equality test to a membership query. The failure mode is that some routes get the new
+membership check while others keep the old `userId` equality check. A team member who is not the
+project owner gets 403 from routes that were updated but 200 from routes that were missed —
+leaving inconsistent access. The reverse error (inverting the logic) silently returns data to
+unauthorized users without triggering any error.
 
 **Why it happens:**
-
-The app was intentionally designed to avoid storing full SSNs for privacy and security reasons. The WH-347 and A-1-131 forms only require last 4 digits. When eCPR XML is added, it is tempting to generate the file with the same truncated data already in the database — either by zero-padding the last 4 to fake a 9-digit value or by leaving the field empty.
+Ownership checks in this codebase are scattered across every route file independently:
+`projects.ts`, `workers.ts`, `payroll.ts`, `compliance.ts`, `export.ts`, `reports.ts`,
+`variance.ts`, `union.ts`, `gsa.ts`, `wages.ts`. Each performs `project.userId !== userId`
+at multiple call sites — some routes check twice (load + verify, then update + verify). A
+refactor that touches 9 files with multiple check sites per file will miss at least one.
 
 **How to avoid:**
-
-Do not fake or pad SSNs. The correct resolution is one of two paths: (1) Add an optional `ssnFull` encrypted column to workers for CA-specific use, entered only by contractors who opt into eCPR export, or (2) Add an inline SSN entry step to the eCPR export flow that captures the full SSN at generation time without persisting it. Option 2 is simpler and avoids database schema changes and the security implications of storing full SSNs. The export flow UI should clearly explain why the full SSN is needed and that it is not stored.
+Extract ownership resolution into a single shared service function —
+`assertProjectAccess(projectId, userId, db): Promise<Project>` — that encapsulates the
+membership check. Every route calls this function and receives the project back if access is
+granted, or throws a 403 HttpError if not. After the refactor, no route file should contain
+`project.userId !== userId` directly. Write a cross-tenant test suite before adding `project_members`:
+two users, two projects (one per user), every protected endpoint asserts 403 when accessed by the
+wrong user. This test suite becomes the regression gate.
 
 **Warning signs:**
+- Any route file still containing `.userId !== userId` or `.userId !== req.user` after the multi-user phase
+- Any new route added without calling `assertProjectAccess`
+- `GET /api/projects` list endpoint not filtering by team membership (returns all projects in the DB)
 
-If the eCPR XML generator references `worker.ssnLast4` and pads or zero-fills it to 9 digits, this is the pitfall occurring. Any test XML that passes schema validation with a fake SSN like `000000XXXX` will fail portal upload because the DIR portal validates SSN format against federal ITIN/SSN rules (no `000`, no `666`, no all-zeros in positions 6-9).
-
-**Phase to address:** CA eCPR XML generator phase — the SSN collection strategy must be decided before any generator code is written.
+**Phase to address:**
+Multi-user / team accounts phase — must be the first task in that phase. All other team features
+(invite, member list, member removal) depend on this being correct.
 
 ---
 
-### Pitfall 2: DIR Project ID Is an External Identifier Not in the Existing Database
+### Pitfall 2: Cross-Tenant Data Leak via Indirect Object References on Child Entity Routes
 
 **What goes wrong:**
-
-The CA DIR eCPR XML `<projectID>` field requires the numeric Project ID assigned by the CA DIR Public Works Online System (pattern: `[0-9]{1,18}`). This is completely separate from the `projectId` primary key in the local database. No existing data model field holds this value. If the XML generator uses the local `projectId` (a small integer like `42`) in the `<projectID>` element, the portal will reject the file immediately with no useful error — the uploaded file will be unassociated with any registered DIR project.
+Routes like `GET /api/projects/:projectId/workers` verify project ownership correctly. But routes
+that accept child entity IDs directly — `GET /api/workers/:workerId`, `PATCH /api/workers/:workerId`,
+payroll entry upserts, classification updates — query the child entity by ID without traversing the
+project ownership chain. In a single-user system this is safe because all IDs belong to one user.
+In a multi-user team, user A from Team 1 can observe worker UUIDs in their network traffic and
+request `GET /api/workers/<uuid-from-team-1>` while authenticated as a user from Team 2. If the
+worker route only checks "does this worker exist" and not "does this worker's project belong to a
+team this user is on," the response returns Team 1's data to Team 2.
 
 **Why it happens:**
-
-Both identifiers are called "project ID." The local database has a `projectId` column. Developers building the XML generator see the schema requires a `projectID` and populate it from the field that sounds right.
+UUID opacity is not a security boundary. UUIDs are visible in every React Query cache, every
+network response, every URL. The single-user assumption made them effectively private — that
+assumption evaporates with multi-user.
 
 **How to avoid:**
-
-Add a `dirProjectId` nullable varchar column to the `projects` table via a Drizzle migration. Surface a labeled input field in the CA eCPR export modal or project settings labeled "CA DIR Project ID (from DIR portal)" with a link to the DIR Public Works search. The XML generator must gate generation on this field being present. If it is null, display a pre-generation warning that instructs the user to look up their DIR Project ID before continuing.
+Every route accepting a child entity ID must traverse the parent chain to the project and call
+`assertProjectAccess`. Pattern: load the child entity, read its `projectId`, call
+`assertProjectAccess(projectId, req.user.userId, db)`. Do not rely on the child entity's own
+userId field (workers and entries have no userId — ownership is via projectId → project.userId).
 
 **Warning signs:**
+- Any route querying `workers`, `payrollEntries`, `workerClassifications`, `payrollWeeks`,
+  `unionTradeConfigs`, `gsaRates`, `projectBudgets`, or `otThresholds` by primary key without
+  also loading the project and calling `assertProjectAccess`
+- Tests that only assert 200/201 status but not 403 for cross-user access
 
-Any XML generator code that references `project.id`, `project.projectId`, or any numeric primary key for the `<projectID>` element. The DIR Project ID for real projects is typically 14-18 digits long; any short integer signals the wrong field is being used.
-
-**Phase to address:** CA eCPR XML generator phase — the DB migration for `dirProjectId` must be the first task in the phase.
+**Phase to address:**
+Multi-user / team accounts phase — simultaneous with Pitfall 1. Both are part of the same
+`assertProjectAccess` refactor.
 
 ---
 
-### Pitfall 3: CA eCPR Requires Contractor PWCR Registration Number (10 Digits) — Not in Existing System
+### Pitfall 3: Rate Snapshot Corruption During CSV Import — Silent Compliance Failure
 
 **What goes wrong:**
+QuickBooks and ADP CSV exports contain a pay rate column ("Regular Pay Rate," "Hourly Rate,"
+"Base Pay" — naming varies by version). If the import logic maps this column to
+`baseRateSnapshot` or `fringeRateSnapshot` in `payroll_entries`, the WH-347 will show the wrong
+rate. The compliance engine (`under-wage` check) fires based on `baseRateSnapshot` vs. the WD
+rate. If the snapshot is set to the imported payroll rate (which may coincidentally equal or
+exceed the WD rate), the compliance engine will not fire violations even when the worker was
+actually paid below prevailing wage.
 
-The `<contractorPWCR>` element in the eCPR schema requires either a 10-digit Public Works Contractor Registration number (pattern: `[0-9]{10}`) or the literal string `NA`. The app currently stores no PWCR number. New registrations in the DIR system now carry a `PW-LR-` prefix before the 10 digits (e.g., `PW-LR-1001032751`). If the full prefixed form is placed into the XML field, it fails the `[0-9]{10}` pattern validation. If the field is simply left as `NA`, the submission is technically valid but may trigger additional scrutiny from DIR auditors since a registered contractor should have this number.
+This is the most serious data integrity failure possible in this system. The WH-347 is a legally
+required certified document — any corruption of the rate data is a compliance failure, not just
+a software bug.
 
 **Why it happens:**
-
-PWCR is a CA-specific identifier that has no analog in the federal WH-347 workflow. When building the XML generator, developers will not know this number is needed and it has no natural source in existing data.
+The natural approach to CSV import is to map CSV columns to database columns. An implementer sees
+a "Rate" column and maps it to the `rateSnapshot` columns by name. The fact that snapshots must
+come from the wage determination cache (not from the payroll provider) is a compliance constraint
+that is not visible from the schema alone.
 
 **How to avoid:**
-
-Add a `caContractorPWCR` nullable varchar(10) field to the user profile or account settings. Strip the `PW-LR-` prefix when storing, keeping only the 10-digit numeric portion. Surface the input in the CA eCPR export modal with a helper link to the DIR PWCR lookup. Document in the UI that `NA` is permitted if the contractor is exempt from registration (e.g., certain small contracts under Labor Code 1771.1 threshold), but this is rare and should not be the default.
+The import logic must never accept rate data from the CSV as the snapshot value. The import flow
+must: (1) parse CSV to extract worker name, hours, and pay period; (2) match each worker to
+existing `workers` and `workerClassifications` records; (3) fetch `baseRateSnapshot` and
+`fringeRateSnapshot` from the WD cache exactly as the manual payroll entry UI does (via
+`getCachedClassifications`); (4) write entries with WD-sourced snapshots. The CSV pay rate may be
+stored as a separate `importedRate` field for audit trail purposes, but must never become the
+compliance snapshot. Enforce this at the service layer: if `baseRateSnapshot` is not sourced from
+the WD cache lookup, throw before writing.
 
 **Warning signs:**
+- Import code that reads any rate column from the CSV
+- `baseRateSnapshot` values in imported entries that differ from `getCachedClassifications` output
+  for the same trade code
+- No compliance violations firing on imported payroll weeks when violations would be expected
 
-XML generation that populates `<contractorPWCR>` with anything other than exactly 10 digits or `NA`. Any code that passes the full `PW-LR-XXXXXXXXXX` string through without stripping the prefix.
-
-**Phase to address:** CA eCPR XML generator phase — add to same settings modal that collects DIR Project ID.
+**Phase to address:**
+Payroll import phase — the snapshot sourcing rule must be implemented in the import service before
+any CSV parsing logic is written.
 
 ---
 
-### Pitfall 4: CA eCPR Fund Admin Is a Fringe Contribution, Not a Deduction — Schema Has No Dedicated Contribution Fields
+### Pitfall 4: Duplicate payroll_entries on Re-Import — Silent Overwrite or Hard Crash
 
 **What goes wrong:**
+`payroll_entries` has `UNIQUE(payroll_week_id, worker_id, classification_id)`. A re-import
+(user re-uploads the same CSV after a correction) hits this constraint and either:
+- Crashes the entire batch if using plain INSERT (constraint violation error, partial data remains)
+- Silently ignores the new data if using `INSERT OR IGNORE` (first import "wins" permanently)
+- Deletes-then-inserts if using `INSERT OR REPLACE`, resetting `createdAt` and breaking the
+  audit trail (amendment logic depends on `createdAt` ordering)
 
-The existing app's fringe benefit model (used for WH-347 and A-1-131) treats fund administration, pension, health/welfare, and vacation as employer contributions. The CA DIR eCPR XML schema v1.3 places all of these in the `<deductionsContribPay>` element alongside actual worker deductions (fedTax, FICA, stateTax, SDI). There is no structural distinction in the XML between employer contributions and worker deductions — all are sibling decimal elements.
-
-The DIR portal processing code (as of June 2024 system update) now treats `<fundAdmin>` as a worker deduction, not an employer contribution, regardless of how it was classified in the submitter's intent. This causes fringe benefits to be understated in the DIR's report view and gross-to-net reconciliation to fail for auditors reviewing the submission.
-
-Additionally, the schema has only one `<other>` element for the combined deductions section. The post-2024 portal now expects two "Other" categories — one for contributions and one for withholdings — but the schema has not been updated. Any amount placed in `<other>` will be ambiguously classified by the portal.
+None of these are correct for a certified payroll audit trail.
 
 **Why it happens:**
-
-The XSD does not signal the deduction/contribution distinction — all fields are `decimal` elements. Developers map fringe data to the numerically corresponding schema fields without knowing how the portal back-end interprets each field.
+SQLite upsert shorthand is seductive. `INSERT OR REPLACE` looks like "upsert" but it is
+delete-then-insert with a new primary key. `INSERT OR IGNORE` looks safe but silently swallows
+corrections. Neither option preserves audit semantics.
 
 **How to avoid:**
-
-When building the XML generator, use the `<notes>` field (up to 256 characters) to clarify fringe classification for items placed in `<other>`. For `<fundAdmin>`, `<vacationHoliday>`, `<healthWelfare>`, `<pension>`, and `<training>`: map from the app's `fringeRateSnapshot` multiplied by total hours. Document in code comments that these fields are dual-purpose and the portal may display them as deductions. Do not attempt to move these amounts to `<other>` to work around the schema — the portal will mishandle `<other>` even more badly. File is correct to the schema even though the portal display is a known DIR system bug.
+Use the preview-then-commit pattern already established in `copyPayrollWeek()`. Import flow:
+(1) parse CSV fully in memory; (2) detect existing entries by the unique key; (3) return a
+preview response showing `{new: N, updated: N, skipped: N}` with a diff of changed hours for
+"updated" entries; (4) require explicit user confirmation before writing. For entries that already
+exist and the CSV has different hours, show the delta (`monSt: 8.0 → 9.5`). If the payroll week
+has `submittedAt` set, block import entirely with a clear error — submitted weeks are immutable.
 
 **Warning signs:**
+- Import code using `INSERT OR IGNORE`, `INSERT OR REPLACE`, or `ON CONFLICT DO NOTHING`
+- No preview step before writing import data
+- Import logic not checking `payrollWeeks.submittedAt` before writing
 
-Any attempt to "fix" fringe display by routing contributions through `<other>` or by duplicating amounts across multiple schema fields to force the portal to show the correct total.
-
-**Phase to address:** CA eCPR XML generator phase — document this as a known DIR portal limitation, not a code bug.
+**Phase to address:**
+Payroll import phase — the preview-commit pattern must be designed before any CSV parsing.
 
 ---
 
-### Pitfall 5: WA PWIA XML Upload Requires an intentId That Must Be Filed Separately Before Any XML Can Be Submitted
+### Pitfall 5: SSN Encryption Key Loss — Permanent and Unrecoverable Data Loss
 
 **What goes wrong:**
-
-The WA PWIA XML schema (`WaPWCPR`) has a required `<intentId>` element (xs:unsignedInt) at the top level. This is the Intent ID issued by WA L&I when the contractor files a Statement of Intent to Pay Prevailing Wages — a separate form that must be filed before work begins and before any certified payroll can be submitted. No existing field in the app stores this identifier. If a contractor tries to use the WA submission assist without having filed their Statement of Intent first, the XML will either be left blank (schema violation) or populated with a fabricated value (portal rejection).
+The encrypted SSN column is added to `workers`. The AES-256 key is stored as a Render.com
+environment variable (`ENCRYPTION_KEY`). An operator rotates the env var (treating it like an
+API key), the service redeploys with the new key, and every SSN in the database is permanently
+unreadable. CA eCPR and WA portal pre-fill break. If a compliance audit requests full SSNs, the
+system cannot produce them. There is no recovery path — AES-256 ciphertext without the key is
+irreversible.
 
 **Why it happens:**
-
-The Statement of Intent filing is a prerequisite step that happens outside the app entirely. Contractors who are new to WA public works may not have filed this yet when they first encounter the eCPR feature. The `intentId` is an unsigned integer that looks like it could be auto-generated, tempting developers to try to generate or guess it.
+Render.com environment variables can be changed at any time through the dashboard. There is no
+built-in key versioning or rotation history. Operators who manage API keys and secrets routinely
+use "rotate = delete old, generate new." That mental model is catastrophically wrong for
+encryption keys tied to stored data.
 
 **How to avoid:**
-
-The WA submission assist flow must begin with a clear prerequisite checklist that includes "Have you filed your Statement of Intent with WA L&I and received your Intent ID?" Add a `waIntentId` nullable varchar column to the projects table. Surface the input labeled "WA L&I Intent ID" with a link to secure.lni.wa.gov/wagelookup/ and a note that this number is issued only after filing the Statement of Intent. Gate XML generation on this field being present. This is the same pattern used for the CA DIR Project ID.
+(1) Store the key version alongside every encrypted value. The `ssnEncrypted` column must hold a
+JSON envelope: `{"v":"1","iv":"<hex12>","tag":"<hex16>","ct":"<hex>"}`. The `v` field identifies
+which key was used. (2) Never delete old key versions. Use versioned env vars:
+`ENCRYPTION_KEY_V1`, `ENCRYPTION_KEY_V2`. Keep all versions active until a re-encryption
+migration has run. (3) Build a re-encryption migration script: load all rows encrypted with `v1`,
+decrypt with `ENCRYPTION_KEY_V1`, re-encrypt with `ENCRYPTION_KEY_V2`, write `v2` envelope. (4)
+Add a startup assertion: if `ENCRYPTION_KEY_V1` (or the current active version) is missing or
+fails to decrypt a known test vector, throw and refuse to start. (5) Write the key rotation
+runbook in the repository before shipping the encryption feature.
 
 **Warning signs:**
+- `ssnEncrypted` column stores only raw base64 ciphertext with no key version metadata
+- Application starts normally when `ENCRYPTION_KEY` env var is missing
+- No re-encryption script exists when a new key version is introduced
 
-Any WA XML generation that omits `<intentId>` or generates it from local data. Any UI that proceeds to XML generation without first verifying the user has an Intent ID entered.
-
-**Phase to address:** WA submission assist phase — the prerequisite UX must be designed before any XML generator code is written.
+**Phase to address:**
+SSN encryption phase — key versioning schema and rotation runbook must be designed before the
+first migration is written.
 
 ---
 
-### Pitfall 6: WA PWIA Requires 4-Letter Trade Codes That Do Not Match CA or Federal Trade Classifications
+### Pitfall 6: IV Reuse in AES-256-CBC Mode — Structural Cryptographic Weakness
 
 **What goes wrong:**
-
-The WA PWIA XML `<trade>` element requires an exact 4-letter code from a fixed enumeration of 100+ values (ELEC, CARP, LABO, PAIN, PLUM, etc.). The existing app stores trade classifications as free-text `workClass` strings entered by the user when assigning workers to trades (e.g., "Electrician - Inside", "Carpenter", "Laborer - Group 1"). These strings will not match the WA enumeration.
-
-CA eCPR XML uses a freetext `<workClass>` element (1-300 characters), so CA mapping is trivially solved. WA requires an exact code. If the mapping fails or defaults to a single code for all workers, the portal will either reject the XML or accept it with all workers assigned to a single incorrect trade — which creates an inaccurate affidavit and potential L&I audit.
+If the encryption implementation uses AES-256-CBC with a static IV (hardcoded, derived from
+worker ID, or derived from a timestamp with second granularity), encrypting two workers with the
+same SSN produces identical ciphertext. An attacker with read access to the database can
+immediately identify workers who share SSNs. With enough known-plaintext pairs, CBC with a
+static IV leaks the key. This is a compliance failure against PII standards and a legal liability.
 
 **Why it happens:**
-
-The WA trade code system is opaque. The enumeration is documented only in the XSD, not in any user-facing guide. Developers building the mapping logic often see the 100+ codes and attempt to create an automated string-matching algorithm, which works for obvious cases (CARP/Carpenter) but fails silently for ambiguous classifications (INDE vs INDP, RESA through RESZ for residential work).
+The majority of AES-256-CBC code examples on the internet use a hardcoded IV for demonstration
+clarity. Developers copy these examples. The mistake is invisible in testing because decryption
+works correctly with a static IV — the failure is cryptographic, not functional.
 
 **How to avoid:**
-
-Do not attempt automatic string matching. Build a WA trade code selection UI element: a required dropdown or search-select populated from the full WA trade code enumeration, shown when a user adds a worker to a WA project. Store the selected WA code as a separate column (`waTrade` varchar(4)) on worker-project assignments or on the payroll entry. The XML generator reads `waTrade` directly. If `waTrade` is null for a worker on a WA project, block XML generation with a field-completion prompt. Include the full enumeration as a TypeScript constant in the codebase, sourced directly from the XSD.
+Use AES-256-GCM, not CBC. GCM is authenticated encryption: it provides confidentiality and
+integrity. A corrupted or tampered ciphertext is detected at decrypt time (authentication tag
+mismatch) rather than silently returning garbled data. Generate a fresh 12-byte random nonce
+(IV) for every encryption call: `crypto.randomBytes(12)`. Store `{iv, authTag, ciphertext}` in
+the JSON envelope (see Pitfall 5). Never derive the IV from any deterministic input.
+Implementation: `crypto.createCipheriv('aes-256-gcm', keyBuffer, iv)` — use the 32-byte key
+directly, do not hash or derive unless using a dedicated KDF.
 
 **Warning signs:**
+- Any use of `aes-256-cbc` in encryption code
+- IV generated from `worker.id`, `Date.now()`, or any non-`crypto.randomBytes` source
+- Missing `authTag` in the stored envelope (GCM without the auth tag is not authenticated)
 
-Any fuzzy string matching, `toLowerCase().includes()`, or `switch` statements attempting to derive WA trade codes from existing `workClass` strings. Any XML generator that uses a single default trade code for all workers.
-
-**Phase to address:** WA submission assist phase — requires a DB migration and UI before the XML generator can be built.
+**Phase to address:**
+SSN encryption phase — must be reviewed before the first encrypted value is written to any
+environment.
 
 ---
 
-### Pitfall 7: WA PWIA Requires WA County Names as Exact Enumerated Strings — Existing County Field Is Free-Text Lowercase
+### Pitfall 7: Agency Portal Auto-Submit Sets submittedAt Before Portal Confirms — Permanent State Mismatch
 
 **What goes wrong:**
+CA DIR eCPR and WA PWIA portal submissions involve multiple steps: authenticate, build request,
+POST data, receive confirmation. If `payrollWeeks.submittedAt` is set optimistically (before the
+portal returns a confirmed success), and the POST then fails (session expired, network timeout,
+portal validation error), the local record shows the week as submitted while the portal has no
+record of it. The app's existing edit lock (`assertWeekNotSubmitted`) will then block all further
+edits to that week. The week is stuck: locally "submitted," remotely missing.
 
-The WA PWIA XML `<county>` element requires the county name as an exact match against a fixed enumeration (ADAMS, ASOTIN, BENTON, ... YAKIMA — 39 WA counties, uppercase). The existing app stores `county` as a user-entered lowercase string with no validation or normalization (stored as "king", "pierce", etc. — used only for SAM.gov wage determination lookups with a statewide fallback). The existing value cannot be directly placed in the WA XML without transformation, and minor variations ("Grays Harbor" vs "GRAYS HARBOR") will fail XSD validation.
+Additionally: CA DIR eCPR portal has a documented pattern of accepting uploads and then silently
+marking them as "drafts" rather than processing them (confirmed from the June 2024 portal launch
+failure series). The upload POST returns HTTP 200 but the submission is not actually finalized.
 
 **Why it happens:**
-
-The county field looks like it can just be uppercased — `county.toUpperCase()` — and passed through. This works for most single-word counties but breaks for multi-word counties: "GRAYS HARBOR" and "PEND OREILLE" and "SAN JUAN" and "WALLA WALLA" are the most common failure cases. Also, if the user typed "gray's harbor" or "pend orielle" at project creation, uppercasing alone produces an invalid string.
+Setting `submittedAt` optimistically before waiting for a confirmed response is a natural
+simplification — it avoids a two-step async flow. The CA DIR portal's "returns 200 but marks as
+draft" behavior is undocumented and would only be discovered by a developer who monitored the
+portal after upload.
 
 **How to avoid:**
-
-Build a WA county normalization mapping: a TypeScript const that maps common lowercase variations to the exact XSD enumeration value. Do not rely on the existing free-text county field alone — surface a WA county selector (dropdown pre-populated from the 39-county enumeration) when creating a project in WA, or add a WA county correction step to the submission assist pre-generation checklist. Include multi-word counties explicitly in the mapping.
+(1) Never set `submittedAt` until the portal returns a confirmed non-draft success. (2) Add a
+`portal_submission_attempts` table with columns: `id`, `payrollWeekId`, `portal` (ca-dir | wa-lni),
+`status` (pending | success | failed | draft-stuck), `startedAt`, `completedAt`, `errorMessage`,
+`portalResponse` (text). (3) Only set `payrollWeeks.submittedAt` after writing a `success` record.
+(4) For CA DIR: after upload, poll the portal's project history endpoint to confirm the week
+appears as "submitted" (not "draft") before marking success. (5) For session expiry: detect 401
+or redirect responses mid-submission, re-authenticate, and retry from the failed step. Do not
+retry from the beginning — already-received records may create duplicates.
 
 **Warning signs:**
+- Any code path that calls `updateWeekSubmission()` before receiving portal confirmation
+- No `portal_submission_attempts` table or equivalent status tracking
+- No re-authentication logic in the portal submission service
 
-Any XML generator that calls `county.toUpperCase()` without normalization. Any code that does not have the full 39-county WA enumeration as a constant. Test cases that only cover single-word counties and miss the multi-word edge cases.
-
-**Phase to address:** WA submission assist phase — county normalization must be addressed before XML validation tests are written.
+**Phase to address:**
+Agency portal auto-submit phase — the submission state machine must be designed before any portal
+HTTP client code is written.
 
 ---
 
-### Pitfall 8: Scope Creep From "XML Download" to "Direct Portal Submission" Is a Multi-Week Trap
+### Pitfall 8: Portal Session Expiry Mid-Submission Leaves Partial State at the Portal
 
 **What goes wrong:**
-
-Once XML export is working and contractors are using it, the natural next request is "can the app just submit directly to the portal so I don't have to log in separately?" This sounds like a small addition but it is a fundamentally different integration: it requires OAuth or session-based authentication with the CA DIR or WA L&I portals, handling CSRF tokens, maintaining session state, managing 2FA flows, and dealing with portals that have no documented public API. The CA DIR portal has had severe reliability issues (went down for weeks after June 2024 relaunch). The WA PWIA portal has no confirmed programmatic submission API for third-party software.
-
-**Why it happens:**
-
-The XML generation step feels like 80% of the work. Clicking "Upload" on the portal manually feels like a minor friction point. The temptation to close that gap is strong, especially when a contractor requests it. The work is actually 3-5x more effort than the XML generation itself and introduces ongoing maintenance risk every time the portal changes.
-
-**How to avoid:**
-
-The scope for v2.5 is explicit: XML download (CA) and guided data entry / structured export (WA). Lock the UI language to "Download XML for manual upload" and "Copy data for portal entry." Do not add a "Submit directly" button even as a placeholder. If a contractor requests direct submission, log the request for a future milestone and explain that the portal does not provide a public API. Any work on portal session automation should require a dedicated milestone with feasibility research first.
-
-**Warning signs:**
-
-Any code that makes HTTP requests to efiling.dir.ca.gov or secure.lni.wa.gov from the app backend. Any discussion of Playwright/Puppeteer or browser automation to "click submit" on behalf of the user. Any "Submit to DIR" button that does more than trigger a file download.
-
-**Phase to address:** Both CA and WA phases — scope boundaries must be stated explicitly in each phase's acceptance criteria.
-
----
-
-### Pitfall 9: CA DIR Portal Instability Since June 2024 — XML That Validates May Still Be Rejected
-
-**What goes wrong:**
-
-The CA DIR relaunched its Public Works Online System on June 24, 2024. The new system had severe reliability failures for months: it rejected valid XML submissions by marking them as "drafts" that never posted, failed to associate uploaded records with projects, and lost employee data (names, addresses, SSNs) after upload despite the XML being structurally valid. DIR manually combed the system daily to fix stuck draft submissions. The portal's internal processing logic changed how it classifies fringe benefit fields without updating the XSD.
-
-This means: a contractor can generate a schema-valid XML file, upload it to the portal, receive a success confirmation, and still have an incorrectly processed or missing submission. The XML generator has no visibility into this.
+CA DIR eCPR and WA PWIA portals use session-based authentication (cookie or short-lived token).
+Government portal sessions typically expire in 15-30 minutes. A submission for a project with
+20+ workers can take longer than the session lifetime, particularly if the submission involves
+per-worker POSTs rather than a single XML batch upload. When the session expires mid-submission,
+the portal receives partial data. On retry, re-submitting all workers creates duplicates at the
+portal side.
 
 **Why it happens:**
-
-Developers testing against the XSD assume schema validity equals portal acceptance. The portal's back-end processing is a separate layer that can mishandle valid files.
+Developers implementing the submission flow test with a 3-worker project. The session never
+expires. The flow goes to production with a 25-worker project and the session expires at worker 18.
 
 **How to avoid:**
-
-Build the export UI to include a post-download checklist: "After uploading to DIR: (1) Verify the submission appears in your DIR project history, (2) Check that all workers are listed, (3) Confirm week ending date is correct, (4) If submission shows 'draft' status, contact publicworks@dir.ca.gov." Document in-app that the app is responsible for generating a valid XML file but cannot verify portal processing. Add a note in the export modal linking to the DIR support page. Advise contractors to keep the downloaded XML as a local backup.
+Strongly prefer XML batch upload over per-worker POSTs. A single atomic XML POST is: authenticate
+once, POST one file, receive one response. Session expiry during a single HTTP POST is effectively
+impossible. For portals that only support per-worker submission: (1) implement session keepalive
+by making a low-cost authenticated request every 5 minutes; (2) on 401/redirect, re-authenticate
+and resume from the last successful worker (tracked in `portal_submission_attempts`); (3) before
+re-submitting a worker, check if the portal already has that worker's record for the week.
 
 **Warning signs:**
+- Portal submission code that iterates over workers in a loop without session refresh logic
+- No test with a simulated session expiry after the N-th worker
+- Submission that starts from the beginning on retry without checking what was already received
 
-Any assumption in code or UX copy that a successful download equals a successful submission. Any missing post-submission verification guidance in the UI.
-
-**Phase to address:** CA eCPR XML generator phase — the download UX must include the post-upload checklist.
+**Phase to address:**
+Agency portal auto-submit phase — concurrent with Pitfall 7.
 
 ---
 
@@ -218,13 +311,13 @@ Any assumption in code or UX copy that a successful download equals a successful
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Zero-pad ssnLast4 to 9 digits for CA XML | No schema change needed | Produces invalid SSNs; portal rejects all submissions | Never |
-| Use local projectId for DIR Project ID | No new DB field needed | Every CA XML upload rejected immediately | Never |
-| Auto-derive WA trade code from workClass string | No new UI needed | Silent misclassification for ambiguous trades; creates inaccurate affidavit | Never |
-| Use `county.toUpperCase()` without normalization map | One-liner in generator | Fails for "Grays Harbor", "Pend Oreille", "San Juan", "Walla Walla" | Never |
-| Single `waIntentId` per project stored as text | Simple | Fine for v2.5; becomes a problem if multi-contract-per-project scenarios arise later | Acceptable for v2.5 |
-| Freetext CSLB license number with no format validation | No validation code needed | User enters wrong format; portal rejects XML | Acceptable for v2.5 with UI hint |
-| Reuse CA A-1-131 fringe data directly for XML deductions | No recalculation needed | Portal misclassifies fund admin; known DIR bug, not code bug | Acceptable with in-app documentation |
+| Keep `project.userId !== req.user.userId` checks inline in route files, add membership check "later" | Faster to ship team invite without refactoring all routes | Every missed route is a live IDOR vulnerability; cross-tenant data leak | Never — the check must be centralized before any multi-user data is live |
+| Store IV and ciphertext as separate columns rather than a JSON envelope | Slightly simpler initial schema | Cannot add key version without another migration; rotation runbook becomes complex | Never for new encryption — envelope from day one |
+| Import CSV pay rates directly into snapshot columns | Faster import implementation | WH-347 and compliance checks silently use wrong rates; audit failure; cannot be caught until a DOL audit | Never for certified payroll data |
+| Set `submittedAt` optimistically before portal confirms | Simpler single-step code path | Week becomes permanently locked in the app while portal has no record; unrecoverable without direct DB edit | Never — submission tracking is legally significant |
+| Skip import preview step | Less UI to build | Silent overwrites; user cannot catch mapping errors before data is corrupted | Never for payroll data |
+| Use a single `ENCRYPTION_KEY` env var with no versioning | Simple initial implementation | Key rotation destroys all existing encrypted data — unrecoverable | Never if key rotation is anticipated |
+| Embed team membership list in JWT payload | Avoids DB query on each request | Stale membership: removed user retains access until token expiry; cannot revoke without invalidating all tokens | Never — membership must be DB-resolved per request |
 
 ---
 
@@ -232,16 +325,12 @@ Any assumption in code or UX copy that a successful download equals a successful
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| CA DIR eCPR portal | Using schema-validated XML and assuming it will post correctly | Validate against XSD locally, then add post-upload verification checklist |
-| CA DIR eCPR portal | Placing `<fundAdmin>` contribution in `<other>` to correct portal display | Accept portal misclassification; use `<notes>` field to clarify; this is a DIR bug |
-| CA DIR eCPR portal | Populating `<contractorFEIN>` from DB field that stores dashes (XX-XXXXXXX) | Strip dashes before writing XML: `fein.replace(/-/g, '')` → 9 digits |
-| CA DIR eCPR portal | Encoding dates as MM/DD/YYYY or YYYY/MM/DD | `<forWeekEnding>` and per-day `<date>` elements must be yyyy-mm-dd (ISO 8601) |
-| CA DIR eCPR portal | Omitting `<checkNum>` because it is not tracked in the app | `<checkNum>` is required (1-20 chars); use `CASH` for cash-paid workers; add check number input to eCPR export flow for check-paid workers |
-| CA DIR eCPR portal | Setting `<grossAmountEarned><allWork>` same as `<thisProject>` | `<allWork>` should reflect wages across all projects that week, not just this project; the app has no multi-project pay data — use `<thisProject>` value and note the limitation |
-| WA PWIA portal | Using WA XML upload for filing Statements of Intent | XML upload is only for certified payroll (weekly reports); Statements of Intent and Affidavits must be filed manually through PWIA portal |
-| WA PWIA portal | Assuming XML upload replaces the Affidavit of Wages Paid | Affidavit must be filed separately at project completion; XML is weekly payroll reporting only |
-| WA PWIA portal | Submitting without consistent `<endOfWeekDate>` day-of-week across weeks | WA schema requires weekday to remain consistent across all amendments; changing end-of-week day between submissions triggers validation failure |
-| WA PWIA portal | Omitting `<apprenticeFlg>` or setting it without all required companion fields | `<apprenticeFlg>true</apprenticeFlg>` requires: apprenticeId, apprenticeState (WA/OR/MT/AK only), apprenticeOccpnName, apprenticeStepName, apprenticeStepBeginHours, apprenticeStepEndHours — all must be present |
+| QuickBooks CSV export | Column headers vary by QBO vs QBD version and locale: "Regular Pay Rate" / "Hourly Rate" / "Base Pay" | Build a column mapping UI showing parsed headers; ask the user to confirm the hours columns; never hardcode column indices or names |
+| ADP CSV export | ADP exports by cost center, not by project — one file may span multiple projects or include workers not on this project | Add a project filter step in the import UI; warn when imported workers do not match any existing worker record on the target project |
+| ADP CSV export | ADP separates regular hours, OT hours, and DT hours into different rows per employee, not columns | The import parser must group rows by employee and map row-type to the correct hour bucket (monSt/monOt/monDt) |
+| CA DIR eCPR portal | Treating HTTP 200 upload response as confirmed submission | CA DIR portal returns 200 but marks submissions as "draft" — poll the portal's project history to confirm "submitted" status |
+| WA L&I PWIA | Conflating weekly CPR XML submission with the Affidavit of Wages Paid | Affidavit is a separate post-project filing; the auto-submit flow must distinguish between these two and not mark a project complete after weekly submissions |
+| Render.com env vars | Changing `ENCRYPTION_KEY` in Render dashboard and assuming it takes effect on the running instance | Env var changes require a deploy; but operators may change the value and then deploy an unrelated change — always verify decryption works in staging before touching production |
 
 ---
 
@@ -249,9 +338,11 @@ Any assumption in code or UX copy that a successful download equals a successful
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Generating XML server-side by string concatenation instead of a DOM builder | XSS-style injection if any text field contains `<` or `&` characters; character encoding errors | Use a proper XML builder library (fast-xml-parser, xmlbuilder2, or Node.js DOMParser) that handles entity encoding | First contractor with an ampersand in their company name |
-| Re-fetching all payroll entries per-worker during XML generation instead of a joined query | 10-worker week generates 10+ queries; 50-worker week generates 50+ | Use a single JOIN query to load all entries for the week, then group in-memory | Any project with more than 20 workers/week |
-| Loading all historical payroll weeks to find payroll number for auto-increment | Slow for projects with many weeks | Query only `COUNT(*)` of submitted weeks for the project to determine the next payroll number | Projects that have been running for 6+ months with weekly submissions |
+| `GET /api/projects` changes from `WHERE userId=X` to a membership JOIN with no index on `project_members(user_id)` | Dashboard load latency increases; SQLite serializes all requests so all users wait | Add `CREATE INDEX idx_project_members_user_id ON project_members(user_id)` in the migration that creates the table | With 3+ concurrent team members loading the dashboard |
+| CSV import parsed and written in one synchronous transaction with 50+ rows | Import POST times out at Render's 30-second HTTP timeout; partial transaction state | Stream rows in batches of 10 using Drizzle's `.transaction()` per batch; timeout leaves clean batch boundaries | Any import with more than ~20 workers × 5 weeks = 100+ rows |
+| Compliance batch endpoint re-queries membership per project after project_members is added | N+1 membership query resurfaces for team members who see more projects than single-user owner | The membership query must be a single JOIN, not a per-project loop; existing `staleTime:60_000` on ProjectCard helps client-side, but server batch must use a single SQL | With 10+ projects visible to a team member |
+| SQLite write serialization under concurrent team use | Import + manual payroll entry + SSN update queue behind the same write lock; one request blocks others | Explicitly enable WAL mode in `getDb()` via `PRAGMA journal_mode=WAL`; WAL allows reads to proceed concurrently with writes | With 3+ concurrent write operations |
+| Re-encrypting all SSNs during key rotation in the same process as the running server | Server is unavailable during migration; if process is killed mid-migration, some rows have new key, others old key | Key rotation must be a standalone script that runs outside the server process; the JSON envelope's `v` field allows mixed-version rows to coexist safely during migration | Any rotation on a database with more than ~500 workers |
 
 ---
 
@@ -259,10 +350,12 @@ Any assumption in code or UX copy that a successful download equals a successful
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Logging full SSN entered in CA eCPR export flow | PII exposure in server logs, error tracking | Ensure the SSN field never appears in Express request logging; use a dedicated non-logged endpoint or strip the SSN field before any log middleware fires |
-| Storing full SSN if the app ever persists it for CA eCPR | PII breach risk; app is not currently designed for full-SSN storage | If full SSN must be stored, encrypt at rest with AES-256 and store separately from other worker fields; evaluate whether storage is necessary vs. per-session collection |
-| Passing CA FEIN in URL query parameters for XML generation | FEIN visible in server access logs | Keep FEIN in POST body only; XML generation endpoint must be POST, not GET |
-| Including full SSN in the XML download filename | SSN visible in file system / download history | Name files by project name + week ending date only, e.g., `ecpr-ProjectName-2026-03-28.xml` |
+| Storing key version, IV, and ciphertext as separate columns | Schema leaks the relationship between key version and ciphertext; reduces brute-force search space | Store as a single JSON blob: `{"v":"1","iv":"<hex>","tag":"<hex>","ct":"<hex>"}` — the DB schema alone does not reveal crypto structure |
+| Logging decrypted SSN values in Express request/response logs | Full SSNs appear in Render.com log stream (accessible to anyone with dashboard access) | Ensure no SSN field reaches the logger; log `"ssn":"[REDACTED]"` in any request/response body logging middleware |
+| Returning full decrypted SSN over the API to the React client for display | Full SSN exposed in browser memory, React Query cache, and network traffic | The API returns `ssnMasked: "***-**-1234"` for display; the full SSN is only decrypted server-side in XML export handlers |
+| Embedding team membership in JWT payload to avoid a DB lookup | Membership changes (user removed) are not reflected until JWT expiry; removed user retains access | Resolve membership from DB on every request using the `userId` from the JWT; the DB lookup cost is negligible vs. the security risk |
+| Storing invite tokens as plaintext in the DB | Anyone with DB read access can generate valid invite links | Hash invite tokens (SHA-256) before storing; compare the hash at acceptance time; expire tokens after 7 days |
+| CSV import staging table persists full SSNs from the CSV | Full SSNs sit in plaintext in a staging table long after import completes | Treat any full SSN from CSV as ephemeral: decrypt from CSV → encrypt immediately → discard plaintext → never log; drop staging rows after commit |
 
 ---
 
@@ -270,26 +363,36 @@ Any assumption in code or UX copy that a successful download equals a successful
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Generating CA XML without explaining what to do with it | Contractor downloads file and doesn't know where to upload it | Include step-by-step post-download instructions in the modal: link to efiling.dir.ca.gov, screenshot guidance, and support contact |
-| Presenting WA "submission assist" as equivalent to WA XML upload without clarifying manual steps remain | Contractor believes submission is complete when it is not | Label the feature "WA Submission Checklist" or "WA Payroll Export" — never "Submit to L&I" or "File with L&I" |
-| No indication of which fields are CA-eCPR-specific vs always required | Contractors on non-CA projects see confusing CA fields | Gate CA eCPR export UI behind project state === 'CA' check (same pattern as A-1-131 CA gate in v2.4) |
-| No pre-generation validation showing missing fields | Contractor downloads XML, portal rejects it, contractor doesn't know what was wrong | Run a "readiness check" before generating XML that lists missing required data (DIR Project ID, PWCR number, worker SSNs, check numbers) and blocks generation until complete |
-| WA trade code selector buried in settings vs shown at time of need | Contractor doesn't populate WA codes until they try to generate XML and hit an error | Surface WA trade code as a required field during worker assignment on WA projects, not at export time |
+| CSV import maps columns automatically and writes data without a preview | User discovers corrupt rate snapshots after printing WH-347 for an auditor | Show a preview table of the first 3 rows with column mapping annotations and an hours total; require explicit confirmation before writing |
+| Team invite is the only recovery path if the invite email is lost | Admin cannot re-invite without invalidating the original token; friction for the inviting user | Allow re-sending an invite; generate a new token, invalidate the previous one |
+| No indication of which team member entered or modified a payroll entry | Audit trail is anonymous; GC cannot determine who entered erroneous data during a DOL audit | Add `createdByUserId` and `updatedByUserId` to `payroll_entries` from the start of v3.0; retrofitting after the fact leaves null on all existing rows, indistinguishable from manually entered |
+| Portal auto-submit status not visible on the payroll week detail page | User re-submits manually after auto-submit already completed, creating duplicate portal records | Add a `submissionAttempt` status badge alongside the existing `submittedAt` indicator on the payroll week detail view |
+| Import silently skips workers that could not be matched to existing worker records | Payroll week appears complete but is missing workers who were not in the system at import time | Show an "unmatched workers" list in the import preview; block import completion until the user resolves each unmatched worker |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **CA XML namespace:** Verify `xmlns` attribute matches the schema namespace exactly: `http://www.dir.ca.gov/dlse/CPR-Prod-Test/CPR.xsd` — a missing or wrong namespace causes silent rejection at the portal
-- [ ] **CA XML decimal format:** All decimal values must have exactly 2 decimal places (e.g., `1250.00` not `1250` or `1250.5`) — the XSD enforces fractionDigits=2
-- [ ] **CA day-of-week IDs:** The 7 `<day>` elements must have `id` attributes `"1"` through `"7"` and dates that correspond to the correct calendar days of the payroll week — ID `"1"` is always the first day of the week configured for the project
-- [ ] **CA `<allWork>` gross pay:** Must reflect worker's gross pay across ALL projects that week — app only knows about this project; the UI should instruct contractors to verify this field or expose an input for multi-project workers
-- [ ] **CA `<checkNum>` required:** Missing from the current app's data model — must be added to the XML export flow; schema enforces minLength=1
-- [ ] **WA `<noWorkPerformFlag>`:** When this is `true`, the `<employees>` element must be absent entirely (not empty) — sending an empty employees container when noWorkPerformFlag=true fails WA XSD validation
-- [ ] **WA SSN validation:** WA schema enforces additional SSN rules beyond format: must not start with `9` (ITIN range), must not equal `666` or `000` in first 3 digits, must not have `00` in positions 4-5, must not have `0000` in positions 6-9 — these will fail portal validation even if 9 digits
-- [ ] **WA apprentice fields:** Setting `<apprenticeFlg>true</apprenticeFlg>` without all 6 required companion elements (apprenticeId, apprenticeState, apprenticeOccpnName, apprenticeStepName, apprenticeStepBeginHours, apprenticeStepEndHours) causes XSD validation failure
-- [ ] **WA `<jobClass>` required for non-apprentices:** When `apprenticeFlg=false`, `<jobClass>` becomes required (1-500 chars) — it is optional-looking in the schema but the conditional makes it effectively required for journeyworkers
-- [ ] **Amendment tracking:** Both CA and WA have amendment flows in their schemas (`<amendmentNum>` for CA, `<amendedFlag>/<amendReason>` for WA) — the app's existing amendment workflow (v2.3) must correctly populate these fields when exporting an amended week, not just re-export the week as if it were original
+- [ ] **Multi-user ownership:** `project.userId !== req.user.userId` still exists in route files after
+  adding `project_members` — verify with: `grep -r "\.userId !== " src/server/routes/`
+- [ ] **Multi-user list endpoint:** `GET /api/projects` still filters by `projects.userId` alone
+  rather than by membership — verify query returns only team-visible projects for each user
+- [ ] **SSN encryption health check:** Application starts and returns 200 on the health route
+  even when `ENCRYPTION_KEY_V1` env var is missing — verify startup asserts key presence and
+  fails fast if the test vector does not decrypt
+- [ ] **Rate snapshot integrity on import:** Imported `payroll_entries` have `baseRateSnapshot`
+  and `fringeRateSnapshot` that match the WD cache output for the same trade code — verify by
+  comparing a sample imported entry against `getCachedClassifications` for the same worker
+- [ ] **Submitted week protection:** Import flow checks `payrollWeeks.submittedAt` before writing
+  — verify that attempting to import into a submitted week returns a 400 error, not a silent overwrite
+- [ ] **IV uniqueness per encryption call:** Verify by encrypting the same SSN 100 times and
+  asserting all 100 IV values are unique and all 100 ciphertexts differ
+- [ ] **Key version in stored envelope:** The `ssnEncrypted` column value parses to a JSON object
+  with a `v` field — verify by inspecting a raw DB row after encryption
+- [ ] **submittedAt not set until portal confirms:** Simulate a portal timeout mid-submission and
+  assert that `payrollWeeks.submittedAt` is still null afterward
+- [ ] **Audit trail columns present:** `payroll_entries` has `createdByUserId` NOT NULL in the
+  migration — verify the column exists with a default for existing rows
 
 ---
 
@@ -297,13 +400,12 @@ Any assumption in code or UX copy that a successful download equals a successful
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Full SSNs not collected, XML rejected | MEDIUM | Add SSN collection step to export flow; existing generated XML files must be regenerated with corrected SSNs |
-| Wrong DIR Project ID used in submitted XML | LOW | Re-generate XML with correct ID and re-upload; DIR portal supports multiple submissions per project week |
-| XML rejected due to namespace mismatch | LOW | Fix namespace string constant in generator; regenerate and re-upload |
-| WA XML submitted without intentId, portal rejected | LOW | Contractor files Statement of Intent first, adds intentId in app, regenerates XML |
-| WA trade codes not set, XML generation blocked | MEDIUM | Contractor must revisit each worker assignment and select WA trade code; add a bulk-edit UI if many workers affected |
-| CA portal marked submission as "draft" (June 2024 bug class) | LOW | Contractor contacts publicworks@dir.ca.gov; DIR manually processes draft; provide email template in-app help |
-| Amendment week exported as original (missing amendedFlag/amendmentNum) | MEDIUM | Re-generate XML with amendment fields set; re-upload with explanation to DIR; may require DIR support contact |
+| Cross-tenant data leak discovered post-launch | HIGH | Audit access logs to identify which cross-tenant requests succeeded; notify affected users; patch ownership checks; invalidate all JWTs to force re-login |
+| Rate snapshot corruption from import | HIGH | Identify all entries from the import batch using an `importBatchId` column (add this before shipping import); delete the corrupt entries; re-run import with corrected snapshot logic; regenerate all WH-347 forms for affected weeks |
+| SSN encryption key lost with no backup | CRITICAL / UNRECOVERABLE | If no old key version exists anywhere, encrypted SSNs cannot be recovered; users must re-enter full SSNs manually; add key backup and rotation runbook before this happens |
+| Portal partial submission (session expired mid-submission) | MEDIUM | Query the portal for which workers were received; submit only the missing workers; do not re-submit already-received records; mark `portal_submission_attempts` as `partially-recovered` |
+| Duplicate payroll entries from re-import | MEDIUM | Use `importBatchId` to identify the duplicate batch; delete the second batch; verify the unique constraint is satisfied; re-run with the preview mode enabled |
+| `submittedAt` set optimistically, portal has no record | MEDIUM | Requires direct DB update to clear `submittedAt` (no UI path since edit lock fires); add an admin "un-submit" endpoint; then re-submit correctly |
 
 ---
 
@@ -311,35 +413,78 @@ Any assumption in code or UX copy that a successful download equals a successful
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Full SSN required for CA XML | CA eCPR generator phase (first task) | Test: generate XML for a worker; verify `<ssn>` is 9 digits and matches `name id` attribute |
-| DIR Project ID not in DB | CA eCPR generator phase (DB migration first) | Test: project without `dirProjectId` cannot generate XML; UI shows blocking prompt |
-| PWCR number missing | CA eCPR generator phase | Test: PWCR field accepts 10 digits or `NA`; strips `PW-LR-` prefix if entered |
-| Fund admin misclassification (portal display bug) | CA eCPR generator phase (document as known DIR issue) | Test: verify `<fundAdmin>` populated with correct hourly rate × hours; add code comment citing DIR system bug |
-| intentId not in DB for WA | WA submission assist phase (first task) | Test: WA project without intentId cannot generate XML; UI shows blocking prompt with L&I link |
-| WA trade code missing | WA submission assist phase (requires DB migration + UI) | Test: worker without `waTrade` on WA project blocks XML generation; dropdown populated from full enumeration |
-| WA county normalization | WA submission assist phase | Test: "king" → "KING", "grays harbor" → "GRAYS HARBOR", "pend oreille" → "PEND OREILLE" all pass |
-| Scope creep to direct submission | Both phases (in acceptance criteria) | Verify no HTTP calls to portal domains in backend code; "Download" not "Submit" in all UI copy |
-| XML string injection | Both phases (XML builder library selection) | Test: worker with name "John & Jane <Test>" produces valid escaped XML |
-| Post-download verification gap | CA eCPR generator phase (UX) | Verify export modal includes post-upload checklist and DIR support contact |
-| check number missing from CA XML | CA eCPR generator phase | Test: `<checkNum>` present in output; UI captures check number or displays CASH option |
-| Amendment fields not set on amended weeks | Both phases (wire to existing amendment model) | Test: export of amended week has `<amendmentNum>` > 0 (CA) and `<amendedFlag>true</amendedFlag>` (WA) |
+| IDOR auth bypass after project_members | Multi-user / team accounts (first task) | Cross-tenant test suite: two users, two projects, all protected endpoints assert 403 for wrong user |
+| Indirect object reference on child entities | Multi-user / team accounts (simultaneous with IDOR fix) | Grep: no direct child entity query without `assertProjectAccess`; integration test suite |
+| Rate snapshot corruption on import | Payroll import phase (first design constraint) | Automated test: import a CSV, compare all `baseRateSnapshot` values against `getCachedClassifications`; assert no CSV rate column was used |
+| Duplicate entries on re-import | Payroll import phase | Test: import same CSV twice; second import shows preview with "already exists" for all rows; DB has no duplicates |
+| SSN encryption key loss | SSN encryption phase (key versioning schema designed before migration) | Key rotation drill in staging: generate new key, run re-encryption script, verify all SSNs decrypt with new key; old key decrypts old rows |
+| IV reuse / CBC mode | SSN encryption phase (implementation review before any data written) | Unit test: encrypt same SSN 100 times; all 100 IVs unique; all 100 ciphertexts unique; auth tags present |
+| Portal submittedAt set before confirm | Agency portal auto-submit phase (state machine design first) | Integration test with mocked portal that times out after worker N; assert `submittedAt` is null; `submissionAttempt` shows `failed` |
+| Portal session expiry mid-submission | Agency portal auto-submit phase | Simulated session expiry after worker 5 of 20; assert partial state is tracked; retry resumes from worker 6 |
+| `createdByUserId` missing from audit trail | Multi-user / team accounts (migration design step) | Schema review: `payroll_entries` migration adds `createdByUserId` NOT NULL with DEFAULT to owner userId for existing rows |
+
+---
+
+## Integration Pitfalls Between Features
+
+These pitfalls arise from combining two v3.0 features. Neither feature alone causes them.
+
+### Import + Multi-user: Imported Entries Have No Author
+
+When a team member imports a CSV, the resulting `payroll_entries` have no `createdByUserId` in
+the current schema. In a DOL audit, the GC may need to identify who entered which payroll records
+and when. If audit columns are retrofitted after import is shipped, all existing imported entries
+have null `createdByUserId` — indistinguishable from manually entered entries. Design
+`createdByUserId` (and `updatedByUserId`) into `payroll_entries` and `payrollWeeks` from the
+start of v3.0, not as a follow-up migration.
+
+### Encryption + WH-347 Export: Full SSN Must Never Reach the PDF Generator
+
+WH-347 currently uses `workers.ssnLast4`. v3.0 adds `workers.ssnEncrypted`. The WH-347 PDF
+generator (`fillWh347()`) must continue using only the last 4 digits — DOL format is
+`XXX-XX-XXXX` with only the last 4 shown. If a developer passes the full decrypted SSN through
+`fillWh347()` "for convenience" (because it is now available), the full SSN appears on every
+downloaded WH-347, which is a PII exposure on a document that may be filed publicly with federal
+agencies.
+
+Prevention: the `fillWh347()` function signature accepts only `ssnLast4: string`. The SSN
+decryption path exists only in `caEcprExport` and `waPwiaExport`. Write a test that asserts the
+WH-347 PDF bytes do not contain any sequence matching `\d{9}` (a 9-digit SSN).
+
+### Import + Encryption: CSV Full SSN Is Ephemeral — Never Stage It
+
+QuickBooks and ADP exports sometimes include full SSNs in the worker row. If the import stores
+this in a plaintext staging table or logs it during processing, the full SSN sits unencrypted in
+the database or log stream. The import pipeline must treat any full SSN from CSV as ephemeral:
+read from CSV → pass directly to the encrypt function → write the envelope → discard the
+plaintext string. The raw SSN string must never be assigned to a variable that outlives the
+encryption call, logged, or written to any column other than `ssnEncrypted`.
+
+### Multi-user + Compliance History: Cross-Project Identity Becomes Ambiguous Under Team Accounts
+
+The current per-worker compliance history uses `(name, ssnLast4)` identity to aggregate
+violations across projects. In a team account, two team members may add the same physical worker
+independently on different projects, creating two `workers` records. The compliance history page
+shows separate violation histories for the same physical person. This is not data corruption but
+it misleads GCs who believe a worker has a clean history when they actually have violations on a
+different project record. The v3.0 migration to full SSN (encrypted) enables proper
+deduplication — plan the cross-project identity query to use decrypted SSN matching when the
+user requests it, with an explicit privacy notice in the UI.
 
 ---
 
 ## Sources
 
-- CA DIR eCPR XML Schema (XSD): [https://www.dir.ca.gov/Public-Works/CPR/CPR.xsd](https://www.dir.ca.gov/Public-Works/CPR/CPR.xsd) — obtained directly, schema version 1.3
-- WA LNI PWIA XML Schema (XSD): [https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd](https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd) — obtained directly
-- CA DIR eCPR XML Guidelines: [https://www.dir.ca.gov/Public-Works/CPR/eCPRXMLGuideline.pdf](https://www.dir.ca.gov/Public-Works/CPR/eCPRXMLGuideline.pdf)
-- CA DIR XML Upload User Guide: [https://www.dir.ca.gov/Public-Works/documents/CPR-XML-Upload-User-Guide.pdf](https://www.dir.ca.gov/Public-Works/documents/CPR-XML-Upload-User-Guide.pdf)
-- CA DIR Certified Payroll Reporting Page: [https://www.dir.ca.gov/public-works/certified-payroll-reporting.html](https://www.dir.ca.gov/public-works/certified-payroll-reporting.html)
-- Sunburst Software 2024 CA DIR System Issues: [https://www.sunburstsoftwaresolutions.com/2024-ca-dir.htm](https://www.sunburstsoftwaresolutions.com/2024-ca-dir.htm) — documents fund admin misclassification, fringes displayed as deductions, schema unchanged since 2016
-- United Contractors DIR System Failures Guidance: [https://www.unitedcontractors.org/news/contractor-guidance-during-dir-website-system-failures](https://www.unitedcontractors.org/news/contractor-guidance-during-dir-website-system-failures) — June 2024 portal launch failures
-- CA DIR Public Works Online System Enhancement Update (April 2025): [https://bayareabx.com/news/html/public-works-online-system-enhancement-update](https://bayareabx.com/news/html/public-works-online-system-enhancement-update)
-- WA PWIA XML Payroll Upload Guide: [https://lni.wa.gov/licensing-permits/_docs/xml%20payroll%20guide.pdf](https://lni.wa.gov/licensing-permits/_docs/xml%20payroll%20guide.pdf)
-- WA Prevailing Wage Apprenticeship Tracking and Craft Codes: [https://www.certifiedpayrollreporting.com/prevailing-wage-washington](https://www.certifiedpayrollreporting.com/prevailing-wage-washington)
-- LCPtracker WA L&I Export Guide v1.3: [https://cms.tacoma.gov/cedd/SBE/Equity%20in%20Contracting%20FAQ/LCPtracker_Guide%20to%20WA%20LNI%20Features%20_V1.3.pdf](https://cms.tacoma.gov/cedd/SBE/Equity%20in%20Contracting%20FAQ/LCPtracker_Guide%20to%20WA%20LNI%20Features%20_V1.3.pdf)
+- Source code analysis: `src/server/routes/projects.ts` (ownership pattern — `project.userId !== userId` at lines 113, 150, 184), `src/server/routes/workers.ts` (indirect reference pattern), `src/server/db/schema.ts` (data model — no `project_members` table, no `ssnEncrypted` column, no `createdByUserId`)
+- SQLite WAL mode and write concurrency: [SQLite Write-Ahead Logging documentation](https://www.sqlite.org/wal.html)
+- AES-256-GCM nonce requirements: [Node.js crypto documentation](https://nodejs.org/api/crypto.html)
+- AES-256 mode pitfalls: [AES-256 Encryption Types — Modes, Uses & Pitfalls](https://terrazone.io/aes-256-encryption-types/)
+- Multi-tenant cross-tenant leak prevention: [Preventing Cross-Tenant Data Leakage in Multi-Tenant SaaS](https://agnitestudio.com/blog/preventing-cross-tenant-leakage/)
+- CA DIR eCPR portal reliability issues: [DIR Update on Public Works Website Issues](https://thewpcca.com/dir-update-on-public-works-website-issues/)
+- WA L&I PWIA system overview: [L&I PWIA Step-by-Step Instructions](https://lni.wa.gov/licensing-permits/_docs/pwia-step-by-step-instructions.pdf)
+- Certified payroll software integration patterns: [Certified Payroll Software Integration Guide](https://www.certifiedpayrollreporting.com/blog/certified-payroll-software-integration-guide)
+- Multi-tenant API in Node.js: [Guide to building Multi-Tenant Architecture in Nodejs](https://dev.to/rampa2510/guide-to-building-multi-tenant-architecture-in-nodejs-40og)
 
 ---
-*Pitfalls research for: CA eCPR XML export and WA PWIA submission assist — HCC Prevailing Wage v2.5*
-*Researched: 2026-03-26*
+*Pitfalls research for: HCC Prevailing Wage v3.0 — Team & Integration milestone*
+*Researched: 2026-03-27*

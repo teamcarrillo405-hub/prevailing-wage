@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** HCC Prevailing Wage v2.5 — CA eCPR XML Export + WA PWIA Submission Assist
-**Domain:** Prevailing wage compliance SaaS — state portal integration layer
-**Researched:** 2026-03-26
+**Project:** HCC Prevailing Wage — v3.0 Team & Integration
+**Domain:** Multi-user team accounts, payroll provider CSV import, AES-256 SSN encryption, agency portal auto-submit research gate
+**Researched:** 2026-03-27
 **Confidence:** HIGH
 
 ## Executive Summary
 
-v2.5 adds state portal integration to an already-shipped compliance stack (Node/Express/TypeScript, React 18/Vite/TailwindCSS v4, SQLite/Drizzle, pdf-lib, JWT auth). The scope is deliberately narrow: CA DIR eCPR generates a downloadable XML file the contractor manually uploads to the DIR portal; WA L&I produces a JSON prefill guide the contractor copies into the PWIA web form. Neither state offers a documented machine-to-machine API — direct submission is not feasible and must not be attempted. One new npm dependency (`xmlbuilder2@4.0.3`) covers both XML outputs. No new pages, no new router files, no DB migrations are required under the baseline approach.
+HCC Prevailing Wage v3.0 adds four integrations on top of a fully-shipped v2.5 single-user compliance platform: multi-user team accounts, QuickBooks/ADP CSV import, AES-256 SSN encryption at rest, and a research-gated agency portal auto-submit feature. The existing stack (Node.js + Express + TypeScript, React + Vite + TailwindCSS v4, SQLite + Drizzle ORM) requires only one new production dependency — `nodemailer@8.0.4` for invite emails. All other v3.0 features are implemented using already-installed packages (`multer`, `papaparse`) or Node.js built-ins (`node:crypto`). The stack is minimal and intentional.
 
-The principal technical challenge is not code complexity — it is data gaps. Both XML schemas require a full 9-digit SSN (the app stores only `ssnLast4`), and CA additionally needs the DIR-assigned project registration number, contractor FEIN, PWCR registration number, and contract agency name — none of which are in the current database. The recommended mitigation for v2.5 is runtime collection via a pre-generation modal (no DB schema changes needed), with placeholder values and prominent contractor disclosures where data is missing. Full SSN storage requires a privacy and security review and is deferred past v2.5.
+The most consequential architectural decision is the auth refactor: every project-scoped route currently guards via `project.userId === req.user.userId`, a single-owner invariant scattered across 9 route files. Upgrading to multi-user requires replacing this with a centralized `assertProjectAccess(projectId, userId, db)` function backed by a new `project_members` join table. This must be the first task of the team phase — every other team feature depends on it being correct. The risk is an IDOR vulnerability if even one route file retains the old check after the refactor, silently leaking one team's data to another.
 
-The critical risk is scope creep: once XML download is working, the next request will be "submit directly to the portal." This must be locked out of v2.5 scope explicitly in each phase's acceptance criteria. A secondary risk is the CA DIR portal's documented instability since its June 2024 relaunch — valid XML files can be silently mis-processed. The export UX must include a post-upload verification checklist, not just a download button.
+The agency portal auto-submit research gate is closed: neither CA DIR eCPR nor WA L&I PWIA publish a public machine-to-machine API as of 2026-03. The correct scope for v3.0 is export-assist (XML file generation with guided checklist and "mark as submitted" tracking), which is already partially shipped in v2.5. No Playwright/Puppeteer automation should be attempted — it would violate portal ToS, break on UI changes, and require storing contractor portal credentials. SSN encryption requires AES-256-GCM (not CBC), with per-record random IVs, a versioned JSON envelope, and a startup assertion that fails fast if the encryption key is missing.
 
 ---
 
@@ -19,137 +19,139 @@ The critical risk is scope creep: once XML download is working, the next request
 
 ### Recommended Stack
 
-The existing stack handles v2.5 with a single new library. `xmlbuilder2@4.0.3` (Node >= 20 required, already satisfied by project `package.json`) provides a fluent DOM-conformant API with namespace prefix support — required for CA eCPR's `CPR:` prefix on every element. Template-string XML is viable for simple flat schemas but fails silently when data contains `&`, `<`, or `>`, which is unacceptable for contractor name and project fields. No alternative library handles CA's namespace requirement as cleanly. TypeScript types are bundled; no `@types/` package needed.
+The existing stack handles all v3.0 features without architectural changes. One new dependency (`nodemailer@8.0.4`) handles transactional invite email over SMTP. This is transport-agnostic — the SMTP relay (Resend, SendGrid, Postmark) is configured via environment variables so the provider can be swapped without code changes. CSV upload and parsing reuse `multer@2.1.1` (already handles multipart/form-data) and `papaparse@5.5.3` (already installed; `header: true` mode is more ergonomic than `csv-parse` for column-name-based mapping required by QuickBooks and ADP). SSN encryption uses `node:crypto` AES-256-GCM — no third-party crypto library is needed or appropriate for server-side Node.js.
 
-XSD validation at runtime is explicitly excluded. Both schemas are fixed and known at build time. Use `xmllint` CLI against downloaded XSD files during development; rely on portal error messages in production. Do not install `libxmljs2-xsd` or any native node-gyp XSD binding — the build friction on Windows outweighs the benefit for a dev-only validation step.
+**Core technologies:**
+- `nodemailer@8.0.4`: SMTP invite email — only new production dependency; v8 is ESM-compatible and bundles TypeScript types; install with `npm install nodemailer@8.0.4`
+- `multer@2.1.1` (existing): Multipart CSV file upload; `memoryStorage()` for in-memory CSV processing avoids temp file cleanup
+- `papaparse@5.5.3` (existing): CSV parsing with `header: true` + `skipEmptyLines: true`; preferred over `csv-parse` for column-name-based QB/ADP mapping
+- `node:crypto` (built-in): AES-256-GCM encryption; random 12-byte IV per call; authenticated encryption detects tampering; no wrapper package needed
+- SQLite + Drizzle ORM (existing): Additive schema migrations only; new `project_members`, `payroll_imports`, and `agency_submissions` tables
 
-**Core new technology:**
-- `xmlbuilder2@4.0.3`: XML document generation for CA eCPR and WA L&I CPR — handles `CPR:` namespace prefix cleanly; TypeScript types bundled; actively maintained (v4.0.3 released November 2025)
-
-**Existing stack (unchanged):**
-- Node.js/Express/TypeScript: server-side XML generation and download route
-- React 18/TanStack Query: client download handler (fetch → Blob → anchor) and WA assist modal
-- SQLite/Drizzle ORM: data source for all generated content
-- pdf-lib: unchanged — XML export is a separate code path with zero overlap
-
-See STACK.md for the full CA CPR.xsd v1.3 and WA xmlschema.xsd field reference tables fetched live from official portals 2026-03-26.
+**Do not add:** Playwright/Puppeteer (no agency API exists), `aes-256-gcm` npm wrappers (use Node.js built-in), vendor-specific email SDKs (nodemailer is transport-agnostic), SQLCipher (breaks existing Drizzle setup), or an `organizations` table (flat model needs only a `project_members` join table).
 
 ### Expected Features
 
-**Must have (table stakes for v2.5):**
-- CA eCPR XML download — server-side generation of CPR.xsd v1.3 compliant file, filename `[last4FEIN]_[projectID]_[weekEnding].xml`, state-gated to CA projects only
-- Pre-generation readiness check modal — list missing required data (DIR Project ID, FEIN, PWCR number, check numbers) and block generation until contractor acknowledges gaps
-- Post-download verification checklist — inline steps in the export modal: verify submission appears in DIR history, confirm all workers listed, follow up if submission shows "draft" status; link to `publicworks@dir.ca.gov`
-- WA submission assist panel — JSON prefill modal showing per-worker trade code, hours by day, rates, and gross pay; labeled gaps where SSN and intentId must be supplied manually
-- WA prerequisite checklist — display `intentId` input labeled "WA L&I Intent ID" with link to `secure.lni.wa.gov/wagelookup/` before the prefill panel is shown; gate the panel on intentId being entered
+**Must have (table stakes for v3.0):**
+- Invite user by email — tokenized link, 72-hour expiry, single-use, invitee creates account or accepts; owner and all members see all projects (flat model)
+- Project member access revocation — compliance software handles sensitive payroll PII; soft-delete membership, do not destroy user record
+- Pending invite status — owner must know whether an invite is still outstanding before re-sending
+- QuickBooks CSV import — pre-populate payroll entry form from QB Payroll Summary or Time Activity export; contractor reviews and confirms before saving
+- ADP CSV import — pre-populate from ADP Workforce Now PRcccEPI.csv format; contractor reviews and confirms before saving
+- AES-256 SSN encryption at rest — full SSN needed for CA eCPR and WA PWIA XML; must be encrypted with GCM, decrypted only at XML export, never returned in API responses
+- Agency submission status tracking — "Mark as Submitted" for CA DIR and WA L&I; `caEcprSubmittedAt` and `waLniSubmittedAt` columns on `payroll_weeks` extend the existing `submittedAt` pattern
 
-**Should have (UX quality for v2.5):**
-- PWCR number normalization — if contractor enters `PW-LR-XXXXXXXXXX`, strip prefix; store only the 10-digit numeric portion
-- WA trade code gate — block WA XML generation for any worker without a confirmed 4-letter `waTradeCode`; surface a field-completion prompt listing affected workers
-- WA county normalization — TypeScript const mapping free-text county values to the exact 39-county WA XSD enumeration, explicitly covering "Grays Harbor", "Pend Oreille", "San Juan", "Walla Walla"
-- Amendment fields wired — CA `<amendmentNum>` and WA `<amendedFlag>/<amendReason>` correctly populated from v2.3 amendment model when exporting an amended week
+**Should have (differentiators):**
+- Preview-then-commit import UX — show parsed rows, column mapping, matched vs unmatched workers before any DB write; extends existing `copyPayrollWeek` pattern; block import into submitted weeks
+- `payroll_imports` audit table — records who imported, from what provider, how many rows, how many skipped; filename stored (not raw CSV, which may contain full SSNs)
+- `createdByUserId` and `updatedByUserId` on `payroll_entries` — without these, imported entries are indistinguishable from manually-entered entries in a DOL audit
+- SSN encryption key versioning — `{"v":"1","iv":"...","tag":"...","ct":"..."}` JSON envelope format; `ENCRYPTION_KEY_V1` env var naming convention; re-encryption runbook written before first migration
+- `SubmissionStatusBadge` React component — surfaces CA/WA submission state on Payroll Week Detail alongside existing WH-347 submission badge
 
-**Defer (v3+):**
-- Full 9-digit SSN storage — requires privacy review and AES-256 at-rest encryption design
-- Persistent DB columns for `dirProjectId`, `contractorFein`, `dirContractAgency`, `waIntentId` — v2.5 collects at runtime; v3 persists across sessions
-- WA full CPR XML upload — blocked by SSN gap (Gap #2) and intentId gap (Gap #4); present approach is JSON assist only
-- Direct portal submission for any state — no public API exists; portal session automation is a multi-week trap with ongoing maintenance risk
+**Defer to v4+:**
+- Per-project team permissions — flat model is sufficient; granular RBAC is a v4 milestone if needed
+- SSO/SAML/OAuth provider login — JWT + email/password is the planned auth stack
+- QuickBooks OAuth API integration — CSV export is a 2-minute operation; direct API requires Intuit developer registration and quota management; scope explosion not justified
+- ADP API integration — requires ADP Marketplace approval; enterprise pricing; not feasible for small contractor tool
+- KMS-backed encryption key management — Render.com env vars are sufficient at current scale; flag for SOC 2 milestone
+- Agency portal auto-submit — monitor CA DIR and WA L&I developer portals for public API announcement; not available as of 2026-03
+
+**Confirmed anti-features (must not build):**
+- Playwright/Puppeteer portal automation — violates portal ToS, requires credential storage, breaks on UI changes, not supportable on Render.com
+- Auto-save import without review — removes deliberate certification step; legal liability on a federal certified payroll document
+- Full SSN in any API response, log, or CSV export — plaintext SSN is only acceptable inside server-side XML generator, in-process, never assigned to variables that escape that function
 
 ### Architecture Approach
 
-v2.5 extends `src/server/routes/export.ts` with two new GET handlers following the established 8-step pattern (load week, verify ownership, state gate, load entries, map data, call generator, set headers, send response). Two new pure service files are created as siblings to `a1131Generator.ts`: `ecprXmlGenerator.ts` returns an XML string; `waAssistFormatter.ts` returns a typed JSON object. A new `getPayrollEntriesWithWorkerDetails()` function is added to `payrollService.ts` to extend the existing join with `ssnLast4`, `workerAddress`, `tradeCode`, and `waTradeCode`. This resolves the existing `(row as any).waTradeCode` cast hack in the F700 handler as a side effect. No new pages, no new router files, no DB schema changes are required.
+v3.0 follows three established patterns from the existing codebase extended to multi-user. First, the single-owner auth guard (`project.userId === req.user.userId`) is replaced by a `project_members` membership check encapsulated in a single shared `assertProjectAccess` service — no route file should contain direct `userId` equality checks after this refactor; every child entity route must traverse to the project and call this function. Second, the preview-then-commit pattern from `copyPayrollWeek` is extended to CSV import — a preview endpoint returns parsed rows and unmatched workers; a commit endpoint writes to DB only after user confirmation. Third, service-layer encryption via a dedicated `cryptoService.ts` isolates all `node:crypto` calls so key rotation changes one file, not scattered call sites.
+
+Agency submissions use the export-assist pattern (XML generation + guided checklist + mark-submitted tracking) with a future-ready `agency_submissions` table designed to support API retries if portals publish endpoints later — no Redis or BullMQ dependency, SQLite polling only.
 
 **Major components:**
-1. `ecprXmlGenerator.ts` (NEW) — pure function `generateEcprXml(data: EcprData): string`; uses xmlbuilder2; CA CPR.xsd v1.3 compliant; no I/O; unit-testable without Express
-2. `waAssistFormatter.ts` (NEW) — pure function `formatWaAssistData(week, project, entries): WaAssistOutput`; returns JSON-serializable prefill object; no I/O; unit-testable without Express
-3. `export.ts` GET handlers (MODIFIED) — two new routes following identical auth + ownership + state-gate + generate + respond pattern; ~75 lines for CA, ~60 lines for WA
-4. `payrollService.ts` (MODIFIED) — `getPayrollEntriesWithWorkerDetails()` extends existing join with worker address, trade codes, and ssnLast4
-5. `PayrollWeekDetailPage.tsx` (MODIFIED) — CA XML download handler with new `caEcprGeneratingRef` (third dedicated ref, per existing comment at line 128); WA assist button with `showWaAssistModal` state + prefill panel modal
-
-Build order: Step 1 (extended join) unlocks Steps 2-4 (CA path) and Steps 5-7 (WA path) which can proceed in parallel after the join is proven.
+1. `assertProjectAccess(projectId, userId, db)` — centralized auth guard; replaces inline `project.userId !== userId` in all 9 route files; also called by every child-entity route after loading the child and reading its `projectId`
+2. `project_members` table — flat team model with `(project_id, user_id)` unique constraint; `acceptedAt` distinguishes accepted from pending; index on `(project_id, user_id)` required for auth guard performance
+3. `inviteService.ts` — invite token via `crypto.randomBytes(32)`; SHA-256 hash stored in DB; raw token in email link; 72-hour expiry; `project_members` row created with `acceptedAt: null` at invite time
+4. `cryptoService.ts` — `encryptSsn()` and `decryptSsn()` using AES-256-GCM; all `node:crypto` calls isolated here; `decryptSsn()` called only from CA eCPR and WA PWIA XML generators
+5. `importService.ts` + `qbMapper.ts` + `adpMapper.ts` — provider auto-detection by column signature; column-to-field mapping; rate snapshots fetched from WD cache (never from CSV); preview/commit two-step pipeline
+6. `agency_submissions` table — future-ready SQLite-backed status tracking; `status` enum covers pending/processing/submitted/failed/rejected; polling via `SELECT WHERE status = 'pending' AND next_retry <= datetime('now')`
 
 ### Critical Pitfalls
 
-1. **Full SSN required but only last-4 stored** — CA and WA both need 9-digit SSN. Zero-padding `ssnLast4` to produce `000000XXXX` fails portal validation (DIR checks against federal SSN rules: no `000` prefix, no `0000` in last 4 positions). Mitigation: output `000000XXX` placeholder in CA XML with a prominent modal disclosure; show `XXX-XX-XXXX` masked in WA assist panel; document that contractor must supply full SSNs before uploading to portal.
+1. **IDOR auth bypass from scattered ownership checks** — 9 route files contain `project.userId !== req.user.userId`; migrating to `project_members` without centralizing leaves missed routes that silently pass data to unauthorized users. Prevention: extract `assertProjectAccess` first, write cross-tenant test suite (two users, two projects, all protected endpoints assert 403 for wrong user) before any team data exists in any environment.
 
-2. **DIR Project ID is not the app's `projectId`** — CA XML `<projectID>` is the CA DIR Public Works Online System's numeric identifier (14-18 digits), not the app's internal integer PK. Populating it from `project.id` causes immediate portal rejection with no useful error message. Mitigation: collect in pre-generation modal labeled explicitly "CA DIR Project ID (from DIR portal)"; gate generation on this value being present.
+2. **Cross-tenant data leak via indirect object references** — routes accepting child entity IDs (workers, payroll entries, classifications) without traversing the project ownership chain are safe in single-user but become IDOR vulnerabilities in multi-user; UUID opacity is not a security boundary. Prevention: every such route must load the child entity, read its `projectId`, and call `assertProjectAccess`.
 
-3. **WA intentId is a prerequisite external filing** — The `intentId` required by WA XML is issued only after the contractor files a Statement of Intent through the PWIA portal — a separate step that must happen before work begins. It cannot be auto-generated or inferred. Mitigation: surface as a prerequisite step in the WA submission assist entry point with a link to the PWIA portal; gate the prefill panel on intentId being entered.
+3. **Rate snapshot corruption during CSV import** — QuickBooks and ADP export pay rates; if import maps these to `baseRateSnapshot` or `fringeRateSnapshot`, the WH-347 and compliance engine use wrong rates and may fail to fire violations. This is a legal compliance failure, not just a software bug. Prevention: rate snapshots must always come from `getCachedClassifications` — never from the CSV; enforce at the service layer before any CSV parsing logic is written.
 
-4. **WA trade codes are a fixed 4-letter enumeration** — The `<trade>` element requires an exact code (ELEC, CARP, LABO, etc.) from the XSD enumeration. Fuzzy string matching or `toLowerCase().includes()` against existing `workClass` descriptions will fail silently for ambiguous classifications (INDE vs INDP; RESA through RESZ). Mitigation: `waTradeCode` column introduced in v2.4 stores the correct value; verify it is populated for all workers on WA projects before allowing XML generation; block with a field-completion prompt if null.
+4. **SSN encryption key loss** — rotating the `ENCRYPTION_KEY` env var without a versioned envelope destroys all encrypted SSNs permanently (AES-256 without the key is unrecoverable). Prevention: store key version in JSON envelope (`{"v":"1",...}`); use `ENCRYPTION_KEY_V1` naming; add a startup assertion that decrypts a known test vector and refuses to start if it fails; write the key rotation runbook before the first migration is written.
 
-5. **CA DIR portal instability since June 2024** — Schema-valid XML can be accepted and then silently mis-processed (stuck as "draft", employee records not associated with the project). The XML generator has no visibility into portal processing. Mitigation: include a post-download verification checklist in the export modal; do not imply that a successful download equals a successful submission.
-
-6. **Scope creep to direct portal submission** — Once XML download works, pressure to "just submit directly" is predictable. Neither CA DIR nor WA L&I provides a public contractor submission API. Portal session automation (Playwright/headless browser) is 3-5x the work of XML generation plus ongoing maintenance risk every time portals change. Mitigation: acceptance criteria for both phases explicitly prohibit HTTP calls to portal domains from app backend; UI copy uses "Download" not "Submit" throughout.
+5. **`submittedAt` set optimistically before portal confirms** — CA DIR eCPR portal returns HTTP 200 but may mark submissions as "draft" rather than processing them; setting `submittedAt` before confirmed success permanently locks the week in the app while the portal has no record. Prevention: never set `submittedAt` until confirmed non-draft success; use `agency_submissions` table with explicit status states rather than writing to `payrollWeeks.submittedAt` directly.
 
 ---
 
 ## Implications for Roadmap
 
-Based on the combined research, v2.5 has a clean two-phase structure. The shared data layer must be built first; CA and WA can then proceed in parallel with CA having higher technical priority due to schema complexity.
+Based on combined research, the architecture recommends this build order with strict dependency respect:
 
-### Phase 1: Extended Data Layer + CA eCPR XML Export
+### Phase 1: SSN Encryption Foundation
 
-**Rationale:** The extended payroll entry join (`getPayrollEntriesWithWorkerDetails`) is a prerequisite for both CA and WA features and should be proven once before either generator is built. CA eCPR has a more complex XML mapping (40+ required fields, namespace prefixes, 13 deduction fields, 7-day arrays per worker) and higher-stakes failure modes (DIR portal instability, fund admin misclassification). Building CA first surfaces implementation issues before WA adds new unknowns.
+**Rationale:** No dependencies on any other v3.0 feature — purely additive column (`workers.ssn_encrypted`) plus `cryptoService.ts`. Must land before any CA eCPR or WA PWIA improvement that writes full SSN to XML. Key versioning envelope and startup assertion must be designed and implemented here before a single encrypted value is written to any environment.
+**Delivers:** AES-256-GCM SSN encryption at rest; `cryptoService.ts` with `encryptSsn` and `decryptSsn`; key versioning JSON envelope (`{"v":"1","iv":"...","tag":"...","ct":"..."}`); `ENCRYPTION_KEY_V1` env var; startup health check assertion; re-encryption runbook documented
+**Addresses:** SSN encryption table stakes from FEATURES.md Part 7; unblocks CA/WA XML full-SSN requirement deferred from v2.5
+**Avoids:** SSN key loss (Pitfall 4), IV reuse/CBC mode, plaintext SSN in API responses, AES-CBC instead of AES-GCM
 
-**Delivers:** Downloadable CA CPR.xsd v1.3 compliant XML for CA projects; pre-generation modal for runtime data collection; post-download verification checklist; `ecprXmlGenerator.ts` unit-tested against CPR.xsd structure.
+### Phase 2: Multi-User Auth Foundation (DB Schema + Middleware Refactor)
 
-**Addresses:** CA eCPR table stakes feature; pre-generation readiness check; PWCR strip logic; amendment field wiring for CA; xmlbuilder2 install and namespace usage pattern established.
+**Rationale:** The `project_members` table and the `assertProjectAccess` refactor must land before invite routes, team UI, or any team data can exist. The cross-tenant test suite must be written and passing before this phase is complete. `createdByUserId` and `updatedByUserId` columns on `payroll_entries` belong in this phase — retrofitting after import ships leaves null on all imported entries, indistinguishable from manually-entered entries in a DOL audit.
+**Delivers:** `project_members` table with `(project_id, user_id)` unique index; `users.invite_token` and `users.invite_token_exp` columns; `assertProjectAccess` service replacing all inline `userId` checks across 9 route files; cross-tenant test suite; `createdByUserId` and `updatedByUserId` on `payroll_entries`
+**Addresses:** Flat team model architectural decision; `project_members` over `organizations` design rationale
+**Avoids:** IDOR auth bypass (Pitfall 1), indirect object reference data leak (Pitfall 2)
 
-**Avoids:**
-- Full SSN pitfall: `000000XXX` placeholder with disclosure, never zero-padded fake
-- DIR Project ID pitfall: runtime modal collection, labeled explicitly with DIR portal link
-- String injection pitfall: xmlbuilder2 handles entity encoding for `&` and `<` in contractor/project names
-- CA portal instability pitfall: post-download checklist with `publicworks@dir.ca.gov` contact in modal
-- Scope creep: acceptance criteria prohibit any HTTP call to `efiling.dir.ca.gov`
-- `checkNum` omission: CA schema requires minLength=1; add check number input to export flow with "DIRECT DEPOSIT" default
+### Phase 3: Multi-User Invite Flow + Team UI
 
-**Key tasks in order:**
-1. `npm install xmlbuilder2@4.0.3`
-2. Add `getPayrollEntriesWithWorkerDetails()` to `payrollService.ts` — also resolves `(row as any).waTradeCode` hack in F700 handler
-3. Build and unit-test `ecprXmlGenerator.ts` against CPR.xsd structure
-4. Add `GET /api/export/ecpr-xml/:weekId` to `export.ts`
-5. Update CA disclosure modal in `PayrollWeekDetailPage.tsx` with XML option, gap disclosures, post-download checklist
+**Rationale:** Depends on Phase 2 (`project_members` table must exist). New routes (`POST /projects/:id/invite`, `POST /invites/accept`, `GET /projects/:id/members`, `DELETE /projects/:id/members/:userId`) plus `TeamSettingsPanel` and `InviteAcceptPage` React components. `nodemailer` install happens here.
+**Delivers:** Email invite flow; tokenized accept link (SHA-256 hash stored, raw token in email); team member list for owner; access revocation; pending invite status; `nodemailer@8.0.4` install; SMTP env var configuration
+**Addresses:** All team account table stakes and differentiators from FEATURES.md Part 7
+**Avoids:** Invite token stored plaintext (always SHA-256 hash before storing); membership embedded in JWT payload (resolve from DB per request, never cache in token)
 
-### Phase 2: WA L&I Submission Assist + CPR JSON Prefill
+### Phase 4: Agency Submission Status Tracking
 
-**Rationale:** Depends on Phase 1's extended join and proven route pattern. WA submission assist is architecturally simpler (JSON response, no file download) but has more prerequisite UX gates (intentId, WA trade code validation, county normalization). Sequencing after CA ensures both the data layer and the modal pattern are stable before WA adds its own UX complexity.
+**Rationale:** No dependencies on other v3.0 features. Purely additive — `caEcprSubmittedAt` and `waLniSubmittedAt` columns on `payroll_weeks`, new `agency_submissions` table (future-ready), and `SubmissionStatusBadge` React component. Extends existing v2.5 Phase 29/30 CA/WA modal UI with "Mark as Submitted" actions.
+**Delivers:** Per-agency submission tracking on `payroll_weeks`; `SubmissionStatusBadge` on Payroll Week Detail; `agency_submissions` table with full status state machine for future API support; "Mark as Submitted" UI action in CA eCPR and WA PWIA export modals
+**Addresses:** Agency portal auto-submit research gate finding (not feasible as machine-to-machine); export-assist pattern formalization
+**Avoids:** Optimistic `submittedAt` before portal confirms (Pitfall 5); portal session expiry mid-submission; headless browser automation anti-pattern
 
-**Delivers:** WA submission assist modal in `PayrollWeekDetailPage.tsx` showing per-worker prefill data; `waAssistFormatter.ts` unit-tested against xmlschema.xsd field list; `GET /api/export/wa-assist/:weekId` returning structured JSON; prerequisite checklist for intentId.
+### Phase 5: Payroll Import — Server Pipeline
 
-**Addresses:** WA submission assist table stakes; intentId prerequisite flow; 39-county normalization const; WA trade code gate; amendment field wiring for WA.
+**Rationale:** Depends only on existing `payrollEntries` schema. Server-side CSV parsing is business logic that needs tests and versioning; WD rate snapshot fetch requires DB access. Two-route pattern (preview + commit) mirrors `copyPayrollWeek`. Rate snapshot sourcing rule must be the first constraint implemented in `importService.ts` before any CSV parsing is written — this is not an afterthought.
+**Delivers:** `importService.ts` with provider auto-detection; `qbMapper.ts` and `adpMapper.ts`; `POST /import` preview route and `POST /import/commit` route; `payroll_imports` audit table; submitted-week protection (reject import into weeks with `submittedAt` set)
+**Addresses:** QuickBooks and ADP import table stakes; server-side parsing architectural decision; preview-then-commit pattern
+**Avoids:** Rate snapshot corruption from CSV (Pitfall 3), duplicate entries on re-import (Pitfall 4), CSV SSN staging in plaintext
 
-**Avoids:**
-- intentId pitfall: prerequisite step shown before prefill panel; link to `secure.lni.wa.gov/wagelookup/`
-- WA trade code pitfall: gate on `waTradeCode` being populated; surface actionable warning for workers with null `waTradeCode`
-- County normalization pitfall: TypeScript const covering all 39 counties with multi-word edge cases tested explicitly
-- WA apprentice field pitfall: `<apprenticeFlg>true</apprenticeFlg>` requires all 6 companion fields — surface gap for `apprenticeId` (app stores `programName`, not individual reg ID)
-- `noWorkPerformFlag` pitfall: when true, `<employees>` element must be absent entirely, not empty
-- Scope creep: acceptance criteria prohibit any HTTP call to `secure.lni.wa.gov`; label is "WA Submission Assist" not "Submit to L&I"
+### Phase 6: Payroll Import — React UI
 
-**Key tasks in order:**
-1. Build and unit-test `waAssistFormatter.ts` against xmlschema.xsd field list
-2. Add `GET /api/export/wa-assist/:weekId` to `export.ts`
-3. Add WA assist button + prefill panel modal to `PayrollWeekDetailPage.tsx`
+**Rationale:** Depends on Phase 5 routes. `PayrollImportModal` with file picker, provider label, preview table showing matched and unmatched workers and estimated daily hour distribution, column mapping annotations, and confirm-commit action.
+**Delivers:** `PayrollImportModal`; unmatched worker warning list; import confirmation flow with hours-delta display; integration with existing Payroll Week Detail page
+**Addresses:** Import UX table stakes and differentiators — preview before commit, unmatched worker surfacing, column mapping transparency
+**Avoids:** Auto-save without review anti-feature; silent unmatched worker skip; import that proceeds with partial data
 
 ### Phase Ordering Rationale
 
-- Phase 1 before Phase 2 because `getPayrollEntriesWithWorkerDetails()` is a shared prerequisite — build it once, test it once
-- CA before WA because CA has higher XML complexity (namespace prefixes, 40+ fields, deduction mapping) and higher portal risk (June 2024 instability) — resolving CA first de-risks the release
-- No DB migrations in either phase — all missing CA fields collected at runtime in pre-generation modal; WA intentId shown as a labeled blank with external link
-- `xmlbuilder2` install is the first action in Phase 1 before any generator code is written
+- SSN encryption is first because it has zero dependencies and CA/WA XML full-SSN support has been deferred since v2.5 — it unblocks two downstream compliance features
+- Auth foundation (Phase 2) precedes the invite flow (Phase 3) because invite routes reference `project_members` and the cross-tenant test suite is the regression gate for all subsequent team work
+- Submission tracking (Phase 4) is independent and low-complexity; placing it before import avoids the import phase being blocked by unrelated status UI work
+- Import server pipeline (Phase 5) before import React UI (Phase 6) is the natural dependency order; shipping the pipeline with automated tests before building UI reduces debugging surface
 
 ### Research Flags
 
-Phases with well-documented patterns (no additional research needed):
-- **Phase 1 (CA XML):** CA CPR.xsd v1.3 fetched live; all 40+ fields documented in STACK.md; xmlbuilder2 API is straightforward; existing export.ts route pattern proven across 3 prior handlers (WH-347, A-1-131, F700)
-- **Phase 2 (WA Assist):** WA xmlschema.xsd fetched live; all fields documented in STACK.md; JSON route pattern is simpler than Phase 1; PWIA portal-only distinction confirmed
+Phases likely needing deeper research during planning:
+- **Phase 3 (Invite Flow):** SMTP relay selection (Resend vs SendGrid vs Postmark) and Render.com environment variable setup for `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` — confirm relay provider and verify deliverability to contractor email domains before implementation
+- **Phase 5 (Import Pipeline):** QuickBooks column names vary by QB version and export type (QB Desktop vs QB Online, Payroll Summary vs Time Activity); ADP column names differ between ADP Run and ADP Workforce Now; test with real contractor export files before hardcoding column templates; build column mapping UI that shows parsed headers for user confirmation rather than relying solely on hardcoded templates
 
-Areas to verify at implementation start (not blocking, but confirm before writing generator code):
-- **CA FEIN format in DB:** May be stored with dashes (XX-XXXXXXX); generator must strip to 9 digits. Confirm format at Phase 1 task 2.
-- **CA XML namespace URI:** Must match portal's expected value exactly: `http://www.dir.ca.gov/dlse/CPR-Prod-Test/CPR.xsd`. Verify against live `CPRSample.xml` before finalizing the generator constant.
-- **WA `waTradeCode` data completeness:** Workers assigned before v2.4 may have null `waTradeCode`. Include a data audit in Phase 2 acceptance criteria.
-- **Amendment week detection logic:** Confirm `payroll_weeks.parent_week_id` and `submission_status = 'amended'` are the correct signals for populating `<amendmentNum>` (CA) and `<amendedFlag>` (WA) before writing generator code.
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (SSN Encryption):** AES-256-GCM with `node:crypto` is a well-documented Node.js pattern; implementation code is fully specified in STACK.md and ARCHITECTURE.md with working TypeScript snippets
+- **Phase 2 (Auth Foundation):** `project_members` join table pattern is standard multi-tenant SaaS; ARCHITECTURE.md specifies exact schema, guard pattern, and data flow diagrams
+- **Phase 4 (Submission Tracking):** Additive columns plus existing submission badge pattern; no new domain complexity
 
 ---
 
@@ -157,46 +159,44 @@ Areas to verify at implementation start (not blocking, but confirm before writin
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | CA CPR.xsd v1.3 and WA xmlschema.xsd fetched directly from official portals; xmlbuilder2 v4.0.3 changelog confirmed on GitHub; Node.js compatibility verified against project `package.json` engines field |
-| Features | HIGH | CA eCPR field requirements confirmed from live XSD and sample XML; WA PWIA field requirements confirmed from live XSD and RCW 39.12.040; PWIA portal-only distinction confirmed from multiple sources |
-| Architecture | HIGH | Existing codebase directly inspected (`export.ts`, `payrollService.ts`, `PayrollWeekDetailPage.tsx`, `schema.ts`, `a1131Generator.ts`, `f700Generator.ts`, `index.ts`) — no inference needed; patterns are established and repeatable |
-| Pitfalls | HIGH | Critical pitfalls grounded in official XSD constraints (SSN pattern, enumeration types, required fields); CA DIR portal instability documented by United Contractors and Sunburst Software; scope creep risk is structural |
+| Stack | HIGH | nodemailer version confirmed from live GitHub release (2026-03-27); multer and papaparse confirmed in project package.json; Node.js crypto AES-256-GCM from official docs; project confirmed ESM with Node >= 20 |
+| Features | HIGH (team/encryption) / MEDIUM (import field mapping) | Team invite and SSN encryption patterns are standard and well-documented; QB/ADP CSV column names vary by product version — confirmed in principle but exact column names need real-file validation before hardcoding templates |
+| Architecture | HIGH | Grounded in direct source code review of existing routes, schema, and middleware; `project_members` vs `organizations` decision based on actual flat-model requirement; service-layer encryption preference over SQLCipher based on confirmed Render.com deployment constraints |
+| Pitfalls | HIGH (security/data integrity) / MEDIUM (portal behavior) | IDOR and rate snapshot pitfalls grounded in source code analysis of 9 route files; CA DIR "returns 200 but marks as draft" behavior documented in vendor reports but not confirmed by direct portal testing |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Full SSN strategy for v3+:** v2.5 uses placeholder output with disclosures. Before adding persistent SSN storage, conduct a privacy review and design AES-256 encryption at rest. Do not shortcut with a plain `TEXT` column.
-- **FEIN format in DB:** Confirm whether `projects.contractorFein` (if it exists) stores raw digits or formatted with dashes. The CA XML generator must call `.replace(/-/g, '')` before writing `<contractorFEIN>`. Verify at Phase 1 task 2 during codebase inspection.
-- **`allWork` gross wages:** CA XML `<grossAmountEarned><allWork>` should reflect worker's total gross across all jobs that week. The app only has per-project data. v2.5 mitigation is to use `thisProject` value and add a disclosure. This is a known limitation, not a code bug — document it in the modal.
-- **WA apprentice `apprenticeId` vs `programName`:** App stores `programName` (the program name); WA XML needs the individual apprentice registration ID. WA assist panel shows `programName` with a note explaining the distinction. If apprentice ID tracking is needed, add a new worker-level field in a future milestone.
-- **`waTradeCode` null handling:** Phase 2 acceptance criteria must include a test for the case where one or more workers on a WA project have `waTradeCode = null` — verify the assist panel surfaces an actionable list of affected workers, not a silent blank or a crash.
+- **QuickBooks exact column names by version:** STACK.md documents QB column names from a community support article (MEDIUM confidence); exact column headers vary by QB version, locale, and export type. Mitigation: build a column mapping UI that shows parsed headers and lets the contractor confirm hours columns; treat hardcoded QB template as a default override-able per upload.
+
+- **ADP Run vs ADP Workforce Now formats:** ADP Workforce Now (`PRcccEPI.csv`) is documented at MEDIUM confidence from third-party integration guides; ADP Run (small business product) uses a different export format with different column names. Mitigation: same column mapping UI; ship WFN template first; ADP Run is a secondary target.
+
+- **CA DIR XML: SSN gap now closeable with Phase 1:** v2.5 shipped a masked SSN placeholder in CA eCPR XML. With Phase 1 (SSN encryption) complete, the CA XML generator must be updated to call `cryptoService.decryptSsn()` and write the real SSN. This update belongs in Phase 1 scope, not a separate phase.
+
+- **Invite token storage — SHA-256 hash vs plaintext:** ARCHITECTURE.md recommends SHA-256 hashing the invite token before storage; FEATURES.md Part 7 uses "cryptographically random, single-use" without specifying hashing. Implementation must hash before storage — 256-bit entropy raw token travels only in the email link; SHA-256 hash stored in DB; hash comparison at acceptance.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- `https://www.dir.ca.gov/Public-Works/CPR/CPR.xsd` — CA DIR eCPR XML Schema v1.3, live fetch 2026-03-26; full field reference in STACK.md
-- `https://www.dir.ca.gov/Public-Works/CPR/CPRSample.xml` — CA DIR eCPR sample XML, namespace URI confirmed
-- `https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd` — WA L&I CPR XML Schema, live fetch 2026-03-26; full field reference in STACK.md
-- `https://github.com/oozcitak/xmlbuilder2/blob/master/CHANGELOG.md` — xmlbuilder2 v4.0.3 release date (November 2025) and Node >= 20 requirement confirmed
-- Existing codebase (directly inspected): `export.ts`, `payrollService.ts`, `PayrollWeekDetailPage.tsx`, `schema.ts`, `a1131Generator.ts`, `f700Generator.ts`, `index.ts`
-- `package.json` (`engines.node >= 20.0.0`) — Node compatibility confirmed
+- `package.json` (project root) — confirmed installed: multer@^2.1.1, papaparse@^5.5.3, argon2@^0.44.0, csv-parse@^6.2.0; `"type": "module"` ESM; engines.node >= 20
+- `https://github.com/nodemailer/nodemailer/releases` — nodemailer v8.0.4 released 2026-03-25; ESM support confirmed; TypeScript types bundled; one breaking change from v7 (error code rename, no impact on clean install)
+- `https://nodejs.org/api/crypto.html` — AES-256-GCM, `createCipheriv`, `randomBytes` official Node.js docs
+- `src/server/routes/projects.ts`, `src/server/db/schema.ts` — direct source code review for auth pattern and existing schema; `project.userId !== userId` pattern confirmed in 9 route files
+- `https://efiling.dir.ca.gov/eCPR/pages/home.jsp` — CA DIR eCPR portal: XML file upload only, no REST API confirmed
+- `https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd` — WA L&I official XML schema (parsed directly in v2.5 research); no machine-to-machine submission endpoint
 
 ### Secondary (MEDIUM confidence)
+- `https://quickbooks.intuit.com/learn-support/en-us/employees-and-payroll/csv-file-export-for-payroll/00/700576` — QB CSV export column structure; community support article, not official API docs
+- ADP Workforce Now PRcccEPI.csv format — Co Code, Batch ID, File #, Reg Hours, O/T Hours confirmed from multiple third-party integration guides; official ADP docs behind login wall
+- CA DIR "returns 200 but marks as draft" behavior — documented in `thewpcca.com/dir-update-on-public-works-website-issues`; not confirmed by direct portal testing
+- `https://agnitestudio.com/blog/preventing-cross-tenant-leakage/` — multi-tenant IDOR prevention patterns
 
-- `https://www.dir.ca.gov/public-works/certified-payroll-reporting.html` — v1.3 schema confirmed current; links to XSD and sample XML
-- `https://lni.wa.gov/licensing-permits/public-works-projects/contractors-employers/` — WA weekly CPR filing via My L&I confirmed official requirement
-- `https://www.points-north.com/state-by-state-certified-payroll-reporting/washington` — PWIA vs CPR distinction confirmed; PWIA is web form only, CPR accepts XML upload
-- `https://sunburstsoftwaresolutions.com/washington-state-l-i-electronic-xml-upload-available.htm` — WA L&I XML as portal file upload (not API) confirmed; effective January 2020
-- `https://bayareabx.com/news/html/public-works-online-system-enhancement-update` — CA DIR April 2025 platform update; XML format unchanged from v1.3
-- `https://www.sunburstsoftwaresolutions.com/2024-ca-dir.htm` — CA DIR June 2024 portal instability and fund admin misclassification as known DIR system bug
-- `https://www.unitedcontractors.org/news/contractor-guidance-during-dir-website-system-failures` — June 2024 portal launch failures documented; draft submission behavior confirmed
-- `https://lni.wa.gov/licensing-permits/_docs/xml%20payroll%20guide.pdf` — WA XML Payroll Upload Guide (existence confirmed; content not extracted from binary PDF)
-- DOL WH-347 (Rev. Jan 2025), 29 CFR Part 5, 29 CFR 3.9, RCW 39.12.040 — regulatory basis for all compliance feature context
+### Tertiary (LOW confidence — needs validation)
+- QB Time Activity export day-level columns — inferred from ADP Marketplace listing for Points North integration; exact field names in day-level QB export not confirmed from official QB documentation; validate with real contractor export file before hardcoding
 
 ---
-*Research completed: 2026-03-26*
+*Research completed: 2026-03-27*
 *Ready for roadmap: yes*
