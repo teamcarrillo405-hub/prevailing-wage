@@ -18,7 +18,13 @@ import { requireAuth } from '../middleware/auth.js';
 import {
   getPayrollWeek,
   getPayrollEntries,
+  getPayrollEntriesWithWorkerDetails,
 } from '../services/payrollService.js';
+import {
+  generateEcprXml,
+  type EcprData,
+  type EcprEmployee,
+} from '../services/ecprXmlGenerator.js';
 import {
   fillWh347,
   type Wh347Data,
@@ -503,6 +509,179 @@ router.get('/csv/emars/:weekId', async (req, res) => {
     `attachment; filename="emars-payroll-${week.payrollNumber}.csv"`,
   );
   res.send(csv);
+});
+
+// ── GET /api/export/ecpr-xml/:weekId ─────────────────────────────────────────
+// CA DIR eCPR XML export — CPR.xsd v1.3 compliant
+// Requires query params: checkNum, contractorFein, dirProjectId, awardingAgency, contractNumber, contractorEmail
+
+router.get('/ecpr-xml/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project ownership
+  const db = getDb();
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, week.projectId))
+    .limit(1);
+
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  if (project.userId !== userId) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  // 3. State gate — eCPR XML is CA-only
+  if (project.state !== 'CA') {
+    res.status(400).json({ error: 'CA eCPR XML export is only available for California projects' });
+    return;
+  }
+
+  // 4. Read required query params (collected by pre-generation modal)
+  const checkNum = (req.query.checkNum as string) || 'DIRECT DEPOSIT';
+  const contractorFein = (req.query.contractorFein as string) || project.contractorFein || '';
+  const dirProjectId = (req.query.dirProjectId as string) || project.dirProjectId || '';
+  const awardingAgency = (req.query.awardingAgency as string) || project.awardingAgency || '';
+  const contractNumber = (req.query.contractNumber as string) || project.contractNumber || '';
+  const contractorEmail = (req.query.contractorEmail as string) || '';
+
+  // Validate required fields
+  if (!contractorFein || !dirProjectId) {
+    res.status(400).json({ error: 'contractorFein and dirProjectId are required for eCPR XML export' });
+    return;
+  }
+
+  // 5. Load payroll entries with worker details
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+
+  // 6. Compute week start date (Sun) from weekEndingDate (Sat)
+  const weekEnd = new Date(week.weekEndingDate + 'T00:00:00');
+  const weekStartDate = new Date(weekEnd);
+  weekStartDate.setDate(weekEnd.getDate() - 6);
+
+  // Map entries to EcprEmployee[]
+  type EcprEntryRow = (typeof entries)[number];
+  const employees: EcprEmployee[] = entries.map((row: EcprEntryRow) => {
+    const e = row.entry;
+    const ssnLast4 = row.workerSsnLast4 || '0000';
+    const ssn10 = '000000' + ssnLast4;
+
+    // Parse address: "street, city, state zip" format
+    const addrParts = (row.workerAddress || '').split(',').map((s: string) => s.trim());
+    const street = addrParts[0] || '';
+    const city = addrParts[1] || '';
+    const stateZip = (addrParts[2] || '').split(' ').filter(Boolean);
+    const addrState = stateZip[0] || 'CA';
+    const zip = stateZip[1] || '00000';
+
+    // Build 7-day array (id=1=Sun through id=7=Sat)
+    const dayOrder = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+    const days = dayOrder.map((d, i) => {
+      const dayDate = new Date(weekStartDate);
+      dayDate.setDate(weekStartDate.getDate() + i);
+      const dateStr = dayDate.toISOString().split('T')[0];
+      return {
+        date: dateStr,
+        straightTime: (e as any)[`${d}St`] || 0,
+        overtime: (e as any)[`${d}Ot`] || 0,
+        doubletime: (e as any)[`${d}Dt`] || 0,
+      };
+    });
+
+    const totalSt = days.reduce((s, d) => s + d.straightTime, 0);
+    const totalOt = days.reduce((s, d) => s + d.overtime, 0);
+    const totalDt = days.reduce((s, d) => s + d.doubletime, 0);
+    const baseRate = e.baseRateSnapshot;
+    const grossThisProject = e.grossWages ?? 0;
+
+    // Fringe sub-fields for deductions/contributions
+    const hw = e.fringeHealthWelfare ?? 0;
+    const pen = e.fringePension ?? 0;
+    const vac = e.fringeVacation ?? 0;
+    const trn = e.fringeTraining ?? 0;
+    const totalHours = totalSt + totalOt + totalDt;
+
+    return {
+      name: row.workerName,
+      ssn: ssn10,
+      address: { street, city, state: addrState, zip },
+      numWithholdingExemp: '0',
+      workClass: row.tradeDescription,
+      days,
+      totHrsStraightTime: totalSt,
+      totHrsOvertime: totalOt,
+      totHrsDoubletime: totalDt,
+      hrlyPayRateStraightTime: baseRate,
+      hrlyPayRateOvertime: baseRate * 1.5,
+      hrlyPayRateDoubletime: baseRate * 2.0,
+      grossThisProject,
+      grossAllWork: grossThisProject,  // single-project limitation
+      deductions: {
+        fedTax: 0,
+        FICA: 0,
+        stateTax: 0,
+        SDI: 0,
+        vacationHoliday: vac * totalHours,
+        healthWelfare: hw * totalHours,
+        pension: pen * totalHours,
+        training: trn * totalHours,
+        fundAdmin: 0,
+        dues: 0,
+        travelSubs: 0,
+        savings: 0,
+        other: 0,
+      },
+      netWagePaidWeek: e.netPay ?? 0,
+      checkNum,
+    };
+  });
+
+  // 7. Build EcprData and generate XML
+  const feinClean = contractorFein.replace(/-/g, '');
+  const ecprData: EcprData = {
+    contractor: {
+      name: project.name,
+      licenseType: 'CSLB',
+      licenseNum: project.cslbLicense || '',
+      pwcr: 'NA',
+      fein: feinClean,
+      address: { street: '', city: '', state: 'CA', zip: '00000' },
+      insuranceNum: project.wcPolicyNumber || '',
+      email: contractorEmail,
+    },
+    project: {
+      contractAgency: awardingAgency,
+      projectID: dirProjectId,
+      contractID: contractNumber,
+    },
+    payroll: {
+      statementOfNP: entries.length === 0,
+      forWeekEnding: week.weekEndingDate,
+      amendmentNum: (week.originalWeekId && week.amendmentNumber) ? week.amendmentNumber : null,
+    },
+    employees,
+  };
+
+  const xml = generateEcprXml(ecprData);
+
+  // 8. Set headers and send response
+  const last4Fein = feinClean.slice(-4);
+  const filename = `${last4Fein}_${dirProjectId}_${week.weekEndingDate}.xml`;
+  res.setHeader('Content-Type', 'application/xml');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(xml);
 });
 
 export { router as exportRouter };
