@@ -22,6 +22,7 @@ const COOKIE_OPTS = {
 const RegisterSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
+  inviteCode: z.string().optional(),
 });
 
 const LoginSchema = z.object({
@@ -31,7 +32,13 @@ const LoginSchema = z.object({
 
 // POST /api/auth/register
 authRouter.post('/register', validate(RegisterSchema), async (req, res) => {
-  const { email, password } = req.body as z.infer<typeof RegisterSchema>;
+  const { email, password, inviteCode } = req.body as z.infer<typeof RegisterSchema>;
+
+  if (process.env.INVITE_CODE && inviteCode !== process.env.INVITE_CODE) {
+    res.status(403).json({ error: 'Invalid invitation code' });
+    return;
+  }
+
   const db = getDb();
 
   // Check for duplicate email

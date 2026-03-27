@@ -20,6 +20,10 @@ import { complianceRouter } from './routes/compliance.js';
 import { reportsRouter } from './routes/reports.js';
 import { runWageSync } from './services/wdolSync.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(helmet());
@@ -40,6 +44,15 @@ app.use('/api/union', unionRouter);
 app.use('/api/variance', varianceRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/reports', reportsRouter);
+
+// Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(join(__dirname, '../../dist/client')));
+  app.get('*', (_req, res) => {
+    res.sendFile(join(__dirname, '../../dist/client/index.html'));
+  });
+}
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
