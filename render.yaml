@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: hcc-prevailing-wage
+    runtime: node
+    buildCommand: npm run build
+    startCommand: node dist/server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /var/data/prevailing-wage.db
+      - key: CORS_ORIGIN
+        value: https://hcc-prevailing-wage.onrender.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: INVITE_CODE
+        sync: false
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
