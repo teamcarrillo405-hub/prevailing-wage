@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 29-01-PLAN.md
-last_updated: "2026-03-27T08:28:40.808Z"
+stopped_at: Completed 29-03-PLAN.md task 1 — awaiting human-verify checkpoint at task 2
+last_updated: "2026-03-27T08:36:44.957Z"
 progress:
   total_phases: 14
   completed_phases: 12
   total_plans: 27
-  completed_plans: 25
+  completed_plans: 26
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 29 (CA eCPR XML Export) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Plan: 2 of 3
 | 27 | 2/2 | Complete |
 | 28 | 2/2 | Complete |
 | Phase 29-ca-ecpr-xml-export P01 | 272 | 2 tasks | 9 files |
+| Phase 29-ca-ecpr-xml-export P03 | 8 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,7 @@ Key decisions affecting v2.5 work:
 - [Research]: getPayrollEntriesWithWorkerDetails() extended join is a shared prerequisite — build once in Phase 29, reuse in Phase 30
 - [Phase 25]: waTradeCode stored per classification in 0013 migration — Phase 30 reads this column for WA trade code gate
 - [Phase 29-ca-ecpr-xml-export]: fringe sub-columns nullable REAL: null=non-CA, 0=explicitly zero; getPayrollEntriesWithWorkerDetails new export alongside getPayrollEntries; UpsertEntrySchema extended to prevent Zod strip silently dropping fringe fields
+- [Phase 29-ca-ecpr-xml-export]: CA eCPR XML button added alongside CA A-1-131 button — both CA-gated; 2-step in-place modal transition on successful download; ecprCheckNum defaults to DIRECT DEPOSIT, ephemeral per export
 
 ### Pending Todos
 
@@ -74,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T08:28:40.805Z
-Stopped at: Completed 29-01-PLAN.md
+Last session: 2026-03-27T08:36:44.953Z
+Stopped at: Completed 29-03-PLAN.md task 1 — awaiting human-verify checkpoint at task 2
 Resume file: None

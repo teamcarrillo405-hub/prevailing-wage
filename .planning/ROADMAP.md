@@ -548,7 +548,7 @@ Plans:
 
 - [ ] 29-02-PLAN.md — ecprXmlGenerator.ts (CPR.xsd v1.3 XML) + unit tests + GET /api/export/ecpr-xml/:weekId route
 
-- [ ] 29-03-PLAN.md — CA eCPR XML download button + 2-step pre-generation modal + post-download portal checklist
+- [x] 29-03-PLAN.md — CA eCPR XML download button + 2-step pre-generation modal + post-download portal checklist
 
 
 
@@ -634,7 +634,7 @@ Plans:
 
 | 28. Production Deployment | v2.4 | 2/2 | Complete | 2026-03-27 |
 
-| 29. CA eCPR XML Export | v2.5 | 1/3 | In Progress|  |
+| 29. CA eCPR XML Export | v2.5 | 2/3 | In Progress|  |
 
 | 30. WA PWIA Submission Assist | v2.5 | 0/TBD | Not started | - |
 
