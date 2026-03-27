@@ -1,7 +1,8 @@
 ---
 phase: 31
 slug: ssn-encryption-foundation
-status: draft
+status: approved
+reviewed_at: 2026-03-27
 shadcn_initialized: false
 preset: none
 created: 2026-03-27
@@ -44,7 +45,7 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Major section breaks |
 | 3xl | 64px | Page-level spacing |
 
-Exceptions: Touch targets for the SSN show/hide toggle button must be minimum 44px tall to meet WCAG 2.5.5 target size. Use `min-h-[44px]` on that control.
+Exceptions: none — SSN input uses `type="password"` (browser native masking); no show/hide toggle button is implemented.
 
 Source: 8-point scale default; CLAUDE.md design token rules confirm Tailwind spacing usage.
 
@@ -88,7 +89,7 @@ These existing primitives are used in this phase. No new UI components are creat
 
 | Component | File | Usage in Phase 31 |
 |-----------|------|-------------------|
-| `Button` | `ui/Button.tsx` | Primary: "Save Worker", "Update Worker". Ghost: show/hide toggle for SSN input |
+| `Button` | `ui/Button.tsx` | Primary: "Save Worker", "Update Worker" |
 | `Badge` | `ui/Badge.tsx` | `neutral` variant: "Full SSN not on file" indicator on worker detail/edit view |
 | `EmptyState` | `ui/EmptyState.tsx` | Not used in this phase (workers list already has content) |
 | `Card` | `ui/Card.tsx` | Worker form panel wrapper (existing, unchanged) |
