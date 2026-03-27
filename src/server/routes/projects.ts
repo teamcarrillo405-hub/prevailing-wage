@@ -34,6 +34,10 @@ const IMMUTABLE_FIELDS = ['awardDate', 'fundingType', 'wdIdentifier', 'wdModNumb
 const UpdateProjectSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   status: z.enum(['active', 'closed']).optional(),
+  contractorFein: z.string().max(9).optional(),
+  dirProjectId: z.string().max(18).optional(),
+  awardingAgency: z.string().max(56).optional(),
+  contractNumber: z.string().max(25).optional(),
 });
 
 // POST /api/projects — create a project

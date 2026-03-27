@@ -81,6 +81,10 @@ export interface UpsertPayrollEntryInput {
   grossWages?: number | null;
   deductions?: number;
   netPay?: number | null;
+  fringeHealthWelfare?: number | null;
+  fringePension?: number | null;
+  fringeVacation?: number | null;
+  fringeTraining?: number | null;
 }
 
 // ── Service Functions ─────────────────────────────────────────────────────
@@ -160,6 +164,10 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     grossWages: input.grossWages ?? null,
     deductions: input.deductions ?? 0,
     netPay: input.netPay ?? null,
+    fringeHealthWelfare: input.fringeHealthWelfare ?? null,
+    fringePension: input.fringePension ?? null,
+    fringeVacation: input.fringeVacation ?? null,
+    fringeTraining: input.fringeTraining ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -200,6 +208,10 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         grossWages: values.grossWages,
         deductions: values.deductions,
         netPay: values.netPay,
+        fringeHealthWelfare: values.fringeHealthWelfare,
+        fringePension: values.fringePension,
+        fringeVacation: values.fringeVacation,
+        fringeTraining: values.fringeTraining,
         updatedAt: now,
       },
     });
@@ -241,6 +253,30 @@ export async function getPayrollEntries(weekId: string) {
     )
     .where(eq(payrollEntries.payrollWeekId, weekId));
 
+  return rows;
+}
+
+export async function getPayrollEntriesWithWorkerDetails(weekId: string) {
+  const db = getDb();
+  const rows = await db
+    .select({
+      entry: payrollEntries,
+      workerName: workers.name,
+      workerSsnLast4: workers.ssnLast4,
+      workerAddress: workers.address,
+      tradeDescription: workerClassifications.tradeDescription,
+      tradeCode: workerClassifications.tradeCode,
+      waTradeCode: workerClassifications.waTradeCode,
+      laborType: workerClassifications.laborType,
+      programName: workerClassifications.programName,
+    })
+    .from(payrollEntries)
+    .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
+    .innerJoin(
+      workerClassifications,
+      eq(payrollEntries.classificationId, workerClassifications.id),
+    )
+    .where(eq(payrollEntries.payrollWeekId, weekId));
   return rows;
 }
 

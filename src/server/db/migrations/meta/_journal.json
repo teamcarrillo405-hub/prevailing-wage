@@ -71,6 +71,13 @@
       "when": 1774481700001,
       "tag": "0013_wa_manual_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1774900000000,
+      "tag": "0014_ca_ecpr_fringe_columns",
+      "breakpoints": true
     }
   ]
 }

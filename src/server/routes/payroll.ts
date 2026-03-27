@@ -64,6 +64,10 @@ const UpsertEntrySchema = z.object({
   grossWages: z.number().nullable().optional(),
   deductions: z.number().min(0).optional(),
   netPay: z.number().nullable().optional(),
+  fringeHealthWelfare: z.number().min(0).nullable().optional(),
+  fringePension: z.number().min(0).nullable().optional(),
+  fringeVacation: z.number().min(0).nullable().optional(),
+  fringeTraining: z.number().min(0).nullable().optional(),
 });
 
 const SubmitWeekSchema = z.object({

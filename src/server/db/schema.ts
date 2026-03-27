@@ -35,6 +35,11 @@ export const projects = sqliteTable('projects', {
   ubiNumber: text('ubi_number'),
   lniCertificate: text('lni_certificate'),
   wcAccount: text('wc_account'),
+  // Phase 29 — CA eCPR export fields (persisted from pre-generation modal)
+  contractorFein: text('contractor_fein'),
+  dirProjectId: text('dir_project_id'),
+  awardingAgency: text('awarding_agency'),
+  contractNumber: text('contract_number'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -170,6 +175,11 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   grossWages: real('gross_wages'),
   deductions: real('deductions').notNull().default(0),
   netPay: real('net_pay'),
+  // Phase 29 — CA fringe disaggregation (nullable; null = non-CA, 0 = entered as zero)
+  fringeHealthWelfare: real('fringe_health_welfare'),
+  fringePension: real('fringe_pension'),
+  fringeVacation: real('fringe_vacation'),
+  fringeTraining: real('fringe_training'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, (table) => ({
