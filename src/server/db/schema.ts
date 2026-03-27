@@ -40,6 +40,8 @@ export const projects = sqliteTable('projects', {
   dirProjectId: text('dir_project_id'),
   awardingAgency: text('awarding_agency'),
   contractNumber: text('contract_number'),
+  // Phase 30 — WA PWIA export field (persisted from pre-generation modal)
+  pwiaIntentId: text('pwia_intent_id'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

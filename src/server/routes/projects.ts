@@ -38,6 +38,7 @@ const UpdateProjectSchema = z.object({
   dirProjectId: z.string().max(18).optional(),
   awardingAgency: z.string().max(56).optional(),
   contractNumber: z.string().max(25).optional(),
+  pwiaIntentId: z.string().max(20).optional(),
 });
 
 // POST /api/projects — create a project
