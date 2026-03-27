@@ -10,8 +10,8 @@
 
 ### CA Electronic Certified Payroll (CAE)
 
-- [ ] **CAE-01**: System disaggregates CA fringe contributions into 4 separate line items at payroll entry — health/welfare, pension, vacation, and training — stored in new DB columns per payroll entry (CA projects only)
-- [ ] **CAE-02**: User can generate and download a CA DIR eCPR-compliant XML file from existing A-1-131 payroll data; missing required fields (contractor FEIN, DIR project ID, awarding agency, contract number) are collected via a pre-generation modal at export time
+- [x] **CAE-01**: System disaggregates CA fringe contributions into 4 separate line items at payroll entry — health/welfare, pension, vacation, and training — stored in new DB columns per payroll entry (CA projects only)
+- [x] **CAE-02**: User can generate and download a CA DIR eCPR-compliant XML file from existing A-1-131 payroll data; missing required fields (contractor FEIN, DIR project ID, awarding agency, contract number) are collected via a pre-generation modal at export time
 - [ ] **CAE-03**: After eCPR XML download, app displays a portal upload checklist with step-by-step instructions for submitting the file to the CA DIR eCPR portal, including the SSN caveat (must be entered directly in portal)
 - [ ] **CAE-04**: eCPR XML carries the correct amendment/resubmit marker when the payroll week is an amendment (ties into the v2.3 amendment model)
 
@@ -49,8 +49,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAE-01 | Phase 29 | Pending |
-| CAE-02 | Phase 29 | Pending |
+| CAE-01 | Phase 29 | Complete |
+| CAE-02 | Phase 29 | Complete |
 | CAE-03 | Phase 29 | Pending |
 | CAE-04 | Phase 29 | Pending |
 | WAL-03 | Phase 30 | Pending |

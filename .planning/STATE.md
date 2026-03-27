@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Phase 29 context gathered — ready to plan
-last_updated: "2026-03-27T00:00:00.000Z"
+status: Ready to execute
+stopped_at: Completed 29-01-PLAN.md
+last_updated: "2026-03-27T08:28:40.808Z"
 progress:
-  total_phases: 2
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 14
+  completed_phases: 12
+  total_plans: 27
+  completed_plans: 25
 ---
 
 # State
@@ -23,16 +23,13 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 
 ## Current Position
 
-Phase: 29 of 30 (CA eCPR XML Export)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-03-27 — Phase 29 context gathered (discuss-phase complete)
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 29 (CA eCPR XML Export) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
 **Velocity (v2.4):**
+
 - Total plans completed: 14
 - Total phases: 6
 - Shipped: 2026-03-27
@@ -47,6 +44,7 @@ Progress: [░░░░░░░░░░] 0%
 | 26 | 2/2 | Complete |
 | 27 | 2/2 | Complete |
 | 28 | 2/2 | Complete |
+| Phase 29-ca-ecpr-xml-export P01 | 272 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -64,6 +62,7 @@ Key decisions affecting v2.5 work:
 - [Research]: WA PWIA has no file upload for Intent/Affidavit — WAL-04 is a UI summary panel only, not a file download
 - [Research]: getPayrollEntriesWithWorkerDetails() extended join is a shared prerequisite — build once in Phase 29, reuse in Phase 30
 - [Phase 25]: waTradeCode stored per classification in 0013 migration — Phase 30 reads this column for WA trade code gate
+- [Phase 29-ca-ecpr-xml-export]: fringe sub-columns nullable REAL: null=non-CA, 0=explicitly zero; getPayrollEntriesWithWorkerDetails new export alongside getPayrollEntries; UpsertEntrySchema extended to prevent Zod strip silently dropping fringe fields
 
 ### Pending Todos
 
@@ -75,6 +74,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27
-Stopped at: Phase 29 discuss-phase complete — ready for /gsd:plan-phase 29
+Last session: 2026-03-27T08:28:40.805Z
+Stopped at: Completed 29-01-PLAN.md
 Resume file: None
