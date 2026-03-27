@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 29-03-PLAN.md task 1 — awaiting human-verify checkpoint at task 2
-last_updated: "2026-03-27T08:36:44.957Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 29-02-PLAN.md
+last_updated: "2026-03-27T08:42:33.016Z"
 progress:
   total_phases: 14
-  completed_phases: 12
+  completed_phases: 13
   total_plans: 27
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 # State
@@ -46,6 +46,7 @@ Plan: 3 of 3
 | 28 | 2/2 | Complete |
 | Phase 29-ca-ecpr-xml-export P01 | 272 | 2 tasks | 9 files |
 | Phase 29-ca-ecpr-xml-export P03 | 8 | 1 tasks | 1 files |
+| Phase 29-ca-ecpr-xml-export P02 | 8 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Key decisions affecting v2.5 work:
 - [Phase 25]: waTradeCode stored per classification in 0013 migration — Phase 30 reads this column for WA trade code gate
 - [Phase 29-ca-ecpr-xml-export]: fringe sub-columns nullable REAL: null=non-CA, 0=explicitly zero; getPayrollEntriesWithWorkerDetails new export alongside getPayrollEntries; UpsertEntrySchema extended to prevent Zod strip silently dropping fringe fields
 - [Phase 29-ca-ecpr-xml-export]: CA eCPR XML button added alongside CA A-1-131 button — both CA-gated; 2-step in-place modal transition on successful download; ecprCheckNum defaults to DIRECT DEPOSIT, ephemeral per export
+- [Phase 29-ca-ecpr-xml-export]: CPR:amendmentNum always emitted per D-13: empty for non-amendment, populated for amendment
+- [Phase 29-ca-ecpr-xml-export]: SSN 10-char placeholder (000000 + ssnLast4) — full SSN entered by contractor in DIR portal
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T08:36:44.953Z
-Stopped at: Completed 29-03-PLAN.md task 1 — awaiting human-verify checkpoint at task 2
+Last session: 2026-03-27T08:42:33.013Z
+Stopped at: Completed 29-02-PLAN.md
 Resume file: None
