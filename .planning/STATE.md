@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Ready to plan
-stopped_at: Completed 26-02-PLAN.md
-last_updated: "2026-03-26T23:13:19.763Z"
+status: Ready to execute
+stopped_at: Completed 27-01-PLAN.md
+last_updated: "2026-03-27T00:05:07.979Z"
 progress:
   total_phases: 12
   completed_phases: 10
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 22
+  completed_plans: 21
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 26 — contractor-guidance-system
+**Current focus:** Phase 27 — design-elevation
 
 ## Current Position
 
-Phase: 27
-Plan: Not started
+Phase: 27 (design-elevation) — EXECUTING
+Plan: 2 of 2
 
 ### Phase Structure
 
@@ -64,6 +64,7 @@ Plan: Not started
 | Phase 25 P02 | 45 | 5 tasks | 3 files |
 | Phase 26-contractor-guidance-system P01 | 13 | 3 tasks | 9 files |
 | Phase 26-contractor-guidance-system P02 | 15 | 2 tasks | 9 files |
+| Phase 27-design-elevation P01 | 6min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -219,6 +220,9 @@ Plan: Not started
 - [Phase 26]: PayrollListPage HelpCallout uses contextual 'Your Payroll Weeks' copy (not 'Review Before You Submit')
 - [Phase 26-contractor-guidance-system]: HelpCallout body and EmptyState message changed to React.ReactNode — widening type only, existing string props still valid, enables TermTooltip embedding
 - [Phase 26-contractor-guidance-system]: TermTooltip definition constants defined at module level (DB_DEF, WH347_DEF, etc.) — avoids long inline strings in JSX, keeps components readable
+- [Phase 27]: OtScenarioPage PageHeader uses className='mb-0' to suppress default mb-6 since it lives inside an existing flex row with a back button
+- [Phase 27]: hover:shadow-md removed from ProjectCard base classes — elevated shadow baseline makes hover:shadow-md a visual regression (DES-01 research pitfall #5)
+- [Phase 27]: VarianceReportPage/UnionAllocationPage Export PDF links moved to PageHeader action slot; text-[#F5C518] migrated to text-brand-gold per CLAUDE.md token constraint
 
 ### Research Flags for v2.4
 
@@ -236,6 +240,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-26T23:05:19.965Z
-Stopped at: Completed 26-02-PLAN.md
+Last session: 2026-03-27T00:05:07.976Z
+Stopped at: Completed 27-01-PLAN.md
 Resume file: None

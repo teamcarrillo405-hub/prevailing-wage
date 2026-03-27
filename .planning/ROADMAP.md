@@ -232,7 +232,7 @@ Plans:
   4. Photography assets are WebP format, under 200KB each, loaded via CSS background-image (not Vite import), with a print media override preventing dark overlays from printing on white paper
 **Plans**: 2 plans
 Plans:
-- [ ] 27-01-PLAN.md — Shadow-card-elevated token + print CSS + PageHeader tracking-tight + ProjectCard className prop + HelpCallout shadow + h1 migration (7 pages)
+- [x] 27-01-PLAN.md — Shadow-card-elevated token + print CSS + PageHeader tracking-tight + ProjectCard className prop + HelpCallout shadow + h1 migration (7 pages)
 - [ ] 27-02-PLAN.md — Placeholder WebP photos + hero section rewrite (photo overlay, floating nav, clamp headline) + dashboard photo background strip + visual checkpoint
 
 ### Phase 28: Production Deployment
@@ -273,5 +273,5 @@ Plans:
 | 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress|  |
 | 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete    | 2026-03-26 |
 | 26. Contractor Guidance System | v2.4 | 2/2 | Complete    | 2026-03-26 |
-| 27. Design Elevation | v2.4 | 0/2 | Not started | - |
+| 27. Design Elevation | v2.4 | 1/2 | In Progress|  |
 | 28. Production Deployment | v2.4 | 0/2 | Not started | - |
