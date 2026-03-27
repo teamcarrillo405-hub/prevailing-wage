@@ -1123,3 +1123,300 @@ Contractor Guidance UX
 
 *Feature research for: HCC Prevailing Wage — v2.4 state forms, contractor guidance, compliance filter, CSV export*
 *Researched: 2026-03-24*
+
+---
+
+## Part 6: v2.5 Feature Research — CA eCPR XML Export and WA PWIA Submission Assist (2026-03-26)
+
+**Milestone context:** Subsequent milestone. All payroll entry, worker, project, and compliance data is already in the DB from v2.4. This milestone is about transforming existing data into submission-ready artifacts for CA and WA state portals. No new data collection is needed beyond a few small new project-level fields.
+
+**Confidence:** HIGH for CA XML schema (official XSD + CPRSample.xml confirmed stable through June 2025 per Sunburst Software); HIGH for WA XML schema (parsed actual XSD at lni.wa.gov/xmlschema.xsd); MEDIUM for WA Intent to Pay portal field names (confirmed conceptually from multiple sources, portal screens not enumerable without login).
+
+---
+
+### Data Already in DB (Do Not Re-collect)
+
+- **CA projects:** contractor name, CSLB license, workers comp policy, PWCR, contractor address, project county/city/zip, payroll weeks with per-worker hours (ST/OT by day), workClass, gross wages, deductions, fringe rates (snapshotted as single value)
+- **WA projects:** UBI, L&I account number, workers comp info, project county, workers with 4-letter WA trade codes, payroll weeks with hours by day (ST/OT), wage rates, fringe breakdown (pension/medical/vacation/holiday stored separately per v2.4 WA form)
+
+---
+
+### Table Stakes (Must Ship for Milestone to Have Any Value)
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| CA eCPR XML generation per payroll week | This is the entire CA deliverable -- XML file for manual upload to CA DIR portal | MEDIUM | Schema from CPRSample.xml confirmed stable since Jan 2016; no change in 2024 DIR overhaul |
+| CA eCPR XML file download | User must download the file to upload manually to efiling.dir.ca.gov/eCPR | LOW | Standard Content-Disposition: attachment response |
+| CA eCPR XML filename convention | DIR may reject incorrectly named files | LOW | Convention: [FEIN]_[ProjectID]_[WeekEnding]_[PayrollNum].xml |
+| CA eCPR XML correct root and namespace | Upload fails if namespace or root element is wrong | LOW | Root: CPR:eCPR with CPR namespace per official schema |
+| DIR Project ID stored on CA project | projectID is the portal lookup key; wrong value causes rejected upload | LOW | New column dir_project_id on projects table; editable field in CA project detail |
+| CA eCPR workClass mapping | Work classification must match CA craft names in the XML | MEDIUM | Map from existing trade_classifications.classification; CA uses free-text not codes |
+| CA fringe disaggregation | CA XML requires healthWelfare / pension / vacation / training as separate elements; current CA entry uses single fringeRateSnapshot | MEDIUM | Need new columns on payroll entries for CA projects: ca_fringe_health_welfare, ca_fringe_pension, ca_fringe_vacation, ca_fringe_training -- plus UI fields in CA payroll entry form |
+| CA deductions section in XML | Required XML block; missing causes schema validation failure | LOW | Map FICA, federal/state withholding, other deductions from existing payroll entry deduction fields |
+| CA training fund contribution field | California-specific deduction line item; element must be present even if zero | LOW | Map from ca_fringe_training; default to 0.00 if blank |
+| WA submission assist summary page | Core WA deliverable given no confirmed portal API; pre-populated data for manual entry | MEDIUM | Print/copy-friendly page covering Intent to Pay pre-fill and Affidavit summary |
+| WA Intent to Pay pre-fill summary | Contractor must file Intent immediately after award; app pre-populates all known fields | LOW | Fields: contractor name, UBI, registration number, project name, county, awarding agency, start/end dates, trade classifications |
+| WA Affidavit of Wages Paid summary | Filed after project completion; per-worker/per-trade wage totals | MEDIUM | Aggregated from payroll entries: employee name/address, trade code, ST rate, OT rate, benefit rate, total ST/OT hours, total wages, itemized deductions |
+| WA certified payroll XML export | L&I PWIA portal accepts XML upload -- highest-value WA deliverable | HIGH | Schema parsed from official XSD; root: WaPWCPR > projectIntent (intentId) > payroll > payrollWeek > employees > employee > tradeHoursWages |
+| WA Intent ID stored on WA project | intentId is required in WA XML to link payroll to approved intent | LOW | New column wa_intent_id on projects table; editable in WA project detail after portal approval |
+| WA trade code validation | 4-letter trade codes (CARP, ELEC, LABO, etc.) strictly enforced by WA XSD enum | LOW | Already captured in DB from v2.4 WA form; verify against official XSD enum values |
+| WA county per trade entry in XML | county is required at tradeHoursWage level -- not just project level | LOW | Propagate projects.county down to each tradeHoursWage element |
+| WA fringe fields per trade entry | XSD requires hourlyPensionRateAmt, hourlyMedicalAmt, hourlyVacationAmt, hourlyHolidayAmt, apprenticeBenefitAmt as separate elements | MEDIUM | v2.4 WA form stores these separately; confirm DB column names match expected XSD mapping |
+| WA apprentice conditional fields | If apprenticeFlg=true, 6 additional required fields (apprenticeId, apprenticeState, apprenticeOccpnName, apprenticeStepName, apprenticeStepBeginHours, apprenticeStepEndHours) | MEDIUM | v2.0 added J/RA flag; verify all 6 sub-fields are stored; gap likely on some fields |
+
+### Differentiators (Competitive Advantage)
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| CA eCPR pre-flight validation UI | Shows missing required fields before generating XML -- prevents wasted upload attempts | MEDIUM | Check: FEIN present, projectID set, all workers have workClass, fringe disaggregated, SSN limitation flagged |
+| CA eCPR week selector | Export any historical week, not just current; needed for catching up on prior weeks | LOW | Dropdown of all payroll weeks for the project |
+| WA XML pre-flight validation | Surface missing intentId, incomplete apprentice fields, missing fringe breakdowns before generating | MEDIUM | WA XSD has many conditional-required fields; pre-flight catches them before upload rejection |
+| WA submission checklist UI | Step-by-step guide: (1) file Intent in portal, (2) post on jobsite, (3) submit monthly CPRs via XML, (4) file Affidavit after completion | LOW | Turns portal-only scope into a guided workflow; this is where the WA UX value lives |
+| Awarding agency field on project | Required for both CA and WA filings; store once, reuse in all exports | LOW | Add awarding_agency column to projects; shared between CA and WA |
+| Contract number field on project | Required for WA Intent to Pay; useful for CA too | LOW | Add contract_number column to projects |
+
+### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Direct CA portal API submission | Eliminates manual upload step | CA DIR eCPR portal has no public API; efiling.dir.ca.gov is session-authenticated; any attempt risks account lockout or ToS violation | Generate XML for manual upload -- this is the documented and only supported path |
+| Direct WA PWIA portal API submission | Same motivation | No confirmed public contractor-facing API for My L&I PWIA submissions | WA XML upload (portal-supported) plus guided manual summary |
+| State-specific prevailing wage rate fetch | Auto-populate CA/WA rates into forms | CA and WA have separate rate schedules; adding state WD sources requires a separate rate engine rewrite -- completely different milestone scope | Continue using existing federal WD snapshots; state form data reuses the same payroll entries already in the DB |
+| Full SSN storage for XML submission | Both CA and WA XML technically require full SSN in the file | Full SSN storage requires encryption at rest, strict access controls, and security audit -- violates the existing design decision to store only last 4 digits | Flag in pre-flight UI that user must enter full SSNs at the portal; generate XML with masked placeholder XXX-XX-[last4] as a data-entry guide |
+| Batch multi-week XML (all weeks in one file) | Less clicking | CA DIR schema has a single forWeekEnding per file -- batch not supported. WA technically supports multi-week but adds complexity not justified by savings | Week selector with single-week download |
+| In-browser XSD validation | Developer-quality validation | Heavy XML library dependency for minor benefit; server generates from fixed templates that already conform | Server-side validation before download; flag obvious errors (missing required fields) without full XSD parse |
+
+---
+
+### CA eCPR XML Required Fields Reference
+
+Based on official CPRSample.xml (dir.ca.gov) and confirmed-stable schema (CPR.xsd, unchanged through June 2025).
+
+Root element: CPR:eCPR with CPR namespace (http://www.dir.ca.gov/Public-Works/CPRSchema)
+
+#### Contractor Section
+
+| XML Element | Required | Source in DB |
+|-------------|----------|--------------|
+| CPR:contractorName | Yes | User company name or project contractor field |
+| CPR:contractorLicense > CPR:licenseType | Yes | "CSLB" for CA contractors |
+| CPR:contractorLicense > CPR:licenseNum | Yes | projects.cslbLicenseNumber (v2.4) |
+| CPR:contractorPWCR | Yes | projects.pwcrNumber (v2.4); "NA" if exempt |
+| CPR:contractorFEIN | Yes | User profile FEIN field (verify stored; add if missing) |
+| CPR:contractorAddress > street/city/state/zip | Yes | User profile address |
+| CPR:insuranceNum | Yes | projects.wcPolicyNumber (v2.4) |
+| CPR:contractorEmail | Yes | users.email |
+
+#### Project Section
+
+| XML Element | Required | Source in DB |
+|-------------|----------|--------------|
+| CPR:awardingBody | Conditional | projects.awarding_agency (new column) |
+| CPR:contractAgency | Yes | Agency code; "CA-DIR" or awarding body code |
+| CPR:projectID | Yes (preferred) | projects.dir_project_id (new column) |
+| CPR:projectLocation > street/city/county/state/zip | Yes | projects address fields |
+
+#### Payroll Section (per week)
+
+| XML Element | Required | Source in DB |
+|-------------|----------|--------------|
+| CPR:forWeekEnding | Yes | payroll_weeks.weekEndingDate |
+| CPR:payrollNum | Yes | Sequential integer (1, 2, 3...); amendments: "1-1" |
+
+#### Per-Employee
+
+| XML Element | Required | Source in DB |
+|-------------|----------|--------------|
+| CPR:name (id=SSN attr) | Yes | workers.firstName/lastName; SSN masked |
+| CPR:address | Yes | workers.address |
+| CPR:ssn | Yes | Placeholder XXX-XX-[ssnLast4]; flag in pre-flight |
+| CPR:workClass | Yes | trade_classifications.classification |
+| CPR:hrsWorkedEachDay x7 (date, ST, OT, DT) | Yes | payroll_entries daily columns |
+| CPR:totHrs ST/OT/DT | Yes | Derived totals |
+| CPR:hrlyPayRate ST/OT/DT | Yes | baseRateSnapshot; OT=1.5x, DT=2.0x |
+| CPR:grossAmountEarned > thisProject/allWork | Yes | payroll_entries.grossWage |
+| CPR:deductionsContribPay > healthWelfare | Yes | ca_fringe_health_welfare (new column) |
+| CPR:deductionsContribPay > pension | Yes | ca_fringe_pension (new column) |
+| CPR:deductionsContribPay > vacation | Yes | ca_fringe_vacation (new column) |
+| CPR:deductionsContribPay > training | Yes | ca_fringe_training (new column) |
+| CPR:deductionsContribPay > FICA | Yes | Existing deduction field |
+| CPR:deductionsContribPay > withholding | Yes | Existing deduction field |
+| CPR:deductionsContribPay > totalDeductions | Yes | Derived sum |
+| CPR:netWagePaidWeek | Yes | grossWage minus totalDeductions |
+| CPR:checkNum | Optional | Not stored; omit or leave empty |
+
+**Fringe disaggregation note:** CA XML requires four separate fringe elements. The existing CA payroll entry form uses a single fringeRateSnapshot. This is the largest scope item in the CA feature track -- it requires a DB migration, UI changes to the CA payroll entry form, and XML generator logic. The recommended approach is to add the four new fringe columns and update the CA entry form, not to prompt the user at export time.
+
+---
+
+### WA PWIA Required Fields Reference
+
+#### Intent to Pay (portal manual entry -- no API; submission assist pre-populates a copy-ready summary)
+
+| Field | Required | Source in DB |
+|-------|----------|--------------|
+| Contractor company name | Yes | User profile |
+| UBI number | Yes | projects.ubiNumber (v2.4) |
+| Contractor registration license number | Yes | projects.contractorRegNumber (v2.4) |
+| Contact name, phone, email | Yes | User profile |
+| Prime or subcontractor | Yes | Project setting |
+| Project name | Yes | projects.name |
+| Project number / contract number | Yes | projects.contract_number (new column) |
+| County where work performed | Yes | projects.county |
+| City where work performed | Yes | Derived from project address |
+| Awarding agency | Yes | projects.awarding_agency (new column; shared with CA) |
+| Estimated start date | Yes | projects.startDate |
+| Estimated end date | Yes | projects.estimated_end_date (new column) |
+| Trade classifications to be used | Yes | trade_classifications for this project |
+| Estimated hours per trade | Yes | Computed from existing payroll data at export time |
+
+Filing timing: Immediately after contract award, before work begins. Payment is blocked until L&I approves the Intent.
+
+#### Affidavit of Wages Paid (portal manual entry -- submission assist generates structured summary)
+
+| Field | Required | Source in DB |
+|-------|----------|--------------|
+| Intent ID | Yes | projects.wa_intent_id (new column) |
+| Project name and number | Yes | projects |
+| Date work completed | Yes | Last payroll week date or new field |
+| Per worker: name and address | Yes | workers |
+| Per worker: trade and occupation | Yes | trade_classifications |
+| Per worker: straight time rate | Yes | payroll_entries.baseRateSnapshot |
+| Per worker: hourly benefit rate | Yes | payroll_entries.fringeRateSnapshot |
+| Per worker: total ST and OT hours | Yes | Aggregated from all payroll_entries for this project |
+| Per worker: total gross wages | Yes | Aggregated from payroll_entries.grossWage |
+| Per worker: itemized deductions | Yes | Aggregated from deduction fields |
+
+Filing timing: After project completion. Retainage cannot be released until all affidavits are L&I-approved (45-60 day window post-completion).
+
+#### WA Certified Payroll XML (schema: official lni.wa.gov/xmlschema.xsd -- HIGH confidence)
+
+Root: WaPWCPR. Links to approved intent via projectIntent > intentId.
+
+| XML Element | Required | Notes |
+|-------------|----------|-------|
+| projectIntent > intentId | Yes | Blocks upload if absent; stored in projects.wa_intent_id |
+| payrollWeek > endOfWeekDate | Yes | ISO date yyyy-mm-dd |
+| payrollWeek > noWorkPerformFlag | Conditional | true for no-work weeks |
+| payrollWeek > amendedFlag | Conditional | true if amendment_number IS NOT NULL |
+| employee > firstName / lastName | Yes | |
+| employee > ssn | Yes | Masked placeholder; flag in pre-flight |
+| employee > address1 / city / state / zip | Yes | |
+| employee > grossPay | Yes | |
+| tradeHoursWage > trade | Yes | 4-letter code; validated against XSD enum |
+| tradeHoursWage > jobClass | Conditional | Required if not apprentice |
+| tradeHoursWage > county | Yes | Required per trade entry; from projects.county |
+| tradeHoursWage > regularHourRateAmt | Yes | baseRateSnapshot |
+| tradeHoursWage > overtimeHourRateAmt | Conditional | Required if OT hours present |
+| tradeHoursWage > hourlyPensionRateAmt | Yes | 0.00 if none |
+| tradeHoursWage > hourlyMedicalAmt | Yes | 0.00 if none |
+| tradeHoursWage > hourlyVacationAmt | Yes | 0.00 if none |
+| tradeHoursWage > hourlyHolidayAmt | Yes | 0.00 if none |
+| tradeHoursWage > apprenticeBenefitAmt | Yes | 0.00 if not apprentice |
+| tradeHoursWage > apprenticeFlg | Yes | boolean |
+| tradeHoursWage > apprenticeId | Conditional | Required if apprenticeFlg=true |
+| tradeHoursWage > apprenticeState | Conditional | WA / OR / MT / AK; required if apprenticeFlg=true |
+| tradeHoursWage > apprenticeOccpnName | Conditional | Required if apprenticeFlg=true |
+| tradeHoursWage > apprenticeStepName | Conditional | Required if apprenticeFlg=true |
+| tradeHoursWage > apprenticeStepBeginHours | Conditional | Required if apprenticeFlg=true; integer |
+| tradeHoursWage > apprenticeStepEndHours | Conditional | Required if apprenticeFlg=true; integer |
+| tradeHoursWage > regularDay1Hours to Day7Hours | Optional | Daily ST hours; 0-24, 2 decimals |
+| tradeHoursWage > overtimeDay1Hours to Day7Hours | Optional | Daily OT hours |
+
+---
+
+### Feature Dependencies (v2.5)
+
+```
+CA eCPR XML Generation
+    requires --> dir_project_id on projects [new column]
+    requires --> awarding_agency on projects [new column]
+    requires --> contract_number on projects [new column]
+    requires --> CA fringe disaggregation [new columns on payroll_entries + CA entry UI changes -- LARGEST SCOPE ITEM]
+    requires --> user FEIN stored [verify existing; add field if missing]
+
+CA eCPR XML Download
+    requires --> CA eCPR XML Generation
+
+CA Pre-flight Validation
+    enhances --> CA eCPR XML Download (prevents rejected uploads)
+
+WA Certified Payroll XML Generation
+    requires --> wa_intent_id on projects [new column]
+    requires --> awarding_agency on projects [shared with CA]
+    requires --> contract_number on projects [shared with CA]
+    requires --> estimated_end_date on projects [new column]
+    requires --> all apprentice sub-fields stored on workers [audit v2.0/v2.4 DB -- gap likely]
+
+WA Submission Assist Summary
+    requires --> WA project data (all v2.4 fields present)
+    requires --> awarding_agency, contract_number, estimated_end_date [new columns]
+
+WA Pre-flight Validation
+    enhances --> WA Certified Payroll XML Generation
+```
+
+**Dependency notes:**
+
+- CA fringe disaggregation is the largest new scope item. Single fringeRateSnapshot must be split into four separate fringe fields in the CA payroll entry form. This requires a DB migration (add-only), UI changes to CA payroll entry, and XML generator logic reading four fields. Existing CA payroll entries with the old single value need a migration strategy -- recommended: add new columns with NULL default and require users to fill them in going forward; show a warning on older entries in the pre-flight check.
+- SSN masking is a fixed constraint. Both CA and WA XML technically require full SSN, but the app does not store full SSNs by design. Resolve with a pre-flight warning explaining the limitation. Do NOT add full SSN storage.
+- dir_project_id, wa_intent_id, awarding_agency, contract_number, estimated_end_date are all small new columns on the projects table. Audit existing schema before writing migrations -- some may already exist from v2.4 work.
+- Apprentice sub-fields: v2.0 added J/RA flag; v2.4 captured additional data for WA. Audit workers/trade_classifications tables for apprenticeId, apprenticeState, apprenticeOccpnName, apprenticeStepName, apprenticeStepBeginHours, apprenticeStepEndHours before building the WA XML generator.
+
+---
+
+### New DB Columns Required for v2.5
+
+| Column | Table | Purpose | State |
+|--------|-------|---------|-------|
+| dir_project_id | projects | CA DIR portal project ID (from awarding agency) | CA |
+| ca_fringe_health_welfare | payroll_entries | CA fringe disaggregation: health and welfare hourly rate | CA |
+| ca_fringe_pension | payroll_entries | CA fringe disaggregation: pension hourly rate | CA |
+| ca_fringe_vacation | payroll_entries | CA fringe disaggregation: vacation hourly rate | CA |
+| ca_fringe_training | payroll_entries | CA fringe disaggregation: training fund hourly contribution | CA |
+| wa_intent_id | projects | WA L&I-assigned Intent ID after portal approval | WA |
+| awarding_agency | projects | Name of awarding public agency | CA + WA |
+| contract_number | projects | Contract or purchase order number | CA + WA |
+| estimated_end_date | projects | Project estimated completion date | WA |
+
+Verify each against current schema before writing migrations. Use add-only migrations per project constraints (never drop columns).
+
+---
+
+### MVP for v2.5
+
+#### Ship in This Milestone
+
+- [ ] CA fringe disaggregation: new DB columns and CA payroll entry UI fields and migration -- required blocker for valid CA XML
+- [ ] DIR Project ID, awarding agency, contract number fields on CA project detail -- required for XML
+- [ ] CA eCPR XML generation and download (per week, with pre-flight validation) -- core CA deliverable
+- [ ] WA Intent ID, awarding agency, contract number, estimated end date fields on WA project detail -- required for WA
+- [ ] WA submission assist summary page (Intent pre-fill and Affidavit summary) -- core WA deliverable
+- [ ] WA certified payroll XML generation and download (with pre-flight validation) -- high-value WA deliverable
+
+#### Defer to Future Milestone
+
+- [ ] CA amendment XML support -- base export must be validated by real users first
+- [ ] Export history log (per-week download tracking) -- useful but not blocking
+- [ ] State-specific prevailing wage rate integration -- separate milestone, large scope
+
+---
+
+### v2.5 Sources
+
+- [CA DIR CPRSample.xml (official)](https://www.dir.ca.gov/Public-Works/CPR/CPRSample.xml) -- authoritative CA XML element names and structure
+- [CA DIR eCPR XML Guidelines (Jan 2016)](https://www.dir.ca.gov/Public-Works/CPR/eCPRXMLGuideline.pdf) -- confirmed stable schema
+- [CA DIR eCPR Certified Payroll Reporting page](https://www.dir.ca.gov/public-works/certified-payroll-reporting.html)
+- [CA DIR eCPR FAQ (SB 854)](https://www.dir.ca.gov/Public-Works/ecprfaq.html)
+- [Sunburst Software -- 2024 CA DIR changes (June 2025)](https://www.sunburstsoftwaresolutions.com/2024-ca-dir.htm) -- confirmed XML schema unchanged through 2024 overhaul
+- [WA L&I official XML schema (XSD)](https://www.lni.wa.gov/licensing-permits/_docs/xmlschema.xsd) -- parsed directly; all WA XML field names are HIGH confidence
+- [WA L&I PWIA step-by-step instructions](https://lni.wa.gov/licensing-permits/_docs/pwia-step-by-step-instructions.pdf)
+- [WA L&I contractors/employers page](https://lni.wa.gov/licensing-permits/public-works-projects/contractors-employers/)
+- [MRSC -- Navigating Intents and Affidavits (March 2025)](https://mrsc.org/stay-informed/mrsc-insight/march-2025/intents-affidavits-prevailing-wages) -- Intent/Affidavit timing and payment dependency
+- [Murow DC -- DIR eCPR Upload Guide](https://murowdc.com/dir-registration-and-uploads/ecpr-upload/) -- Contractor-facing eCPR upload field requirements
+- [Points North -- Washington Prevailing Wage](https://www.points-north.com/state-by-state-certified-payroll-reporting/washington) -- WA trade codes and certified payroll record requirements
+
+---
+
+*Feature research for: HCC Prevailing Wage -- v2.5 CA eCPR XML export and WA PWIA submission assist*
+*Researched: 2026-03-26*

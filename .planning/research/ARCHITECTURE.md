@@ -1,6 +1,464 @@
-# Architecture Patterns
+# Architecture Research
 
-**Project:** HCC Prevailing Wage v2.4 — Ship-Ready + Design Elevation
+**Domain:** State-portal export integration — CA eCPR XML and WA PWIA submission assist (v2.5)
+**Researched:** 2026-03-26
+**Confidence:** HIGH — existing code directly inspected; CA CPR.xsd and WA xmlschema.xsd fetched from official portals
+
+---
+
+## v2.5 Integration Architecture
+
+### System Overview
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  React Client (PayrollWeekDetailPage.tsx)                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │ CA eCPR      │  │ WA Submit    │  │ Existing PDF buttons   │  │
+│  │ XML button   │  │ Assist button│  │ WH-347, A-1-131, F700  │  │
+│  └──────┬───────┘  └──────┬───────┘  └────────────────────────┘  │
+│         │  updated CA     │  new WA                               │
+│         ▼  disclosure     ▼  assist modal                         │
+│  handleCaEcprDownload  handleWaAssistClick                        │
+│  → fetch /api/export/  → fetch /api/export/                       │
+│    ecpr-xml/:weekId      wa-assist/:weekId                        │
+└──────────────────────┬───────────────────────────────────────────┘
+                       │ HTTP (fetch→Blob→anchor for XML;
+                       │       fetch→JSON→setState for WA assist)
+┌──────────────────────▼───────────────────────────────────────────┐
+│  Express  src/server/routes/export.ts  (existing router)         │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │ GET /api/export/ecpr-xml/:weekId   NEW — CA XML download │    │
+│  │ GET /api/export/wa-assist/:weekId  NEW — WA JSON prefill │    │
+│  │ GET /api/export/wh347/:weekId      existing              │    │
+│  │ GET /api/export/a1131/:weekId      existing              │    │
+│  │ GET /api/export/f700/:weekId       existing              │    │
+│  └───────────────────┬──────────────────────────────────────┘    │
+│                      │                                           │
+│  ┌───────────────────▼──────────────────────────────────────┐    │
+│  │  Services (src/server/services/)                         │    │
+│  │  ecprXmlGenerator.ts  NEW — pure XML builder             │    │
+│  │  waAssistFormatter.ts NEW — pure PWIA data assembler     │    │
+│  │  a1131Generator.ts    existing — NOT modified            │    │
+│  │  f700Generator.ts     existing — NOT modified            │    │
+│  └───────────────────┬──────────────────────────────────────┘    │
+│                      │                                           │
+└──────────────────────┼───────────────────────────────────────────┘
+                       │ Drizzle ORM
+┌──────────────────────▼───────────────────────────────────────────┐
+│  SQLite                                                          │
+│  payroll_entries  workers  worker_classifications  projects       │
+│  No schema changes required — all fields already present         │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Component Responsibilities
+
+| Component | Responsibility | Integrates With |
+|-----------|---------------|-----------------|
+| `ecprXmlGenerator.ts` (NEW) | Build CA eCPR v1.3 XML string from typed EcprData — pure function, no I/O | `export.ts` route |
+| `waAssistFormatter.ts` (NEW) | Assemble WA PWIA prefill data object — pure function, returns typed JSON | `export.ts` route |
+| `export.ts` route (MODIFIED) | Two new GET handlers following identical 8-step ownership/load/generate/respond pattern | Both services, `payrollService` |
+| `payrollService.ts` (MODIFIED) | Add `getPayrollEntriesWithWorkerDetails()` — extends join to include `ssnLast4`, `address`, `waTradeCode`, `tradeCode` | Both new routes |
+| `PayrollWeekDetailPage.tsx` (MODIFIED) | CA: new XML download handler + updated CA modal; WA: new assist button + prefill panel modal | TanStack Query / fetch |
+
+---
+
+## Recommended Project Structure
+
+```
+src/
+├── server/
+│   ├── routes/
+│   │   └── export.ts              # ADD: /ecpr-xml/:weekId, /wa-assist/:weekId
+│   └── services/
+│       ├── ecprXmlGenerator.ts    # NEW: CA eCPR v1.3 XML builder
+│       ├── waAssistFormatter.ts   # NEW: WA PWIA submission data assembler
+│       ├── payrollService.ts      # ADD: getPayrollEntriesWithWorkerDetails()
+│       ├── a1131Generator.ts      # UNCHANGED
+│       └── f700Generator.ts       # UNCHANGED
+└── client/
+    └── pages/
+        └── PayrollWeekDetailPage.tsx  # MODIFY: CA XML button, WA assist modal
+```
+
+No new route files. No new pages. No DB migrations.
+
+### Structure Rationale
+
+- **ecprXmlGenerator.ts as a sibling service:** Follows the same pattern as `a1131Generator.ts`. The PDF generator does PDF rendering; the XML generator does XML building. Same module boundary, different output format. Both are pure functions testable without Express.
+- **waAssistFormatter.ts separate from f700Generator.ts:** F700 is a PDF form renderer. PWIA submission assist is a data assembly task — it returns a JSON-serializable object, not file bytes. Mixing these concerns into one file would require two different import shapes in the route.
+- **No new router file:** All export endpoints share auth middleware and the ownership guard pattern already in `export.ts`. Adding ~150 lines to an existing 510-line file is appropriate. Splitting into a new router adds an `index.ts` import for minimal benefit.
+- **getPayrollEntriesWithWorkerDetails() in payrollService.ts:** Both new routes need fields not selected by the existing `getPayrollEntries()`. Adding a new exported function is cleaner than the `(row as any).waTradeCode` cast already in the F700 handler — and this is the moment to resolve that existing hack as a side effect.
+
+---
+
+## New vs Modified Files — Explicit List
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `src/server/services/ecprXmlGenerator.ts` | CA eCPR v1.3 XML builder — `generateEcprXml(data: EcprData): string` |
+| `src/server/services/waAssistFormatter.ts` | WA PWIA prefill assembler — `formatWaAssistData(input: WaAssistInput): WaAssistOutput` |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `src/server/routes/export.ts` | Add `GET /ecpr-xml/:weekId` (~75 lines) and `GET /wa-assist/:weekId` (~60 lines) after existing F700 handler |
+| `src/server/services/payrollService.ts` | Add `getPayrollEntriesWithWorkerDetails()` — same join as `getPayrollEntries()` plus `workers.ssnLast4`, `workers.address`, `workerClassifications.waTradeCode`, `workerClassifications.tradeCode` |
+| `src/client/pages/PayrollWeekDetailPage.tsx` | Add CA XML download handler + `caEcprGeneratingRef`; update CA disclosure modal to offer XML option; add WA assist button + `showWaAssistModal` state + prefill panel |
+
+### No Changes Required
+
+| File | Why untouched |
+|------|--------------|
+| `src/server/services/a1131Generator.ts` | CA eCPR XML is a different output — A-1-131 PDF is unaffected |
+| `src/server/services/f700Generator.ts` | WA submission assist is separate from F700 PDF rendering |
+| `src/server/index.ts` | `exportRouter` already mounted at `/api/export` — no new mount needed |
+| `src/server/db/schema.ts` | All required fields already present as of v2.4 |
+
+---
+
+## Architectural Patterns
+
+### Pattern 1: New Route Handler in Existing export.ts
+
+**What:** Each new export follows the identical 8-step pattern already established by `/a1131/:weekId` and `/f700/:weekId`:
+1. Load payroll week by `weekId`
+2. Verify project ownership (`project.userId === req.user.userId`)
+3. State gate (`project.state === 'CA'` or `'WA'`)
+4. Load entries with extended join
+5. Map to typed data object
+6. Call generator/formatter function
+7. Set response headers
+8. Send response
+
+**When to use:** Any new export that shares this auth + ownership model — always true for payroll exports.
+
+**Trade-offs:** Handlers are 60-80 lines each. All duplication is in the auth/guard preamble, which is intentional — the ownership check must not be abstracted away in a way that makes it easy to skip.
+
+**Example (eCPR XML handler shape):**
+```typescript
+router.get('/ecpr-xml/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+  const week = await getPayrollWeek(weekId);
+  if (!week) { res.status(404).json({ error: 'Payroll week not found' }); return; }
+  const db = getDb();
+  const [project] = await db.select().from(projects).where(eq(projects.id, week.projectId)).limit(1);
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  if (project.userId !== userId) { res.status(403).json({ error: 'Access denied' }); return; }
+  if (project.state !== 'CA') { res.status(400).json({ error: 'eCPR XML is only available for California projects' }); return; }
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+  const ecprData: EcprData = mapToEcprData(week, project, entries);
+  const xmlString = generateEcprXml(ecprData);
+  res.setHeader('Content-Type', 'application/xml');
+  res.setHeader('Content-Disposition', `attachment; filename="ecpr-${week.payrollNumber}.xml"`);
+  res.end(xmlString);
+});
+```
+
+### Pattern 2: Pure Service — ecprXmlGenerator.ts
+
+**What:** `generateEcprXml(data: EcprData): string` — builds a CA eCPR v1.3 XML document as a string. No PDF library needed. Uses template literals or simple string concatenation — the XSD has no conditional nesting; all 500 possible employee records are structurally identical.
+
+**Why server-side (not client-side):** (1) SSN data — even the 4-digit placeholder — must not be sent to the client. (2) All existing exports are server-side — consistency. (3) XSD validation belongs server-side. The client already omits `ssnLast4` from its `PayrollWeekDetailResponse`.
+
+**Trade-offs:** String concatenation is brittle but the CA eCPR schema is shallow (3 levels max). A library like `xmlbuilder2` would be cleaner but violates the "no new libraries" constraint. The schema is fixed by DIR — it does not change frequently enough to justify a builder dependency.
+
+**CA eCPR v1.3 data mapping (from CPR.xsd, fetched 2026-03-26):**
+
+| eCPR XML Element | DB Source | Gap |
+|-----------------|-----------|-----|
+| `contractorName` | `projects.name` | — |
+| `contractorFEIN` | Not in DB | Gap #1 |
+| `contractorPWCR` | Not in DB (output "NA") | Gap #1 |
+| `contractorLicense.licenseNum` | `projects.cslbLicense` | — |
+| `contractorLicense.licenseType` | "CSLB" | — |
+| `insuranceNum` | `projects.wcPolicyNumber` | — |
+| `contractorEmail` | Not in DB (output empty string) | Gap #1 |
+| `contractorAddress.street/city/state/zip` | `projects.county + state` (partial) | Gap #1 |
+| `contractAgency` | Not in DB — must be user-entered | Gap #1 |
+| `projectID` | Not in DB — DIR-assigned numeric ID | Gap #1 |
+| `forWeekEnding` | `payrollWeeks.weekEndingDate` (YYYY-MM-DD) | — |
+| `payrollNum` | `payrollWeeks.payrollNumber` | — |
+| `statementOfNP` | "false" (always — this route only runs if entries exist) | — |
+| `employee.ssn` | `workers.ssnLast4` as "000000XXX" placeholder | Gap #2 |
+| `employee.address.street` | `workers.address` (full string, truncate to 40 chars) | partial |
+| `employee.workClass` | `workerClassifications.tradeDescription` | — |
+| `employee.numWithholdingExemp` | "0" — not collected | Gap #3 |
+| `payroll.hrsWorkedEachDay.day[1-7].date` | derive from `weekEndingDate` — 7 days back | — |
+| `payroll.hrsWorkedEachDay.day[n].straightTime` | `payrollEntries.monSt`...`sunSt` | — |
+| `payroll.hrsWorkedEachDay.day[n].overtime` | `payrollEntries.monOt`...`sunOt` | — |
+| `payroll.hrsWorkedEachDay.day[n].doubletime` | `payrollEntries.monDt`...`sunDt` | — |
+| `payroll.totHrs.totHrsStraightTime` | sum of daily ST | — |
+| `payroll.totHrs.totHrsOvertime` | sum of daily OT | — |
+| `payroll.totHrs.totHrsDoubletime` | sum of daily DT | — |
+| `payroll.hrlyPayRate.hrlyPayRateStraightTime` | `payrollEntries.baseRateSnapshot` | — |
+| `payroll.hrlyPayRate.hrlyPayRateOvertime` | `baseRateSnapshot * 1.5` | — |
+| `payroll.hrlyPayRate.hrlyPayRateDoubletime` | `baseRateSnapshot * 2.0` | — |
+| `payroll.grossAmountEarned.thisProject` | `payrollEntries.grossWages ?? 0` | — |
+| `payroll.grossAmountEarned.allWork` | same as thisProject (single-project app) | — |
+| `payroll.deductionsContribPay.fedTax` | 0 — not collected | Gap #3 |
+| `payroll.deductionsContribPay.FICA` | 0 | Gap #3 |
+| `payroll.deductionsContribPay.stateTax` | 0 | Gap #3 |
+| `payroll.deductionsContribPay.SDI` | 0 | Gap #3 |
+| `payroll.deductionsContribPay.total` | `payrollEntries.deductions` | — |
+| `payroll.netWagePaidWeek` | `payrollEntries.netPay ?? 0` | — |
+| `payroll.checkNum` | "DIRECT DEPOSIT" — default | — |
+
+### Pattern 3: WA Submission Assist as JSON Response
+
+**What:** `GET /api/export/wa-assist/:weekId` returns JSON (not a file). The client renders a read-only prefill panel inside a modal — the contractor copies values into the PWIA portal manually. No Blob download needed.
+
+**Why JSON rather than a downloadable XML file:** The WA PWIA XML upload path (`xmlschema.xsd`) requires a full 9-digit SSN, a previously-filed `intentId`, and separately-parsed address components. These gaps (Gap #2, Gap #4) make a valid uploadable XML impossible with current data. A JSON prefill guide is honest about what the app can supply and what the contractor must provide.
+
+**WA PWIA data mapping (from xmlschema.xsd, fetched 2026-03-26):**
+
+| PWIA XML Field | DB Source | Gap |
+|---------------|-----------|-----|
+| `intentId` | Not in DB — contractor must supply their PWIA intent filing number | Gap #4 |
+| `endOfWeekDate` | `payrollWeeks.weekEndingDate` | — |
+| `employee.firstName/lastName` | `workers.name` (split on last space) | — |
+| `employee.ssn` | `workers.ssnLast4` shown as "XXX-XX-XXXX" masked — user must supply full SSN in portal | Gap #2 |
+| `employee.address1` | `workers.address` (truncate) | partial |
+| `employee.city/state/zip` | Not parsed from address string | partial |
+| `employee.grossPay` | `payrollEntries.grossWages ?? 0` | — |
+| `tradeHoursWage.trade` | `workerClassifications.waTradeCode ?? workerClassifications.tradeCode` | — |
+| `tradeHoursWage.county` | `projects.county` (must match WA county enum — already stored as entered) | — |
+| `tradeHoursWage.regularHourRateAmt` | `payrollEntries.baseRateSnapshot` | — |
+| `tradeHoursWage.overtimeHourRateAmt` | `baseRateSnapshot * 1.5` | — |
+| `tradeHoursWage.regularDay1-7Hours` | `payrollEntries.monSt`...`sunSt` | — |
+| `tradeHoursWage.overtimeDay1-7Hours` | `payrollEntries.monOt`...`sunOt` | — |
+| `tradeHoursWage.hourlyPensionRateAmt` | `payrollEntries.fringeRateSnapshot` (mapped to pension; can't split fringe by type) | partial |
+| `tradeHoursWage.hourlyMedicalAmt` | 0 — fringe not broken down | partial |
+| `tradeHoursWage.apprenticeFlg` | `workerClassifications.laborType === 'apprentice'` | — |
+| `tradeHoursWage.apprenticeId` | `workerClassifications.programName` (program name, not individual reg ID) | Gap #5 |
+| `ubiNumber` (project-level) | `projects.ubiNumber` | — |
+| `lniCertificate` (project-level) | `projects.lniCertificate` | — |
+| `wcAccount` (project-level) | `projects.wcAccount` | — |
+
+---
+
+## Data Flow
+
+### CA eCPR XML Export Flow
+
+```
+User clicks "Download CA eCPR XML"
+    ↓
+handleCaEcprDownload() [new handler in PayrollWeekDetailPage.tsx]
+    ↓ (uses updated CA disclosure modal — adds XML option alongside PDF button)
+if (caEcprGeneratingRef.current) return;  ← double-click guard (same as existing)
+caEcprGeneratingRef.current = true;
+    ↓
+fetch('/api/export/ecpr-xml/' + weekId, { credentials: 'include' })
+    ↓
+export.ts: GET /ecpr-xml/:weekId
+  1. getPayrollWeek(weekId)
+  2. verify project.userId === req.user.userId
+  3. project.state === 'CA' or 400
+  4. getPayrollEntriesWithWorkerDetails(weekId)
+  5. mapToEcprData(week, project, entries) → EcprData
+  6. generateEcprXml(ecprData) → string
+  7. Content-Type: application/xml
+  8. res.end(xmlString)
+    ↓
+Client: res.blob() → URL.createObjectURL → hiddenAnchorRef.current.download = 'ecpr-N.xml'
+→ hiddenAnchorRef.current.click() → setTimeout(revokeObjectURL, 100)
+← Same hiddenAnchorRef used by all existing downloads — no second anchor element
+```
+
+### WA Submission Assist Flow
+
+```
+User clicks "WA Submission Assist" button (new, alongside existing "Download WA F700")
+    ↓
+handleWaAssistClick() → setShowWaAssistModal(true)
+    ↓ (modal opens immediately; fetch happens inside modal on mount or button confirm)
+fetch('/api/export/wa-assist/' + weekId, { credentials: 'include' })
+    ↓
+export.ts: GET /wa-assist/:weekId
+  1. getPayrollWeek(weekId)
+  2. verify ownership
+  3. project.state === 'WA' or 400
+  4. getPayrollEntriesWithWorkerDetails(weekId)
+  5. formatWaAssistData(week, project, entries) → WaAssistOutput
+  6. res.json(assistOutput)
+    ↓
+Client: setWaAssistData(json)
+→ modal renders prefill panel:
+    - Project fields (UBI, L&I cert, WA account, county)
+    - Per-worker rows: name, trade code, hours by day (Mon-Sun), rates, gross pay, fringe
+    - Gap warnings: SSN masked, intentId must be supplied, address components
+→ No file download — contractor copies values into PWIA portal manually
+```
+
+### Extended Join — getPayrollEntriesWithWorkerDetails
+
+The existing `getPayrollEntries()` at `payrollService.ts` line 226 selects:
+```
+entry, workerName, tradeDescription, laborType, programName
+```
+
+The new `getPayrollEntriesWithWorkerDetails()` adds:
+```
+ssnLast4: workers.ssnLast4
+workerAddress: workers.address
+tradeCode: workerClassifications.tradeCode
+waTradeCode: workerClassifications.waTradeCode
+```
+
+This also resolves the `(row as any).waTradeCode` cast hack currently in the F700 handler (export.ts line 371) as a side effect — the F700 handler can be updated to use the typed version.
+
+---
+
+## Identified Gaps (with mitigations)
+
+### Gap #1: Missing CA eCPR required fields — FEIN, PWCR, contractAgency, projectID
+
+The CA CPR.xsd requires `contractorFEIN` (9-digit), `contractorPWCR` (DIR registration, 10-digit or "NA"), `contractAgency` (awarding body name), and `projectID` (DIR-assigned numeric ID). None are in the `projects` table.
+
+**v2.5 mitigation:** Collect the three most critical fields (`contractorFEIN`, `contractAgency`, `projectID`) in the CA disclosure modal at download time as a one-time form — no DB change. Output `contractorPWCR = "NA"` (schema allows). Add prominent modal warning that these fields must be filled correctly before uploading to the DIR portal. The contractor must edit `contractorFEIN` in the downloaded XML if supplying a real FEIN is required.
+
+**Future enhancement:** Add `contractorFein`, `dirContractAgency`, `dirProjectId` as optional columns on `projects` (add-only migration) so they persist across downloads.
+
+### Gap #2: Full SSN not stored — blocks validated XML upload to both portals
+
+Both CA eCPR and WA PWIA XML schemas require 9-digit SSN. The app stores only `ssnLast4`. This is intentional.
+
+**v2.5 mitigation:** In CA XML: output `000000XXX` where XXX = `ssnLast4`. In WA assist JSON: show `XXX-XX-XXXX` masked display. Both are accompanied by a disclosure warning that contractors must supply full SSNs manually before uploading to the portal. Do not collect full SSNs in v2.5 — this requires a privacy review and encrypted storage at rest.
+
+### Gap #3: Deduction breakdown not captured — eCPR wants itemized deductions
+
+CA eCPR schema has 13 itemized deduction fields (fedTax, FICA, stateTax, SDI, vacationHoliday, healthWelfare, pension, training, fundAdmin, dues, travelSubs, savings, other). The app stores one `deductions` total.
+
+**v2.5 mitigation:** Output 0 for all line items except `other` (set to `deductions` total) and `total` (set to `deductions`). Add disclosure in modal that itemized breakdown is not available and contractor should verify before uploading.
+
+### Gap #4: WA intentId not stored — required for PWIA XML upload
+
+The PWIA XML schema root requires `intentId` — the ID from the contractor's previously-filed Statement of Intent to Pay Prevailing Wages. Not in DB.
+
+**v2.5 mitigation:** Display `intentId` as a prominently labeled blank field in the WA assist panel with instructions on where to find it. Future: add `waIntentId` as optional column on `projects`.
+
+### Gap #5: WA apprentice registration ID not stored
+
+PWIA XML `apprenticeId` (individual apprentice program registration number) differs from `programName`. App stores `programName` only.
+
+**v2.5 mitigation:** In WA assist panel, show `programName` as the apprentice program field with a label clarifying the PWIA portal needs the individual apprentice registration number from the approved apprenticeship program. Leave the `apprenticeId` assist field blank with an inline note.
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Extending a1131Generator.ts to produce XML
+
+**What people do:** Add XML output to the existing CA export service since it's already CA-specific.
+**Why it's wrong:** `a1131Generator.ts` is a pdf-lib PDF renderer with coordinate constants. Mixing in XML string generation creates a module with two unrelated responsibilities and different import shapes. The PDF generator imports pdf-lib; the XML generator imports nothing. They have zero code overlap.
+**Do this instead:** `ecprXmlGenerator.ts` as a sibling service file.
+
+### Anti-Pattern 2: Client-side XML generation
+
+**What people do:** Use the payroll data already in TanStack Query cache on the client to build the XML in the browser.
+**Why it's wrong:** (1) The client data shape intentionally omits `ssnLast4` and `address`. (2) XSD validation is a server concern. (3) All 5 existing exports are server-side — breaking that pattern without a strong reason is a maintenance liability. (4) Content-Disposition and Content-Type headers must come from the server for reliable browser download behavior.
+**Do this instead:** Server-side generation, identical download UX (fetch → Blob → anchor) as all existing exports.
+
+### Anti-Pattern 3: Full PWIA XML upload as the v2.5 WA feature
+
+**What people do:** Build a complete PWIA XML upload route because the XSD is available.
+**Why it's wrong:** Requires full SSN (Gap #2), `intentId` (Gap #4), and individual `apprenticeId` (Gap #5). None are in the DB. Generating a structurally valid but data-invalid XML file (with placeholder SSNs) and presenting it as ready for upload creates compliance risk. A contractor who uploads it without replacing SSNs submits invalid certified payroll records.
+**Do this instead:** "Submission assist" — a JSON prefill guide. The contractor has all the data in front of them to enter into the PWIA portal manually. XML upload is a v3+ feature dependent on the privacy review for full SSN storage.
+
+### Anti-Pattern 4: Reusing caGeneratingRef for the eCPR XML download
+
+**What people do:** Reuse the existing `caGeneratingRef` (which guards the A-1-131 PDF download) for the eCPR XML download.
+**Why it's wrong:** If a user clicks both CA buttons in rapid succession, the shared ref will block one download mid-flight. Each download button must have its own `useRef` guard — as established by the comment in `PayrollWeekDetailPage.tsx` line 128 ("MUST be new ref — do not reuse generatingRef or caGeneratingRef").
+**Do this instead:** `const caEcprGeneratingRef = useRef(false)` — a third ref dedicated to the XML download.
+
+---
+
+## Download UX Pattern (confirmed from PayrollWeekDetailPage.tsx)
+
+The established pattern for all file downloads — to be followed identically for CA eCPR XML:
+
+```typescript
+// 1. Dedicated useRef for double-click guard
+const caEcprGeneratingRef = useRef(false);
+
+// 2. Handler
+async function handleCaEcprDownload() {
+  if (caEcprGeneratingRef.current) return;
+  caEcprGeneratingRef.current = true;
+  try {
+    const res = await fetch(`/api/export/ecpr-xml/${weekId}`, { credentials: 'include' });
+    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    hiddenAnchorRef.current!.href = url;
+    hiddenAnchorRef.current!.download = `ecpr-${weekData?.week.payrollNumber || weekId}.xml`;
+    hiddenAnchorRef.current!.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  } catch (err) {
+    console.error('CA eCPR XML download failed:', err);
+  } finally {
+    caEcprGeneratingRef.current = false;
+  }
+}
+```
+
+The WA submission assist fetch pattern is different — JSON response, render in-page:
+
+```typescript
+const [waAssistData, setWaAssistData] = useState(null);
+
+async function fetchWaAssist() {
+  const res = await fetch(`/api/export/wa-assist/${weekId}`, { credentials: 'include' });
+  if (!res.ok) return;
+  const data = await res.json();
+  setWaAssistData(data);
+}
+```
+
+No `hiddenAnchorRef` needed for WA assist. No file is downloaded.
+
+---
+
+## Build Order (v2.5 specific)
+
+| Step | Work | Dependency |
+|------|------|-----------|
+| 1 | Add `getPayrollEntriesWithWorkerDetails()` to `payrollService.ts` | None — pure DB layer |
+| 2 | Build `ecprXmlGenerator.ts` with unit tests against CPR.xsd structure | Step 1 types |
+| 3 | Add `GET /api/export/ecpr-xml/:weekId` to `export.ts` | Steps 1-2 |
+| 4 | Update CA disclosure modal — add XML download button and gap disclosures | Step 3 (route must exist to test) |
+| 5 | Build `waAssistFormatter.ts` with unit tests against xmlschema.xsd field list | Step 1 types |
+| 6 | Add `GET /api/export/wa-assist/:weekId` to `export.ts` | Step 5 |
+| 7 | Add WA assist button + prefill panel modal to `PayrollWeekDetailPage.tsx` | Step 6 |
+
+Steps 2-4 (CA) and 5-7 (WA) can proceed in parallel after Step 1.
+
+---
+
+## Sources
+
+- CA CPR.xsd (v1.3): [https://www.dir.ca.gov/Public-Works/CPR/CPR.xsd](https://www.dir.ca.gov/Public-Works/CPR/CPR.xsd) — HIGH confidence (fetched directly 2026-03-26, full schema extracted)
+- CA eCPR XML Guidelines: [https://www.dir.ca.gov/Public-Works/CPR/eCPRXMLGuideline.pdf](https://www.dir.ca.gov/Public-Works/CPR/eCPRXMLGuideline.pdf) — HIGH confidence
+- WA PWIA xmlschema.xsd: [https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd](https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd) — HIGH confidence (fetched directly 2026-03-26, all elements and types extracted)
+- Existing codebase — directly inspected: `export.ts`, `a1131Generator.ts`, `f700Generator.ts`, `payrollService.ts`, `PayrollWeekDetailPage.tsx`, `schema.ts`, `index.ts`
+
+---
+
+*Architecture research for: CA eCPR XML export and WA PWIA submission assist (v2.5)*
+*Researched: 2026-03-26*
+
+---
+---
+
+# Prior Architecture Research (v2.4 — preserved for reference)
+
+**Domain:** HCC Prevailing Wage v2.4 — Ship-Ready + Design Elevation
 **Researched:** 2026-03-24
 **Confidence:** HIGH — based on direct codebase analysis of all affected files
 
@@ -437,122 +895,5 @@ PORT=4099
 
 ---
 
-## Data Flow: Key Scenarios
-
-### State Form Download (CA DIR)
-```
-PayrollWeekDetailPage (project.state === 'CA')
-  → "Download CA DIR" button — fetch-driven Blob download
-  → GET /api/export/state-form/:weekId?form=ca-dir
-  → export.ts: same ownership check + week/entry load as /wh347/:weekId
-  → calls fillCaDirForm(data, templateBytes) from caDirGenerator.ts
-  → streams PDF response
-  → client: Blob → URL.createObjectURL() → click → revokeObjectURL
-```
-
-### Dashboard Compliance Filter
-```
-DashboardPage mounts
-  → useQuery(['compliance-summary']) → GET /api/compliance/projects/summary
-  → compliance.ts: loads all user projects → per-project:
-      listPayrollWeeks() → for each week: computeCompliance()
-      → returns 'compliant' | 'violations' | 'no-payroll' per project
-  → client: builds complianceByProject lookup map
-  → complianceFilter state drives filteredProjects useMemo
-  → filter chips: "All | Compliant | Has Violations | No Payroll"
-```
-
-### CSV Export from Compliance History
-```
-WorkerComplianceHistoryPage
-  → "Export CSV" button (no API call needed)
-  → client-side: serialize existing violations[] array to CSV string
-  → Blob download via URL.createObjectURL()
-  → no new API endpoint required — data already in component state
-```
-
----
-
-## Build Order with Dependency Reasoning
-
-| Step | Feature | Depends On | Why This Order |
-|------|---------|-----------|----------------|
-| 1 | Design tokens + CSS utilities | — | Everything visual depends on tokens being stable. Extend `index.css` first. |
-| 2 | `HelpText.tsx` primitive | Step 1 tokens | New primitive; no page work until it exists. One small file. |
-| 3 | `Card.tsx` elevated variant | Step 1 tokens | Dashboard and form pages need elevated cards for visual hierarchy. |
-| 4 | Dashboard compliance filter | Existing compliance route | `GET /projects/summary` endpoint + `DashboardPage.tsx` useMemo extension. Most user-visible data feature. |
-| 5 | CSV export from compliance history | — | Client-only; no API changes. Independent; quick win. |
-| 6 | State form generators (CA DIR, WA L&I) | pdf-lib already installed | New service files + single route addition. PDF template assets needed before coding starts — source them first. |
-| 7 | Contractor guidance (HelpText callouts) | Steps 2, 3 | Primitive must exist; applies to multiple pages. Do as a single pass across all pages. |
-| 8 | UI/UX overhaul (photography, gradients) | Steps 1, 3 | Tokens locked, Card variants done. Visual polish pass across LandingPage, DashboardPage. |
-| 9 | Production deployment config | — | Env variable for DATABASE_PATH, Fly.io volume mount setup, SAM.gov prod key. Independent of all feature work. |
-
-**Critical path:** Steps 1 → 4 → 8 for the visual milestone. Steps 6 (state forms) requires sourcing official PDF templates externally before development can begin — this is the most likely scheduling constraint.
-
----
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Separate Routes Per State Form
-
-**What:** `/api/export/ca-dir/:weekId` and `/api/export/wa-li/:weekId` as two distinct Express routes.
-**Why it's wrong:** The ownership check, week load, entry fetch, and response headers are identical. Duplicates ~30 lines of boilerplate per new state. Adding NY DOL later becomes a third copy.
-**Do this instead:** One parametric route with `?form=ca-dir|wa-li`. Branch only on the generator call.
-
-### Anti-Pattern 2: Storing Compliance Summary in DB
-
-**What:** Cache compliance status as a column on the `projects` table (`compliance_status TEXT`), update it whenever payroll entries change.
-**Why it's wrong:** Compliance is computed from frozen snapshots in `payrollEntries`. A cached status column creates a sync problem: any time an entry is added, corrected, or amended, the cached status must be invalidated. The cache management logic becomes more complex than the computation itself.
-**Do this instead:** Compute on read via `computeCompliance()`. It is fast (no live WD lookups). The `/projects/summary` endpoint batches the computation for dashboard use.
-
-### Anti-Pattern 3: Importing Photography via Vite Import
-
-**What:** `import heroBg from '../../assets/hero-construction.jpg'` in LandingPage.
-**Why it's wrong:** Vite will process and hash the image at build time. For manually managed brand photography that gets swapped without rebuild, this adds friction. The image hash changes on every swap, invalidating CDN caches unnecessarily.
-**Do this instead:** Place images in `public/` and reference via `/hero-construction.jpg` in CSS. Vite copies `public/` verbatim to `dist/` — no processing, no hashing.
-
-### Anti-Pattern 4: Tooltip Library for Guidance
-
-**What:** Install `@radix-ui/react-tooltip` or `react-tooltip` for contextual help.
-**Why it's wrong:** Tooltips require hover (broken on touch). A tooltip library adds a dependency and a new interaction pattern. The compliance software is used on desktop browsers with full keyboard and mouse support, but the guidance content needs to be glanceable, not hidden behind hover.
-**Do this instead:** `HelpText` component with `inline` variant under form fields and `callout` variant for multi-sentence guidance blocks. Always visible, always readable, no interaction required.
-
-### Anti-Pattern 5: Turso/Postgres for v2.4
-
-**What:** Migrate from SQLite to Turso or Postgres as part of the production deployment phase.
-**Why it's wrong:** Both require rewriting the Drizzle adapter and driver. `better-sqlite3` uses a synchronous API (`db.get()`, used in `stateWageAdapter.ts`); both alternatives are async-first. The migration risks breaking the 1,522-test suite and adds 2–3 days of work with no user-visible feature value.
-**Do this instead:** Volume mount on Fly.io. Read `DATABASE_PATH` from environment. Ship with the existing SQLite + `better-sqlite3` stack. Migrate to Turso when multi-device access or replication is a real requirement.
-
----
-
-## Integration Points with Existing Patterns
-
-| Existing Pattern | How v2.4 Uses It |
-|-----------------|-----------------|
-| `export.ts` route structure | State form route follows identical ownership-check-then-data-load-then-generate pattern. Copy the block from `/wh347/:weekId` as the starting template. |
-| `fillWh347()` in `wh347Generator.ts` | `fillCaDirForm()` and `fillWaLiForm()` mirror this signature exactly: `(data, templateBytes) => Promise<Uint8Array>`. Same pdf-lib coordinate overlay approach. |
-| `complianceRouter` route ordering | `/projects/summary` must be registered before `/:weekId` — same rule as existing `/project/:projectId` and `/worker/:workerId/history`. The comment at line 17 of `compliance.ts` documents why. |
-| `computeCompliance()` | Called per-week in `/projects/summary` — no service changes needed. Function already returns `hasViolations: boolean`. |
-| Fetch-driven Blob download in `PayrollWeekDetailPage` | State form buttons reuse this exact pattern: `fetch()` → `.blob()` → `URL.createObjectURL()` → click → `setTimeout(URL.revokeObjectURL, 100)`. `generatingRef` useRef double-click guard should also be replicated per button. |
-| `@theme` tokens in `index.css` | New design tokens extend the existing block. Never add `--color-*: initial` which wipes Tailwind's 33 component defaults (per the warning comment at line 1 of `index.css`). |
-| `Badge` component variants | No new variants needed for v2.4. Existing `compliant`, `violation`, `warning`, `neutral` cover all new status displays. |
-| `EmptyState` component | Update copy on DashboardPage and WorkersPage — no code changes to the component itself, only prop values at call sites. |
-| TanStack Query staleTime pattern | `complianceSummary` should use `staleTime: 60_000` — same value as `ProjectCard`'s compliance query, avoiding excessive refetches on navigate-back. |
-
----
-
-## Sources
-
-- Direct codebase analysis: `src/server/routes/export.ts` — confirmed route pattern, ownership check, data load sequence, stream response shape
-- Direct codebase analysis: `src/server/routes/compliance.ts` — confirmed route ordering constraint (specific before wildcard), existing `/project/:projectId` and `/worker/:workerId/history` patterns
-- Direct codebase analysis: `src/server/services/complianceService.ts` — confirmed `computeCompliance()` signature, `hasViolations` field, `ComplianceResult` shape
-- Direct codebase analysis: `src/server/services/stateWageAdapter.ts` — confirmed CA/WA adapters already exist for wage lookup; state form generation is a separate concern
-- Direct codebase analysis: `src/client/index.css` — confirmed @theme token structure and the `--color-*: initial` danger warning
-- Direct codebase analysis: `src/server/index.ts` — confirmed `/api/export` and `/api/compliance` mount points
-- Direct codebase analysis: `src/server/db/schema.ts` — confirmed `projects.status`, `payrollWeeks` columns, cascade delete patterns
-- `.planning/PROJECT.md` — confirmed constraints: pdf-lib, no new UI frameworks, SQLite via Drizzle, JWT auth unchanged, add-only migrations
-- `.planning/research/ARCHITECTURE.md` (v2.3) — confirmed prior decisions on ProjectCard per-card compliance fetch, client-side useMemo filter pattern, batch compliance endpoint as deferred item
-
----
 *Architecture research for: HCC Prevailing Wage v2.4 — Ship-Ready + Design Elevation*
 *Researched: 2026-03-24*
