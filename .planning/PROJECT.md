@@ -110,6 +110,8 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ California A-1-131 certified payroll form (CA-gated, eCPR modal, CSLB/WC fields) — v2.4 Phase 24
 - ✓ Washington F700-065-000 certified payroll form (WA-gated, PWIA modal, UBI/L&I cert/WC fields, manual rate entry, WA trade codes) — v2.4 Phase 25 (NOTE: PDF field coordinates are placeholder until official LNI form is obtained)
 - ✓ Operational: Render.com deployment, SQLite on persistent disk (/var/data), invite-only registration, Express static serving for React SPA — v2.4 Phase 28
+- ✓ CA eCPR XML export: fringe disaggregation (4 sub-columns), pre-generation modal, post-download portal checklist, amendment marker — v2.5 Phase 29
+- ✓ WA PWIA submission assist: CPR XML export gated on intentId + trade codes, WAL-04 submission guide panel (Intent to Pay + Affidavit of Wages Paid) — v2.5 Phase 30
 
 ### Out of Scope
 
@@ -173,4 +175,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-27 — Phase 28 complete — v2.4 milestone fully shipped*
+*Last updated: 2026-03-27 — Phase 30 complete — v2.5 milestone fully shipped*
