@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to plan
-stopped_at: Roadmap created — Phase 29 ready to plan
+stopped_at: Phase 29 context gathered — ready to plan
 last_updated: "2026-03-27T00:00:00.000Z"
 progress:
   total_phases: 2
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 Phase: 29 of 30 (CA eCPR XML Export)
 Plan: — (not yet planned)
 Status: Ready to plan
-Last activity: 2026-03-27 — v2.5 roadmap created, Phase 29 ready to plan
+Last activity: 2026-03-27 — Phase 29 context gathered (discuss-phase complete)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -58,6 +58,9 @@ Key decisions affecting v2.5 work:
 - [Research]: CAE-01 (fringe disaggregation DB columns) must ship in same plan as CAE-02 (XML generator depends on those columns)
 - [Research]: No full SSN storage — use 000000XXX placeholder in CA XML with prominent modal disclosure; contractor enters SSN directly in portal
 - [Research]: DIR Project ID is NOT the app's internal project.id — must be collected via pre-generation modal labeled explicitly "CA DIR Project ID (from DIR portal)"
+- [Phase 29 discuss]: CA fringe entry — 4 per-hour fields (H&W, pension, vacation, training) in payroll entry form for CA projects; fringeRateSnapshot = auto-sum; non-CA unchanged
+- [Phase 29 discuss]: CA eCPR modal fields persist to project record (contractorFein, dirProjectId, awardingAgency, contractNumber); checkNum is ephemeral per export with DIRECT DEPOSIT default
+- [Phase 29 discuss]: Post-download checklist is step 2 of the pre-generation modal (in-place transition after download)
 - [Research]: WA PWIA has no file upload for Intent/Affidavit — WAL-04 is a UI summary panel only, not a file download
 - [Research]: getPayrollEntriesWithWorkerDetails() extended join is a shared prerequisite — build once in Phase 29, reuse in Phase 30
 - [Phase 25]: waTradeCode stored per classification in 0013 migration — Phase 30 reads this column for WA trade code gate
@@ -73,5 +76,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-27
-Stopped at: v2.5 roadmap created — Phases 29 and 30 defined
+Stopped at: Phase 29 discuss-phase complete — ready for /gsd:plan-phase 29
 Resume file: None
