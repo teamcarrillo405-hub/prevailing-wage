@@ -91,6 +91,7 @@ interface ProjectData {
   id: string;
   state: string;
   name: string;
+  county?: string | null;
   cslbLicense: string | null;
   wcPolicyNumber: string | null;
   // Phase 25 — WA fields
@@ -102,6 +103,8 @@ interface ProjectData {
   dirProjectId?: string | null;
   awardingAgency?: string | null;
   contractNumber?: string | null;
+  // Phase 30 — WA PWIA
+  pwiaIntentId?: string | null;
 }
 
 interface PayrollWeekDetailResponse {
@@ -144,6 +147,14 @@ export function PayrollWeekDetailPage() {
   // WA-specific state — mirrors CA pattern; separate from caGeneratingRef
   const [showWaDisclosure, setShowWaDisclosure] = useState(false);
   const waGeneratingRef = useRef(false);  // MUST be new ref — do not reuse generatingRef or caGeneratingRef
+
+  // WA CPR XML download state (separate from F700 PDF flow)
+  const [showWaCprGate, setShowWaCprGate] = useState(false);
+  const [waCprGateWorkers, setWaCprGateWorkers] = useState<Array<{ name: string; workerId: string }>>([]);
+  const [showWaCprModal, setShowWaCprModal] = useState(false);
+  const [waCprIntentId, setWaCprIntentId] = useState('');
+  const [waCprGenerating, setWaCprGenerating] = useState(false);
+  const waCprGeneratingRef = useRef(false);
 
   const queryClient = useQueryClient();
   const [showSubmitForm, setShowSubmitForm] = useState(false);
@@ -210,6 +221,13 @@ export function PayrollWeekDetailPage() {
       if (p.contractNumber) setEcprContractNumber(p.contractNumber);
     }
   }, [projectData]);
+
+  // Pre-fill PWIA Intent ID from project record
+  useEffect(() => {
+    if (projectData?.data?.project?.pwiaIntentId) {
+      setWaCprIntentId(projectData.data.project.pwiaIntentId);
+    }
+  }, [projectData?.data?.project?.pwiaIntentId]);
 
   const isLoading = weekLoading || complianceLoading;
   const isError = weekError || complianceError;
@@ -302,6 +320,74 @@ export function PayrollWeekDetailPage() {
       console.error('WA F700-065-000 download failed:', err);
     } finally {
       waGeneratingRef.current = false;
+    }
+  }
+
+  // WA CPR XML download handlers (separate from F700 PDF flow)
+  function handleWaCprDownloadClick() {
+    setShowWaCprModal(true);
+  }
+
+  async function handleWaCprConfirm() {
+    if (waCprGeneratingRef.current) return;
+    waCprGeneratingRef.current = true;
+    setWaCprGenerating(true);
+
+    try {
+      // Validate intentId is numeric
+      const intentNum = parseInt(waCprIntentId, 10);
+      if (!waCprIntentId || !Number.isInteger(intentNum) || intentNum <= 0) {
+        alert('Please enter a valid numeric PWIA Intent ID.');
+        return;
+      }
+
+      // Persist intentId to project via PATCH
+      await fetch(`/api/projects/${projectData?.data?.project?.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ pwiaIntentId: waCprIntentId }),
+      });
+
+      // Fetch XML
+      const res = await fetch(`/api/export/wa-cpr-xml/${weekId}`, {
+        credentials: 'include',
+      });
+
+      if (res.status === 422) {
+        // Trade code gate — show gate screen
+        const data = await res.json();
+        setWaCprGateWorkers(data.workers || []);
+        setShowWaCprModal(false);
+        setShowWaCprGate(true);
+        return;
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || 'Failed to generate WA CPR XML');
+        return;
+      }
+
+      // Blob download
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const filenameMatch = disposition.match(/filename="(.+?)"/);
+      a.href = url;
+      a.download = filenameMatch?.[1] || `wa-cpr-${waCprIntentId}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+
+      setShowWaCprModal(false);
+    } catch (err) {
+      alert('Error generating WA CPR XML. Please try again.');
+    } finally {
+      waCprGeneratingRef.current = false;
+      setWaCprGenerating(false);
     }
   }
 
@@ -442,6 +528,15 @@ export function PayrollWeekDetailPage() {
                 onClick={handleWaDownloadClick}
               >
                 Download WA F700-065-000
+              </Button>
+            )}
+            {isWA && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleWaCprDownloadClick}
+              >
+                Download WA CPR XML
               </Button>
             )}
           </div>
@@ -662,6 +757,201 @@ export function PayrollWeekDetailPage() {
                 </Button>
               </div>
             )}
+          </Card>
+        )}
+
+        {/* WAL-04 WA PWIA Submission Guide panel */}
+        {!isLoading && !isError && isWA && (
+          <Card className="mt-6">
+            <div className="p-4">
+              <h3 className="font-headline text-lg font-semibold mb-1">WA PWIA Submission Guide</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Data-entry reference for the{' '}
+                <a
+                  href="https://secure.lni.wa.gov/pwia/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-gold underline"
+                >
+                  L&amp;I PWIA portal
+                </a>
+                . This is not a submission mechanism — enter these values manually in the portal.
+              </p>
+
+              {/* Intent to Pay section */}
+              <div className="mb-6">
+                <h4 className="font-headline text-base font-semibold mb-2 border-b pb-1">
+                  Intent to Pay Prevailing Wages
+                </h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
+                  <span className="text-gray-500">Contractor:</span>
+                  <span>{projectData?.data?.project?.name || '—'}</span>
+                  <span className="text-gray-500">UBI Number:</span>
+                  <span>{projectData?.data?.project?.ubiNumber || '—'}</span>
+                  <span className="text-gray-500">L&amp;I Certificate:</span>
+                  <span>{projectData?.data?.project?.lniCertificate || '—'}</span>
+                  <span className="text-gray-500">WC Account:</span>
+                  <span>{projectData?.data?.project?.wcAccount || '—'}</span>
+                  <span className="text-gray-500">County:</span>
+                  <span>{projectData?.data?.project?.county || '—'}</span>
+                </div>
+                {/* Per-classification aggregation */}
+                {(() => {
+                  const classMap = new Map<
+                    string,
+                    {
+                      label: string;
+                      totalSt: number;
+                      totalOt: number;
+                      baseRate: number;
+                      fringeRate: number;
+                      workerIds: Set<string>;
+                    }
+                  >();
+                  for (const row of entries) {
+                    const key = row.tradeDescription || 'Unknown';
+                    const e = row.entry;
+                    const st =
+                      e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
+                    const ot =
+                      e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
+                    if (!classMap.has(key)) {
+                      classMap.set(key, {
+                        label: key,
+                        totalSt: 0,
+                        totalOt: 0,
+                        baseRate: e.baseRateSnapshot,
+                        fringeRate: e.fringeRateSnapshot,
+                        workerIds: new Set(),
+                      });
+                    }
+                    const entry = classMap.get(key)!;
+                    entry.totalSt += st;
+                    entry.totalOt += ot;
+                    entry.workerIds.add(e.workerId);
+                  }
+                  const rows = Array.from(classMap.values());
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wide">
+                            <th className="py-1 pr-3">Classification</th>
+                            <th className="py-1 pr-3 text-right">ST Hours</th>
+                            <th className="py-1 pr-3 text-right">OT Hours</th>
+                            <th className="py-1 pr-3 text-right">Base Rate</th>
+                            <th className="py-1 pr-3 text-right">Fringe Rate</th>
+                            <th className="py-1 text-right">Workers</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {rows.map((r) => (
+                            <tr key={r.label}>
+                              <td className="py-1.5 pr-3 text-gray-800">{r.label}</td>
+                              <td className="py-1.5 pr-3 text-right text-gray-700">{r.totalSt}</td>
+                              <td className="py-1.5 pr-3 text-right text-gray-700">{r.totalOt}</td>
+                              <td className="py-1.5 pr-3 text-right text-gray-700">
+                                ${r.baseRate.toFixed(2)}
+                              </td>
+                              <td className="py-1.5 pr-3 text-right text-gray-700">
+                                ${r.fringeRate.toFixed(2)}
+                              </td>
+                              <td className="py-1.5 text-right text-gray-700">
+                                {r.workerIds.size}
+                              </td>
+                            </tr>
+                          ))}
+                          {rows.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="py-3 text-center text-gray-400 text-xs">
+                                No payroll entries for this week.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Affidavit of Wages Paid section */}
+              <div>
+                <h4 className="font-headline text-base font-semibold mb-2 border-b pb-1">
+                  Affidavit of Wages Paid
+                </h4>
+                <p className="text-xs text-gray-400 mb-2">
+                  Worker SSNs: Not stored — enter full SSN directly in portal. Shown as
+                  ***-**-XXXX below.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wide">
+                        <th className="py-1 pr-3">Worker</th>
+                        <th className="py-1 pr-2 text-right">Mon</th>
+                        <th className="py-1 pr-2 text-right">Tue</th>
+                        <th className="py-1 pr-2 text-right">Wed</th>
+                        <th className="py-1 pr-2 text-right">Thu</th>
+                        <th className="py-1 pr-2 text-right">Fri</th>
+                        <th className="py-1 pr-2 text-right">Sat</th>
+                        <th className="py-1 pr-2 text-right">Sun</th>
+                        <th className="py-1 pr-2 text-right">Total ST</th>
+                        <th className="py-1 pr-2 text-right">Total OT</th>
+                        <th className="py-1 pr-2 text-right">Base Rate</th>
+                        <th className="py-1 pr-2 text-right">Fringe</th>
+                        <th className="py-1 text-right">Gross Pay</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {entries.map((row) => {
+                        const e = row.entry;
+                        const totalSt =
+                          e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
+                        const totalOt =
+                          e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
+                        const fmt = (h: number) => (h === 0 ? '—' : String(h));
+                        return (
+                          <tr key={e.id}>
+                            <td className="py-1.5 pr-3 text-gray-800 whitespace-nowrap">
+                              {row.workerName}
+                            </td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{fmt(e.monSt)}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{fmt(e.tueSt)}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{fmt(e.wedSt)}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{fmt(e.thuSt)}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{fmt(e.friSt)}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{fmt(e.satSt)}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{fmt(e.sunSt)}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{totalSt}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">{totalOt}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">
+                              ${e.baseRateSnapshot.toFixed(2)}
+                            </td>
+                            <td className="py-1.5 pr-2 text-right text-gray-700">
+                              ${e.fringeRateSnapshot.toFixed(2)}
+                            </td>
+                            <td className="py-1.5 text-right text-gray-700">
+                              {e.grossWages !== null ? `$${e.grossWages.toFixed(2)}` : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {entries.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={13}
+                            className="py-3 text-center text-gray-400 text-xs"
+                          >
+                            No payroll entries for this week.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </Card>
         )}
 
@@ -917,6 +1207,107 @@ export function PayrollWeekDetailPage() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* WA CPR XML — trade code gate screen (blocking, not modal) */}
+        {showWaCprGate && (
+          <Card className="mt-6">
+            <div className="p-4">
+              <h3 className="font-headline text-lg font-semibold mb-3">WA Trade Code Required</h3>
+              <p className="mb-4 text-sm text-gray-700">
+                The following workers are missing a WA L&amp;I trade code. All workers must have a
+                trade code assigned before generating WA CPR XML.
+              </p>
+              <ul className="list-disc pl-5 mb-4 space-y-1 text-sm">
+                {waCprGateWorkers.map((w) => (
+                  <li key={w.workerId}>
+                    {w.name} —{' '}
+                    <a
+                      href={`/projects/${projectData?.data?.project?.id}/workers`}
+                      className="text-brand-gold underline"
+                    >
+                      Edit classification
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <Button variant="secondary" onClick={() => setShowWaCprGate(false)}>
+                Dismiss
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* WA CPR XML — intentId modal */}
+        {showWaCprModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setShowWaCprModal(false)}
+          >
+            <div
+              className="mx-4 max-w-md rounded-lg bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-headline font-bold text-gray-900">WA CPR XML Export</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Generate and download the WA PWIA certified payroll XML for this week.
+              </p>
+
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    PWIA Intent ID
+                  </label>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Issued by L&amp;I after Statement of Intent approval. Enter the numeric ID from
+                    your My L&amp;I PWIA portal.
+                  </p>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={waCprIntentId}
+                    onChange={(e) => setWaCprIntentId(e.target.value)}
+                    placeholder="e.g., 12345"
+                    maxLength={20}
+                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* SSN disclosure */}
+              <div className="mt-4 rounded bg-amber-50 border border-amber-200 p-3">
+                <p className="text-sm font-medium text-amber-800">SSN Notice</p>
+                <p className="mt-1 text-xs text-amber-700">
+                  Worker SSNs are not stored in this application. The generated XML uses placeholder
+                  SSNs (00000XXXX). You must enter full SSNs directly in the L&amp;I PWIA portal.
+                </p>
+                <a
+                  href="https://secure.lni.wa.gov/pwia/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block text-xs text-brand-gold underline hover:opacity-80"
+                >
+                  secure.lni.wa.gov/pwia/
+                </a>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowWaCprModal(false)}
+                  className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <Button
+                  onClick={handleWaCprConfirm}
+                  disabled={!waCprIntentId.trim() || waCprGenerating}
+                >
+                  {waCprGenerating ? 'Generating...' : 'Generate & Download'}
+                </Button>
+              </div>
             </div>
           </div>
         )}
