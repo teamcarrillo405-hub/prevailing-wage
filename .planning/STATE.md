@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Ready to execute
-stopped_at: "Checkpoint reached at Task 3: 27-02-PLAN.md — awaiting visual verification"
-last_updated: "2026-03-27T00:12:04.093Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 27-02-PLAN.md — Phase 27 design-elevation complete
+last_updated: "2026-03-27T00:27:52.927Z"
 progress:
   total_phases: 12
   completed_phases: 11
@@ -66,6 +66,7 @@ Plan: 2 of 2
 | Phase 26-contractor-guidance-system P02 | 15 | 2 tasks | 9 files |
 | Phase 27-design-elevation P01 | 6min | 2 tasks | 12 files |
 | Phase 27-design-elevation P02 | 6min | 2 tasks | 4 files |
+| Phase 27-design-elevation P02 | 15min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -224,6 +225,9 @@ Plan: 2 of 2
 - [Phase 27]: OtScenarioPage PageHeader uses className='mb-0' to suppress default mb-6 since it lives inside an existing flex row with a back button
 - [Phase 27]: hover:shadow-md removed from ProjectCard base classes — elevated shadow baseline makes hover:shadow-md a visual regression (DES-01 research pitfall #5)
 - [Phase 27]: VarianceReportPage/UnionAllocationPage Export PDF links moved to PageHeader action slot; text-[#F5C518] migrated to text-brand-gold per CLAUDE.md token constraint
+- [Phase 27-design-elevation]: Placeholder WebP files (48-byte) created for hero.webp and dashboard-bg.webp; user must replace with real Unsplash construction photography before production
+- [Phase 27-design-elevation]: LandingNav removed; nav inlined inside HeroSection z-10 container for floating transparent nav over photo
+- [Phase 27-design-elevation]: dashboard-bg wrapper uses -mt-8 pt-8 to consume Layout.tsx py-8 top padding and restore it inside the strip
 
 ### Research Flags for v2.4
 
@@ -241,6 +245,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T00:11:56.196Z
-Stopped at: Checkpoint reached at Task 3: 27-02-PLAN.md — awaiting visual verification
+Last session: 2026-03-27T00:27:52.924Z
+Stopped at: Completed 27-02-PLAN.md — Phase 27 design-elevation complete
 Resume file: None

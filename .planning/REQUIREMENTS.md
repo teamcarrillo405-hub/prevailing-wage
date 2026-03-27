@@ -37,7 +37,7 @@
 ### Design Elevation (DES)
 
 - [x] **DES-01**: App visual design elevated to match HCC website standard — construction photography in hero/dashboard areas, dark gold gradient overlays, card depth with shadows matching `0 2px 12px rgba(0,0,0,0.08)` / `0 8px 24px rgba(0,0,0,0.12)`
-- [ ] **DES-02**: Landing page hero features full-bleed construction photography with dark overlay, Oswald display headline (`clamp(56px, 8vw, 88px)`), and high-contrast CTA
+- [x] **DES-02**: Landing page hero features full-bleed construction photography with dark overlay, Oswald display headline (`clamp(56px, 8vw, 88px)`), and high-contrast CTA
 - [x] **DES-03**: All pages use richer typography hierarchy — tighter letter-spacing on Oswald headlines, improved spacing rhythm matching HCC website
 
 ### Operational (OPS)
@@ -87,7 +87,7 @@
 | UX-07 | Phase 26 | Complete |
 | UX-08 | Phase 26 | Complete |
 | DES-01 | Phase 27 | Complete |
-| DES-02 | Phase 27 | Pending |
+| DES-02 | Phase 27 | Complete |
 | DES-03 | Phase 27 | Complete |
 | OPS-01 | Phase 28 | Pending |
 | OPS-02 | Phase 28 | Pending |

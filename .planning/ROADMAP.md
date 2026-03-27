@@ -75,7 +75,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 24: California DIR A-1-131 Form** - DT schema migration, CA-specific project fields, CA certified payroll PDF generation with daily OT/DT model and eCPR disclosure (CAL-01, CAL-02, CAL-03) (completed 2026-03-25)
 - [x] **Phase 25: Washington L&I F700-065-000 Form** - Manual rate entry for WA projects, WA trade code mapping, WA certified payroll PDF generation (WAL-01, WAL-02) (completed 2026-03-26)
 - [x] **Phase 26: Contractor Guidance System** - HelpText primitive, contextual help across all major pages, instructional empty states, inline compliance term tooltips (UX-05, UX-06, UX-07, UX-08) (completed 2026-03-26)
-- [ ] **Phase 27: Design Elevation** - Construction photography, dark gold gradient overlays, elevated card shadows, richer typography matching HCC website standard (DES-01, DES-02, DES-03)
+- [x] **Phase 27: Design Elevation** - Construction photography, dark gold gradient overlays, elevated card shadows, richer typography matching HCC website standard (DES-01, DES-02, DES-03) (completed 2026-03-27)
 - [ ] **Phase 28: Production Deployment** - Render.com deployment with persistent SQLite disk, invite-only registration, environment variable hygiene, Vite static file serving (OPS-01, OPS-02, OPS-03, OPS-04)
 
 ## Phase Details
@@ -233,7 +233,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 27-01-PLAN.md — Shadow-card-elevated token + print CSS + PageHeader tracking-tight + ProjectCard className prop + HelpCallout shadow + h1 migration (7 pages)
-- [ ] 27-02-PLAN.md — Placeholder WebP photos + hero section rewrite (photo overlay, floating nav, clamp headline) + dashboard photo background strip + visual checkpoint
+- [x] 27-02-PLAN.md — Placeholder WebP photos + hero section rewrite (photo overlay, floating nav, clamp headline) + dashboard photo background strip + visual checkpoint
 
 ### Phase 28: Production Deployment
 **Goal**: The app is live at a public HTTPS URL on Render.com with persistent data storage, invite-only registration, and all secrets properly configured via environment variables
@@ -273,5 +273,5 @@ Plans:
 | 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress|  |
 | 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete    | 2026-03-26 |
 | 26. Contractor Guidance System | v2.4 | 2/2 | Complete    | 2026-03-26 |
-| 27. Design Elevation | v2.4 | 1/2 | In Progress|  |
+| 27. Design Elevation | v2.4 | 2/2 | Complete   | 2026-03-27 |
 | 28. Production Deployment | v2.4 | 0/2 | Not started | - |

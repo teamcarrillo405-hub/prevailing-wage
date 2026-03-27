@@ -2,7 +2,7 @@
 phase: 27-design-elevation
 plan: "02"
 subsystem: client-ui
-status: checkpoint
+status: complete
 tags:
   - photography
   - hero
@@ -39,9 +39,9 @@ decisions:
   - "LandingNav function removed; nav markup inlined inside HeroSection z-10 container for D-09 floating nav"
   - "dashboard-bg wrapper uses -mt-8 pt-8 to consume Layout.tsx py-8 top padding and restore it inside the strip"
 metrics:
-  duration: "6min"
-  completed: "2026-03-27T00:11:00Z"
-  tasks_completed: 2
+  duration: "~15min total (Tasks 1+2: 6min auto; Task 3: checkpoint)"
+  completed: "2026-03-27"
+  tasks_completed: 3
   tasks_total: 3
   files_changed: 4
 requirements:
@@ -50,7 +50,7 @@ requirements:
 
 # Phase 27 Plan 02: Photography and Hero Elevation Summary
 
-One-liner: Full-bleed hero with photo overlay, floating transparent nav, and clamp(56px,8vw,88px) Oswald headline; dashboard PageHeader wrapped in a dark photo strip.
+One-liner: Full-bleed hero with photo overlay, floating transparent nav, and clamp(56px,8vw,88px) Oswald headline; dashboard PageHeader wrapped in a dark photo strip using placeholder WebPs.
 
 ## Tasks Completed
 
@@ -58,7 +58,7 @@ One-liner: Full-bleed hero with photo overlay, floating transparent nav, and cla
 |------|------|--------|--------|
 | 1 | Create placeholder WebPs, rewrite HeroSection | 11b48b7 | Done |
 | 2 | Add dashboard photo background strip | a285176 | Done |
-| 3 | Visual verification | — | Awaiting checkpoint |
+| 3 | Visual verification — user approved | — | Done (approved) |
 
 ## What Was Built
 
@@ -84,15 +84,28 @@ One-liner: Full-bleed hero with photo overlay, floating transparent nav, and cla
 - `[&_h1]:text-white` Tailwind v4 descendant selector ensures white title text
 - `HelpCallout` remains outside the wrapper in normal page flow
 
+### Task 3 — Visual Verification (User Approved)
+
+User confirmed the following in browser:
+- Hero section renders with photo background (placeholder), dark overlay, floating transparent nav, and large white Oswald headline
+- Dashboard "Projects" PageHeader area shows the dark photo background strip
+- Non-landing pages retain normal `bg-nav-dark` nav bar
+- Print preview shows clean white backgrounds — no dark overlays printed
+
 ### Placeholder Images
 
-Both `hero.webp` and `dashboard-bg.webp` are 48-byte minimal valid WebP placeholders. The CSS background-image will resolve (no 404), but no photo will be visible until the user replaces them.
+Both `hero.webp` and `dashboard-bg.webp` are 48-byte minimal valid WebP placeholders. The CSS background-image resolves (no 404), but no photo is visible until the user replaces them.
 
 **User action required:** Replace placeholders with real construction photography:
 - **hero.webp**: Search "highway bridge construction aerial dark" on Unsplash. Select a dark-toned infrastructure/bridge scene. Download at 1920px width. Convert to WebP, target under 150KB.
 - **dashboard-bg.webp**: Search "construction site steel workers" on Unsplash. Select a darker construction scene. Download at 1920px width. Convert to WebP, target under 100KB.
 
 Place files in `src/client/public/images/` (overwrite the placeholders).
+
+## Build and Test Verification
+
+- `npm run build`: PASS (Vite build clean, 0 TS errors)
+- `npm test`: Pre-existing failures in worktrees (RED TDD stubs and EADDRINUSE port conflicts from parallel agent sessions) — not caused by this plan's frontend-only changes. Main project tests unaffected.
 
 ## Deviations from Plan
 
@@ -105,7 +118,7 @@ None — plan executed exactly as written.
 
 These stubs do NOT prevent the plan's goal from being achieved: all CSS structure, overlay, classes, and print targeting are wired and correct. Visual effect is complete once real photos are dropped in.
 
-## Self-Check
+## Self-Check: PASSED
 
 | Claim | Verified |
 |-------|---------|
@@ -117,3 +130,5 @@ These stubs do NOT prevent the plan's goal from being achieved: all CSS structur
 | dashboard-bg class in DashboardPage.tsx | PASS |
 | Commit 11b48b7 exists | PASS |
 | Commit a285176 exists | PASS |
+| Task 3 user approved | PASS |
+| npm run build exits 0 | PASS |
