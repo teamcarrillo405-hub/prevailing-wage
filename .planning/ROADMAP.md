@@ -277,4 +277,4 @@ Plans:
 | 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete    | 2026-03-26 |
 | 26. Contractor Guidance System | v2.4 | 2/2 | Complete    | 2026-03-26 |
 | 27. Design Elevation | v2.4 | 2/2 | Complete    | 2026-03-27 |
-| 28. Production Deployment | v2.4 | 2/2 | Complete   | 2026-03-27 |
+| 28. Production Deployment | v2.4 | 2/2 | Complete    | 2026-03-27 |
