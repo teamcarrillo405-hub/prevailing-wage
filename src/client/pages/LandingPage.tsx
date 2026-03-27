@@ -10,41 +10,57 @@ const PW_DEF = "The minimum hourly pay rate for each trade and location, determi
 const CWHSSA_DEF = "The Contract Work Hours and Safety Standards Act. It requires overtime pay (1.5x base rate) for all hours over 40 in a week on federal contracts exceeding $100,000.";
 const WD_DEF = "Wage Determination — the specific DOL document that lists the prevailing wage rates for a given trade in a given county. Each project is assigned a WD number tied to its location.";
 
-function LandingNav() {
-  return (
-    <nav className="bg-nav-dark sticky top-0 z-10 px-6 py-4 flex items-center justify-between">
-      <span className="text-brand-gold font-headline text-xl font-bold">
-        HCC Prevailing Wage
-      </span>
-      <Link
-        to="/login"
-        className="text-white hover:text-brand-gold transition-colors text-sm font-body"
-      >
-        Log In
-      </Link>
-    </nav>
-  );
-}
-
 function HeroSection() {
   return (
-    <section className="bg-nav-dark text-white py-24 px-4">
-      <div className="max-w-4xl mx-auto text-center">
-        <h1 className="font-headline text-5xl font-bold leading-tight mb-6">
-          WH-347 Certified Payroll.<br />
-          Davis-Bacon Rates from SAM.gov, Automated.
-        </h1>
-        <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
-          Pull prevailing wage rates for your project location, enter weekly
-          payroll, and generate compliant WH-347 forms — in minutes, not hours.
-        </p>
-        <div className="flex gap-4 justify-center flex-wrap mt-8">
-          <Link to="/register">
-            <Button variant="primary" size="md">Create Free Account</Button>
+    <section
+      className="hero-bg relative min-h-screen flex flex-col"
+      style={{
+        backgroundImage: "url('/images/hero.webp')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Dark overlay per D-06: bg-black/60 */}
+      <div className="absolute inset-0 bg-black/60" aria-hidden="true" />
+
+      {/* Content above overlay */}
+      <div className="relative z-10 flex flex-col flex-1">
+        {/* Floating nav per D-09 — transparent, no bg-nav-dark on landing */}
+        <nav className="px-6 py-4 flex items-center justify-between">
+          <span className="text-brand-gold font-headline text-xl font-bold">
+            HCC Prevailing Wage
+          </span>
+          <Link
+            to="/login"
+            className="text-white hover:text-brand-gold transition-colors text-sm font-body"
+          >
+            Log In
           </Link>
-          <a href="#how-it-works">
-            <Button variant="secondary" size="md">See How It Works</Button>
-          </a>
+        </nav>
+
+        {/* Hero content centered vertically */}
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1
+              className="font-headline font-bold leading-tight mb-6 tracking-tight text-white"
+              style={{ fontSize: 'clamp(56px, 8vw, 88px)' }}
+            >
+              WH-347 Certified Payroll.<br />
+              Davis-Bacon Rates from SAM.gov, Automated.
+            </h1>
+            <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto font-body">
+              Pull prevailing wage rates for your project location, enter weekly
+              payroll, and generate compliant WH-347 forms — in minutes, not hours.
+            </p>
+            <div className="flex gap-4 justify-center flex-wrap mt-8">
+              <Link to="/register">
+                <Button variant="primary" size="md">Create Free Account</Button>
+              </Link>
+              <a href="#how-it-works">
+                <Button variant="secondary" size="md">See How It Works</Button>
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -303,7 +319,6 @@ function LandingFooter() {
 export function LandingPage() {
   return (
     <div className="min-h-screen">
-      <LandingNav />
       <HeroSection />
       <HowItWorksSection />
       <ProblemSection />
