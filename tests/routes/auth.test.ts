@@ -43,6 +43,41 @@ describe('POST /api/auth/register', () => {
       .send({ email: 'not-an-email', password: 'password123' });
     expect(res.status).toBe(400);
   });
+
+  describe('invite code gating', () => {
+    it('returns 403 when INVITE_CODE is set and no code provided', async () => {
+      process.env.INVITE_CODE = 'secret-abc-123';
+      try {
+        const res = await supertest(app)
+          .post('/api/auth/register')
+          .send({ email: `noinvite-${Date.now()}@test.com`, password: 'password123' });
+        expect(res.status).toBe(403);
+        expect(res.body.error).toBe('Invalid invitation code');
+      } finally {
+        delete process.env.INVITE_CODE;
+      }
+    });
+
+    it('returns 201 when INVITE_CODE is set and correct code provided', async () => {
+      process.env.INVITE_CODE = 'secret-abc-123';
+      try {
+        const res = await supertest(app)
+          .post('/api/auth/register')
+          .send({ email: `withinvite-${Date.now()}@test.com`, password: 'password123', inviteCode: 'secret-abc-123' });
+        expect(res.status).toBe(201);
+      } finally {
+        delete process.env.INVITE_CODE;
+      }
+    });
+
+    it('returns 201 when INVITE_CODE env var is absent (open registration)', async () => {
+      delete process.env.INVITE_CODE;
+      const res = await supertest(app)
+        .post('/api/auth/register')
+        .send({ email: `openreg-${Date.now()}@test.com`, password: 'password123' });
+      expect(res.status).toBe(201);
+    });
+  });
 });
 
 describe('POST /api/auth/login', () => {
