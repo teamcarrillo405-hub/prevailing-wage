@@ -109,7 +109,7 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ Dashboard compliance status filter + batch summary endpoint (no N+1) — v2.4 Phase 23
 - ✓ CSV export from per-worker compliance history page (17 cols, UTF-8 BOM) — v2.4 Phase 23
 - ✓ Contractor guidance: HelpCallout on 5 pages, TermTooltip for 5 compliance terms, instructional empty states with action buttons, 4-step landing page how-it-works — v2.4 Phase 26
-- UI/UX overhaul: construction photography, dark gold gradients, card depth/shadows matching HCC website standard
+- ✓ UI/UX overhaul: full-bleed hero photography, floating nav, clamp headline, elevated dashboard card shadow, tracking-tight PageHeader h1, 7-page h1 migration — v2.4 Phase 27 (placeholder WebPs — swap real photos before launch)
 - ✓ California A-1-131 certified payroll form (CA-gated, eCPR modal, CSLB/WC fields) — v2.4 Phase 24
 - ✓ Washington F700-065-000 certified payroll form (WA-gated, PWIA modal, UBI/L&I cert/WC fields, manual rate entry, WA trade codes) — v2.4 Phase 25 (NOTE: PDF field coordinates are placeholder until official LNI form is obtained)
 - Operational: cloud hosting, SQLite persistence, controlled auth, SAM.gov production key
@@ -176,4 +176,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-26 — Phase 26 complete*
+*Last updated: 2026-03-27 — Phase 27 complete*
