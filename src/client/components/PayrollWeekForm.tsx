@@ -1,6 +1,7 @@
 // src/client/components/PayrollWeekForm.tsx
 // Weekly hours entry grid: one row per worker classification, columns Mon-Sun ST + Mon-Sun OT.
 // FormProvider wraps the form so LiveCalcDisplay can call useFormContext().
+import { useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { LiveCalcDisplay } from './LiveCalcDisplay';
 
@@ -18,6 +19,10 @@ interface PayrollWeekFormValues {
   payrollNumber: number;
   baseRate: number;
   fringeRate: number;
+  fringeHealthWelfare: number;
+  fringePension: number;
+  fringeVacation: number;
+  fringeTraining: number;
   monSt: number;
   tueSt: number;
   wedSt: number;
@@ -70,13 +75,25 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false }: Pa
       payrollNumber: 1,
       baseRate: firstWorker?.baseRate ?? 0,
       fringeRate: firstWorker?.fringeRate ?? 0,
+      fringeHealthWelfare: 0,
+      fringePension: 0,
+      fringeVacation: 0,
+      fringeTraining: 0,
       monSt: 0, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
       monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
       monDt: 0, tueDt: 0, wedDt: 0, thuDt: 0, friDt: 0, satDt: 0, sunDt: 0,
     },
   });
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = methods;
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = methods;
+
+  const watchedFringe = watch(['fringeHealthWelfare', 'fringePension', 'fringeVacation', 'fringeTraining']);
+  useEffect(() => {
+    if (isCA) {
+      const sum = (watchedFringe[0] || 0) + (watchedFringe[1] || 0) + (watchedFringe[2] || 0) + (watchedFringe[3] || 0);
+      setValue('fringeRate', parseFloat(sum.toFixed(2)));
+    }
+  }, [isCA, watchedFringe, setValue]);
 
   async function onSubmit(data: PayrollWeekFormValues) {
     // 1. Create the payroll week
@@ -132,6 +149,12 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false }: Pa
           } : {}),
           baseRateSnapshot: data.baseRate,
           fringeRateSnapshot: data.fringeRate,
+          ...(isCA ? {
+            fringeHealthWelfare: data.fringeHealthWelfare || 0,
+            fringePension: data.fringePension || 0,
+            fringeVacation: data.fringeVacation || 0,
+            fringeTraining: data.fringeTraining || 0,
+          } : {}),
         }),
       });
     }
@@ -173,6 +196,38 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false }: Pa
         {/* Rate fields (hidden but watched by LiveCalcDisplay) */}
         <input type="hidden" {...register('baseRate', { valueAsNumber: true })} />
         <input type="hidden" {...register('fringeRate', { valueAsNumber: true })} />
+
+        {/* CA fringe disaggregation fields */}
+        {isCA && (
+          <div className="mb-4 rounded border border-amber-200 bg-amber-50 p-4">
+            <h4 className="text-sm font-semibold text-amber-900 mb-2">CA Fringe Contributions (per hour)</h4>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Health &amp; Welfare</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('fringeHealthWelfare', { valueAsNumber: true })}
+                  className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Pension</label>
+                <input type="number" step="0.01" min="0" {...register('fringePension', { valueAsNumber: true })} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Vacation</label>
+                <input type="number" step="0.01" min="0" {...register('fringeVacation', { valueAsNumber: true })} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Training</label>
+                <input type="number" step="0.01" min="0" {...register('fringeTraining', { valueAsNumber: true })} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">Sum auto-fills the fringe rate below.</p>
+          </div>
+        )}
 
         {/* Hours grid */}
         {workers.length === 0 ? (
