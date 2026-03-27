@@ -745,11 +745,12 @@ router.get('/wa-cpr-xml/:weekId', async (req, res) => {
   const entries = await getPayrollEntriesWithWorkerDetails(weekId);
 
   // 5b. Trade code gate — 422 if any worker has null waTradeCode (D-03, D-04, D-05)
-  const nullTradeEntries = entries.filter(row => !row.waTradeCode);
+  type EntryRow = (typeof entries)[number];
+  const nullTradeEntries = entries.filter((row: EntryRow) => !row.waTradeCode);
   if (nullTradeEntries.length > 0) {
     res.status(422).json({
       error: 'WA trade code required for all workers',
-      workers: nullTradeEntries.map(row => ({
+      workers: nullTradeEntries.map((row: EntryRow) => ({
         name: row.workerName,
         workerId: row.entry.workerId,
       })),
