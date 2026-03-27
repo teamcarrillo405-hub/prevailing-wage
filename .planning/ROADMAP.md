@@ -7,7 +7,8 @@
 - ✅ **v2.1** Design Polish + Landing Page — Phases 10-14 (shipped 2026-03-22)
 - ✅ **v2.2** UX Completion + Compliance Hardening — Phases 15-16 (shipped 2026-03-23)
 - ✅ **v2.3** Contractor Workflow Efficiency + Audit Readiness — Phases 17-22 (shipped 2026-03-24)
-- 🔄 **v2.4** Ship-Ready + Design Elevation — Phases 23-28 (active)
+- ✅ **v2.4** Ship-Ready + Design Elevation — Phases 23-28 (shipped 2026-03-27)
+- 🚧 **v2.5** State Portal Integration — Phases 29-30 (active)
 
 ## Phases
 
@@ -69,7 +70,8 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 </details>
 
-### v2.4 Ship-Ready + Design Elevation (Phases 23-28) — ACTIVE
+<details>
+<summary>✅ v2.4 Ship-Ready + Design Elevation (Phases 23-28) — SHIPPED 2026-03-27</summary>
 
 - [x] **Phase 23: Dashboard Compliance Filter + CSV Export** - Batch compliance summary endpoint, dashboard filter chips, and CSV download from compliance history (DASH-05, AUD-03) (completed 2026-03-24)
 - [x] **Phase 24: California DIR A-1-131 Form** - DT schema migration, CA-specific project fields, CA certified payroll PDF generation with daily OT/DT model and eCPR disclosure (CAL-01, CAL-02, CAL-03) (completed 2026-03-25)
@@ -77,6 +79,13 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 26: Contractor Guidance System** - HelpText primitive, contextual help across all major pages, instructional empty states, inline compliance term tooltips (UX-05, UX-06, UX-07, UX-08) (completed 2026-03-26)
 - [x] **Phase 27: Design Elevation** - Construction photography, dark gold gradient overlays, elevated card shadows, richer typography matching HCC website standard (DES-01, DES-02, DES-03) (completed 2026-03-27)
 - [x] **Phase 28: Production Deployment** - Render.com deployment with persistent SQLite disk, invite-only registration, environment variable hygiene, Vite static file serving (OPS-01, OPS-02, OPS-03, OPS-04) (completed 2026-03-27)
+
+</details>
+
+### v2.5 State Portal Integration (Phases 29-30) — ACTIVE
+
+- [ ] **Phase 29: CA eCPR XML Export** - Fringe disaggregation DB columns + CA payroll UI, CA DIR eCPR XML download, pre-generation modal for missing fields, post-download portal checklist, amendment XML marker
+- [ ] **Phase 30: WA PWIA Submission Assist** - WA CPR XML download gated on intentId + trade code validation, WA Intent to Pay + Affidavit submission summary panel
 
 ## Phase Details
 
@@ -250,6 +259,32 @@ Plans:
 - [x] 28-01-PLAN.md — Wave 0 invite code tests + tsconfig.server.json + build script + db mkdirSync fix + static file serving + invite code gate + .env.example + render.yaml
 - [x] 28-02-PLAN.md — RegisterForm invite code field + brand token fix + Render deploy smoke test checkpoint
 
+### Phase 29: CA eCPR XML Export
+**Goal**: Contractors on California projects can generate a CA DIR eCPR-compliant XML file with correctly disaggregated fringe line items, with guided handling of missing fields, a post-download checklist, and correct amendment markers
+**Depends on**: Phase 28 (all v2.4 features shipped; xmlbuilder2 install is the first task)
+**Requirements**: CAE-01, CAE-02, CAE-03, CAE-04
+**Success Criteria** (what must be TRUE):
+  1. Payroll entry for a CA project shows four separate fringe contribution fields — health/welfare, pension, vacation, and training — each stored as its own DB column per entry
+  2. User can click a CA eCPR XML export button on a CA project's payroll week; if contractor FEIN, DIR project ID, awarding agency, or contract number are absent, a pre-generation modal collects them before the file is generated
+  3. After the XML file downloads, the app displays a step-by-step portal upload checklist informing the contractor how to submit to the CA DIR eCPR portal, including the disclosure that SSNs must be entered directly in the portal
+  4. When the payroll week is an amendment (created via the v2.3 amendment workflow), the exported XML carries the correct amendment/resubmit marker — a non-amendment week produces no amendment marker
+  5. A WA or federal-only project has no CA eCPR XML export button — the export is state-gated to CA projects only
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 30: WA PWIA Submission Assist
+**Goal**: Contractors on Washington projects can generate a WA L&I CPR XML file gated on their PWIA intent ID and validated trade codes, and can view a pre-populated submission summary for Intent to Pay and Affidavit of Wages portal entry
+**Depends on**: Phase 29 (shared getPayrollEntriesWithWorkerDetails() join and xmlbuilder2 pattern established in Phase 29)
+**Requirements**: WAL-03, WAL-04
+**Success Criteria** (what must be TRUE):
+  1. Before generating a WA CPR XML file, the app requires the contractor to enter their PWIA Intent ID (issued after Statement of Intent approval); generation is blocked until the ID is provided, with a link to the PWIA portal
+  2. If any worker on the WA project has a missing or unconfirmed WA trade code, the app surfaces those workers by name and blocks XML generation until the codes are resolved
+  3. User can download a WA L&I CPR XML file for a WA project's payroll week; the file is gated to WA projects only
+  4. User can view a WA submission assist summary panel — pre-populated with trade codes, hours by day, rates, and gross pay per worker — formatted as a reference for manual entry into the PWIA portal's Intent to Pay and Affidavit of Wages forms
+  5. The submission assist panel is clearly labeled as a data-entry guide, not a submission mechanism; no HTTP calls are made to PWIA portal domains from the app backend
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -272,9 +307,11 @@ Plans:
 | 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete | 2026-03-23 |
 | 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
-| 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete    | 2026-03-24 |
-| 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress|  |
-| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete    | 2026-03-26 |
-| 26. Contractor Guidance System | v2.4 | 2/2 | Complete    | 2026-03-26 |
-| 27. Design Elevation | v2.4 | 2/2 | Complete    | 2026-03-27 |
-| 28. Production Deployment | v2.4 | 2/2 | Complete    | 2026-03-27 |
+| 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete | 2026-03-24 |
+| 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress | - |
+| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete | 2026-03-26 |
+| 26. Contractor Guidance System | v2.4 | 2/2 | Complete | 2026-03-26 |
+| 27. Design Elevation | v2.4 | 2/2 | Complete | 2026-03-27 |
+| 28. Production Deployment | v2.4 | 2/2 | Complete | 2026-03-27 |
+| 29. CA eCPR XML Export | v2.5 | 0/TBD | Not started | - |
+| 30. WA PWIA Submission Assist | v2.5 | 0/TBD | Not started | - |
