@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { WageClassificationsTable } from '../components/WageClassificationsTable.js';
 import { ManualWageEntryForm } from '../components/ManualWageEntryForm.js';
 import type { WageDetermination, WageClassification } from '../../shared/types.js';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface LookupResult {
   wd: WageDetermination;
@@ -49,9 +50,7 @@ export function WageLookupPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
-      <h1 className="font-headline text-2xl font-bold text-gray-900 mb-6">
-        Prevailing Wage Lookup
-      </h1>
+      <PageHeader title="Prevailing Wage Lookup" />
 
       <form onSubmit={handleSearch} className="flex gap-3 mb-8">
         <div>

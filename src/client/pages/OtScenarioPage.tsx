@@ -9,6 +9,7 @@ import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { OtThresholdForm } from '../components/OtThresholdForm';
 import { OtScenarioComparison } from '../components/OtScenarioComparison';
+import { PageHeader } from '../components/ui/PageHeader';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ export function OtScenarioPage() {
           >
             &larr; Back to Project
           </button>
-          <h1 className="text-2xl font-headline text-gray-900">OT Scenario Planner</h1>
+          <PageHeader title="OT Scenario Planner" className="mb-0" />
         </div>
 
         {isLoading && <LoadingSpinner />}

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { GsaRateForm, type GsaRateFormValues } from '../components/GsaRateForm.js';
 import { GsaRateDisplay } from '../components/GsaRateDisplay.js';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface SavedRate extends GsaRateFormValues {
   id: string;
@@ -55,7 +56,7 @@ export function GsaRateBuilderPage({ projectId }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 space-y-8">
-      <h1 className="text-xl font-semibold text-gray-900">GSA Rate Builder</h1>
+      <PageHeader title="GSA Rate Builder" />
 
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSave)} className="space-y-4">

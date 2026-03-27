@@ -9,6 +9,7 @@ import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
+import { PageHeader } from '../components/ui/PageHeader';
 
 const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
@@ -312,17 +313,12 @@ export function PayrollWeekDetailPage() {
               &larr; Back to Payroll
             </button>
             {week && (
-              <h1 className="text-2xl font-headline text-gray-900 flex items-center flex-wrap gap-2">
-                Payroll Week #{week.payrollNumber}
-                <span className="text-base font-normal text-gray-500">
-                  Week Ending {week.weekEndingDate}
-                </span>
-                {week.amendmentNumber != null && (
-                  <Badge variant="warning" className="ml-1">
-                    Amendment {week.amendmentNumber}
-                  </Badge>
-                )}
-              </h1>
+              <PageHeader
+                title={`Payroll Week #${week.payrollNumber}`}
+                subtitle={`Week Ending ${week.weekEndingDate}`}
+                action={week.amendmentNumber != null ? <Badge variant="warning">Amendment {week.amendmentNumber}</Badge> : undefined}
+                className="mb-0"
+              />
             )}
           </div>
           <div className="flex items-center gap-2">

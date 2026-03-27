@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { VarianceSummaryTable } from '../components/VarianceSummaryTable.js';
 import { VarianceTrendChart } from '../components/VarianceTrendChart.js';
 import type { VarianceReport } from '../../server/services/varianceService.js';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface BudgetFormValues {
   bidAmount?: number;
@@ -52,17 +53,17 @@ export function VarianceReportPage({ projectId }: Props) {
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Job Cost Variance Report</h1>
-        {report && report.weeks.length > 0 && (
+      <PageHeader
+        title="Job Cost Variance Report"
+        action={report && report.weeks.length > 0 ? (
           <a
             href={`/api/variance/${projectId}/report/pdf`}
-            className="text-sm font-medium text-[#F5C518] hover:underline"
+            className="text-sm font-medium text-brand-gold hover:underline"
           >
             Export PDF
           </a>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {noBudget && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-6">

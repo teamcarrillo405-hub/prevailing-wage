@@ -249,7 +249,7 @@ export function DashboardPage() {
       {!isLoading && !isError && filteredProjects.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard key={project.id} project={project} className="shadow-card-elevated" />
           ))}
         </div>
       )}

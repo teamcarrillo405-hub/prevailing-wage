@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { UnionTradeForm } from '../components/UnionTradeForm.js';
 import { UnionSummaryTable } from '../components/UnionSummaryTable.js';
 import type { UnionAllocationResult } from '../../server/services/unionAllocation.js';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface Props {
   projectId: string;
@@ -30,17 +31,17 @@ export function UnionAllocationPage({ projectId }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Union Trade Allocation</h1>
-        {result && result.trades.length > 0 && (
+      <PageHeader
+        title="Union Trade Allocation"
+        action={result && result.trades.length > 0 ? (
           <a
             href={`/api/union/${projectId}/allocation/pdf`}
-            className="text-sm font-medium text-[#F5C518] hover:underline"
+            className="text-sm font-medium text-brand-gold hover:underline"
           >
             Export PDF
           </a>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <section>
         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">

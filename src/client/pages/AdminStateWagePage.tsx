@@ -4,6 +4,7 @@
 // No emojis — use text colors and borders for feedback states.
 
 import { useState, useRef } from 'react';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface ImportResult {
   inserted: number;
@@ -64,9 +65,7 @@ export function AdminStateWagePage() {
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
-      <h1 className="font-headline text-2xl font-bold text-gray-900 mb-2">
-        Import State Prevailing Wages
-      </h1>
+      <PageHeader title="Import State Prevailing Wages" />
       <p className="text-sm text-gray-500 mb-6">
         Upload a CSV file with prevailing wage rates for California (CA), Washington (WA), or New York (NY).
         Rates are stored in the local wage cache and returned by the wage lookup tool for those states.

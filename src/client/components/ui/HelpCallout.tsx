@@ -13,7 +13,7 @@ export function HelpCallout({ icon: Icon, title, body, className }: HelpCalloutP
   return (
     <div
       className={cn(
-        'bg-surface-card rounded-card shadow-card border border-border-default border-l-4 border-l-brand-gold',
+        'bg-surface-card rounded-card shadow-card-elevated border border-border-default border-l-4 border-l-brand-gold',
         'p-4 flex gap-3 items-start mb-4',
         className
       )}
