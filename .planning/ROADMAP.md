@@ -18,7 +18,9 @@
 
 - ✅ **v2.4** Ship-Ready + Design Elevation — Phases 23-28 (shipped 2026-03-27)
 
-- 🚧 **v2.5** State Portal Integration — Phases 29-30 (active)
+- ✅ **v2.5** State Portal Integration — Phases 29-30 (shipped 2026-03-27)
+
+- 🚧 **v3.0** Team & Integration — Phases 31-36 (active)
 
 
 
@@ -166,14 +168,32 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 
 
-### v2.5 State Portal Integration (Phases 29-30) — ACTIVE
+### v2.5 State Portal Integration (Phases 29-30) — SHIPPED 2026-03-27
 
 
 
 - [x] **Phase 29: CA eCPR XML Export** - Fringe disaggregation DB columns + CA payroll UI, CA DIR eCPR XML download, pre-generation modal for missing fields, post-download portal checklist, amendment XML marker
  (completed 2026-03-27)
 
-- [x] **Phase 30: WA PWIA Submission Assist** - WA CPR XML download gated on intentId + trade code validation, WA Intent to Pay + Affidavit submission summary panel (completed 2026-03-27)
+- [x] **Phase 30: WA PWIA Submission Assist** - WA CPR XML download gated on intentId + trade code validation, WA Intent to Pay + Affidavit submission summary panel (completed 2026-03-27)
+
+
+
+### v3.0 Team & Integration (Phases 31-36) — ACTIVE
+
+
+
+- [ ] **Phase 31: SSN Encryption Foundation** - AES-256-GCM encryption at rest, cryptoService.ts, key versioning envelope, CA eCPR XML updated to write real SSN (SEC-01, SEC-02, SEC-03)
+
+- [ ] **Phase 32: Multi-User Auth Foundation** - project_members schema + assertProjectAccess refactor across 9 route files, cross-tenant test suite, createdByUserId/updatedByUserId on payroll_entries (MT-03)
+
+- [ ] **Phase 33: Team Invite Flow + Team UI** - Email invite with tokenized link, team member list, ownership transfer, member removal with data retention (MT-01, MT-02, MT-04, MT-05)
+
+- [ ] **Phase 34: Agency Submission Status Tracking** - caEcprSubmittedAt + waLniSubmittedAt columns, SubmissionStatusBadge, "Mark as Submitted" UI in CA/WA export modals (AS-01, AS-02)
+
+- [ ] **Phase 35: Payroll Import — Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02)
+
+- [ ] **Phase 36: Payroll Import — React UI** - PayrollImportModal with file picker, preview table, unmatched worker review & match screen, confirm-commit flow (PI-03)
 
 
 
@@ -576,9 +596,157 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [x] 30-01-PLAN.md � DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
-- [x] 30-02-PLAN.md � waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
-- [x] 30-03-PLAN.md � PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
+- [x] 30-01-PLAN.md — DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
+- [x] 30-02-PLAN.md — waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
+- [x] 30-03-PLAN.md — PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
+
+**UI hint**: yes
+
+
+
+### Phase 31: SSN Encryption Foundation
+
+**Goal**: Worker SSNs are stored encrypted at rest with AES-256-GCM, and the CA eCPR XML generator writes real SSNs from encrypted storage instead of the v2.5 placeholder
+
+**Depends on**: Phase 30 (v2.5 fully shipped; no v3.0 dependencies — this phase is purely additive)
+
+**Requirements**: SEC-01, SEC-02, SEC-03
+
+**Success Criteria** (what must be TRUE):
+
+  1. Worker add/edit form accepts a full 9-digit SSN; the value is displayed as `***-**-1234` in all UI views — the raw value is never returned in any API response
+
+  2. The workers table stores SSN as an encrypted JSON envelope (`{"v":"1","iv":"...","tag":"...","ct":"..."}`) — a direct SQLite inspection shows no plaintext SSN digits
+
+  3. CA eCPR XML downloaded for a CA project worker contains the real full SSN (not the v2.5 placeholder `000-00-0000`) — decryption happens server-side at export time only
+
+  4. The server refuses to start if `ENCRYPTION_KEY_V1` environment variable is missing or if the startup self-test (decrypt known test vector) fails — preventing a misconfigured deploy from silently writing unencryptable records
+
+  5. Existing workers with `ssn_last4` values are migrated so their last-4 digits are preserved in the encrypted SSN field; workers with no SSN on file display a "SSN not on file" indicator
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+
+
+### Phase 32: Multi-User Auth Foundation
+
+**Goal**: The app's project ownership model supports multiple users via a project_members join table, and every route that guards project access uses a single centralized assertProjectAccess function — eliminating IDOR risk before any team data exists
+
+**Depends on**: Phase 31 (SSN encryption landed first to avoid retrofitting crypto into multi-user schema migration)
+
+**Requirements**: MT-03
+
+**Success Criteria** (what must be TRUE):
+
+  1. A second user added to an account can view and act on all projects owned by the account — including creating payroll entries, downloading WH-347, and viewing compliance history
+
+  2. Attempting to access another account's project (cross-tenant request) returns HTTP 403 — verified across all 9 previously-guarded route files
+
+  3. All payroll entries created after this phase record which user created and last updated them (`createdByUserId`, `updatedByUserId`) — distinguishable in a DOL audit from pre-migration entries which show null
+
+  4. The cross-tenant test suite passes: two independent users each own one project; neither can read, write, or delete any resource belonging to the other
+
+**Plans**: TBD
+
+
+
+### Phase 33: Team Invite Flow + Team UI
+
+**Goal**: An account owner can invite one other user by email and manage team membership — including viewing pending invites, transferring ownership, and revoking access — without any per-project permission configuration
+
+**Depends on**: Phase 32 (project_members table and assertProjectAccess must exist before invite routes create member rows)
+
+**Requirements**: MT-01, MT-02, MT-04, MT-05
+
+**Success Criteria** (what must be TRUE):
+
+  1. Owner can enter an email address and send an invite; the invitee receives an email with a single-use tokenized link that expires after 72 hours
+
+  2. Invitee clicks the link, creates an account, and immediately sees all of the owner's projects — no additional steps required
+
+  3. The invite button is visibly disabled when the account already has 2 members (owner + 1); attempting to send a second invite while one is pending shows a clear message
+
+  4. Owner can view team settings showing current members and any outstanding pending invite, and can revoke an outstanding invite or remove the existing member
+
+  5. Owner can transfer ownership to the existing member; after transfer the original owner's role changes to member and the other user becomes owner — both users remain active
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+
+
+### Phase 34: Agency Submission Status Tracking
+
+**Goal**: After downloading a CA eCPR XML or WA L&I CPR XML file, contractors can record that the submission was made to the respective portal, and see per-agency submission status on the Payroll Week Detail page
+
+**Depends on**: Phase 30 (CA and WA export modals must exist to add "Mark as Submitted" actions)
+
+**Requirements**: AS-01, AS-02
+
+**Success Criteria** (what must be TRUE):
+
+  1. After downloading a CA eCPR XML file, a "Mark as Submitted to CA DIR" button is available; clicking it records the current timestamp and shows a CA submission badge on Payroll Week Detail
+
+  2. After downloading a WA L&I CPR XML file, a "Mark as Submitted to WA L&I" button is available; clicking it records the current timestamp and shows a WA submission badge on Payroll Week Detail
+
+  3. CA and WA submission badges are visually distinct from the existing WH-347 submission badge — a contractor can tell at a glance which portals have received this week's payroll
+
+  4. Submission status for each agency can be cleared independently (un-submit CA, un-submit WA) without affecting WH-347 submission status or the other agency's status
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+
+
+### Phase 35: Payroll Import — Server Pipeline
+
+**Goal**: The server can parse QuickBooks and ADP CSV payroll exports, auto-detect the provider by column signature, map columns to payroll entry fields, and return a preview of matched and unmatched workers — without writing any DB rows until the contractor confirms
+
+**Depends on**: Phase 32 (createdByUserId on payroll_entries must exist before import writes entries; submitted-week guard requires assertProjectAccess)
+
+**Requirements**: PI-01, PI-02
+
+**Success Criteria** (what must be TRUE):
+
+  1. Uploading a QuickBooks payroll export CSV returns a preview response listing each row's detected worker name, trade classification, base rate, and daily hours (ST/OT) — with rate snapshots sourced from the WD cache, never from the CSV
+
+  2. Uploading an ADP payroll export CSV produces the same preview behavior via a separate column mapping template; the server auto-detects which provider format was uploaded by column signature
+
+  3. The preview response flags any CSV row whose worker name does not match an existing project worker — these rows are marked unmatched, not silently skipped or auto-created
+
+  4. Attempting to import into a submitted payroll week returns an error before any parsing occurs — the submitted-week lock applies to imports the same as manual edits
+
+  5. After confirmation, committed import entries are written with `createdByUserId` set to the importing user — distinguishable from manually-entered entries in the `payroll_imports` audit table
+
+**Plans**: TBD
+
+
+
+### Phase 36: Payroll Import — React UI
+
+**Goal**: Contractors can upload a payroll export file from the Payroll Week Detail page, review a parsed preview of matched and unmatched workers, resolve any worker mismatches, and commit the import — or cancel without any data being written
+
+**Depends on**: Phase 35 (preview and commit API routes must exist before building the UI against them)
+
+**Requirements**: PI-03
+
+**Success Criteria** (what must be TRUE):
+
+  1. A "Import from Payroll Provider" button on Payroll Week Detail opens an import modal with a file picker and provider label (QuickBooks / ADP)
+
+  2. After file selection the modal shows a preview table with one row per CSV entry — displaying matched worker name, classification, and estimated daily hours; unmatched workers are highlighted in a distinct warning state
+
+  3. For each unmatched worker, the contractor can either map the CSV name to an existing project worker via a dropdown, or confirm creation of a new worker record — no rows are silently skipped
+
+  4. The contractor must explicitly click "Confirm Import" to write entries to the database; closing the modal or clicking Cancel at any point leaves the payroll week unchanged
+
+  5. After a successful import, the Payroll Week Detail refreshes to show the newly imported entries and a confirmation message naming the provider and row count
+
+**Plans**: TBD
 
 **UI hint**: yes
 
@@ -640,7 +808,18 @@ Plans:
 
 | 28. Production Deployment | v2.4 | 2/2 | Complete | 2026-03-27 |
 
-| 29. CA eCPR XML Export | v2.5 | 3/3 | Complete   | 2026-03-27 |
+| 29. CA eCPR XML Export | v2.5 | 3/3 | Complete | 2026-03-27 |
 
-| 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete    | 2026-03-27 |
+| 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete | 2026-03-27 |
 
+| 31. SSN Encryption Foundation | v3.0 | 0/TBD | Not started | - |
+
+| 32. Multi-User Auth Foundation | v3.0 | 0/TBD | Not started | - |
+
+| 33. Team Invite Flow + Team UI | v3.0 | 0/TBD | Not started | - |
+
+| 34. Agency Submission Status Tracking | v3.0 | 0/TBD | Not started | - |
+
+| 35. Payroll Import — Server Pipeline | v3.0 | 0/TBD | Not started | - |
+
+| 36. Payroll Import — React UI | v3.0 | 0/TBD | Not started | - |

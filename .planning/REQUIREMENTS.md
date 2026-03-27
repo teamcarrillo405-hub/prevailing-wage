@@ -78,19 +78,19 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MT-01 | TBD | Pending |
-| MT-02 | TBD | Pending |
-| MT-03 | TBD | Pending |
-| MT-04 | TBD | Pending |
-| MT-05 | TBD | Pending |
-| PI-01 | TBD | Pending |
-| PI-02 | TBD | Pending |
-| PI-03 | TBD | Pending |
-| AS-01 | TBD (conditional) | Pending |
-| AS-02 | TBD (conditional) | Pending |
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
+| MT-01 | Phase 33 | Pending |
+| MT-02 | Phase 33 | Pending |
+| MT-03 | Phase 32 | Pending |
+| MT-04 | Phase 33 | Pending |
+| MT-05 | Phase 33 | Pending |
+| PI-01 | Phase 35 | Pending |
+| PI-02 | Phase 35 | Pending |
+| PI-03 | Phase 36 | Pending |
+| AS-01 | Phase 34 | Pending |
+| AS-02 | Phase 34 | Pending |
+| SEC-01 | Phase 31 | Pending |
+| SEC-02 | Phase 31 | Pending |
+| SEC-03 | Phase 31 | Pending |
 | CAE-01 | Phase 29 | Complete |
 | CAE-02 | Phase 29 | Complete |
 | CAE-03 | Phase 29 | Complete |
