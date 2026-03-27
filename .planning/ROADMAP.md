@@ -173,7 +173,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 29: CA eCPR XML Export** - Fringe disaggregation DB columns + CA payroll UI, CA DIR eCPR XML download, pre-generation modal for missing fields, post-download portal checklist, amendment XML marker
  (completed 2026-03-27)
 
-- [ ] **Phase 30: WA PWIA Submission Assist** - WA CPR XML download gated on intentId + trade code validation, WA Intent to Pay + Affidavit submission summary panel
+- [x] **Phase 30: WA PWIA Submission Assist** - WA CPR XML download gated on intentId + trade code validation, WA Intent to Pay + Affidavit submission summary panel (completed 2026-03-27)
 
 
 
@@ -578,7 +578,7 @@ Plans:
 Plans:
 - [x] 30-01-PLAN.md � DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
 - [x] 30-02-PLAN.md � waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
-- [ ] 30-03-PLAN.md � PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
+- [x] 30-03-PLAN.md � PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
 
 **UI hint**: yes
 
@@ -642,5 +642,5 @@ Plans:
 
 | 29. CA eCPR XML Export | v2.5 | 3/3 | Complete   | 2026-03-27 |
 
-| 30. WA PWIA Submission Assist | v2.5 | 2/3 | In Progress|  |
+| 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete   | 2026-03-27 |
 

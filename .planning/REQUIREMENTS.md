@@ -18,7 +18,7 @@
 ### WA L&I Submission (WAL)
 
 - [x] **WAL-03**: User can generate and download a WA L&I CPR XML file for upload to the My L&I PWIA portal; export is gated on the contractor providing their PWIA `intentId` (issued after Statement of Intent approval); WA trade codes validated before generation
-- [ ] **WAL-04**: User can view a pre-populated submission summary for WA Intent to Pay and Affidavit of Wages filings — all required field values drawn from project/worker/payroll data — formatted for manual entry into the PWIA portal
+- [x] **WAL-04**: User can view a pre-populated submission summary for WA Intent to Pay and Affidavit of Wages filings — all required field values drawn from project/worker/payroll data — formatted for manual entry into the PWIA portal
 
 ---
 
@@ -54,4 +54,4 @@
 | CAE-03 | Phase 29 | Complete |
 | CAE-04 | Phase 29 | Complete |
 | WAL-03 | Phase 30 | Complete |
-| WAL-04 | Phase 30 | Pending |
+| WAL-04 | Phase 30 | Complete |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 30-02-PLAN.md — WA CPR XML generator + export route, all Wave 0 RED stubs GREEN
-last_updated: "2026-03-27T10:38:56.311Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 30-03-PLAN.md — WA CPR XML download flow + WAL-04 submission guide panel, Phase 30 complete
+last_updated: "2026-03-27T10:58:07.420Z"
 progress:
   total_phases: 14
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 30
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 # State
@@ -47,6 +47,7 @@ Plan: 3 of 3
 | 29 | 3/3 | Complete ✓ |
 | Phase 30-wa-pwia-submission-assist P01 | 5 | 2 tasks | 6 files |
 | Phase 30 P02 | 15 | 2 tasks | 2 files |
+| Phase 30-wa-pwia-submission-assist P30-03 | 30 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Key decisions affecting v2.5 work:
 - [Phase 30-wa-pwia-submission-assist]: pwiaIntentId stored as TEXT not INTEGER — matches dirProjectId pattern; Plan 02 converts to integer when building WaCprData
 - [Phase 30-wa-pwia-submission-assist]: WA day ordering is Monday-first (Day1=Mon, Day7=Sun) per WA XSD — inverse of CA eCPR Sunday-first spec
 - [Phase 30-wa-pwia-submission-assist]: Workers with multiple trade entries grouped by workerId Map — one employee element, multiple tradeHoursWage children
+- [Phase 30-wa-pwia-submission-assist]: intentId modal is entry point before XML fetch; trade code gate fires server-side via 422 after modal confirm
+- [Phase 30-wa-pwia-submission-assist]: WAL-04 panel uses entries already loaded on the page — no extra API call needed
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T10:38:56.308Z
-Stopped at: Completed 30-02-PLAN.md — WA CPR XML generator + export route, all Wave 0 RED stubs GREEN
+Last session: 2026-03-27T10:58:07.417Z
+Stopped at: Completed 30-03-PLAN.md — WA CPR XML download flow + WAL-04 submission guide panel, Phase 30 complete
 Resume file: None
