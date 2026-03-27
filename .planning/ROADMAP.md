@@ -246,6 +246,9 @@ Plans:
   4. All secrets (SAM.gov API key, JWT secret, database path) are set as Render runtime environment variables and are absent from the deployed JavaScript bundle — no VITE_-prefixed secrets exist
   5. The Vite production build is served as static files by Express, and all React routes resolve correctly on hard refresh (SPA catch-all in place)
 **Plans**: 2 plans
+Plans:
+- [ ] 28-01-PLAN.md — Wave 0 invite code tests + tsconfig.server.json + build script + db mkdirSync fix + static file serving + invite code gate + .env.example + render.yaml
+- [ ] 28-02-PLAN.md — RegisterForm invite code field + brand token fix + Render deploy smoke test checkpoint
 
 ## Progress
 
