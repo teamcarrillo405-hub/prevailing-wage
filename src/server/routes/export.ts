@@ -26,6 +26,12 @@ import {
   type EcprEmployee,
 } from '../services/ecprXmlGenerator.js';
 import {
+  generateWaCprXml,
+  type WaCprData,
+  type WaCprEmployee,
+  type WaCprTradeEntry,
+} from '../services/waCprXmlGenerator.js';
+import {
   fillWh347,
   type Wh347Data,
   type Wh347WorkerRow,
@@ -679,6 +685,163 @@ router.get('/ecpr-xml/:weekId', async (req, res) => {
   // 8. Set headers and send response
   const last4Fein = feinClean.slice(-4);
   const filename = `${last4Fein}_${dirProjectId}_${week.weekEndingDate}.xml`;
+  res.setHeader('Content-Type', 'application/xml');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(xml);
+});
+
+// ── GET /api/export/wa-cpr-xml/:weekId ───────────────────────────────────────
+// WA L&I PWIA CPR XML export — WaPWCPR schema compliant
+// Requires: project.state === 'WA', project.pwiaIntentId set (positive integer),
+//           all worker classifications must have waTradeCode set
+
+router.get('/wa-cpr-xml/:weekId', async (req, res) => {
+  // 1. Load payroll week
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project ownership
+  const db = getDb();
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, week.projectId))
+    .limit(1);
+
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  if (project.userId !== userId) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  // 3. State gate — WA CPR XML is WA-only (D-07)
+  if (project.state !== 'WA') {
+    res.status(400).json({ error: 'WA CPR XML is only available for Washington projects' });
+    return;
+  }
+
+  // 4. Validate intentId — must be on project record and must be a positive integer (D-07)
+  const intentIdStr = project.pwiaIntentId;
+  if (!intentIdStr) {
+    res.status(400).json({ error: 'PWIA Intent ID is required. Enter your Intent ID from the L&I PWIA portal.' });
+    return;
+  }
+  const intentIdNum = parseInt(intentIdStr, 10);
+  if (!Number.isInteger(intentIdNum) || intentIdNum <= 0) {
+    res.status(400).json({ error: 'PWIA Intent ID must be a positive integer as shown in the L&I PWIA portal.' });
+    return;
+  }
+
+  // 5. Load payroll entries with worker details (D-09)
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+
+  // 5b. Trade code gate — 422 if any worker has null waTradeCode (D-03, D-04, D-05)
+  const nullTradeEntries = entries.filter(row => !row.waTradeCode);
+  if (nullTradeEntries.length > 0) {
+    res.status(422).json({
+      error: 'WA trade code required for all workers',
+      workers: nullTradeEntries.map(row => ({
+        name: row.workerName,
+        workerId: row.entry.workerId,
+      })),
+    });
+    return;
+  }
+
+  // 6. Map entries to WaCprEmployee[]
+  // Group by workerId so multiple trade entries per worker are collected
+  const workerMap = new Map<string, { empData: WaCprEmployee; trades: WaCprTradeEntry[] }>();
+
+  for (const row of entries) {
+    const wId = row.entry.workerId;
+
+    if (!workerMap.has(wId)) {
+      // Parse name: "First Last" → firstName = everything before last token, lastName = last token
+      const parts = row.workerName.trim().split(/\s+/);
+      const lastName = parts.length > 1 ? parts[parts.length - 1]! : '';
+      const firstName = parts.slice(0, Math.max(1, parts.length - 1)).join(' ');
+
+      // 9-digit SSN placeholder
+      const ssn9 = '00000' + (row.workerSsnLast4 || '0000');
+
+      // Address parsing: "street, city, state zip" format
+      const addrParts = (row.workerAddress || '').split(',').map((s: string) => s.trim());
+      const address1 = addrParts[0] || '';
+      const city = addrParts[1] || '';
+      const stateZip = (addrParts[2] || '').split(' ').filter(Boolean);
+      const addrState = stateZip[0] || 'WA';
+      const zip = stateZip[1] || '00000';
+
+      workerMap.set(wId, {
+        empData: {
+          firstName,
+          lastName,
+          ssn: ssn9,
+          address1,
+          city,
+          state: addrState,
+          zip,
+          grossPay: row.entry.grossWages ?? 0,
+          tradeHoursWages: [],
+        },
+        trades: [],
+      });
+    }
+
+    // Build WaCprTradeEntry for this classification row
+    const e = row.entry;
+    const days = [
+      { regularHours: e.monSt ?? 0, overtimeHours: e.monOt ?? 0 },  // Day1 = Mon
+      { regularHours: e.tueSt ?? 0, overtimeHours: e.tueOt ?? 0 },  // Day2 = Tue
+      { regularHours: e.wedSt ?? 0, overtimeHours: e.wedOt ?? 0 },  // Day3 = Wed
+      { regularHours: e.thuSt ?? 0, overtimeHours: e.thuOt ?? 0 },  // Day4 = Thu
+      { regularHours: e.friSt ?? 0, overtimeHours: e.friOt ?? 0 },  // Day5 = Fri
+      { regularHours: e.satSt ?? 0, overtimeHours: e.satOt ?? 0 },  // Day6 = Sat
+      { regularHours: e.sunSt ?? 0, overtimeHours: e.sunOt ?? 0 },  // Day7 = Sun
+    ];
+
+    const tradeEntry: WaCprTradeEntry = {
+      trade: row.waTradeCode!,
+      jobClass: row.tradeDescription || '',
+      county: project.county,
+      regularHourRateAmt: e.baseRateSnapshot,
+      overtimeHourRateAmt: e.baseRateSnapshot * 1.5,
+      fringeRateAmt: e.fringeRateSnapshot ?? undefined,
+      days,
+      apprenticeFlg: row.laborType === 'apprentice',
+    };
+
+    workerMap.get(wId)!.empData.tradeHoursWages.push(tradeEntry);
+  }
+
+  const mappedEmployees: WaCprEmployee[] = Array.from(workerMap.values()).map(w => w.empData);
+
+  // 7. Build WaCprData and generate XML
+  const isAmendment = week.originalWeekId != null && week.amendmentNumber != null;
+  const cprData: WaCprData = {
+    intentId: intentIdNum,
+    payrollWeek: {
+      endOfWeekDate: week.weekEndingDate,
+      noWorkPerformFlag: entries.length === 0,
+      amendedFlag: isAmendment,
+      amendReason: isAmendment ? `Amendment ${week.amendmentNumber}` : undefined,
+    },
+    employees: mappedEmployees,
+  };
+
+  const xml = generateWaCprXml(cprData);
+
+  // 8. Send XML response as attachment download
+  const filename = `wa-cpr-${project.pwiaIntentId}_${week.weekEndingDate}.xml`;
   res.setHeader('Content-Type', 'application/xml');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send(xml);
