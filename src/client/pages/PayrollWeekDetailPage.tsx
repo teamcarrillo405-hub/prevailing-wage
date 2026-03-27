@@ -1,6 +1,6 @@
 // src/client/pages/PayrollWeekDetailPage.tsx
 // Route: /projects/:projectId/payroll/:weekId
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileCheck } from 'lucide-react';
@@ -97,6 +97,11 @@ interface ProjectData {
   ubiNumber: string | null;
   lniCertificate: string | null;
   wcAccount: string | null;
+  // Phase 29 — CA eCPR XML fields
+  contractorFein?: string | null;
+  dirProjectId?: string | null;
+  awardingAgency?: string | null;
+  contractNumber?: string | null;
 }
 
 interface PayrollWeekDetailResponse {
@@ -122,6 +127,19 @@ export function PayrollWeekDetailPage() {
   // CA-specific state
   const [showCaDisclosure, setShowCaDisclosure] = useState(false);
   const caGeneratingRef = useRef(false);
+
+  // CA eCPR XML export modal
+  const [showEcprModal, setShowEcprModal] = useState(false);
+  const [ecprStep, setEcprStep] = useState<1 | 2>(1); // Step 1: configure, Step 2: checklist
+  const [ecprGenerating, setEcprGenerating] = useState(false);
+  const ecprGeneratingRef = useRef(false);
+
+  // Pre-fill from project record
+  const [ecprFein, setEcprFein] = useState('');
+  const [ecprDirProjectId, setEcprDirProjectId] = useState('');
+  const [ecprAwardingAgency, setEcprAwardingAgency] = useState('');
+  const [ecprContractNumber, setEcprContractNumber] = useState('');
+  const [ecprCheckNum, setEcprCheckNum] = useState('DIRECT DEPOSIT');
 
   // WA-specific state — mirrors CA pattern; separate from caGeneratingRef
   const [showWaDisclosure, setShowWaDisclosure] = useState(false);
@@ -181,6 +199,17 @@ export function PayrollWeekDetailPage() {
   });
   const isCA = projectData?.data?.project?.state === 'CA';
   const isWA = projectData?.data?.project?.state === 'WA';
+
+  // Pre-fill eCPR modal fields from project record when data loads
+  useEffect(() => {
+    if (projectData?.data?.project) {
+      const p = projectData.data.project;
+      if (p.contractorFein) setEcprFein(p.contractorFein);
+      if (p.dirProjectId) setEcprDirProjectId(p.dirProjectId);
+      if (p.awardingAgency) setEcprAwardingAgency(p.awardingAgency);
+      if (p.contractNumber) setEcprContractNumber(p.contractNumber);
+    }
+  }, [projectData]);
 
   const isLoading = weekLoading || complianceLoading;
   const isError = weekError || complianceError;
@@ -276,6 +305,62 @@ export function PayrollWeekDetailPage() {
     }
   }
 
+  // CA eCPR XML download handler
+  async function handleEcprXmlDownload() {
+    if (ecprGeneratingRef.current) return;
+    ecprGeneratingRef.current = true;
+    setEcprGenerating(true);
+
+    try {
+      // Persist fields to project record
+      await api.patch(`/projects/${projectData?.data?.project?.id}`, {
+        contractorFein: ecprFein.replace(/-/g, ''),
+        dirProjectId: ecprDirProjectId,
+        awardingAgency: ecprAwardingAgency,
+        contractNumber: ecprContractNumber,
+      });
+
+      // Build query params
+      const params = new URLSearchParams({
+        checkNum: ecprCheckNum,
+        contractorFein: ecprFein.replace(/-/g, ''),
+        dirProjectId: ecprDirProjectId,
+        awardingAgency: ecprAwardingAgency,
+        contractNumber: ecprContractNumber,
+      });
+
+      const response = await fetch(`/api/export/ecpr-xml/${weekId}?${params}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error || 'Failed to generate eCPR XML');
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const filenameMatch = disposition.match(/filename="(.+?)"/);
+      a.href = url;
+      a.download = filenameMatch?.[1] || 'ecpr-export.xml';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+
+      // Transition to Step 2 (checklist)
+      setEcprStep(2);
+    } catch (err) {
+      alert('Failed to generate eCPR XML. Please try again.');
+    } finally {
+      ecprGeneratingRef.current = false;
+      setEcprGenerating(false);
+    }
+  }
+
   const handleAmendClick = async () => {
     if (amendingRef.current) return;
     amendingRef.current = true;
@@ -339,6 +424,15 @@ export function PayrollWeekDetailPage() {
                 onClick={handleCaDownloadClick}
               >
                 Download CA A-1-131
+              </Button>
+            )}
+            {isCA && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => { setEcprStep(1); setShowEcprModal(true); }}
+              >
+                Download CA eCPR XML
               </Button>
             )}
             {isWA && weekId && (
@@ -669,6 +763,160 @@ export function PayrollWeekDetailPage() {
                 </button>
                 <Button onClick={handleWaConfirmedDownload}>Download PDF</Button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* CA eCPR XML Export — 2-step modal (per D-09, D-10, D-12) */}
+        {showEcprModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setShowEcprModal(false)}
+          >
+            <div
+              className="mx-4 max-w-lg rounded-lg bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {ecprStep === 1 ? (
+                <>
+                  <h3 className="text-lg font-headline font-bold text-gray-900">
+                    CA eCPR XML Export — Step 1 of 2
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Confirm or enter the fields required for the DIR eCPR portal.
+                  </p>
+
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Contractor FEIN (9 digits)</label>
+                      <input
+                        type="text"
+                        value={ecprFein}
+                        onChange={(e) => setEcprFein(e.target.value)}
+                        placeholder="123456789"
+                        maxLength={10}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        CA DIR Project ID
+                        <span className="ml-1 text-xs text-gray-400">(from DIR portal, NOT this app's project number)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={ecprDirProjectId}
+                        onChange={(e) => setEcprDirProjectId(e.target.value)}
+                        placeholder="DIR portal project number"
+                        maxLength={18}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Awarding Agency</label>
+                      <input
+                        type="text"
+                        value={ecprAwardingAgency}
+                        onChange={(e) => setEcprAwardingAgency(e.target.value)}
+                        placeholder="e.g., Caltrans, City of Los Angeles"
+                        maxLength={56}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Contract Number</label>
+                      <input
+                        type="text"
+                        value={ecprContractNumber}
+                        onChange={(e) => setEcprContractNumber(e.target.value)}
+                        placeholder="Contract or PO number"
+                        maxLength={25}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Check / Direct Deposit Number</label>
+                      <input
+                        type="text"
+                        value={ecprCheckNum}
+                        onChange={(e) => setEcprCheckNum(e.target.value)}
+                        maxLength={20}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                      />
+                      <p className="mt-0.5 text-xs text-gray-400">Applies to all workers this week. Default: DIRECT DEPOSIT</p>
+                    </div>
+                  </div>
+
+                  {/* SSN Disclosure (per D-14) */}
+                  <div className="mt-4 rounded bg-amber-50 border border-amber-200 p-3">
+                    <p className="text-sm font-medium text-amber-800">SSN Notice</p>
+                    <p className="mt-1 text-xs text-amber-700">
+                      This app does not store full Social Security Numbers. The XML file will contain placeholder SSNs
+                      (000000XXXX using the last 4 digits on file). You must enter full SSNs for each worker directly
+                      in the DIR eCPR portal after uploading the XML file.
+                    </p>
+                  </div>
+
+                  <div className="mt-4 flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowEcprModal(false)}
+                      className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <Button
+                      onClick={handleEcprXmlDownload}
+                      disabled={!ecprFein.replace(/-/g, '') || !ecprDirProjectId || ecprGenerating}
+                    >
+                      {ecprGenerating ? 'Generating...' : 'Generate & Download XML'}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-headline font-bold text-gray-900">
+                    CA eCPR XML Export — Step 2 of 2
+                  </h3>
+                  <p className="mt-1 text-sm text-green-700 font-medium">
+                    XML file downloaded successfully. Now upload it to the DIR eCPR portal.
+                  </p>
+
+                  <ol className="mt-4 space-y-2 text-sm text-gray-700 list-decimal list-inside">
+                    <li>
+                      Log in to{' '}
+                      <a href="https://efiling.dir.ca.gov/eCPR" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">
+                        efiling.dir.ca.gov/eCPR
+                      </a>
+                    </li>
+                    <li>Select your project (must match DIR Project ID: <strong>{ecprDirProjectId}</strong>)</li>
+                    <li>Upload the downloaded XML file</li>
+                    <li>Verify all workers appear in the submission preview</li>
+                    <li>
+                      <strong>Enter full SSNs</strong> for each worker directly in the portal
+                      <span className="text-amber-700"> (the XML contains placeholder SSNs)</span>
+                    </li>
+                    <li>
+                      Submit and confirm status — if the submission shows "Draft," follow up at{' '}
+                      <a href="mailto:publicworks@dir.ca.gov" className="text-blue-600 underline hover:text-blue-800">
+                        publicworks@dir.ca.gov
+                      </a>
+                    </li>
+                  </ol>
+
+                  <div className="mt-4 rounded bg-blue-50 border border-blue-200 p-3">
+                    <p className="text-xs text-blue-800">
+                      The DIR eCPR portal may take several minutes to process your upload. If the submission appears
+                      stuck as "Draft," this is a known portal issue — contact DIR Public Works at the email above.
+                    </p>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <Button onClick={() => setShowEcprModal(false)}>
+                      Done
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
