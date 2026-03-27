@@ -642,5 +642,5 @@ Plans:
 
 | 29. CA eCPR XML Export | v2.5 | 3/3 | Complete   | 2026-03-27 |
 
-| 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete   | 2026-03-27 |
+| 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete    | 2026-03-27 |
 
