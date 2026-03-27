@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 30-01-PLAN.md — DB migration + Wave 0 RED stubs
-last_updated: "2026-03-27T10:30:35.892Z"
+stopped_at: Completed 30-02-PLAN.md — WA CPR XML generator + export route, all Wave 0 RED stubs GREEN
+last_updated: "2026-03-27T10:38:56.311Z"
 progress:
   total_phases: 14
   completed_phases: 13
   total_plans: 30
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 30 (wa-pwia-submission-assist) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Plan: 2 of 3
 | 28 | 2/2 | Complete |
 | 29 | 3/3 | Complete ✓ |
 | Phase 30-wa-pwia-submission-assist P01 | 5 | 2 tasks | 6 files |
+| Phase 30 P02 | 15 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Key decisions affecting v2.5 work:
 - [Phase 29-ca-ecpr-xml-export]: CPR:amendmentNum always emitted per D-13: empty for non-amendment, populated for amendment
 - [Phase 29-ca-ecpr-xml-export]: SSN 10-char placeholder (000000 + ssnLast4) — full SSN entered by contractor in DIR portal
 - [Phase 30-wa-pwia-submission-assist]: pwiaIntentId stored as TEXT not INTEGER — matches dirProjectId pattern; Plan 02 converts to integer when building WaCprData
+- [Phase 30-wa-pwia-submission-assist]: WA day ordering is Monday-first (Day1=Mon, Day7=Sun) per WA XSD — inverse of CA eCPR Sunday-first spec
+- [Phase 30-wa-pwia-submission-assist]: Workers with multiple trade entries grouped by workerId Map — one employee element, multiple tradeHoursWage children
 
 ### Pending Todos
 
@@ -79,6 +82,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T10:30:35.889Z
-Stopped at: Completed 30-01-PLAN.md — DB migration + Wave 0 RED stubs
+Last session: 2026-03-27T10:38:56.308Z
+Stopped at: Completed 30-02-PLAN.md — WA CPR XML generator + export route, all Wave 0 RED stubs GREEN
 Resume file: None
