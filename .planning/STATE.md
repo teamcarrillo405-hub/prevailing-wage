@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Phase complete — ready for verification
-stopped_at: Completed 29-02-PLAN.md
-last_updated: "2026-03-27T08:42:33.016Z"
+status: Ready to execute
+stopped_at: Completed 30-01-PLAN.md — DB migration + Wave 0 RED stubs
+last_updated: "2026-03-27T10:30:35.892Z"
 progress:
   total_phases: 14
   completed_phases: 13
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 30
+  completed_plans: 28
 ---
 
 # State
@@ -19,19 +19,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 29 — CA eCPR XML Export
+**Current focus:** Phase 30 — wa-pwia-submission-assist
 
 ## Current Position
 
-Phase: 29 (CA eCPR XML Export) — EXECUTING
-Plan: 3 of 3
+Phase: 30 (wa-pwia-submission-assist) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
-**Velocity (v2.4):**
+**Velocity (v2.5):**
 
-- Total plans completed: 14
-- Total phases: 6
+- Total plans completed: 3
+- Total phases: 1
 - Shipped: 2026-03-27
 
 **By Phase:**
@@ -44,9 +44,8 @@ Plan: 3 of 3
 | 26 | 2/2 | Complete |
 | 27 | 2/2 | Complete |
 | 28 | 2/2 | Complete |
-| Phase 29-ca-ecpr-xml-export P01 | 272 | 2 tasks | 9 files |
-| Phase 29-ca-ecpr-xml-export P03 | 8 | 1 tasks | 1 files |
-| Phase 29-ca-ecpr-xml-export P02 | 8 | 2 tasks | 3 files |
+| 29 | 3/3 | Complete ✓ |
+| Phase 30-wa-pwia-submission-assist P01 | 5 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -68,6 +67,7 @@ Key decisions affecting v2.5 work:
 - [Phase 29-ca-ecpr-xml-export]: CA eCPR XML button added alongside CA A-1-131 button — both CA-gated; 2-step in-place modal transition on successful download; ecprCheckNum defaults to DIRECT DEPOSIT, ephemeral per export
 - [Phase 29-ca-ecpr-xml-export]: CPR:amendmentNum always emitted per D-13: empty for non-amendment, populated for amendment
 - [Phase 29-ca-ecpr-xml-export]: SSN 10-char placeholder (000000 + ssnLast4) — full SSN entered by contractor in DIR portal
+- [Phase 30-wa-pwia-submission-assist]: pwiaIntentId stored as TEXT not INTEGER — matches dirProjectId pattern; Plan 02 converts to integer when building WaCprData
 
 ### Pending Todos
 
@@ -79,6 +79,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T08:42:33.013Z
-Stopped at: Completed 29-02-PLAN.md
+Last session: 2026-03-27T10:30:35.889Z
+Stopped at: Completed 30-01-PLAN.md — DB migration + Wave 0 RED stubs
 Resume file: None

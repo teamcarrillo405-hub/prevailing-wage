@@ -576,9 +576,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 30-01-PLAN.md — DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
-- [ ] 30-02-PLAN.md — waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
-- [ ] 30-03-PLAN.md — PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
+- [x] 30-01-PLAN.md ï¿½ DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
+- [ ] 30-02-PLAN.md ï¿½ waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
+- [ ] 30-03-PLAN.md ï¿½ PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
 
 **UI hint**: yes
 
@@ -642,5 +642,5 @@ Plans:
 
 | 29. CA eCPR XML Export | v2.5 | 3/3 | Complete   | 2026-03-27 |
 
-| 30. WA PWIA Submission Assist | v2.5 | 0/TBD | Not started | - |
+| 30. WA PWIA Submission Assist | v2.5 | 1/3 | In Progress|  |
 
