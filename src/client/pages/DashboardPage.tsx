@@ -142,14 +142,28 @@ export function DashboardPage() {
   return (
     <Layout>
 
-<PageHeader
-        title="Projects"
-        action={
-          <Button onClick={() => setShowForm(true)}>
-            New Project
-          </Button>
-        }
-      />
+      {/* Dashboard photo background strip — DES-02 D-04 */}
+      <div
+        className="dashboard-bg relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 -mt-8 pt-8 pb-6 mb-6"
+        style={{
+          backgroundImage: "url('/images/dashboard-bg.webp')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="absolute inset-0 bg-nav-dark/85" aria-hidden="true" />
+        <div className="relative z-10">
+          <PageHeader
+            title="Projects"
+            className="mb-0 text-white [&_h1]:text-white"
+            action={
+              <Button onClick={() => setShowForm(true)}>
+                New Project
+              </Button>
+            }
+          />
+        </div>
+      </div>
 
       <HelpCallout
         icon={LayoutDashboard}
