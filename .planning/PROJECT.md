@@ -8,20 +8,22 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v2.5 — State Portal Integration
+## Current Milestone: v3.0 — Team & Integration
 
-**Goal:** Give contractors everything they need to file CA and WA state compliance submissions — as file exports and guided data entry.
+**Goal:** Transform HCC Prevailing Wage from a single-contractor tool into a team-ready platform with payroll imports, encrypted SSN storage, and agency portal auto-submit where APIs exist.
 
 **Target features:**
-- CA eCPR XML export — generate eCPR-format XML from existing A-1-131 data for manual upload to the CA DIR eCPR portal
-- WA submission assist — structured data export + submission summary pre-populated from WA payroll data for manual PWIA portal entry
+- Multi-user team accounts — owner invites contractors by email; flat model (all members see all projects); no per-project permission tiers
+- Payroll provider import — QuickBooks and ADP CSV/export import to pre-populate weekly payroll entries
+- Agency portal auto-submit — research-gated; CA DIR eCPR and WA L&I PWIA direct submission only if public APIs are confirmed
+- SSN encryption — AES-256 at rest; used for CA eCPR and WA portal pre-fill only (not WH-347)
 
-## Current State (v2.3)
+## Current State (v2.5)
 
-**Shipped:** 2026-03-24
-**Tests:** 1,522 passing
-**Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation
-**LOC:** ~12,150 net new lines (74 files changed since v2.2)
+**Shipped:** 2026-03-27
+**Tests:** 1,522+ passing
+**Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation, xmlbuilder2 for XML export
+**LOC:** ~12,150+ net new lines
 
 **What works end-to-end:**
 - Full marketing landing page at "/" (HCC brand, WH-347/Davis-Bacon/SAM.gov above fold, CTA to /register)
@@ -175,4 +177,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-27 — Phase 30 complete — v2.5 milestone fully shipped*
+*Last updated: 2026-03-27 — v2.5 milestone fully shipped — v3.0 Team & Integration milestone initiated*
