@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ship-Ready + Design Elevation
-status: Executing Phase 28
-stopped_at: Completed 27-02-PLAN.md — Phase 27 design-elevation complete
-last_updated: "2026-03-27T01:28:04.094Z"
+status: Ready to execute
+stopped_at: Completed 28-02-PLAN.md — Phase 28 production-deployment complete
+last_updated: "2026-03-27T02:03:37.785Z"
 progress:
   total_phases: 12
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 24
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 28 (production-deployment) — EXECUTING
-Plan: 1 of 2
+Plan: 2 of 2
 
 ### Phase Structure
 
@@ -67,6 +67,7 @@ Plan: 1 of 2
 | Phase 27-design-elevation P01 | 6min | 2 tasks | 12 files |
 | Phase 27-design-elevation P02 | 6min | 2 tasks | 4 files |
 | Phase 27-design-elevation P02 | 15min | 3 tasks | 4 files |
+| Phase 28-production-deployment P02 | 15 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -228,6 +229,8 @@ Plan: 1 of 2
 - [Phase 27-design-elevation]: Placeholder WebP files (48-byte) created for hero.webp and dashboard-bg.webp; user must replace with real Unsplash construction photography before production
 - [Phase 27-design-elevation]: LandingNav removed; nav inlined inside HeroSection z-10 container for floating transparent nav over photo
 - [Phase 27-design-elevation]: dashboard-bg wrapper uses -mt-8 pt-8 to consume Layout.tsx py-8 top padding and restore it inside the strip
+- [Phase 28-production-deployment]: Client RegisterSchema requires inviteCode min(1) while server schema has it optional — client always enforces invite gate, server allows programmatic access
+- [Phase 28-production-deployment]: bg-brand-gold replaces bg-[#F5C518] on RegisterForm submit button per CLAUDE.md brand token constraint; hover:bg-brand-gold/90 per Phase 11 opacity modifier pattern
 
 ### Research Flags for v2.4
 
@@ -245,6 +248,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T00:27:52.924Z
-Stopped at: Completed 27-02-PLAN.md — Phase 27 design-elevation complete
+Last session: 2026-03-27T02:03:37.782Z
+Stopped at: Completed 28-02-PLAN.md — Phase 28 production-deployment complete
 Resume file: None

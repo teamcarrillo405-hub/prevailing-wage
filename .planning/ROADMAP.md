@@ -76,7 +76,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 25: Washington L&I F700-065-000 Form** - Manual rate entry for WA projects, WA trade code mapping, WA certified payroll PDF generation (WAL-01, WAL-02) (completed 2026-03-26)
 - [x] **Phase 26: Contractor Guidance System** - HelpText primitive, contextual help across all major pages, instructional empty states, inline compliance term tooltips (UX-05, UX-06, UX-07, UX-08) (completed 2026-03-26)
 - [x] **Phase 27: Design Elevation** - Construction photography, dark gold gradient overlays, elevated card shadows, richer typography matching HCC website standard (DES-01, DES-02, DES-03) (completed 2026-03-27)
-- [ ] **Phase 28: Production Deployment** - Render.com deployment with persistent SQLite disk, invite-only registration, environment variable hygiene, Vite static file serving (OPS-01, OPS-02, OPS-03, OPS-04)
+- [x] **Phase 28: Production Deployment** - Render.com deployment with persistent SQLite disk, invite-only registration, environment variable hygiene, Vite static file serving (OPS-01, OPS-02, OPS-03, OPS-04) (completed 2026-03-27)
 
 ## Phase Details
 
@@ -247,8 +247,8 @@ Plans:
   5. The Vite production build is served as static files by Express, and all React routes resolve correctly on hard refresh (SPA catch-all in place)
 **Plans**: 2 plans
 Plans:
-- [ ] 28-01-PLAN.md — Wave 0 invite code tests + tsconfig.server.json + build script + db mkdirSync fix + static file serving + invite code gate + .env.example + render.yaml
-- [ ] 28-02-PLAN.md — RegisterForm invite code field + brand token fix + Render deploy smoke test checkpoint
+- [x] 28-01-PLAN.md — Wave 0 invite code tests + tsconfig.server.json + build script + db mkdirSync fix + static file serving + invite code gate + .env.example + render.yaml
+- [x] 28-02-PLAN.md — RegisterForm invite code field + brand token fix + Render deploy smoke test checkpoint
 
 ## Progress
 
@@ -277,4 +277,4 @@ Plans:
 | 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete    | 2026-03-26 |
 | 26. Contractor Guidance System | v2.4 | 2/2 | Complete    | 2026-03-26 |
 | 27. Design Elevation | v2.4 | 2/2 | Complete    | 2026-03-27 |
-| 28. Production Deployment | v2.4 | 0/2 | Not started | - |
+| 28. Production Deployment | v2.4 | 2/2 | Complete   | 2026-03-27 |

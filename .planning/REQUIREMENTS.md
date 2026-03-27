@@ -43,9 +43,9 @@
 ### Operational (OPS)
 
 - [ ] **OPS-01**: App deployed to a live HTTPS URL on Render.com with SQLite on a persistent disk volume (`/var/data/prevailing-wage.db`); Drizzle migrations run at app startup
-- [ ] **OPS-02**: Registration requires a valid invitation code — open registration disabled in production
+- [x] **OPS-02**: Registration requires a valid invitation code — open registration disabled in production
 - [ ] **OPS-03**: SAM.gov API key and all secrets configured via environment variables; `.env.example` documents every required variable
-- [ ] **OPS-04**: Vite production build served as static files by Express in production mode
+- [x] **OPS-04**: Vite production build served as static files by Express in production mode
 
 ---
 
@@ -90,6 +90,6 @@
 | DES-02 | Phase 27 | Complete |
 | DES-03 | Phase 27 | Complete |
 | OPS-01 | Phase 28 | Pending |
-| OPS-02 | Phase 28 | Pending |
+| OPS-02 | Phase 28 | Complete |
 | OPS-03 | Phase 28 | Pending |
-| OPS-04 | Phase 28 | Pending |
+| OPS-04 | Phase 28 | Complete |
