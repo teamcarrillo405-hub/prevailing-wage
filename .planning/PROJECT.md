@@ -8,16 +8,13 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v2.4 — Ship-Ready + Design Elevation
+## Current Milestone: v2.5 — State Portal Integration
 
-**Goal:** Close remaining features, elevate the UI to match HCC website quality, guide contractors through every step of the workflow, and deploy to a live URL.
+**Goal:** Give contractors everything they need to file CA and WA state compliance submissions — as file exports and guided data entry.
 
 **Target features:**
-- Dashboard compliance status filter + CSV export from compliance history
-- Contractor guidance throughout — homepage explainer, step-by-step cues, contextual help, inline tooltips, empty states with instructions
-- UI/UX overhaul — construction photography, dark gold gradients, card depth matching HCC website standard
-- State-specific prevailing wage forms (California DIR, Washington L&I)
-- Operational deployment: cloud hosting, controlled auth, SAM.gov production key
+- CA eCPR XML export — generate eCPR-format XML from existing A-1-131 data for manual upload to the CA DIR eCPR portal
+- WA submission assist — structured data export + submission summary pre-populated from WA payroll data for manual PWIA portal entry
 
 ## Current State (v2.3)
 

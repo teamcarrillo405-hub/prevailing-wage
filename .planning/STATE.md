@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.4
-milestone_name: Ship-Ready + Design Elevation
-status: Milestone complete
-stopped_at: Completed 28-02-PLAN.md — Phase 28 production-deployment complete
-last_updated: "2026-03-27T02:08:16.304Z"
+milestone: v2.5
+milestone_name: State Portal Integration
+status: Defining requirements
+stopped_at: Milestone v2.5 started — defining requirements
+last_updated: "2026-03-27T00:00:00.000Z"
 progress:
-  total_phases: 12
-  completed_phases: 12
-  total_plans: 24
-  completed_plans: 24
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # State
@@ -23,19 +23,10 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 
 ## Current Position
 
-Phase: 28
-Plan: Not started
-
-### Phase Structure
-
-| Phase | Name | Requirements | Status |
-|-------|------|--------------|--------|
-| 23 | Dashboard Compliance Filter + CSV Export | DASH-05, AUD-03 | Not started |
-| 24 | California DIR A-1-131 Form | CAL-01, CAL-02, CAL-03 | Not started |
-| 25 | Washington L&I F700-065-000 Form | WAL-01, WAL-02 | Not started |
-| 26 | Contractor Guidance System | UX-05, UX-06, UX-07, UX-08 | Not started |
-| 27 | Design Elevation | DES-01, DES-02, DES-03 | Not started |
-| 28 | Production Deployment | OPS-01, OPS-02, OPS-03, OPS-04 | Not started |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-27 — Milestone v2.5 started
 
 ## Performance Metrics
 
