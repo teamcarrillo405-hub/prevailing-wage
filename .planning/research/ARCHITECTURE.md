@@ -84,6 +84,24 @@ Invite flow: owner triggers invite -> server generates token ->
 email contains `/accept-invite?token=<raw>` -> server hashes and
 compares -> creates `project_members` row + clears token.
 
+### Important: Existing `INVITE_CODE` Env Var Is Separate
+
+`auth.ts` already contains a global `INVITE_CODE` env-var gate on
+`POST /api/auth/register` (line 37-39). This is a deploy-level
+registration guard ("only people with the secret code can self-register").
+It is NOT the per-user invite token introduced in v3.0.
+
+The two systems must coexist:
+- Global `INVITE_CODE`: controls whether anyone can self-register at all.
+  If set, direct `/register` requires the code. Keep this behavior.
+- Per-user invite token (`users.invite_token`): issued by an existing owner
+  to invite a specific email into their team. The `/accept-invite` flow
+  bypasses the global INVITE_CODE check (the owner has already vouched
+  for the invitee by issuing the token).
+
+In the `InviteAcceptPage` registration path, do not require `INVITE_CODE`.
+Require only a valid (non-expired, unused) per-user invite token.
+
 ### Authorization Change: From `userId` to Member Check
 
 **Current guard pattern (every route):**
@@ -244,6 +262,23 @@ environment variable.**
 encryption -- it detects tampered ciphertext. CBC does not. Node.js
 `node:crypto` supports GCM natively with no additional packages.
 
+### Render.com Env Var Viability (Confirmed)
+
+Render.com Web Services support environment variables set in the
+dashboard under Environment > Environment Variables. They are injected
+as process environment at container startup. The `SSN_ENCRYPTION_KEY`
+env var (32-byte hex string = 64 hex characters) is set once in the
+Render dashboard; it is never written to disk, never in the codebase,
+and never visible in logs. This is the same pattern already in use for
+`JWT_SECRET` and `INVITE_CODE` in this app. No new infrastructure is
+needed; the pattern is already proven in the existing deployment.
+
+**Key generation (one-time, developer runs locally):**
+```
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+Paste the 64-character output into Render dashboard as `SSN_ENCRYPTION_KEY`.
+
 ### Storage Pattern: Single Column, Concatenated Encoding
 
 Do not store the IV as a separate column. Store `iv:authTag:ciphertext`
@@ -402,6 +437,77 @@ A polling loop queries:
 
 ---
 
+## Migration Strategy for Existing Data
+
+Three categories of existing data must be addressed when these migrations
+are applied to the live Render.com database.
+
+### 1. Backfill `project_members` for Existing Projects
+
+When migration `0016_project_members.sql` runs, every existing project
+row has a `userId` in `projects.userId` but no corresponding row in
+`project_members`. The auth guard change (Feature 1) will lock out the
+existing user from all their projects unless this is backfilled.
+
+**Migration must include a backfill INSERT:**
+
+```sql
+-- After CREATE TABLE project_members ...
+INSERT INTO project_members (id, project_id, user_id, role, invited_by, invited_at, accepted_at, created_at)
+SELECT
+  lower(hex(randomblob(16))),   -- UUID approximation in SQLite
+  id,                            -- project_id
+  user_id,                       -- user_id from existing projects.user_id
+  'owner',
+  NULL,                          -- invited_by null for original owners
+  created_at,                    -- invited_at = project creation date
+  created_at,                    -- accepted_at = same (auto-accepted; they're the owner)
+  created_at
+FROM projects;
+```
+
+This must be part of the same migration file as `CREATE TABLE project_members`,
+not a separate step, so it is atomic and cannot run partially.
+
+**UUID note:** SQLite has no `gen_random_uuid()`. Use
+`lower(hex(randomblob(16)))` for migration-time ID generation
+(produces 32 hex chars without dashes). Alternatively, generate
+UUIDs in the migration script and write them as literal values.
+The Drizzle service layer uses Node's `randomUUID()` for new rows --
+this backfill is migration-only.
+
+### 2. Existing `users` Table: Invite Token Columns
+
+Adding `invite_token` and `invite_token_exp` to `users` is purely
+additive (nullable columns). All existing users rows are unaffected --
+both columns will be NULL for all existing accounts, which is the
+correct default state (no pending invite).
+
+No backfill needed for this migration.
+
+### 3. Existing `workers.ssn_last4`: No Backfill to `ssn_encrypted`
+
+`SEC-01` requires encrypting existing `ssn_last4` values. However:
+- `ssn_last4` contains only 4 digits, not a full SSN.
+- A 4-digit value encrypted as AES-256-GCM is ciphertext of an
+  already non-secret (non-identifying) value.
+- The spec says "existing `ssn_last4` plain-text values are encrypted
+  in the migration" -- this refers to encrypting the last-4 in
+  `ssn_encrypted` as a stopgap only if the worker has no full SSN yet.
+
+**Recommended interpretation:** The migration adds `ssn_encrypted TEXT`
+(nullable). Existing rows get `ssn_encrypted = NULL`. When an owner
+edits a worker record and enters the full SSN, `ssn_encrypted` is
+populated and `ssn_last4` is derived from it server-side. No bulk
+backfill of `ssn_last4` into `ssn_encrypted` is needed or meaningful --
+it would encrypt non-identifying data with no benefit.
+
+Clarify with product owner if a different interpretation was intended
+(e.g., encrypt the last-4 as a compliance gesture even without the
+full SSN).
+
+---
+
 ## Recommended Build Order (Feature Dependencies)
 
 ```
@@ -413,6 +519,8 @@ A polling loop queries:
    project_members table + authMiddleware change.
    Must land before invite flow (invite routes reference the table).
    projects.userId stays as-is; only auth guard changes.
+   BACKFILL: Migration must include the project_members backfill INSERT
+   for existing projects (see Migration Strategy above).
 
 3. Multi-user: invite flow + React team UI
    Depends on step 2 (table must exist).
@@ -555,6 +663,7 @@ Invitee clicks link -> InviteAcceptPage
 | Add-only migrations | Cannot drop `projects.userId` | Keep it; use only for original-owner display. Auth moves to `project_members` |
 | No native encryption | Column-level crypto not possible at DB layer | Service-layer AES-256-GCM via `node:crypto` |
 | No cascade enforcement | `onDelete: 'cascade'` in Drizzle schema does not fire unless FK pragma is on | Enable FK pragma OR add explicit delete logic in service layer |
+| No `gen_random_uuid()` | Backfill migrations cannot use standard UUID functions | Use `lower(hex(randomblob(16)))` for migration-generated IDs |
 
 ---
 
@@ -612,16 +721,63 @@ is XML generation plus a checklist.
 **Do this instead:** Export-assist pattern: generate the XML, surface
 a checklist, let the user upload manually, mark submitted in the app.
 
+### Anti-Pattern 6: Forgetting the `project_members` Backfill
+
+**What people do:** Add the `project_members` table in a migration,
+switch the auth guard to check it, and deploy -- locking out all
+existing users from their own projects.
+**Why it's wrong:** The auth guard now requires a `project_members` row,
+but existing projects have none. Every existing user gets 403 on all
+their data.
+**Do this instead:** Include the backfill INSERT in the same migration
+as the CREATE TABLE. The migration is atomic -- both run together or
+neither runs.
+
 ---
 
 ## Integration Points Summary
 
 | Feature | Touches Existing Code | New Tables/Columns | New Routes | New React Components |
 |---------|-----------------------|--------------------|------------|----------------------|
-| Multi-user | authMiddleware (every project route) | `project_members`, `users.invite_token`, `users.invite_token_exp` | 4 invite/member routes | TeamSettingsPanel, InviteAcceptPage |
+| Multi-user | authMiddleware (every project route), auth.ts `/register` flow | `project_members`, `users.invite_token`, `users.invite_token_exp` | 4 invite/member routes | TeamSettingsPanel, InviteAcceptPage |
 | Payroll import | None (new parallel flow) | `payroll_imports` | 2 import routes | PayrollImportModal |
 | SSN encryption | `POST /workers`, `PATCH /workers/:id`, CA/WA XML exports | `workers.ssn_encrypted` | None new | AddWorkerForm/EditWorkerForm (SSN field) |
 | Agency status | CA eCPR modal (Phase 29), WA assist panel (Phase 30) | `payrollWeeks.caEcprSubmittedAt`, `payrollWeeks.waLniSubmittedAt`, `agency_submissions` | None new | SubmissionStatusBadge |
+
+### New Files by Feature
+
+| File | Feature | Type |
+|------|---------|------|
+| `src/server/services/cryptoService.ts` | SSN encryption | New service |
+| `src/server/services/importService.ts` | Payroll import | New service |
+| `src/server/services/qbMapper.ts` | Payroll import | New module |
+| `src/server/services/adpMapper.ts` | Payroll import | New module |
+| `src/server/services/inviteService.ts` | Multi-user | New service |
+| `src/server/routes/teams.ts` | Multi-user | New route file |
+| `src/server/routes/invites.ts` | Multi-user | New route file |
+| `src/client/pages/InviteAcceptPage.tsx` | Multi-user | New page |
+| `src/client/components/TeamSettingsPanel.tsx` | Multi-user | New component |
+| `src/client/components/PayrollImportModal.tsx` | Payroll import | New component |
+| `src/client/components/SubmissionStatusBadge.tsx` | Agency status | New component |
+| `src/server/db/migrations/0016_project_members.sql` | Multi-user | New migration |
+| `src/server/db/migrations/0017_users_invite_token.sql` | Multi-user | New migration |
+| `src/server/db/migrations/0018_workers_ssn_encrypted.sql` | SSN encryption | New migration |
+| `src/server/db/migrations/0019_payrollweeks_submission_cols.sql` | Agency status | New migration |
+| `src/server/db/migrations/0020_payroll_imports_table.sql` | Payroll import | New migration |
+| `src/server/db/migrations/0021_agency_submissions_table.sql` | Agency status | New migration |
+
+### Modified Files by Feature
+
+| File | Feature | Change |
+|------|---------|--------|
+| `src/server/middleware/auth.ts` | Multi-user | Add `requireMember()` guard checking `project_members` |
+| `src/server/routes/auth.ts` | Multi-user | Invite-token path bypasses global INVITE_CODE check |
+| `src/server/routes/workers.ts` | SSN encryption | Encrypt SSN on POST/PATCH; strip from GET responses |
+| `src/server/services/ecprXmlGenerator.ts` | SSN encryption | Decrypt SSN at XML generation time |
+| `src/server/services/waCprXmlGenerator.ts` | SSN encryption | Decrypt SSN at XML generation time |
+| `src/client/components/AddWorkerForm.tsx` (or workers page) | SSN encryption | Full SSN input with masked display |
+| `src/client/pages/PayrollWeekDetailPage.tsx` | Agency status | Add SubmissionStatusBadge + "Mark Submitted" actions |
+| All project-scoped route files (projects, workers, payroll, etc.) | Multi-user | Replace `eq(projects.userId, authUserId)` with `requireMember()` |
 
 ---
 
@@ -639,7 +795,11 @@ a checklist, let the user upload manually, mark submitted in the app.
   https://gist.github.com/rjz/15baffeab434b8125ca4d783f4116d81
 - SQLite-native background job system (no Redis pattern):
   https://jasongorman.uk/writing/sqlite-background-job-system/
+- Render.com environment variables documentation:
+  https://render.com/docs/environment-variables
 - Existing schema: src/server/db/schema.ts (read directly)
+- Existing auth routes: src/server/routes/auth.ts (read directly)
+- Existing auth middleware: src/server/middleware/auth.ts (read directly)
 - Project context: .planning/PROJECT.md (read directly)
 
 ---
