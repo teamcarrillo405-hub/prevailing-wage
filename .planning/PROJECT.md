@@ -177,4 +177,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-27 — v2.5 milestone fully shipped — v3.0 Team & Integration milestone initiated*
+*Last updated: 2026-03-28 — Phase 31 complete (SSN Encryption Foundation — SEC-01, SEC-02, SEC-03 validated)*
