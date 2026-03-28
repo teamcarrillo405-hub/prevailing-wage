@@ -658,7 +658,7 @@ Plans:
 
 Plans:
 - [x] 32-01-PLAN.md — SQL migration (project_members + payroll_entries columns) + Drizzle schema + assertProjectAccess utility
-- [ ] 32-02-PLAN.md — Route refactor (all 6 files, 21 checks) + project_members INSERT on POST /projects + payrollService userId threading
+- [x] 32-02-PLAN.md — Route refactor (all 6 files, 21 checks) + project_members INSERT on POST /projects + payrollService userId threading
 - [ ] 32-03-PLAN.md — Cross-tenant IDOR test suite + human verification checkpoint
 
 
@@ -825,7 +825,7 @@ Plans:
 
 | 31. SSN Encryption Foundation | v3.0 | 3/3 | Complete    | 2026-03-28 |
 
-| 32. Multi-User Auth Foundation | v3.0 | 1/3 | In Progress|  |
+| 32. Multi-User Auth Foundation | v3.0 | 2/3 | In Progress|  |
 
 | 33. Team Invite Flow + Team UI | v3.0 | 0/TBD | Not started | - |
 

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 32-01-PLAN.md
-last_updated: "2026-03-28T19:30:28.720Z"
+stopped_at: Completed 32-02-PLAN.md
+last_updated: "2026-03-28T19:53:44.591Z"
 progress:
   total_phases: 28
   completed_phases: 26
   total_plans: 70
-  completed_plans: 70
+  completed_plans: 71
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 32 (multi-user-auth-foundation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -56,6 +56,8 @@ Key decisions locked for v3.0 scope:
 - [Phase 31]: resolveEcprSsn() extracted as testable pure function in export.ts — CA eCPR SSN logic testable without route mocking
 - [Phase 32]: assertProjectAccess throws plain { status, message } objects — no app-wide error handler needed
 - [Phase 32]: Drizzle better-sqlite3 migrator requires --> statement-breakpoint separators between SQL statements in migration files
+- [Phase 32-02]: PATCH/DELETE WHERE clauses simplified to id-only after assertProjectAccess membership check
+- [Phase 32-02]: amendPayrollWeek copies use null for createdByUserId/updatedByUserId (system-generated clones, not direct user edits)
 
 ### Phase Order Rationale
 
@@ -81,7 +83,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-28T19:30:28.717Z
-Stopped at: Completed 32-01-PLAN.md
+Last session: 2026-03-28T19:53:44.587Z
+Stopped at: Completed 32-02-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`
