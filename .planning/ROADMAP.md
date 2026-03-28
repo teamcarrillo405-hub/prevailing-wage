@@ -817,7 +817,7 @@ Plans:
 
 | 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete | 2026-03-27 |
 
-| 31. SSN Encryption Foundation | v3.0 | 3/3 | Complete   | 2026-03-28 |
+| 31. SSN Encryption Foundation | v3.0 | 3/3 | Complete    | 2026-03-28 |
 
 | 32. Multi-User Auth Foundation | v3.0 | 0/TBD | Not started | - |
 
