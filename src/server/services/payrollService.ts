@@ -85,6 +85,7 @@ export interface UpsertPayrollEntryInput {
   fringePension?: number | null;
   fringeVacation?: number | null;
   fringeTraining?: number | null;
+  userId?: string; // populated from req.user.id on POST/PUT; undefined for amendment copies
 }
 
 // ── Service Functions ─────────────────────────────────────────────────────
@@ -168,6 +169,8 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     fringePension: input.fringePension ?? null,
     fringeVacation: input.fringeVacation ?? null,
     fringeTraining: input.fringeTraining ?? null,
+    createdByUserId: input.userId ?? null,
+    updatedByUserId: input.userId ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -212,6 +215,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         fringePension: values.fringePension,
         fringeVacation: values.fringeVacation,
         fringeTraining: values.fringeTraining,
+        updatedByUserId: values.updatedByUserId,
         updatedAt: now,
       },
     });
@@ -564,6 +568,8 @@ export async function amendPayrollWeek(input: AmendWeekInput): Promise<AmendWeek
       grossWages: null,
       deductions: 0,
       netPay: null,
+      createdByUserId: null, // amendment copies are system-generated clones, not direct user edits
+      updatedByUserId: null,
       createdAt: now,
       updatedAt: now,
     });
