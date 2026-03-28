@@ -183,7 +183,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 
 
-- [ ] **Phase 31: SSN Encryption Foundation** - AES-256-GCM encryption at rest, cryptoService.ts, key versioning envelope, CA eCPR XML updated to write real SSN (SEC-01, SEC-02, SEC-03)
+- [x] **Phase 31: SSN Encryption Foundation** - AES-256-GCM encryption at rest, cryptoService.ts, key versioning envelope, CA eCPR XML updated to write real SSN (SEC-01, SEC-02, SEC-03) (completed 2026-03-28)
 
 - [ ] **Phase 32: Multi-User Auth Foundation** - project_members schema + assertProjectAccess refactor across 9 route files, cross-tenant test suite, createdByUserId/updatedByUserId on payroll_entries (MT-03)
 
@@ -629,7 +629,7 @@ Plans:
 Plans:
 - [x] 31-01-PLAN.md — cryptoService (AES-256-GCM) + migration + backfill script
 - [x] 31-02-PLAN.md — Worker routes (encrypt on write, strip responses) + WorkersPage SSN input/display
-- [ ] 31-03-PLAN.md — CA eCPR + WA PWIA XML generators decrypt real SSN
+- [x] 31-03-PLAN.md — CA eCPR + WA PWIA XML generators decrypt real SSN
 
 **UI hint**: yes
 
@@ -817,7 +817,7 @@ Plans:
 
 | 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete | 2026-03-27 |
 
-| 31. SSN Encryption Foundation | v3.0 | 2/3 | In Progress|  |
+| 31. SSN Encryption Foundation | v3.0 | 3/3 | Complete   | 2026-03-28 |
 
 | 32. Multi-User Auth Foundation | v3.0 | 0/TBD | Not started | - |
 
