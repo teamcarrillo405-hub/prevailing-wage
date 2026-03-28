@@ -8,6 +8,7 @@ import { getCachedWd, getCachedClassifications } from '../services/wageCache.js'
 import { lookupWageDetermination } from '../services/wageLookup.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { encryptSsn } from '../services/cryptoService.js';
 
 const router = Router();
 
@@ -16,14 +17,14 @@ router.use(requireAuth);
 
 const CreateWorkerSchema = z.object({
   name: z.string().min(1).max(200),
-  ssnLast4: z.string().length(4).optional(),
+  ssn: z.string().length(9).regex(/^\d{9}$/, 'SSN must contain only digits').optional(),
   tradeUnion: z.string().max(200).optional(),
   address: z.string().max(500).optional(),
 });
 
 const UpdateWorkerSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  ssnLast4: z.string().length(4).optional().nullable(),
+  ssn: z.string().length(9).regex(/^\d{9}$/, 'SSN must contain only digits').optional().nullable(),
   tradeUnion: z.string().max(200).optional().nullable(),
   address: z.string().max(500).optional().nullable(),
 });
@@ -117,8 +118,14 @@ router.get('/:projectId/workers', async (req, res) => {
         .from(workerClassifications)
         .where(eq(workerClassifications.workerId, w.id));
       type ClassificationRow = (typeof classifications)[number];
+      // Derive hasFullSsn from envelope len field without decrypting (per plan task 2 step 6)
+      const hasFullSsn = w.ssnEncrypted
+        ? (JSON.parse(w.ssnEncrypted) as { len?: number }).len === 9
+        : false;
+      const { ssnEncrypted: _enc, ...safeW } = w;
       return {
-        ...w,
+        ...safeW,
+        hasFullSsn,
         classifications: classifications.map((c: ClassificationRow) => ({
           ...c,
           baseRate: rateMap.get(c.tradeCode)?.baseRate ?? null,
@@ -162,7 +169,8 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
     id,
     projectId,
     name: body.name,
-    ssnLast4: body.ssnLast4 ?? null,
+    ssnLast4: body.ssn ? body.ssn.slice(-4) : null,
+    ssnEncrypted: body.ssn ? encryptSsn(body.ssn) : null,
     tradeUnion: body.tradeUnion ?? null,
     address: body.address ?? null,
     isActive: true,
@@ -171,7 +179,11 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
   });
 
   const [worker] = await db.select().from(workers).where(eq(workers.id, id)).limit(1);
-  res.status(201).json({ data: { worker } });
+  const hasFullSsn = worker!.ssnEncrypted
+    ? (JSON.parse(worker!.ssnEncrypted) as { len?: number }).len === 9
+    : false;
+  const { ssnEncrypted: _enc, ...safeWorker } = worker!;
+  res.status(201).json({ data: { worker: { ...safeWorker, hasFullSsn } } });
 });
 
 // PUT /api/projects/:projectId/workers/:workerId — update worker profile
@@ -191,13 +203,25 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
   const now = new Date().toISOString();
   const updates: Record<string, unknown> = { updatedAt: now };
   if (body.name !== undefined) updates.name = body.name;
-  if ('ssnLast4' in body) updates.ssnLast4 = body.ssnLast4 ?? null;
+  if ('ssn' in body) {
+    if (body.ssn) {
+      updates.ssnEncrypted = encryptSsn(body.ssn);
+      updates.ssnLast4 = body.ssn.slice(-4);
+    } else {
+      updates.ssnEncrypted = null;
+      updates.ssnLast4 = null;
+    }
+  }
   if ('tradeUnion' in body) updates.tradeUnion = body.tradeUnion ?? null;
   if ('address' in body) updates.address = body.address ?? null;
 
   await db.update(workers).set(updates).where(eq(workers.id, workerId));
   const [updated] = await db.select().from(workers).where(eq(workers.id, workerId)).limit(1);
-  res.json({ data: { worker: updated } });
+  const hasFullSsn = updated!.ssnEncrypted
+    ? (JSON.parse(updated!.ssnEncrypted) as { len?: number }).len === 9
+    : false;
+  const { ssnEncrypted: _enc, ...safeWorker } = updated!;
+  res.json({ data: { worker: { ...safeWorker, hasFullSsn } } });
 });
 
 // DELETE /api/projects/:projectId/workers/:workerId — remove worker (cascades classifications)

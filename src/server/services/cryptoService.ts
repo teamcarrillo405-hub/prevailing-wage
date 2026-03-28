@@ -14,6 +14,7 @@ export function encryptSsn(plaintext: string): string {
   const tag = cipher.getAuthTag();
   return JSON.stringify({
     v: '1',
+    len: plaintext.length,
     iv: iv.toString('base64'),
     tag: tag.toString('base64'),
     ct: ct.toString('base64'),
@@ -22,7 +23,7 @@ export function encryptSsn(plaintext: string): string {
 
 export function decryptSsn(envelope: string): string {
   const { v, iv: ivB64, tag: tagB64, ct: ctB64 } = JSON.parse(envelope) as {
-    v: string; iv: string; tag: string; ct: string;
+    v: string; len?: number; iv: string; tag: string; ct: string;
   };
   if (v !== '1') throw new Error(`Unknown SSN envelope version: ${v}`);
   const iv = Buffer.from(ivB64, 'base64');
