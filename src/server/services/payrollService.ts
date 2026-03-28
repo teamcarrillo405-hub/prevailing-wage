@@ -263,6 +263,7 @@ export async function getPayrollEntriesWithWorkerDetails(weekId: string) {
       entry: payrollEntries,
       workerName: workers.name,
       workerSsnLast4: workers.ssnLast4,
+      workerSsnEncrypted: workers.ssnEncrypted,
       workerAddress: workers.address,
       tradeDescription: workerClassifications.tradeDescription,
       tradeCode: workerClassifications.tradeCode,

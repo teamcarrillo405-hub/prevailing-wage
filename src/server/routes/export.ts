@@ -53,11 +53,35 @@ import {
   mapEntriesToExportRows,
 } from '../services/csvExporter.js';
 import { computeCompliance } from '../services/complianceService.js';
+import { decryptSsn } from '../services/cryptoService.js';
 
 const router = Router();
 router.use(requireAuth);
 
 // ── Exported helpers (testable) ────────────────────────────────────────────
+
+/**
+ * Resolve the SSN for the CA eCPR XML field.
+ *
+ * Returns the 9-digit SSN when the worker has a full SSN encrypted (len=9).
+ * Falls back to the placeholder format '000000' + last4 otherwise.
+ *
+ * CA eCPR: The ssn field accepts 9 digits for a real SSN or '000000' + last4
+ * as the v2.5 placeholder.
+ */
+export function resolveEcprSsn(
+  ssnEncrypted: string | null,
+  ssnLast4: string | null,
+): string {
+  if (ssnEncrypted) {
+    try {
+      const plain = decryptSsn(ssnEncrypted);
+      if (plain.length === 9) return plain;
+    } catch { /* fall through to placeholder */ }
+  }
+  const last4 = ssnLast4 || '0000';
+  return '000000' + last4;
+}
 
 /**
  * Derive the certApprentices boolean for WH-347 Statement of Compliance.
@@ -581,8 +605,7 @@ router.get('/ecpr-xml/:weekId', async (req, res) => {
   type EcprEntryRow = (typeof entries)[number];
   const employees: EcprEmployee[] = entries.map((row: EcprEntryRow) => {
     const e = row.entry;
-    const ssnLast4 = row.workerSsnLast4 || '0000';
-    const ssn10 = '000000' + ssnLast4;
+    const ssn10 = resolveEcprSsn(row.workerSsnEncrypted ?? null, row.workerSsnLast4 ?? null);
 
     // Parse address: "street, city, state zip" format
     const addrParts = (row.workerAddress || '').split(',').map((s: string) => s.trim());
@@ -771,8 +794,18 @@ router.get('/wa-cpr-xml/:weekId', async (req, res) => {
       const lastName = parts.length > 1 ? parts[parts.length - 1]! : '';
       const firstName = parts.slice(0, Math.max(1, parts.length - 1)).join(' ');
 
-      // 9-digit SSN placeholder
-      const ssn9 = '00000' + (row.workerSsnLast4 || '0000');
+      // 9-digit SSN: use real SSN if available (len=9), else placeholder
+      let ssn9: string;
+      if (row.workerSsnEncrypted) {
+        try {
+          const plain = decryptSsn(row.workerSsnEncrypted);
+          ssn9 = plain.length === 9 ? plain : ('00000' + (row.workerSsnLast4 || '0000'));
+        } catch {
+          ssn9 = '00000' + (row.workerSsnLast4 || '0000');
+        }
+      } else {
+        ssn9 = '00000' + (row.workerSsnLast4 || '0000');
+      }
 
       // Address parsing: "street, city, state zip" format
       const addrParts = (row.workerAddress || '').split(',').map((s: string) => s.trim());
