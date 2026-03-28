@@ -12,7 +12,7 @@
 
 - [ ] **MT-01**: Owner can invite one other user by email; invitee receives a registration link and creates their account through it
 - [ ] **MT-02**: Maximum 2 users total per account (owner + 1 member); invite button disabled when at capacity
-- [ ] **MT-03**: All members see and can act on all projects (flat model; no per-project permission tiers)
+- [x] **MT-03**: All members see and can act on all projects (flat model; no per-project permission tiers)
 - [ ] **MT-04**: Owner can transfer ownership to the existing member; after transfer, original owner becomes a regular member
 - [ ] **MT-05**: When a member is removed, their payroll entries, submissions, and activity records are retained for 1 year from removal date, then purged
 
@@ -80,7 +80,7 @@
 |-------------|-------|--------|
 | MT-01 | Phase 33 | Pending |
 | MT-02 | Phase 33 | Pending |
-| MT-03 | Phase 32 | Pending |
+| MT-03 | Phase 32 | Complete |
 | MT-04 | Phase 33 | Pending |
 | MT-05 | Phase 33 | Pending |
 | PI-01 | Phase 35 | Pending |

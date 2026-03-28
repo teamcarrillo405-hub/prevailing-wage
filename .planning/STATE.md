@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 31-03-PLAN.md (plan complete, human-verify approved)
-last_updated: "2026-03-28T16:35:32.445Z"
+status: Ready to execute
+stopped_at: Completed 32-01-PLAN.md
+last_updated: "2026-03-28T19:30:28.720Z"
 progress:
-  total_phases: 27
+  total_phases: 28
   completed_phases: 26
-  total_plans: 67
-  completed_plans: 69
+  total_plans: 70
+  completed_plans: 70
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 31 — ssn-encryption-foundation
+**Current focus:** Phase 32 — multi-user-auth-foundation
 
 ## Current Position
 
-Phase: 31
-Plan: Not started
+Phase: 32 (multi-user-auth-foundation) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -54,6 +54,8 @@ Key decisions locked for v3.0 scope:
 - [Phase 31]: AES-256-GCM cryptoService with versioned JSON envelope; ENCRYPTION_KEY_V1 env var as 64-char hex; ssnLast4 kept unchanged for WH-347 and compliance history
 - [Phase 31]: encryptSsn envelope includes len field — hasFullSsn derivable without decrypting (avoids D-15 decrypt-in-list-route violation)
 - [Phase 31]: resolveEcprSsn() extracted as testable pure function in export.ts — CA eCPR SSN logic testable without route mocking
+- [Phase 32]: assertProjectAccess throws plain { status, message } objects — no app-wide error handler needed
+- [Phase 32]: Drizzle better-sqlite3 migrator requires --> statement-breakpoint separators between SQL statements in migration files
 
 ### Phase Order Rationale
 
@@ -79,7 +81,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-28T16:22:14.391Z
-Stopped at: Completed 31-03-PLAN.md (plan complete, human-verify approved)
+Last session: 2026-03-28T19:30:28.717Z
+Stopped at: Completed 32-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`
