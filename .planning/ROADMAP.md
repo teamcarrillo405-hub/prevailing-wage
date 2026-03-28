@@ -186,7 +186,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 31: SSN Encryption Foundation** - AES-256-GCM encryption at rest, cryptoService.ts, key versioning envelope, CA eCPR XML updated to write real SSN (SEC-01, SEC-02, SEC-03)
  (completed 2026-03-28)
 
-- [ ] **Phase 32: Multi-User Auth Foundation** - project_members schema + assertProjectAccess refactor across 9 route files, cross-tenant test suite, createdByUserId/updatedByUserId on payroll_entries (MT-03)
+- [x] **Phase 32: Multi-User Auth Foundation** - project_members schema + assertProjectAccess refactor across 9 route files, cross-tenant test suite, createdByUserId/updatedByUserId on payroll_entries (MT-03) (completed 2026-03-28)
 
 - [ ] **Phase 33: Team Invite Flow + Team UI** - Email invite with tokenized link, team member list, ownership transfer, member removal with data retention (MT-01, MT-02, MT-04, MT-05)
 
@@ -659,7 +659,7 @@ Plans:
 Plans:
 - [x] 32-01-PLAN.md — SQL migration (project_members + payroll_entries columns) + Drizzle schema + assertProjectAccess utility
 - [x] 32-02-PLAN.md — Route refactor (all 6 files, 21 checks) + project_members INSERT on POST /projects + payrollService userId threading
-- [ ] 32-03-PLAN.md — Cross-tenant IDOR test suite + human verification checkpoint
+- [x] 32-03-PLAN.md — Cross-tenant IDOR test suite + human verification checkpoint
 
 
 
@@ -825,7 +825,7 @@ Plans:
 
 | 31. SSN Encryption Foundation | v3.0 | 3/3 | Complete    | 2026-03-28 |
 
-| 32. Multi-User Auth Foundation | v3.0 | 2/3 | In Progress|  |
+| 32. Multi-User Auth Foundation | v3.0 | 3/3 | Complete   | 2026-03-28 |
 
 | 33. Team Invite Flow + Team UI | v3.0 | 0/TBD | Not started | - |
 
