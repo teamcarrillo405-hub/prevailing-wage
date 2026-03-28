@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Team & Integration
-status: Roadmap created — Phase 31 next
-stopped_at: roadmap phase — ROADMAP.md written, STATE.md updated, REQUIREMENTS.md traceability updated
-last_updated: "2026-03-27T12:00:00.000Z"
+milestone: v2.5
+milestone_name: State Portal Integration
+status: Ready to execute
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-03-28T15:50:52.946Z"
 progress:
-  total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 27
+  completed_phases: 25
+  total_plans: 67
+  completed_plans: 67
 ---
 
 # State
@@ -19,14 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** v3.0 milestone — Team & Integration
+**Current focus:** Phase 31 — ssn-encryption-foundation
 
 ## Current Position
 
-Phase: 31 — SSN Encryption Foundation
-Plan: Not started
-
-[==========----------] 0% (0/6 phases)
+Phase: 31 (ssn-encryption-foundation) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -53,6 +51,7 @@ Key decisions locked for v3.0 scope:
 - SSN encryption: AES-256-GCM at rest using node:crypto; key versioning JSON envelope; decrypt only at CA eCPR / WA PWIA XML export; never in API responses or WH-347
 - New production dependency: nodemailer@8.0.4 for invite email (only new dep; multer + papaparse already installed)
 - Auth refactor: assertProjectAccess(projectId, userId, db) replaces all inline project.userId checks across 9 route files — must land in Phase 32 before any team data exists
+- [Phase 31]: AES-256-GCM cryptoService with versioned JSON envelope; ENCRYPTION_KEY_V1 env var as 64-char hex; ssnLast4 kept unchanged for WH-347 and compliance history
 
 ### Phase Order Rationale
 
@@ -78,7 +77,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27
-Stopped at: roadmap-phase — v3.0 ROADMAP.md written (Phases 31-36), STATE.md updated, REQUIREMENTS.md traceability updated
+Last session: 2026-03-28T15:50:52.943Z
+Stopped at: Completed 31-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`
