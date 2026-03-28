@@ -3,9 +3,10 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { projects, payrollEntries } from '../db/schema.js';
+import { payrollEntries } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import {
   createPayrollWeek,
   getPayrollWeek,
@@ -90,40 +91,20 @@ const AmendWeekSchema = z.object({
   originalWeekId: z.string().min(1),
 });
 
-// ── Helper: verify project ownership ──────────────────────────────────────
-
-async function assertProjectOwner(
-  projectId: string,
-  userId: string,
-  res: import('express').Response,
-): Promise<boolean> {
-  const db = getDb();
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return false;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
-    return false;
-  }
-  return true;
-}
-
 // ── Routes ────────────────────────────────────────────────────────────────
 
 // POST /api/payroll/weeks — create a new payroll week for a project
 router.post('/weeks', validate(CreateWeekSchema), async (req, res) => {
   const body = req.body as z.infer<typeof CreateWeekSchema>;
   const userId = req.user!.userId;
+  const db = getDb();
 
-  const ok = await assertProjectOwner(body.projectId, userId, res);
-  if (!ok) return;
+  try {
+    await assertProjectAccess(db, body.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const result = await createPayrollWeek(body);
   res.status(201).json(result);
@@ -141,8 +122,13 @@ router.post('/weeks/copy', validate(CopyWeekSchema), async (req, res) => {
     return;
   }
 
-  const ok = await assertProjectOwner(sourceWeek.projectId, userId, res);
-  if (!ok) return;
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, sourceWeek.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const result = await copyPayrollWeek({
     projectId: sourceWeek.projectId,
@@ -166,8 +152,13 @@ router.post('/weeks/amend', validate(AmendWeekSchema), async (req, res) => {
     return;
   }
 
-  const ok = await assertProjectOwner(originalWeek.projectId, userId, res);
-  if (!ok) return;
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, originalWeek.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   if (!originalWeek.submittedAt) {
     res.status(409).json({ error: 'Only submitted weeks can be amended' });
@@ -189,8 +180,13 @@ router.get('/weeks/:id', async (req, res) => {
     return;
   }
 
-  const ok = await assertProjectOwner(week.projectId, userId, res);
-  if (!ok) return;
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const entries = await getPayrollEntries(weekId);
   res.json({ week, entries });
@@ -200,9 +196,14 @@ router.get('/weeks/:id', async (req, res) => {
 router.get('/projects/:projectId/weeks', async (req, res) => {
   const projectId = req.params.projectId as string;
   const userId = req.user!.userId;
+  const db = getDb();
 
-  const ok = await assertProjectOwner(projectId, userId, res);
-  if (!ok) return;
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const weeks = await listPayrollWeeks(projectId);
   res.json({ weeks });
@@ -219,8 +220,13 @@ router.post('/entries', validate(UpsertEntrySchema), async (req, res) => {
     return;
   }
 
-  const ok = await assertProjectOwner(week.projectId, userId, res);
-  if (!ok) return;
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const { locked } = await assertWeekNotSubmitted(body.payrollWeekId);
   if (locked) {
@@ -228,7 +234,7 @@ router.post('/entries', validate(UpsertEntrySchema), async (req, res) => {
     return;
   }
 
-  const entry = await upsertPayrollEntry(body);
+  const entry = await upsertPayrollEntry({ ...body, userId });
   res.status(201).json({ id: entry?.id ?? null });
 });
 
@@ -238,15 +244,20 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
   const body = req.body as z.infer<typeof UpsertEntrySchema>;
   const userId = req.user!.userId;
 
-  // Verify the payroll week exists and user owns the project
+  // Verify the payroll week exists and user has access to the project
   const week = await getPayrollWeek(body.payrollWeekId);
   if (!week) {
     res.status(404).json({ error: 'Payroll week not found' });
     return;
   }
 
-  const ok = await assertProjectOwner(week.projectId, userId, res);
-  if (!ok) return;
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const { locked } = await assertWeekNotSubmitted(body.payrollWeekId);
   if (locked) {
@@ -254,7 +265,7 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
     return;
   }
 
-  const entry = await upsertPayrollEntry(body);
+  const entry = await upsertPayrollEntry({ ...body, userId });
 
   if (!entry) {
     // Fallback: fetch the entry via the payroll week id after upsert
@@ -283,8 +294,13 @@ router.patch('/weeks/:id/submit', validate(SubmitWeekSchema), async (req, res) =
     return;
   }
 
-  const ok = await assertProjectOwner(week.projectId, userId, res);
-  if (!ok) return;
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   await updateWeekSubmission(weekId, body.submittedAt, body.submittedTo);
   res.status(200).json({ message: 'Week marked as submitted' });
@@ -301,8 +317,13 @@ router.delete('/weeks/:id/submit', async (req, res) => {
     return;
   }
 
-  const ok = await assertProjectOwner(week.projectId, userId, res);
-  if (!ok) return;
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   await clearWeekSubmission(weekId);
   res.status(200).json({ message: 'Week submission cleared' });

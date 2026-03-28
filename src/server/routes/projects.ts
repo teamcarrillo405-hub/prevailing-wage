@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { projects } from '../db/schema.js';
+import { projects, projectMembers } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import type { Project } from '../utils/assertProjectAccess.js';
 
 const router = Router();
 
@@ -68,6 +70,15 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
     updatedAt: now,
   });
 
+  // Insert owner membership row so assertProjectAccess works for the new project
+  await db.insert(projectMembers).values({
+    id: randomUUID(),
+    projectId: id,
+    userId,
+    role: 'owner',
+    joinedAt: now,
+  });
+
   const [project] = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
   res.status(201).json({ data: { project } });
 });
@@ -99,19 +110,11 @@ router.get('/:id', async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
 
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, req.params.id))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, req.params.id, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -136,19 +139,10 @@ router.patch('/:id', async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
 
-  const [existing] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, req.params.id))
-    .limit(1);
-
-  if (!existing) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-
-  if (existing.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  try {
+    await assertProjectAccess(db, req.params.id, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -158,7 +152,7 @@ router.patch('/:id', async (req, res) => {
   await db
     .update(projects)
     .set({ ...updates, updatedAt: now })
-    .where(and(eq(projects.id, req.params.id), eq(projects.userId, userId)));
+    .where(eq(projects.id, req.params.id));
 
   const [updated] = await db.select().from(projects).where(eq(projects.id, req.params.id)).limit(1);
   res.json({ data: { project: updated } });
@@ -169,19 +163,10 @@ router.delete('/:id', async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
 
-  const [existing] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, req.params.id))
-    .limit(1);
-
-  if (!existing) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-
-  if (existing.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  try {
+    await assertProjectAccess(db, req.params.id, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -189,7 +174,7 @@ router.delete('/:id', async (req, res) => {
   await db
     .update(projects)
     .set({ status: 'closed', updatedAt: now })
-    .where(and(eq(projects.id, req.params.id), eq(projects.userId, userId)));
+    .where(eq(projects.id, req.params.id));
 
   res.json({ data: { message: 'Project closed' } });
 });
