@@ -624,7 +624,12 @@ Plans:
 
   5. Existing workers with `ssn_last4` values are migrated so their last-4 digits are preserved in the encrypted SSN field; workers with no SSN on file display a "SSN not on file" indicator
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 31-01-PLAN.md — cryptoService (AES-256-GCM) + migration + backfill script
+- [ ] 31-02-PLAN.md — Worker routes (encrypt on write, strip responses) + WorkersPage SSN input/display
+- [ ] 31-03-PLAN.md — CA eCPR + WA PWIA XML generators decrypt real SSN
 
 **UI hint**: yes
 
