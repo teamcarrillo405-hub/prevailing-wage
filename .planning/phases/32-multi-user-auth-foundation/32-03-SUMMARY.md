@@ -48,7 +48,7 @@ completed: 2026-03-28
 - **Duration:** ~5 min
 - **Started:** 2026-03-28T19:53:00Z
 - **Completed:** 2026-03-28T19:58:22Z
-- **Tasks:** 1 completed, 1 pending human checkpoint
+- **Tasks:** 2/2 completed (human-verify approved 2026-03-28)
 - **Files created:** 1
 
 ## Accomplishments
@@ -105,11 +105,9 @@ Tests: 11 passed (11)
 
 ## Checkpoint State
 
-**Plan 32-03 is paused at Task 32-03-02 (checkpoint:human-verify).**
+**Plan 32-03 COMPLETE — human-verify checkpoint approved 2026-03-28.**
 
-Task 1 is complete and committed. Task 2 requires human verification that the cross-tenant protection works end-to-end in a running server.
-
-See the checkpoint return message for verification steps.
+Task 1 (cross-tenant test suite, 11 assertions) committed at `c114df3`. Task 2 (human verification) approved by operator: server started, cross-tenant 403 confirmed, project_members row confirmed in SQLite.
 
 ## Known Stubs
 
@@ -124,4 +122,4 @@ None — the test file is fully wired and all 11 assertions pass.
 
 ---
 *Phase: 32-multi-user-auth-foundation*
-*Completed: 2026-03-28 (pending human checkpoint)*
+*Completed: 2026-03-28*
