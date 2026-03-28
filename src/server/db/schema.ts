@@ -46,6 +46,16 @@ export const projects = sqliteTable('projects', {
   updatedAt: text('updated_at').notNull(),
 });
 
+export const projectMembers = sqliteTable('project_members', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id),
+  role: text('role').notNull().$type<'owner' | 'member'>(),
+  joinedAt: text('joined_at').notNull(),
+}, (table) => ({
+  projectMemberUnique: uniqueIndex('project_member_unique').on(table.projectId, table.userId),
+}));
+
 export const workers = sqliteTable('workers', {
   id: text('id').primaryKey(),
   projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
@@ -183,6 +193,9 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   fringePension: real('fringe_pension'),
   fringeVacation: real('fringe_vacation'),
   fringeTraining: real('fringe_training'),
+  // Phase 32 — user attribution (nullable for all existing rows per D-09)
+  createdByUserId: text('created_by_user_id').references(() => users.id),
+  updatedByUserId: text('updated_by_user_id').references(() => users.id),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, (table) => ({
