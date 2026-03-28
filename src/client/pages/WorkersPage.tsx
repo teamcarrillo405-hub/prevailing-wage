@@ -42,6 +42,7 @@ interface Worker {
   id: string;
   name: string;
   ssnLast4: string | null;
+  hasFullSsn: boolean;
   tradeUnion: string | null;
   address: string | null;
   classifications: Classification[];
@@ -66,7 +67,7 @@ interface ProjectInfo {
 function blankWorkerForm() {
   return {
     name: '',
-    ssnLast4: '',
+    ssn: '',
     tradeUnion: '',
     address: '',
     tradeCode: '',
@@ -82,7 +83,7 @@ function blankWorkerForm() {
 function workerToEditForm(w: Worker) {
   return {
     name: w.name,
-    ssnLast4: w.ssnLast4 ?? '',
+    ssn: '',  // Never pre-populate SSN — it is encrypted server-side; client never has the raw value
     tradeUnion: w.tradeUnion ?? '',
     address: w.address ?? '',
   };
@@ -98,7 +99,7 @@ export function WorkersPage() {
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', ssnLast4: '', tradeUnion: '', address: '' });
+  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', address: '' });
   const [editError, setEditError] = useState('');
 
   // Add-extra-classification state
@@ -143,7 +144,7 @@ export function WorkersPage() {
     mutationFn: async (f: typeof form) => {
       const workerRes = await api.post<{ data: { worker: Worker } }>(`/projects/${projectId}/workers`, {
         name: f.name.trim(),
-        ...(f.ssnLast4 ? { ssnLast4: f.ssnLast4 } : {}),
+        ...(f.ssn ? { ssn: f.ssn } : {}),
         ...(f.tradeUnion.trim() ? { tradeUnion: f.tradeUnion.trim() } : {}),
         ...(f.address.trim() ? { address: f.address.trim() } : {}),
       });
@@ -176,7 +177,7 @@ export function WorkersPage() {
     mutationFn: ({ id, data }: { id: string; data: typeof editForm }) =>
       api.put<{ data: { worker: Worker } }>(`/projects/${projectId}/workers/${id}`, {
         name: data.name.trim(),
-        ssnLast4: data.ssnLast4 || null,
+        ...(data.ssn ? { ssn: data.ssn } : {}),
         tradeUnion: data.tradeUnion.trim() || null,
         address: data.address.trim() || null,
       }),
@@ -229,7 +230,8 @@ export function WorkersPage() {
   function handleSubmit() {
     setFormError('');
     if (!form.name.trim()) { setFormError('Worker name is required'); return; }
-    if (form.ssnLast4 && form.ssnLast4.length !== 4) { setFormError('SSN last 4 must be exactly 4 digits'); return; }
+    if (form.ssn && !/^\d+$/.test(form.ssn)) { setFormError('SSN must contain only digits.'); return; }
+    if (form.ssn && form.ssn.length !== 9) { setFormError('SSN must be exactly 9 digits.'); return; }
     if (!isWA && form.tradeCode && !selectedTrade) { setFormError('Select a valid trade from the list'); return; }
     if (form.laborType === 'apprentice' && !form.apprenticePercent) { setFormError('Apprentice % is required'); return; }
     addWorker.mutate(form);
@@ -238,7 +240,8 @@ export function WorkersPage() {
   function handleEditSave(workerId: string) {
     setEditError('');
     if (!editForm.name.trim()) { setEditError('Name is required'); return; }
-    if (editForm.ssnLast4 && editForm.ssnLast4.length !== 4) { setEditError('SSN last 4 must be exactly 4 digits'); return; }
+    if (editForm.ssn && !/^\d+$/.test(editForm.ssn)) { setEditError('SSN must contain only digits.'); return; }
+    if (editForm.ssn && editForm.ssn.length !== 9) { setEditError('SSN must be exactly 9 digits.'); return; }
     updateWorker.mutate({ id: workerId, data: editForm });
   }
 
@@ -326,12 +329,23 @@ export function WorkersPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">SSN Last 4</label>
-                        <input type="text" maxLength={4} value={editForm.ssnLast4}
-                          onChange={e => setEditForm(p => ({ ...p, ssnLast4: e.target.value.replace(/\D/g, '') }))}
-                          placeholder="optional"
-                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                        <label className="block text-xs text-gray-600 mb-1">Social Security Number</label>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={9}
+                          autoComplete="off"
+                          value={editForm.ssn}
+                          onChange={e => setEditForm(p => ({ ...p, ssn: e.target.value.replace(/\D/g, '') }))}
+                          placeholder="123456789"
+                          className="w-full rounded border border-gray-200 px-3 py-2 text-sm bg-surface-muted focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
+                        <p className="text-xs text-text-secondary mt-1">Enter 9-digit SSN to update. Leave blank to keep current value.</p>
+                        {w.ssnLast4 && !w.hasFullSsn && (
+                          <div className="mt-2">
+                            <Badge variant="neutral">Full SSN not on file</Badge>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">Trade Union</label>
@@ -604,11 +618,16 @@ export function WorkersPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">SSN Last 4 (optional)</label>
-                <input type="text" maxLength={4} value={form.ssnLast4}
-                  onChange={e => setForm(p => ({ ...p, ssnLast4: e.target.value.replace(/\D/g, '') }))}
-                  placeholder="e.g. 4321"
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                <label className="block text-xs text-gray-600 mb-1">Social Security Number (optional)</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={9}
+                  autoComplete="off"
+                  value={form.ssn}
+                  onChange={e => setForm(p => ({ ...p, ssn: e.target.value.replace(/\D/g, '') }))}
+                  placeholder="123456789"
+                  className="w-full rounded border border-gray-200 px-3 py-2 text-sm bg-surface-muted focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
               </div>
               <div>
