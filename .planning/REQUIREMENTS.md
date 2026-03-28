@@ -33,7 +33,7 @@
 
 - [x] **SEC-01**: System collects and stores full SSNs (9 digits) for workers, encrypted at rest with AES-256; existing `ssn_last4` plain-text values are encrypted in the migration
 - [ ] **SEC-02**: Full SSN used exclusively for CA eCPR XML pre-fill and WA L&I PWIA portal pre-fill; CA eCPR XML generator updated to write real SSN replacing the v2.5 placeholder; never written to WH-347 PDFs or included in CSV exports
-- [ ] **SEC-03**: SSN is masked in all UI views (e.g., `***-**-1234`); full value only decrypted server-side at export time
+- [x] **SEC-03**: SSN is masked in all UI views (e.g., `***-**-1234`); full value only decrypted server-side at export time
 
 ---
 
@@ -90,7 +90,7 @@
 | AS-02 | Phase 34 | Pending |
 | SEC-01 | Phase 31 | Complete |
 | SEC-02 | Phase 31 | Pending |
-| SEC-03 | Phase 31 | Pending |
+| SEC-03 | Phase 31 | Complete |
 | CAE-01 | Phase 29 | Complete |
 | CAE-02 | Phase 29 | Complete |
 | CAE-03 | Phase 29 | Complete |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-03-28T15:50:52.946Z"
+stopped_at: Completed 31-02-PLAN.md
+last_updated: "2026-03-28T15:57:52.742Z"
 progress:
   total_phases: 27
   completed_phases: 25
   total_plans: 67
-  completed_plans: 67
+  completed_plans: 68
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 31 (ssn-encryption-foundation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Key decisions locked for v3.0 scope:
 - New production dependency: nodemailer@8.0.4 for invite email (only new dep; multer + papaparse already installed)
 - Auth refactor: assertProjectAccess(projectId, userId, db) replaces all inline project.userId checks across 9 route files — must land in Phase 32 before any team data exists
 - [Phase 31]: AES-256-GCM cryptoService with versioned JSON envelope; ENCRYPTION_KEY_V1 env var as 64-char hex; ssnLast4 kept unchanged for WH-347 and compliance history
+- [Phase 31]: encryptSsn envelope includes len field — hasFullSsn derivable without decrypting (avoids D-15 decrypt-in-list-route violation)
 
 ### Phase Order Rationale
 
@@ -77,7 +78,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-28T15:50:52.943Z
-Stopped at: Completed 31-01-PLAN.md
+Last session: 2026-03-28T15:57:52.739Z
+Stopped at: Completed 31-02-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`

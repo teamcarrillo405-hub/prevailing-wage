@@ -628,7 +628,7 @@ Plans:
 
 Plans:
 - [x] 31-01-PLAN.md — cryptoService (AES-256-GCM) + migration + backfill script
-- [ ] 31-02-PLAN.md — Worker routes (encrypt on write, strip responses) + WorkersPage SSN input/display
+- [x] 31-02-PLAN.md — Worker routes (encrypt on write, strip responses) + WorkersPage SSN input/display
 - [ ] 31-03-PLAN.md — CA eCPR + WA PWIA XML generators decrypt real SSN
 
 **UI hint**: yes
@@ -817,7 +817,7 @@ Plans:
 
 | 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete | 2026-03-27 |
 
-| 31. SSN Encryption Foundation | v3.0 | 1/3 | In Progress|  |
+| 31. SSN Encryption Foundation | v3.0 | 2/3 | In Progress|  |
 
 | 32. Multi-User Auth Foundation | v3.0 | 0/TBD | Not started | - |
 
