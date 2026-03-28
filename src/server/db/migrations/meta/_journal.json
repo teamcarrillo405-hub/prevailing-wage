@@ -92,6 +92,13 @@
       "when": 1774950000000,
       "tag": "0016_workers_ssn_encrypted",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1774960000000,
+      "tag": "0017_project_members",
+      "breakpoints": true
     }
   ]
 }
