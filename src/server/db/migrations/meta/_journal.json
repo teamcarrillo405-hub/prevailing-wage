@@ -85,6 +85,13 @@
       "when": 1774900100000,
       "tag": "0015_wa_pwia_intent_id",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1774950000000,
+      "tag": "0016_workers_ssn_encrypted",
+      "breakpoints": true
     }
   ]
 }

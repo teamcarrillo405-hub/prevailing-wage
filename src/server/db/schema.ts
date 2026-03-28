@@ -51,6 +51,7 @@ export const workers = sqliteTable('workers', {
   projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   ssnLast4: text('ssn_last4'),
+  ssnEncrypted: text('ssn_encrypted'),
   tradeUnion: text('trade_union'),
   address: text('address'),   // street, city, state zip — required for WH-347
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
