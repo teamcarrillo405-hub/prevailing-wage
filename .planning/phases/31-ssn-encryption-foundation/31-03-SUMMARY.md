@@ -52,7 +52,7 @@ completed: 2026-03-28
 - **Duration:** ~12 min
 - **Started:** 2026-03-28T09:00:00Z
 - **Completed:** 2026-03-28T09:12:00Z
-- **Tasks:** 1 auto (Task 1 complete) + 1 checkpoint (Task 2 awaiting human verification)
+- **Tasks:** 2/2 complete (Task 1 auto + Task 2 checkpoint:human-verify approved)
 - **Files modified:** 3
 
 ## Accomplishments
@@ -68,6 +68,7 @@ completed: 2026-03-28
 ## Task Commits
 
 1. **Task 1: eCPR test stubs + payrollService extension + export.ts decrypt integration** — `84f01e4` (feat, TDD green)
+2. **Task 2: checkpoint:human-verify** — approved by user (end-to-end pipeline verified)
 
 ## Files Created/Modified
 
@@ -114,6 +115,6 @@ None — CA eCPR and WA PWIA XML generators now use real decrypted SSNs. Workers
 - `grep decryptSsn src/server/routes/workers.ts` — NOT found (D-15 compliant)
 - Commit `84f01e4` present in git log
 
-## Checkpoint Pending
+## Checkpoint Result
 
-Task 2 is a `checkpoint:human-verify` gate — awaiting user verification of the complete SSN encryption pipeline end-to-end.
+Task 2 (`checkpoint:human-verify`) — **approved by user**. Complete SSN encryption pipeline verified end-to-end: server startup assertion, worker SSN entry/masking, masked display, DevTools confirmation of no ssnEncrypted in API response, CA eCPR XML contains real 9-digit SSN.
