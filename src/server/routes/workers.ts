@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { projects, workers, workerClassifications } from '../db/schema.js';
+import { workers, workerClassifications } from '../db/schema.js';
 import { getCachedWd, getCachedClassifications } from '../services/wageCache.js';
 import { lookupWageDetermination } from '../services/wageLookup.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { encryptSsn } from '../services/cryptoService.js';
+import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import type { Project } from '../utils/assertProjectAccess.js';
 
 const router = Router();
 
@@ -51,9 +53,13 @@ router.get('/:projectId/wage-classifications', async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
 
-  const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
-  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
-  if (project.userId !== userId) { res.status(403).json({ error: 'Access denied' }); return; }
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   // Try cache first, then auto-fetch from SAM.gov using the project's own state + county
   let wd = getCachedWd(project.state, project.county);
@@ -79,19 +85,11 @@ router.get('/:projectId/workers', async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
 
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -144,20 +142,11 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
   const userId = req.user!.userId;
   const db = getDb();
 
-  // Verify user owns the project
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  // Verify user has access to the project
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -192,9 +181,12 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
   const userId = req.user!.userId;
   const db = getDb();
 
-  const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
-  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
-  if (project.userId !== userId) { res.status(403).json({ error: 'Access denied' }); return; }
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const [worker] = await db.select().from(workers).where(eq(workers.id, workerId)).limit(1);
   if (!worker || worker.projectId !== projectId) { res.status(404).json({ error: 'Worker not found' }); return; }
@@ -230,9 +222,12 @@ router.delete('/:projectId/workers/:workerId', async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
 
-  const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
-  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
-  if (project.userId !== userId) { res.status(403).json({ error: 'Access denied' }); return; }
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const [worker] = await db.select().from(workers).where(eq(workers.id, workerId)).limit(1);
   if (!worker || worker.projectId !== projectId) { res.status(404).json({ error: 'Worker not found' }); return; }
@@ -247,9 +242,12 @@ router.delete('/:projectId/workers/:workerId/classifications/:classificationId',
   const userId = req.user!.userId;
   const db = getDb();
 
-  const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
-  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
-  if (project.userId !== userId) { res.status(403).json({ error: 'Access denied' }); return; }
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   const [cls] = await db.select().from(workerClassifications)
     .where(and(eq(workerClassifications.id, classificationId), eq(workerClassifications.workerId, workerId)))
@@ -267,20 +265,11 @@ router.post('/:projectId/workers/:workerId/classifications', validate(CreateClas
   const userId = req.user!.userId;
   const db = getDb();
 
-  // Verify user owns the project
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  // Verify user has access to the project
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 

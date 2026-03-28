@@ -12,6 +12,7 @@ import { getDb } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { computeCompliance, getWorkerComplianceHistory, getBatchProjectCompliance } from '../services/complianceService.js';
 import { listPayrollWeeks } from '../services/payrollService.js';
+import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 
 export const complianceRouter = Router();
 
@@ -24,10 +25,12 @@ complianceRouter.get('/project/:projectId', requireAuth, async (req, res) => {
   const db = getDb();
 
   // Ownership check first
-  const [project] = await db.select().from(schema.projects)
-    .where(eq(schema.projects.id, projectId)).limit(1);
-  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
-  if (project.userId !== userId) { res.status(403).json({ error: 'Access denied' }); return; }
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   // Aggregate compliance across all weeks
   const weeks = await listPayrollWeeks(projectId);
@@ -153,19 +156,11 @@ complianceRouter.get('/:weekId', requireAuth, async (req, res) => {
     return;
   }
 
-  // Ownership check: load project and verify userId matches
-  const [project] = await db
-    .select()
-    .from(schema.projects)
-    .where(eq(schema.projects.id, result.projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  // Ownership check: verify user is a member of the project
+  try {
+    await assertProjectAccess(db, result.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 

@@ -9,12 +9,12 @@
 // Multi-sub support (separate contractor identity) is a v2 scope item.
 
 import { Router } from 'express';
-import { eq } from 'drizzle-orm';
 import path from 'path';
 import { readFileSync } from 'fs';
 import { getDb } from '../db/index.js';
-import { projects } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
+import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import type { Project } from '../utils/assertProjectAccess.js';
 import {
   getPayrollWeek,
   getPayrollEntries,
@@ -127,20 +127,13 @@ router.get('/wh347/:weekId', async (req, res) => {
     return;
   }
 
-  // 2. Verify project ownership
+  // 2. Verify project access
   const db = getDb();
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, week.projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -250,20 +243,13 @@ router.get('/a1131/:weekId', async (req, res) => {
     return;
   }
 
-  // 2. Verify project ownership
+  // 2. Verify project access
   const db = getDb();
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, week.projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -367,20 +353,13 @@ router.get('/f700/:weekId', async (req, res) => {
     return;
   }
 
-  // 2. Verify project ownership
+  // 2. Verify project access
   const db = getDb();
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, week.projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -474,18 +453,11 @@ router.get('/csv/lcptracker/:weekId', async (req, res) => {
   }
 
   const db = getDb();
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, week.projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -514,18 +486,11 @@ router.get('/csv/emars/:weekId', async (req, res) => {
   }
 
   const db = getDb();
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, week.projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -556,20 +521,13 @@ router.get('/ecpr-xml/:weekId', async (req, res) => {
     return;
   }
 
-  // 2. Verify project ownership
+  // 2. Verify project access
   const db = getDb();
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, week.projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
@@ -729,20 +687,13 @@ router.get('/wa-cpr-xml/:weekId', async (req, res) => {
     return;
   }
 
-  // 2. Verify project ownership
+  // 2. Verify project access
   const db = getDb();
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, week.projectId))
-    .limit(1);
-
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-  if (project.userId !== userId) {
-    res.status(403).json({ error: 'Access denied' });
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
   }
 
