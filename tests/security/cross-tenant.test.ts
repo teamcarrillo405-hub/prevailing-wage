@@ -35,6 +35,17 @@ async function createPayrollWeek(cookie: string, projectId: string): Promise<str
   return res.body.id as string;
 }
 
+async function createWorker(cookie: string, projectId: string, name: string): Promise<string> {
+  const res = await supertest(app)
+    .post(`/api/projects/${projectId}/workers`)
+    .set('Cookie', cookie)
+    .send({
+      name,
+      address: '123 Main St, Los Angeles, CA 90001',
+    });
+  return res.body.data?.worker?.id as string;
+}
+
 // ── Setup ──────────────────────────────────────────────────────────────────
 
 describe('Cross-tenant IDOR protection', () => {
@@ -43,6 +54,7 @@ describe('Cross-tenant IDOR protection', () => {
   let projectIdA: string;
   let projectIdB: string;
   let weekIdA: string;
+  let workerIdA: string;
 
   beforeAll(async () => {
     process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
@@ -57,6 +69,9 @@ describe('Cross-tenant IDOR protection', () => {
 
     // Create a payroll week under userA's project (for export.ts route test)
     weekIdA = await createPayrollWeek(cookieA, projectIdA);
+
+    // Create a worker under userA's project (for compliance worker history route test)
+    workerIdA = await createWorker(cookieA, projectIdA, 'Alice Worker');
   });
 
   // ── projects.ts (3 routes) ─────────────────────────────────────────────
@@ -116,6 +131,15 @@ describe('Cross-tenant IDOR protection', () => {
   it('GET /api/compliance/project/:projectId — userB gets 403 on userA project', async () => {
     const res = await supertest(app)
       .get(`/api/compliance/project/${projectIdA}`)
+      .set('Cookie', cookieB);
+    expect(res.status).toBe(403);
+  });
+
+  // ── compliance.ts — worker history route ──────────────────────────────
+
+  it('GET /api/compliance/worker/:workerId/history — userB gets 403 on userA worker', async () => {
+    const res = await supertest(app)
+      .get(`/api/compliance/worker/${workerIdA}/history`)
       .set('Cookie', cookieB);
     expect(res.status).toBe(403);
   });
