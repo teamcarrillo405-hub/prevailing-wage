@@ -825,7 +825,7 @@ Plans:
 
 | 31. SSN Encryption Foundation | v3.0 | 3/3 | Complete    | 2026-03-28 |
 
-| 32. Multi-User Auth Foundation | v3.0 | 4/4 | Complete   | 2026-03-29 |
+| 32. Multi-User Auth Foundation | v3.0 | 4/4 | Complete    | 2026-03-29 |
 
 | 33. Team Invite Flow + Team UI | v3.0 | 0/TBD | Not started | - |
 
