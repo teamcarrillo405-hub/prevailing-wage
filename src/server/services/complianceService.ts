@@ -160,10 +160,13 @@ export async function getBatchProjectCompliance(
   db: BetterSQLite3Database<typeof schema>,
   userId: string,
 ): Promise<Map<string, 'archived' | 'violations' | 'compliant' | 'no-payroll'>> {
-  const allProjects = await db
-    .select()
-    .from(schema.projects)
-    .where(eq(schema.projects.userId, userId));
+  const membershipRows = await db
+    .select({ project: schema.projects })
+    .from(schema.projectMembers)
+    .innerJoin(schema.projects, eq(schema.projectMembers.projectId, schema.projects.id))
+    .where(eq(schema.projectMembers.userId, userId));
+
+  const allProjects = membershipRows.map(r => r.project);
 
   const result = new Map<string, 'archived' | 'violations' | 'compliant' | 'no-payroll'>();
 
@@ -242,20 +245,29 @@ export async function getWorkerComplianceHistory(
     return { error: 'not_found' };
   }
 
-  // 2. Load source worker's project and verify ownership
-  const [sourceProject] = await db
-    .select()
-    .from(schema.projects)
-    .where(eq(schema.projects.id, sourceWorker.projectId))
+  // 2. Load source worker's project via membership check
+  const [membershipRow] = await db
+    .select({ project: schema.projects })
+    .from(schema.projectMembers)
+    .innerJoin(schema.projects, eq(schema.projectMembers.projectId, schema.projects.id))
+    .where(
+      and(
+        eq(schema.projectMembers.projectId, sourceWorker.projectId),
+        eq(schema.projectMembers.userId, userId),
+      ),
+    )
     .limit(1);
 
-  if (!sourceProject) {
-    return { error: 'not_found' };
+  if (!membershipRow) {
+    // Distinguish 404 from 403: check if project exists at all
+    const [projectExists] = await db
+      .select({ id: schema.projects.id })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, sourceWorker.projectId))
+      .limit(1);
+    return projectExists ? { error: 'forbidden' } : { error: 'not_found' };
   }
-
-  if (sourceProject.userId !== userId) {
-    return { error: 'forbidden' };
-  }
+  const sourceProject = membershipRow.project;
 
   // 3. ssnLast4 safety: if null, only search within the source project
   let projectsInScope: typeof sourceProject[];
@@ -263,11 +275,13 @@ export async function getWorkerComplianceHistory(
     // No cross-project merge for workers without SSN — too risky of false matches
     projectsInScope = [sourceProject];
   } else {
-    // Search across all user's projects
-    projectsInScope = await db
-      .select()
-      .from(schema.projects)
-      .where(eq(schema.projects.userId, userId));
+    // Search across all projects the user is a member of
+    const scopeRows = await db
+      .select({ project: schema.projects })
+      .from(schema.projectMembers)
+      .innerJoin(schema.projects, eq(schema.projectMembers.projectId, schema.projects.id))
+      .where(eq(schema.projectMembers.userId, userId));
+    projectsInScope = scopeRows.map(r => r.project);
   }
 
   // 4. For each project, find workers matching (name, ssnLast4) exactly
