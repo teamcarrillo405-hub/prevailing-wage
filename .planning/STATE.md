@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 32-03-PLAN.md — Phase 32 multi-user-auth-foundation DONE
-last_updated: "2026-03-28T20:28:20.796Z"
+stopped_at: Completed 32-04-PLAN.md — gap closure plan, phase 32 ready for verification
+last_updated: "2026-03-29T19:04:25.667Z"
 progress:
   total_phases: 28
   completed_phases: 27
-  total_plans: 70
-  completed_plans: 72
+  total_plans: 71
+  completed_plans: 73
 ---
 
 # State
@@ -60,6 +60,7 @@ Key decisions locked for v3.0 scope:
 - [Phase 32-02]: amendPayrollWeek copies use null for createdByUserId/updatedByUserId (system-generated clones, not direct user edits)
 - [Phase 32]: workers.ts routes mounted at /api/projects (not /api/workers) — cross-tenant test corrected to use actual mount path
 - [Phase 32-multi-user-auth-foundation]: workers.ts routes mounted at /api/projects (not /api/workers) — cross-tenant test corrected to use actual mount path
+- [Phase 32]: Inline projectMembers join in service functions rather than calling assertProjectAccess (which expects req-style callers — services receive db directly)
 
 ### Phase Order Rationale
 
@@ -85,7 +86,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-28T20:28:20.792Z
-Stopped at: Completed 32-03-PLAN.md — Phase 32 multi-user-auth-foundation DONE
+Last session: 2026-03-29T19:04:25.664Z
+Stopped at: Completed 32-04-PLAN.md — gap closure plan, phase 32 ready for verification
 Resume file: None
 Next action: `/gsd:plan-phase 31`
