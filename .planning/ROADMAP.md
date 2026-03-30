@@ -740,7 +740,13 @@ Plans:
 
   5. After confirmation, committed import entries are written with `createdByUserId` set to the importing user — distinguishable from manually-entered entries in the `payroll_imports` audit table
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+
+- [ ] 35-01-PLAN.md — Migration + schema + shared types + QB mapper + ADP mapper + importService + unit tests
+
+- [ ] 35-02-PLAN.md — Import router (preview + commit routes) + mount in index.ts + integration tests
 
 
 
