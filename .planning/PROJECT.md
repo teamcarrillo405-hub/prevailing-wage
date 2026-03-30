@@ -114,11 +114,14 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ Operational: Render.com deployment, SQLite on persistent disk (/var/data), invite-only registration, Express static serving for React SPA — v2.4 Phase 28
 - ✓ CA eCPR XML export: fringe disaggregation (4 sub-columns), pre-generation modal, post-download portal checklist, amendment marker — v2.5 Phase 29
 - ✓ WA PWIA submission assist: CPR XML export gated on intentId + trade codes, WAL-04 submission guide panel (Intent to Pay + Affidavit of Wages Paid) — v2.5 Phase 30
+- ✓ SSN encryption: AES-256-GCM at rest, versioned envelope, full 9-digit SSN input, masked display, hasFullSsn badge — v3.0 Phase 31
+- ✓ Multi-user foundation: project_members join table, assertProjectAccess utility, all 21 ownership checks centralized, cross-tenant IDOR protection — v3.0 Phase 32
+- ✓ Team invite flow + UI: email invite (Resend SDK / console fallback), tokenized /accept-invite page, TeamPage at /team, soft-delete member removal, ownership transfer — v3.0 Phase 33
 
 ### Out of Scope
 
 - Mobile native app — web-first; browser on tablet is sufficient
-- Multi-user / team accounts — single contractor user per account
+- ~~Multi-user / team accounts — single contractor user per account~~ (Shipped v3.0 Phase 31-33)
 - Payroll provider integrations (QuickBooks, ADP) — manual entry is intentional for compliance audit trail
 - State-specific prevailing wage forms (CA DIR, WA L&I) — federal WH-347 only
 - Missing-data hard block on WH-347 submission — warning only (UX-03); hard block deferred
@@ -168,7 +171,7 @@ A contractor can run a full project end-to-end — create project → add worker
 | Browser print CSS for reports | `overflow: visible !important` on `.overflow-x-auto` required for `thead { display: table-header-group }` to work in print | ✓ Good — v2.2 |
 | useRef for double-click guard | `useState` setter is async/batched — second click fires before re-render; `useRef.current` is synchronous | ✓ Good — v2.2 |
 | weekViolations[] separate from violations[] | COMP-03 is per-week aggregate; existing per-entry violations consumers would break if shape changed | ✓ Good — v2.2 |
-| Single user per account | Simplicity for v1/v2; multi-user is a future milestone | — Pending |
+| Single user per account | Simplicity for v1/v2; multi-user is a future milestone | ✓ Superseded — team accounts shipped v3.0 Phase 31-33 |
 | copyPayrollWeek() re-fetches live rates | Federal compliance: stale snapshots produce invalid certified payroll | ✓ Good — v2.3 |
 | amendPayrollWeek() clones snapshots | 29 CFR Part 3: rates fixed at submission time; amendment must use same rates | ✓ Good — v2.3 |
 | Amendment always resolves to root week | rootWeekId = source.originalWeekId ?? source.id — prevents chained amendment numbering | ✓ Good — v2.3 |
@@ -177,4 +180,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-28 — Phase 31 complete (SSN Encryption Foundation — SEC-01, SEC-02, SEC-03 validated)*
+*Last updated: 2026-03-30 — Phase 33 complete (Team Invite Flow + Team UI — MT-01, MT-02, MT-04, MT-05 retention shipped)
