@@ -18,6 +18,7 @@ import { unionRouter } from './routes/union.js';
 import { varianceRouter } from './routes/variance.js';
 import { complianceRouter } from './routes/compliance.js';
 import { reportsRouter } from './routes/reports.js';
+import { teamRouter } from './routes/team.js';
 import { runWageSync } from './services/wdolSync.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
@@ -45,6 +46,7 @@ app.use('/api/union', unionRouter);
 app.use('/api/variance', varianceRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/team', teamRouter);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {

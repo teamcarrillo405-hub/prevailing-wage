@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { users } from '../db/schema.js';
+import { users, projectMembers, teamInvites } from '../db/schema.js';
 import { hashPassword, verifyPassword, createSessionToken } from '../services/auth.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { validateToken } from '../services/inviteService.js';
 
 const authRouter = Router();
 
@@ -91,6 +92,83 @@ authRouter.post('/login', validate(LoginSchema), async (req, res) => {
 authRouter.post('/logout', (_req, res) => {
   res.clearCookie(COOKIE_NAME, { path: '/' });
   res.status(200).json({ data: { message: 'Logged out' } });
+});
+
+const AcceptInviteSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(128),
+});
+
+// POST /api/auth/accept-invite
+authRouter.post('/accept-invite', validate(AcceptInviteSchema), async (req, res) => {
+  const { token, password } = req.body as z.infer<typeof AcceptInviteSchema>;
+  const result = await validateToken(token);
+
+  if (result.status === 'not_found') {
+    res.status(404).json({ error: 'Invite not found' });
+    return;
+  }
+  if (result.status !== 'valid') {
+    res.status(410).json({ error: 'Invite link has expired or has already been used' });
+    return;
+  }
+
+  const invite = result.invite!;
+  const db = getDb();
+
+  // Check if email already registered
+  const [existingUser] = await db.select().from(users).where(eq(users.email, invite.inviteeEmail)).limit(1);
+  if (existingUser) {
+    res.status(409).json({ error: 'Email already registered' });
+    return;
+  }
+
+  const passwordHash = await hashPassword(password);
+  const now = new Date().toISOString();
+  const newUserId = randomUUID();
+
+  // Create user
+  await db.insert(users).values({
+    id: newUserId,
+    email: invite.inviteeEmail,
+    passwordHash,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Insert project_members for ALL inviter's projects (D-10 critical)
+  const inviterProjects = await db
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(
+      and(
+        eq(projectMembers.userId, invite.inviterUserId),
+        isNull(projectMembers.removedAt),
+      ),
+    );
+
+  if (inviterProjects.length > 0) {
+    await db.insert(projectMembers).values(
+      inviterProjects.map((p: { projectId: string }) => ({
+        id: randomUUID(),
+        projectId: p.projectId,
+        userId: newUserId,
+        role: 'member' as const,
+        joinedAt: now,
+      }))
+    );
+  }
+
+  // Mark invite as accepted
+  await db
+    .update(teamInvites)
+    .set({ acceptedAt: now })
+    .where(eq(teamInvites.id, invite.id));
+
+  // Create session and log in
+  const sessionToken = await createSessionToken({ userId: newUserId, email: invite.inviteeEmail });
+  res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
+  res.status(201).json({ data: { user: { id: newUserId, email: invite.inviteeEmail } } });
 });
 
 // GET /api/auth/me
