@@ -188,7 +188,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 32: Multi-User Auth Foundation** - project_members schema + assertProjectAccess refactor across 9 route files, cross-tenant test suite, createdByUserId/updatedByUserId on payroll_entries (MT-03) (completed 2026-03-28)
 
-- [ ] **Phase 33: Team Invite Flow + Team UI** - Email invite with tokenized link, team member list, ownership transfer, member removal with data retention (MT-01, MT-02, MT-04, MT-05)
+- [x] **Phase 33: Team Invite Flow + Team UI** - Email invite with tokenized link, team member list, ownership transfer, member removal with data retention (MT-01, MT-02, MT-04, MT-05) (completed 2026-03-30)
 
 - [ ] **Phase 34: Agency Submission Status Tracking** - caEcprSubmittedAt + waLniSubmittedAt columns, SubmissionStatusBadge, "Mark as Submitted" UI in CA/WA export modals (AS-01, AS-02)
 
@@ -688,7 +688,7 @@ Plans:
 Plans:
 - [x] 33-01-PLAN.md — DB migration (team_invites table + removed_at) + inviteService + assertProjectAccess fix + GET /api/projects fix
 - [x] 33-02-PLAN.md — Team API routes + accept-invite auth route + integration tests
-- [ ] 33-03-PLAN.md — TeamPage + AcceptInvitePage + App.tsx routing + Layout nav link + human verify
+- [x] 33-03-PLAN.md — TeamPage + AcceptInvitePage + App.tsx routing + Layout nav link + human verify
 
 
 
@@ -830,7 +830,7 @@ Plans:
 
 | 32. Multi-User Auth Foundation | v3.0 | 4/4 | Complete    | 2026-03-29 |
 
-| 33. Team Invite Flow + Team UI | v3.0 | 2/3 | In Progress|  |
+| 33. Team Invite Flow + Team UI | v3.0 | 3/3 | Complete   | 2026-03-30 |
 
 | 34. Agency Submission Status Tracking | v3.0 | 0/TBD | Not started | - |
 

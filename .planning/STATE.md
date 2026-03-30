@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 33-02-PLAN.md
-last_updated: "2026-03-30T18:14:28.387Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 33-03-PLAN.md
+last_updated: "2026-03-30T18:57:04.579Z"
 progress:
   total_phases: 29
-  completed_phases: 27
+  completed_phases: 28
   total_plans: 74
-  completed_plans: 75
+  completed_plans: 76
 ---
 
 # State
@@ -65,6 +65,8 @@ Key decisions locked for v3.0 scope:
 - [Phase 33-01]: Resend SDK lazy-initialized at first use — null if RESEND_API_KEY absent; email failure non-fatal (console fallback per D-02)
 - [Phase 33]: GET /invite/:token mounted before requireAuth so unauthenticated users can validate tokens
 - [Phase 33]: isOwner() helper queries project_members for any active owner row — accepts users with multiple projects
+- [Phase 33-03]: /accept-invite is fully public route (no PublicRoute wrapper) per D-09 — authenticated user visiting used token sees 410 from API
+- [Phase 33-03]: Inline confirm row pattern replaces member row in-place for remove and transfer ownership destructive actions — no modal needed
 
 ### Phase Order Rationale
 
@@ -90,7 +92,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-30T18:14:28.383Z
-Stopped at: Completed 33-02-PLAN.md
+Last session: 2026-03-30T18:57:04.576Z
+Stopped at: Completed 33-03-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`
