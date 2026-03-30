@@ -333,6 +333,58 @@ export async function clearWeekSubmission(weekId: string): Promise<void> {
     .where(eq(payrollWeeks.id, weekId));
 }
 
+// ── Agency Submission Tracking (Phase 34 — AS-01, AS-02) ──────────────────
+
+/**
+ * Records the current ISO timestamp as the CA eCPR submission time.
+ * Independent of WH-347 edit lock (per D-05).
+ */
+export async function setCaEcprSubmitted(weekId: string): Promise<{ caEcprSubmittedAt: string }> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  await db.update(payrollWeeks)
+    .set({ caEcprSubmittedAt: now, updatedAt: now })
+    .where(eq(payrollWeeks.id, weekId));
+  return { caEcprSubmittedAt: now };
+}
+
+/**
+ * Clears the CA eCPR submission timestamp. Idempotent.
+ */
+export async function clearCaEcprSubmitted(weekId: string): Promise<{ caEcprSubmittedAt: null }> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  await db.update(payrollWeeks)
+    .set({ caEcprSubmittedAt: null, updatedAt: now })
+    .where(eq(payrollWeeks.id, weekId));
+  return { caEcprSubmittedAt: null };
+}
+
+/**
+ * Records the current ISO timestamp as the WA L&I submission time.
+ * Independent of WH-347 edit lock (per D-05).
+ */
+export async function setWaLniSubmitted(weekId: string): Promise<{ waLniSubmittedAt: string }> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  await db.update(payrollWeeks)
+    .set({ waLniSubmittedAt: now, updatedAt: now })
+    .where(eq(payrollWeeks.id, weekId));
+  return { waLniSubmittedAt: now };
+}
+
+/**
+ * Clears the WA L&I submission timestamp. Idempotent.
+ */
+export async function clearWaLniSubmitted(weekId: string): Promise<{ waLniSubmittedAt: null }> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  await db.update(payrollWeeks)
+    .set({ waLniSubmittedAt: null, updatedAt: now })
+    .where(eq(payrollWeeks.id, weekId));
+  return { waLniSubmittedAt: null };
+}
+
 // ── Copy Payroll Week ──────────────────────────────────────────────────────
 
 /**

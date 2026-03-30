@@ -18,6 +18,10 @@ import {
   clearWeekSubmission,
   copyPayrollWeek,
   amendPayrollWeek,
+  setCaEcprSubmitted,
+  clearCaEcprSubmitted,
+  setWaLniSubmitted,
+  clearWaLniSubmitted,
 } from '../services/payrollService.js';
 
 const router = Router();
@@ -89,6 +93,10 @@ const CopyWeekSchema = z.object({
 
 const AmendWeekSchema = z.object({
   originalWeekId: z.string().min(1),
+});
+
+const AgencySubmitSchema = z.object({
+  submitted: z.boolean(),
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────
@@ -327,6 +335,60 @@ router.delete('/weeks/:id/submit', async (req, res) => {
 
   await clearWeekSubmission(weekId);
   res.status(200).json({ message: 'Week submission cleared' });
+});
+
+// PATCH /api/payroll/weeks/:id/ca-submit — toggle CA eCPR submission status (AS-01)
+router.patch('/weeks/:id/ca-submit', validate(AgencySubmitSchema), async (req, res) => {
+  const weekId = req.params.id as string;
+  const userId = req.user!.userId;
+  const { submitted } = req.body as z.infer<typeof AgencySubmitSchema>;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // NOTE: No submittedAt guard — CA/WA tracking is independent of WH-347 edit lock (per D-05)
+  const result = submitted
+    ? await setCaEcprSubmitted(weekId)
+    : await clearCaEcprSubmitted(weekId);
+  res.status(200).json(result);
+});
+
+// PATCH /api/payroll/weeks/:id/wa-submit — toggle WA L&I submission status (AS-02)
+router.patch('/weeks/:id/wa-submit', validate(AgencySubmitSchema), async (req, res) => {
+  const weekId = req.params.id as string;
+  const userId = req.user!.userId;
+  const { submitted } = req.body as z.infer<typeof AgencySubmitSchema>;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // NOTE: No submittedAt guard — CA/WA tracking is independent of WH-347 edit lock (per D-05)
+  const result = submitted
+    ? await setWaLniSubmitted(weekId)
+    : await clearWaLniSubmitted(weekId);
+  res.status(200).json(result);
 });
 
 export { router as payrollRouter };
