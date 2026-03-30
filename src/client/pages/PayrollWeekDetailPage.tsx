@@ -780,6 +780,65 @@ export function PayrollWeekDetailPage() {
                 </Button>
               </div>
             )}
+
+            {/* Agency Submission Rows per D-10, D-11, D-12, D-13 */}
+            {isCA && (
+              <>
+                <div className="border-t border-gray-100" />
+                <div className="px-5 py-3 flex items-center justify-between">
+                  {week.caEcprSubmittedAt ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="warning">CA DIR Submitted</Badge>
+                        <span className="text-sm text-gray-600">
+                          {week.caEcprSubmittedAt.slice(0, 10)}
+                        </span>
+                      </div>
+                      <button
+                        className="text-sm text-gray-500 underline hover:text-gray-700"
+                        disabled={caUnsubmitMutation.isPending}
+                        onClick={() => caUnsubmitMutation.mutate()}
+                      >
+                        {caUnsubmitMutation.isPending ? 'Clearing...' : 'Un-submit'}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="neutral">Not Submitted to CA DIR</Badge>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {isWA && (
+              <>
+                <div className="border-t border-gray-100" />
+                <div className="px-5 py-3 flex items-center justify-between">
+                  {week.waLniSubmittedAt ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="neutral">WA L&amp;I Submitted</Badge>
+                        <span className="text-sm text-gray-600">
+                          {week.waLniSubmittedAt.slice(0, 10)}
+                        </span>
+                      </div>
+                      <button
+                        className="text-sm text-gray-500 underline hover:text-gray-700"
+                        disabled={waUnsubmitMutation.isPending}
+                        onClick={() => waUnsubmitMutation.mutate()}
+                      >
+                        {waUnsubmitMutation.isPending ? 'Clearing...' : 'Un-submit'}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="neutral">Not Submitted to WA L&amp;I</Badge>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </Card>
         )}
 
