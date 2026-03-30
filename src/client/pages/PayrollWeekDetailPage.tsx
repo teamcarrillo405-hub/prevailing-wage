@@ -27,6 +27,8 @@ interface PayrollWeek {
   createdAt: string;
   amendmentNumber: number | null;
   originalWeekId: string | null;
+  caEcprSubmittedAt: string | null;
+  waLniSubmittedAt: string | null;
 }
 
 interface PayrollEntryRow {
@@ -155,6 +157,7 @@ export function PayrollWeekDetailPage() {
   const [waCprIntentId, setWaCprIntentId] = useState('');
   const [waCprGenerating, setWaCprGenerating] = useState(false);
   const waCprGeneratingRef = useRef(false);
+  const [waCprStep, setWaCprStep] = useState<1 | 2>(1);
 
   const queryClient = useQueryClient();
   const [showSubmitForm, setShowSubmitForm] = useState(false);
@@ -180,6 +183,26 @@ export function PayrollWeekDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
       queryClient.invalidateQueries({ queryKey: ['payroll-weeks', projectId] });
     },
+  });
+
+  const caSubmitMutation = useMutation({
+    mutationFn: () => api.patch(`/payroll/weeks/${weekId}/ca-submit`, { submitted: true }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] }); },
+  });
+
+  const caUnsubmitMutation = useMutation({
+    mutationFn: () => api.patch(`/payroll/weeks/${weekId}/ca-submit`, { submitted: false }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] }); },
+  });
+
+  const waSubmitMutation = useMutation({
+    mutationFn: () => api.patch(`/payroll/weeks/${weekId}/wa-submit`, { submitted: true }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] }); },
+  });
+
+  const waUnsubmitMutation = useMutation({
+    mutationFn: () => api.patch(`/payroll/weeks/${weekId}/wa-submit`, { submitted: false }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] }); },
   });
 
   const {
@@ -382,7 +405,7 @@ export function PayrollWeekDetailPage() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 100);
 
-      setShowWaCprModal(false);
+      setWaCprStep(2);
     } catch (err) {
       alert('Error generating WA CPR XML. Please try again.');
     } finally {
@@ -1200,10 +1223,37 @@ export function PayrollWeekDetailPage() {
                     </p>
                   </div>
 
-                  <div className="mt-4 flex justify-end">
-                    <Button onClick={() => setShowEcprModal(false)}>
-                      Done
-                    </Button>
+                  {week?.caEcprSubmittedAt ? (
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="warning">CA DIR Submitted</Badge>
+                        <span className="text-sm text-gray-600">{week.caEcprSubmittedAt.slice(0, 10)}</span>
+                      </div>
+                      <button
+                        className="text-sm text-gray-500 underline hover:text-gray-700"
+                        disabled={caUnsubmitMutation.isPending}
+                        onClick={() => caUnsubmitMutation.mutate()}
+                      >
+                        {caUnsubmitMutation.isPending ? 'Clearing...' : 'Un-submit'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex justify-end gap-3">
+                      <Button
+                        disabled={caSubmitMutation.isPending}
+                        onClick={() => caSubmitMutation.mutate()}
+                      >
+                        {caSubmitMutation.isPending ? 'Saving...' : 'Mark as Submitted to CA DIR'}
+                      </Button>
+                    </div>
+                  )}
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={() => setShowEcprModal(false)}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Close
+                    </button>
                   </div>
                 </>
               )}
@@ -1240,74 +1290,129 @@ export function PayrollWeekDetailPage() {
           </Card>
         )}
 
-        {/* WA CPR XML — intentId modal */}
+        {/* WA CPR XML — intentId modal (step 1) + submission modal (step 2) */}
         {showWaCprModal && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={() => setShowWaCprModal(false)}
+            onClick={() => { setShowWaCprModal(false); setWaCprStep(1); }}
           >
             <div
               className="mx-4 max-w-md rounded-lg bg-white p-6 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-headline font-bold text-gray-900">WA CPR XML Export</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Generate and download the WA PWIA certified payroll XML for this week.
-              </p>
-
-              <div className="mt-4 space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    PWIA Intent ID
-                  </label>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Issued by L&amp;I after Statement of Intent approval. Enter the numeric ID from
-                    your My L&amp;I PWIA portal.
+              {waCprStep === 1 ? (
+                <>
+                  <h3 className="text-lg font-headline font-bold text-gray-900">WA CPR XML Export</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Generate and download the WA PWIA certified payroll XML for this week.
                   </p>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={waCprIntentId}
-                    onChange={(e) => setWaCprIntentId(e.target.value)}
-                    placeholder="e.g., 12345"
-                    maxLength={20}
-                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-hidden"
-                  />
-                </div>
-              </div>
 
-              {/* SSN disclosure */}
-              <div className="mt-4 rounded bg-amber-50 border border-amber-200 p-3">
-                <p className="text-sm font-medium text-amber-800">SSN Notice</p>
-                <p className="mt-1 text-xs text-amber-700">
-                  Worker SSNs are not stored in this application. The generated XML uses placeholder
-                  SSNs (00000XXXX). You must enter full SSNs directly in the L&amp;I PWIA portal.
-                </p>
-                <a
-                  href="https://secure.lni.wa.gov/pwia/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 block text-xs text-brand-gold underline hover:opacity-80"
-                >
-                  secure.lni.wa.gov/pwia/
-                </a>
-              </div>
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        PWIA Intent ID
+                      </label>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Issued by L&amp;I after Statement of Intent approval. Enter the numeric ID from
+                        your My L&amp;I PWIA portal.
+                      </p>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={waCprIntentId}
+                        onChange={(e) => setWaCprIntentId(e.target.value)}
+                        placeholder="e.g., 12345"
+                        maxLength={20}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
 
-              <div className="mt-4 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowWaCprModal(false)}
-                  className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <Button
-                  onClick={handleWaCprConfirm}
-                  disabled={!waCprIntentId.trim() || waCprGenerating}
-                >
-                  {waCprGenerating ? 'Generating...' : 'Generate & Download'}
-                </Button>
-              </div>
+                  {/* SSN disclosure */}
+                  <div className="mt-4 rounded bg-amber-50 border border-amber-200 p-3">
+                    <p className="text-sm font-medium text-amber-800">SSN Notice</p>
+                    <p className="mt-1 text-xs text-amber-700">
+                      Worker SSNs are not stored in this application. The generated XML uses placeholder
+                      SSNs (00000XXXX). You must enter full SSNs directly in the L&amp;I PWIA portal.
+                    </p>
+                    <a
+                      href="https://secure.lni.wa.gov/pwia/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 block text-xs text-brand-gold underline hover:opacity-80"
+                    >
+                      secure.lni.wa.gov/pwia/
+                    </a>
+                  </div>
+
+                  <div className="mt-4 flex justify-end gap-3">
+                    <button
+                      onClick={() => { setShowWaCprModal(false); setWaCprStep(1); }}
+                      className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <Button
+                      onClick={handleWaCprConfirm}
+                      disabled={!waCprIntentId.trim() || waCprGenerating}
+                    >
+                      {waCprGenerating ? 'Generating...' : 'Generate & Download'}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-headline font-bold text-gray-900">
+                    WA CPR XML — Step 2 of 2
+                  </h3>
+                  <p className="mt-1 text-sm text-green-700 font-medium">
+                    XML file downloaded successfully. Now upload it to the My L&amp;I PWIA portal.
+                  </p>
+
+                  <ol className="mt-4 space-y-2 text-sm text-gray-700 list-decimal list-inside">
+                    <li>Log in to <a href="https://secure.lni.wa.gov/pwia/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">secure.lni.wa.gov/pwia</a></li>
+                    <li>Navigate to your Intent ID and select "Upload CPR XML"</li>
+                    <li>Upload the downloaded XML file</li>
+                    <li>Verify all workers and hours in the submission preview</li>
+                    <li><strong>Enter full SSNs</strong> for each worker directly in the portal <span className="text-amber-700">(the XML contains placeholder SSNs)</span></li>
+                    <li>Submit the certified payroll report</li>
+                  </ol>
+
+                  {week?.waLniSubmittedAt ? (
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="neutral">WA L&amp;I Submitted</Badge>
+                        <span className="text-sm text-gray-600">{week.waLniSubmittedAt.slice(0, 10)}</span>
+                      </div>
+                      <button
+                        className="text-sm text-gray-500 underline hover:text-gray-700"
+                        disabled={waUnsubmitMutation.isPending}
+                        onClick={() => waUnsubmitMutation.mutate()}
+                      >
+                        {waUnsubmitMutation.isPending ? 'Clearing...' : 'Un-submit'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex justify-end gap-3">
+                      <Button
+                        disabled={waSubmitMutation.isPending}
+                        onClick={() => waSubmitMutation.mutate()}
+                      >
+                        {waSubmitMutation.isPending ? 'Saving...' : 'Mark as Submitted to WA L&I'}
+                      </Button>
+                    </div>
+                  )}
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={() => { setShowWaCprModal(false); setWaCprStep(1); }}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
