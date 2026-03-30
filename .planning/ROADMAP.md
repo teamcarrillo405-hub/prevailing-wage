@@ -683,9 +683,12 @@ Plans:
 
   5. Owner can transfer ownership to the existing member; after transfer the original owner's role changes to member and the other user becomes owner — both users remain active
 
-**Plans**: TBD
+**Plans**: 3 plans
 
-**UI hint**: yes
+Plans:
+- [ ] 33-01-PLAN.md — DB migration (team_invites table + removed_at) + inviteService + assertProjectAccess fix + GET /api/projects fix
+- [ ] 33-02-PLAN.md — Team API routes + accept-invite auth route + integration tests
+- [ ] 33-03-PLAN.md — TeamPage + AcceptInvitePage + App.tsx routing + Layout nav link + human verify
 
 
 
