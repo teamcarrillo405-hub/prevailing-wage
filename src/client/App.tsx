@@ -19,6 +19,8 @@ import { PayrollWeekDetailPage } from './pages/PayrollWeekDetailPage.js';
 import { VarianceReportPageRoute } from './pages/VarianceReportPageRoute';
 import { ReportsPage } from './pages/ReportsPage';
 import { WorkerComplianceHistoryPage } from './pages/WorkerComplianceHistoryPage';
+import { TeamPage } from './pages/TeamPage.js';
+import { AcceptInvitePage } from './pages/AcceptInvitePage.js';
 
 const queryClient = new QueryClient();
 
@@ -57,7 +59,11 @@ export default function App() {
               <Route path="/projects/:projectId/workers/:workerId/compliance-history" element={<WorkerComplianceHistoryPage />} />
               <Route path="/projects/:projectId/variance" element={<VarianceReportPageRoute />} />
               <Route path="/projects/:projectId/reports" element={<ReportsPage />} />
+              <Route path="/team" element={<TeamPage />} />
             </Route>
+
+            {/* Public accept-invite route — no auth wrapper per D-09 */}
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
             {/* Auth-aware wildcard */}
             <Route path="*" element={<WildcardRedirect />} />

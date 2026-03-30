@@ -23,12 +23,20 @@ export function Layout({ children }: LayoutProps) {
           <Link to="/dashboard" className="font-headline text-xl text-white tracking-wide hover:text-brand-gold transition-colors">
             HCC Prevailing Wage
           </Link>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-gray-300 hover:text-white px-3 py-1.5 border border-gray-600 hover:border-gray-400 rounded transition-colors"
-          >
-            Log Out
-          </button>
+          <div className="flex items-center gap-4">
+            <Link to="/team" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
+              Team
+            </Link>
+            <Link to="/wages" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
+              Wage Lookup
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-300 hover:text-white px-3 py-1.5 border border-gray-600 hover:border-gray-400 rounded transition-colors"
+            >
+              Log Out
+            </button>
+          </div>
         </div>
       </nav>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
