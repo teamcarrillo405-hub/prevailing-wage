@@ -24,8 +24,8 @@
 
 ### Agency Submission Status Tracking (AS)
 
-- [ ] **AS-01**: After downloading CA eCPR XML, user can mark the submission as submitted to CA DIR; `caEcprSubmittedAt` timestamp recorded on the payroll week; Payroll Week Detail shows CA submission status badge
-- [ ] **AS-02**: After downloading WA L&I CPR XML, user can mark the submission as submitted to WA L&I; `waLniSubmittedAt` timestamp recorded on the payroll week; Payroll Week Detail shows WA submission status badge
+- [x] **AS-01**: After downloading CA eCPR XML, user can mark the submission as submitted to CA DIR; `caEcprSubmittedAt` timestamp recorded on the payroll week; Payroll Week Detail shows CA submission status badge
+- [x] **AS-02**: After downloading WA L&I CPR XML, user can mark the submission as submitted to WA L&I; `waLniSubmittedAt` timestamp recorded on the payroll week; Payroll Week Detail shows WA submission status badge
 
 *Note: Research confirmed no public machine-to-machine API exists for CA DIR eCPR or WA L&I PWIA as of 2026-03. Direct auto-submit is deferred to v4+ pending portal API availability. This phase replaces conditional AS-01/AS-02 with "Mark as Submitted" tracking.*
 
@@ -86,8 +86,8 @@
 | PI-01 | Phase 35 | Pending |
 | PI-02 | Phase 35 | Pending |
 | PI-03 | Phase 36 | Pending |
-| AS-01 | Phase 34 | Pending |
-| AS-02 | Phase 34 | Pending |
+| AS-01 | Phase 34 | Complete |
+| AS-02 | Phase 34 | Complete |
 | SEC-01 | Phase 31 | Complete |
 | SEC-02 | Phase 31 | Complete |
 | SEC-03 | Phase 31 | Complete |

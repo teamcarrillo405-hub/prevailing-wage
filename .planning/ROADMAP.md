@@ -713,7 +713,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 34-01-PLAN.md — Migration + schema + API routes for agency submission timestamps
+- [x] 34-01-PLAN.md — Migration + schema + API routes for agency submission timestamps
 - [ ] 34-02-PLAN.md — Modal submit buttons + agency badge rows on PayrollWeekDetailPage
 
 **UI hint**: yes
@@ -836,7 +836,7 @@ Plans:
 
 | 33. Team Invite Flow + Team UI | v3.0 | 3/3 | Complete    | 2026-03-30 |
 
-| 34. Agency Submission Status Tracking | v3.0 | 0/TBD | Not started | - |
+| 34. Agency Submission Status Tracking | v3.0 | 1/2 | In Progress|  |
 
 | 35. Payroll Import — Server Pipeline | v3.0 | 0/TBD | Not started | - |
 
