@@ -710,7 +710,11 @@ Plans:
 
   4. Submission status for each agency can be cleared independently (un-submit CA, un-submit WA) without affecting WH-347 submission status or the other agency's status
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 34-01-PLAN.md — Migration + schema + API routes for agency submission timestamps
+- [ ] 34-02-PLAN.md — Modal submit buttons + agency badge rows on PayrollWeekDetailPage
 
 **UI hint**: yes
 
