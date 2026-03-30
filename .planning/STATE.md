@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 34-01-PLAN.md
-last_updated: "2026-03-30T21:24:38.347Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 34-02-PLAN.md
+last_updated: "2026-03-30T21:34:46.547Z"
 progress:
   total_phases: 30
-  completed_phases: 28
+  completed_phases: 29
   total_plans: 76
-  completed_plans: 77
+  completed_plans: 78
 ---
 
 # State
@@ -68,6 +68,8 @@ Key decisions locked for v3.0 scope:
 - [Phase 33-03]: /accept-invite is fully public route (no PublicRoute wrapper) per D-09 — authenticated user visiting used token sees 410 from API
 - [Phase 33-03]: Inline confirm row pattern replaces member row in-place for remove and transfer ownership destructive actions — no modal needed
 - [Phase 34]: CA/WA submission tracking independent of WH-347 edit lock — no assertWeekNotSubmitted guard on ca-submit/wa-submit routes (D-05)
+- [Phase 34]: Mark as Submitted action is only available in modal flows (D-12) — detail page shows status and un-submit only
+- [Phase 34]: waCprStep resets to 1 on all close paths to prevent stale modal state on re-open
 
 ### Phase Order Rationale
 
@@ -93,7 +95,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-30T21:24:38.344Z
-Stopped at: Completed 34-01-PLAN.md
+Last session: 2026-03-30T21:34:46.543Z
+Stopped at: Completed 34-02-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`

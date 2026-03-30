@@ -190,7 +190,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 33: Team Invite Flow + Team UI** - Email invite with tokenized link, team member list, ownership transfer, member removal with data retention (MT-01, MT-02, MT-04, MT-05) (completed 2026-03-30)
 
-- [ ] **Phase 34: Agency Submission Status Tracking** - caEcprSubmittedAt + waLniSubmittedAt columns, SubmissionStatusBadge, "Mark as Submitted" UI in CA/WA export modals (AS-01, AS-02)
+- [x] **Phase 34: Agency Submission Status Tracking** - caEcprSubmittedAt + waLniSubmittedAt columns, SubmissionStatusBadge, "Mark as Submitted" UI in CA/WA export modals (AS-01, AS-02) (completed 2026-03-30)
 
 - [ ] **Phase 35: Payroll Import — Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02)
 
@@ -714,7 +714,7 @@ Plans:
 
 Plans:
 - [x] 34-01-PLAN.md — Migration + schema + API routes for agency submission timestamps
-- [ ] 34-02-PLAN.md — Modal submit buttons + agency badge rows on PayrollWeekDetailPage
+- [x] 34-02-PLAN.md — Modal submit buttons + agency badge rows on PayrollWeekDetailPage
 
 **UI hint**: yes
 
@@ -836,7 +836,7 @@ Plans:
 
 | 33. Team Invite Flow + Team UI | v3.0 | 3/3 | Complete    | 2026-03-30 |
 
-| 34. Agency Submission Status Tracking | v3.0 | 1/2 | In Progress|  |
+| 34. Agency Submission Status Tracking | v3.0 | 2/2 | Complete   | 2026-03-30 |
 
 | 35. Payroll Import — Server Pipeline | v3.0 | 0/TBD | Not started | - |
 
