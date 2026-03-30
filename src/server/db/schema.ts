@@ -52,9 +52,21 @@ export const projectMembers = sqliteTable('project_members', {
   userId: text('user_id').notNull().references(() => users.id),
   role: text('role').notNull().$type<'owner' | 'member'>(),
   joinedAt: text('joined_at').notNull(),
+  removedAt: text('removed_at'),
 }, (table) => ({
   projectMemberUnique: uniqueIndex('project_member_unique').on(table.projectId, table.userId),
 }));
+
+export const teamInvites = sqliteTable('team_invites', {
+  id: text('id').primaryKey(),
+  inviterUserId: text('inviter_user_id').notNull().references(() => users.id),
+  inviteeEmail: text('invitee_email').notNull(),
+  token: text('token').notNull().unique(),
+  expiresAt: text('expires_at').notNull(),
+  acceptedAt: text('accepted_at'),
+  revokedAt: text('revoked_at'),
+  createdAt: text('created_at').notNull(),
+});
 
 export const workers = sqliteTable('workers', {
   id: text('id').primaryKey(),
