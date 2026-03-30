@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { projects, projectMembers } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -90,19 +90,24 @@ router.get('/', async (req, res) => {
   const db = getDb();
   const statusFilter = req.query.status as string | undefined;
 
-  // Default to active-only; pass 'all' to include closed projects
-  const conditions = [eq(projects.userId, userId)];
-  if (!statusFilter || statusFilter === 'active') {
-    conditions.push(eq(projects.status, 'active'));
-  }
-  // statusFilter === 'all' => no additional status condition
+  const statusCondition = (!statusFilter || statusFilter === 'active')
+    ? eq(projects.status, 'active')
+    : undefined;
 
   const userProjects = await db
-    .select()
+    .select({ project: projects })
     .from(projects)
-    .where(and(...conditions));
+    .innerJoin(
+      projectMembers,
+      and(
+        eq(projectMembers.projectId, projects.id),
+        eq(projectMembers.userId, userId),
+        isNull(projectMembers.removedAt),
+      ),
+    )
+    .where(statusCondition);
 
-  res.json({ data: { projects: userProjects } });
+  res.json({ data: { projects: userProjects.map(r => r.project) } });
 });
 
 // GET /api/projects/:id — get single project

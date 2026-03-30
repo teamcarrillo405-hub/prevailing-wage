@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { projects, projectMembers } from '../db/schema.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../db/schema.js';
@@ -20,6 +20,7 @@ export async function assertProjectAccess(
       and(
         eq(projectMembers.projectId, projectId),
         eq(projectMembers.userId, userId),
+        isNull(projectMembers.removedAt),
       ),
     )
     .limit(1);

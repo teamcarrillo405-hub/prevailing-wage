@@ -8,6 +8,6 @@ CREATE TABLE team_invites (
   revoked_at TEXT,
   created_at TEXT NOT NULL
 );
--->  statement-breakpoint
+--> statement-breakpoint
 
 ALTER TABLE project_members ADD COLUMN removed_at TEXT;
