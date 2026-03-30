@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 32-04-PLAN.md — gap closure plan, phase 32 ready for verification
-last_updated: "2026-03-29T19:08:38.030Z"
+status: Ready to execute
+stopped_at: Completed 33-01-PLAN.md
+last_updated: "2026-03-30T18:00:06.472Z"
 progress:
-  total_phases: 28
+  total_phases: 29
   completed_phases: 27
-  total_plans: 71
-  completed_plans: 73
+  total_plans: 74
+  completed_plans: 74
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 32 — multi-user-auth-foundation
+**Current focus:** Phase 33 — team-invite-flow-team-ui
 
 ## Current Position
 
-Phase: 32
-Plan: Not started
+Phase: 33 (team-invite-flow-team-ui) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -61,6 +61,8 @@ Key decisions locked for v3.0 scope:
 - [Phase 32]: workers.ts routes mounted at /api/projects (not /api/workers) — cross-tenant test corrected to use actual mount path
 - [Phase 32-multi-user-auth-foundation]: workers.ts routes mounted at /api/projects (not /api/workers) — cross-tenant test corrected to use actual mount path
 - [Phase 32]: Inline projectMembers join in service functions rather than calling assertProjectAccess (which expects req-style callers — services receive db directly)
+- [Phase 33-01]: Migration breakpoint format is --> statement-breakpoint (one space) — two-space variant not recognized by this project's Drizzle migrator
+- [Phase 33-01]: Resend SDK lazy-initialized at first use — null if RESEND_API_KEY absent; email failure non-fatal (console fallback per D-02)
 
 ### Phase Order Rationale
 
@@ -86,7 +88,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T19:04:25.664Z
-Stopped at: Completed 32-04-PLAN.md — gap closure plan, phase 32 ready for verification
+Last session: 2026-03-30T18:00:06.469Z
+Stopped at: Completed 33-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`

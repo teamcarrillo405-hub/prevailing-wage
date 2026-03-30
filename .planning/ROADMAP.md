@@ -686,7 +686,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 33-01-PLAN.md — DB migration (team_invites table + removed_at) + inviteService + assertProjectAccess fix + GET /api/projects fix
+- [x] 33-01-PLAN.md — DB migration (team_invites table + removed_at) + inviteService + assertProjectAccess fix + GET /api/projects fix
 - [ ] 33-02-PLAN.md — Team API routes + accept-invite auth route + integration tests
 - [ ] 33-03-PLAN.md — TeamPage + AcceptInvitePage + App.tsx routing + Layout nav link + human verify
 
@@ -830,7 +830,7 @@ Plans:
 
 | 32. Multi-User Auth Foundation | v3.0 | 4/4 | Complete    | 2026-03-29 |
 
-| 33. Team Invite Flow + Team UI | v3.0 | 0/TBD | Not started | - |
+| 33. Team Invite Flow + Team UI | v3.0 | 1/3 | In Progress|  |
 
 | 34. Agency Submission Status Tracking | v3.0 | 0/TBD | Not started | - |
 
