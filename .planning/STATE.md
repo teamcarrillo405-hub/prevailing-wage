@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 33-01-PLAN.md
-last_updated: "2026-03-30T18:00:06.472Z"
+stopped_at: Completed 33-02-PLAN.md
+last_updated: "2026-03-30T18:14:28.387Z"
 progress:
   total_phases: 29
   completed_phases: 27
   total_plans: 74
-  completed_plans: 74
+  completed_plans: 75
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 33 (team-invite-flow-team-ui) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -63,6 +63,8 @@ Key decisions locked for v3.0 scope:
 - [Phase 32]: Inline projectMembers join in service functions rather than calling assertProjectAccess (which expects req-style callers — services receive db directly)
 - [Phase 33-01]: Migration breakpoint format is --> statement-breakpoint (one space) — two-space variant not recognized by this project's Drizzle migrator
 - [Phase 33-01]: Resend SDK lazy-initialized at first use — null if RESEND_API_KEY absent; email failure non-fatal (console fallback per D-02)
+- [Phase 33]: GET /invite/:token mounted before requireAuth so unauthenticated users can validate tokens
+- [Phase 33]: isOwner() helper queries project_members for any active owner row — accepts users with multiple projects
 
 ### Phase Order Rationale
 
@@ -88,7 +90,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-30T18:00:06.469Z
-Stopped at: Completed 33-01-PLAN.md
+Last session: 2026-03-30T18:14:28.383Z
+Stopped at: Completed 33-02-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`
