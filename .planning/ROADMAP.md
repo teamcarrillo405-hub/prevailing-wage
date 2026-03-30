@@ -830,7 +830,7 @@ Plans:
 
 | 32. Multi-User Auth Foundation | v3.0 | 4/4 | Complete    | 2026-03-29 |
 
-| 33. Team Invite Flow + Team UI | v3.0 | 3/3 | Complete   | 2026-03-30 |
+| 33. Team Invite Flow + Team UI | v3.0 | 3/3 | Complete    | 2026-03-30 |
 
 | 34. Agency Submission Status Tracking | v3.0 | 0/TBD | Not started | - |
 
