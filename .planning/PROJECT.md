@@ -117,6 +117,7 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ SSN encryption: AES-256-GCM at rest, versioned envelope, full 9-digit SSN input, masked display, hasFullSsn badge — v3.0 Phase 31
 - ✓ Multi-user foundation: project_members join table, assertProjectAccess utility, all 21 ownership checks centralized, cross-tenant IDOR protection — v3.0 Phase 32
 - ✓ Team invite flow + UI: email invite (Resend SDK / console fallback), tokenized /accept-invite page, TeamPage at /team, soft-delete member removal, ownership transfer — v3.0 Phase 33
+- ✓ Agency submission status tracking: CA eCPR and WA L&I submission timestamps on payroll_weeks, modal "Mark as Submitted" buttons, independent per-agency badge rows (CA=amber, WA=gray), state-gated display — v3.0 Phase 34
 
 ### Out of Scope
 
@@ -180,4 +181,4 @@ A contractor can run a full project end-to-end — create project → add worker
 | Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-30 — Phase 33 complete (Team Invite Flow + Team UI — MT-01, MT-02, MT-04, MT-05 retention shipped)
+*Last updated: 2026-03-30 — Phase 34 complete (Agency Submission Status Tracking — AS-01, AS-02 shipped)
