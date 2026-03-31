@@ -18,8 +18,8 @@
 
 ### Payroll Provider Import (PI)
 
-- [ ] **PI-01**: User can upload a QuickBooks payroll export file to pre-populate a payroll week's entries — importing worker names, trade classifications, base rates, fringe rates, and hours by day (ST/OT); researcher to confirm the specific QuickBooks report/export format
-- [ ] **PI-02**: User can upload an ADP payroll export file with the same pre-population behavior as PI-01; researcher to confirm the specific ADP report/export format
+- [x] **PI-01**: User can upload a QuickBooks payroll export file to pre-populate a payroll week's entries — importing worker names, trade classifications, base rates, fringe rates, and hours by day (ST/OT); researcher to confirm the specific QuickBooks report/export format
+- [x] **PI-02**: User can upload an ADP payroll export file with the same pre-population behavior as PI-01; researcher to confirm the specific ADP report/export format
 - [ ] **PI-03**: When an imported worker name does not match an existing project worker, system presents a review & match screen — user can map the CSV name to an existing worker or confirm creation of a new worker record; no rows are silently skipped or auto-created
 
 ### Agency Submission Status Tracking (AS)
@@ -83,8 +83,8 @@
 | MT-03 | Phase 32 | Complete |
 | MT-04 | Phase 33 | Complete |
 | MT-05 | Phase 33 | Complete |
-| PI-01 | Phase 35 | Pending |
-| PI-02 | Phase 35 | Pending |
+| PI-01 | Phase 35 | Complete |
+| PI-02 | Phase 35 | Complete |
 | PI-03 | Phase 36 | Pending |
 | AS-01 | Phase 34 | Complete |
 | AS-02 | Phase 34 | Complete |

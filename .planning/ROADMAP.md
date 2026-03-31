@@ -744,7 +744,7 @@ Plans:
 
 Plans:
 
-- [ ] 35-01-PLAN.md — Migration + schema + shared types + QB mapper + ADP mapper + importService + unit tests
+- [x] 35-01-PLAN.md — Migration + schema + shared types + QB mapper + ADP mapper + importService + unit tests
 
 - [ ] 35-02-PLAN.md — Import router (preview + commit routes) + mount in index.ts + integration tests
 
@@ -844,6 +844,6 @@ Plans:
 
 | 34. Agency Submission Status Tracking | v3.0 | 2/2 | Complete    | 2026-03-30 |
 
-| 35. Payroll Import — Server Pipeline | v3.0 | 0/TBD | Not started | - |
+| 35. Payroll Import — Server Pipeline | v3.0 | 1/2 | In Progress|  |
 
 | 36. Payroll Import — React UI | v3.0 | 0/TBD | Not started | - |

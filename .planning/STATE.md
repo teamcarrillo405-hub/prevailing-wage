@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Milestone complete
-stopped_at: Completed 34-02-PLAN.md
-last_updated: "2026-03-30T21:47:21.074Z"
+stopped_at: Completed 35-01-PLAN.md
+last_updated: "2026-03-31T01:25:28.267Z"
 progress:
-  total_phases: 30
+  total_phases: 31
   completed_phases: 29
-  total_plans: 76
-  completed_plans: 78
+  total_plans: 78
+  completed_plans: 79
 ---
 
 # State
@@ -70,6 +70,7 @@ Key decisions locked for v3.0 scope:
 - [Phase 34]: CA/WA submission tracking independent of WH-347 edit lock — no assertWeekNotSubmitted guard on ca-submit/wa-submit routes (D-05)
 - [Phase 34]: Mark as Submitted action is only available in modal flows (D-12) — detail page shows status and un-submit only
 - [Phase 34]: waCprStep resets to 1 on all close paths to prevent stale modal state on re-open
+- [Phase 35]: QB mapper manual MM/DD/YYYY parse avoids timezone bugs; ADP hours placed on Monday; Double Time maps to OT bucket; conflict detection pre-queries payrollEntries
 
 ### Phase Order Rationale
 
@@ -95,7 +96,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-30T21:34:46.543Z
-Stopped at: Completed 34-02-PLAN.md
+Last session: 2026-03-31T01:25:28.263Z
+Stopped at: Completed 35-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`
