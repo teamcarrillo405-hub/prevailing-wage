@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Milestone complete
-stopped_at: Completed 35-01-PLAN.md
-last_updated: "2026-03-31T01:25:28.267Z"
+stopped_at: Completed 35-02-PLAN.md
+last_updated: "2026-03-31T01:43:32.960Z"
 progress:
   total_phases: 31
-  completed_phases: 29
+  completed_phases: 30
   total_plans: 78
-  completed_plans: 79
+  completed_plans: 80
 ---
 
 # State
@@ -71,6 +71,7 @@ Key decisions locked for v3.0 scope:
 - [Phase 34]: Mark as Submitted action is only available in modal flows (D-12) — detail page shows status and un-submit only
 - [Phase 34]: waCprStep resets to 1 on all close paths to prevent stale modal state on re-open
 - [Phase 35]: QB mapper manual MM/DD/YYYY parse avoids timezone bugs; ADP hours placed on Monday; Double Time maps to OT bucket; conflict detection pre-queries payrollEntries
+- [Phase 35-payroll-import-server-pipeline]: multer wrapped in manual invocation so MulterError is caught as 400; commit route does not re-parse CSV (D-09)
 
 ### Phase Order Rationale
 
@@ -96,7 +97,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T01:25:28.263Z
-Stopped at: Completed 35-01-PLAN.md
+Last session: 2026-03-31T01:43:32.956Z
+Stopped at: Completed 35-02-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 31`

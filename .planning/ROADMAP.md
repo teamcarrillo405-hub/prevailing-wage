@@ -192,7 +192,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 34: Agency Submission Status Tracking** - caEcprSubmittedAt + waLniSubmittedAt columns, SubmissionStatusBadge, "Mark as Submitted" UI in CA/WA export modals (AS-01, AS-02) (completed 2026-03-30)
 
-- [ ] **Phase 35: Payroll Import — Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02)
+- [x] **Phase 35: Payroll Import — Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02) (completed 2026-03-31)
 
 - [ ] **Phase 36: Payroll Import — React UI** - PayrollImportModal with file picker, preview table, unmatched worker review & match screen, confirm-commit flow (PI-03)
 
@@ -746,7 +746,7 @@ Plans:
 
 - [x] 35-01-PLAN.md — Migration + schema + shared types + QB mapper + ADP mapper + importService + unit tests
 
-- [ ] 35-02-PLAN.md — Import router (preview + commit routes) + mount in index.ts + integration tests
+- [x] 35-02-PLAN.md — Import router (preview + commit routes) + mount in index.ts + integration tests
 
 
 
@@ -844,6 +844,6 @@ Plans:
 
 | 34. Agency Submission Status Tracking | v3.0 | 2/2 | Complete    | 2026-03-30 |
 
-| 35. Payroll Import — Server Pipeline | v3.0 | 1/2 | In Progress|  |
+| 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete   | 2026-03-31 |
 
 | 36. Payroll Import — React UI | v3.0 | 0/TBD | Not started | - |
