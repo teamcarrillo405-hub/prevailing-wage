@@ -770,7 +770,15 @@ Plans:
 
   5. After a successful import, the Payroll Week Detail refreshes to show the newly imported entries and a confirmation message naming the provider and row count
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 36-01-PLAN.md — Import types, state, entry button, Step 1 file picker + preview call
+
+- [ ] 36-02-PLAN.md — Step 2 preview/resolve UI (provider table, unmatched remaps, conflict panel)
+
+- [ ] 36-03-PLAN.md — Step 3 confirm/commit UI + mutation + success banner + human verify
 
 **UI hint**: yes
 
