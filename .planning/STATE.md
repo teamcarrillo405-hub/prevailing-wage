@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 35-02-PLAN.md
-last_updated: "2026-03-31T01:49:52.304Z"
+status: Phase complete — ready for verification
+stopped_at: "Checkpoint: 36-03 Task 2 human-verify"
+last_updated: "2026-03-31T20:55:44.456Z"
 progress:
-  total_phases: 31
+  total_phases: 32
   completed_phases: 30
-  total_plans: 78
-  completed_plans: 80
+  total_plans: 81
+  completed_plans: 82
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 34 — agency-submission-status-tracking
+**Current focus:** Phase 36 — payroll-import-react-ui
 
 ## Current Position
 
-Phase: 35
-Plan: Not started
+Phase: 36 (payroll-import-react-ui) — EXECUTING
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -72,6 +72,12 @@ Key decisions locked for v3.0 scope:
 - [Phase 34]: waCprStep resets to 1 on all close paths to prevent stale modal state on re-open
 - [Phase 35]: QB mapper manual MM/DD/YYYY parse avoids timezone bugs; ADP hours placed on Monday; Double Time maps to OT bucket; conflict detection pre-queries payrollEntries
 - [Phase 35-payroll-import-server-pipeline]: multer wrapped in manual invocation so MulterError is caught as 400; commit route does not re-parse CSV (D-09)
+- [Phase 36]: Raw fetch() for FormData preview upload — api.post JSON.stringifies body and sets Content-Type: application/json, breaking multipart upload
+- [Phase 36]: Client-side import types re-declared locally — Vite client bundle cannot import from src/server/
+- [Phase 36-01]: importStep resets to 1 on all modal close paths to prevent stale step state on re-open (mirrors waCprStep pattern)
+- [Phase 36-02]: Guard Step 2 with importStep === 2 && importPreview && — eliminates non-null assertions inside block
+- [Phase 36-02]: sumSt/sumOt use structural typing — work on both ImportedRow and UnmatchedRow.hours without overloading
+- [Phase 36]: [Phase 36-03]: IIFE pattern in JSX for Step 3 computed values; api.post JSON body correct for commit (not FormData); onError parses error.message string per api.ts throw pattern; worker.classifications[0] per D-15 for remapped unmatched row promotion
 
 ### Phase Order Rationale
 
@@ -97,7 +103,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T01:43:32.956Z
-Stopped at: Completed 35-02-PLAN.md
+Last session: 2026-03-31T20:55:36.362Z
+Stopped at: Checkpoint: 36-03 Task 2 human-verify
 Resume file: None
 Next action: `/gsd:plan-phase 31`

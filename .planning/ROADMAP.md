@@ -774,9 +774,9 @@ Plans:
 
 Plans:
 
-- [ ] 36-01-PLAN.md — Import types, state, entry button, Step 1 file picker + preview call
+- [x] 36-01-PLAN.md — Import types, state, entry button, Step 1 file picker + preview call
 
-- [ ] 36-02-PLAN.md — Step 2 preview/resolve UI (provider table, unmatched remaps, conflict panel)
+- [x] 36-02-PLAN.md — Step 2 preview/resolve UI (provider table, unmatched remaps, conflict panel)
 
 - [ ] 36-03-PLAN.md — Step 3 confirm/commit UI + mutation + success banner + human verify
 
@@ -854,4 +854,4 @@ Plans:
 
 | 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
 
-| 36. Payroll Import — React UI | v3.0 | 0/TBD | Not started | - |
+| 36. Payroll Import — React UI | v3.0 | 2/3 | In Progress|  |
