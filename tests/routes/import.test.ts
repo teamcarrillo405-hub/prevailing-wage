@@ -1,0 +1,452 @@
+// tests/routes/import.test.ts
+// Integration tests for POST /api/payroll/import/preview and /commit endpoints.
+// Phase 35 Plan 02 — Payroll Import Server Pipeline.
+
+import { describe, it, expect, beforeAll } from 'vitest';
+import supertest from 'supertest';
+import { app } from '../../src/server/index.js';
+
+beforeAll(() => {
+  process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
+  process.env.NODE_ENV = 'test';
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+async function registerAndLogin(suffix: string): Promise<string> {
+  const email = `import-route-${suffix}-${Date.now()}@test.com`;
+  const res = await supertest(app)
+    .post('/api/auth/register')
+    .send({ email, password: 'password123' });
+  expect(res.status).toBe(201);
+  const cookies = res.headers['set-cookie'] as string[] | string;
+  return Array.isArray(cookies) ? cookies.join('; ') : cookies;
+}
+
+async function createProject(cookie: string): Promise<string> {
+  const res = await supertest(app)
+    .post('/api/projects')
+    .set('Cookie', cookie)
+    .send({
+      name: 'Import Test Project',
+      state: 'CA',
+      county: 'Los Angeles',
+      contractType: 'federal-davis-bacon',
+      awardDate: '2025-01-01',
+      fundingType: 'federal',
+    });
+  expect(res.status).toBe(201);
+  return res.body.data?.project?.id as string;
+}
+
+async function createWorker(cookie: string, projectId: string, name: string): Promise<{ workerId: string; classificationId: string }> {
+  const wRes = await supertest(app)
+    .post(`/api/projects/${projectId}/workers`)
+    .set('Cookie', cookie)
+    .send({ name });
+  expect(wRes.status).toBe(201);
+  const workerId = wRes.body.data?.worker?.id as string;
+
+  const cRes = await supertest(app)
+    .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+    .set('Cookie', cookie)
+    .send({
+      tradeCode: 'CARP',
+      tradeDescription: 'Carpenter',
+      laborType: 'journeyworker',
+    });
+  expect(cRes.status).toBe(201);
+  const classificationId = cRes.body.data?.classification?.id as string;
+
+  return { workerId, classificationId };
+}
+
+async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-01-12'): Promise<string> {
+  const res = await supertest(app)
+    .post('/api/payroll/weeks')
+    .set('Cookie', cookie)
+    .send({ projectId, weekEndingDate, payrollNumber: 1 });
+  expect(res.status).toBe(201);
+  return res.body.id as string;
+}
+
+async function submitWeek(cookie: string, weekId: string): Promise<void> {
+  const res = await supertest(app)
+    .patch(`/api/payroll/weeks/${weekId}/submit`)
+    .set('Cookie', cookie)
+    .send({ submittedAt: '2025-01-12', submittedTo: 'DOL Region 9' });
+  expect(res.status).toBe(200);
+}
+
+// ── QB CSV Test Fixtures ──────────────────────────────────────────────────
+// Week ending 2025-01-12 (Sunday) — week starts 2025-01-06 (Monday)
+// Mon=01/06/2025, Tue=01/07/2025, Wed=01/08/2025, Thu=01/09/2025, Fri=01/10/2025
+
+const QB_CSV_WITH_JOHN_SMITH = `Employee,Date,Duration,Payroll Item,Customer:Job
+John Smith,01/06/2025,8.00,Regular Pay,Test Project
+John Smith,01/07/2025,8.00,Regular Pay,Test Project
+John Smith,01/06/2025,2.00,Overtime Pay,Test Project
+Jane Doe,01/06/2025,8.00,Regular Pay,Test Project
+`;
+
+const QB_CSV_JOHN_ONLY = `Employee,Date,Duration,Payroll Item,Customer:Job
+John Smith,01/06/2025,8.00,Regular Pay,Test Project
+John Smith,01/07/2025,8.00,Regular Pay,Test Project
+John Smith,01/06/2025,2.00,Overtime Pay,Test Project
+`;
+
+const ADP_CSV = `Co Code,Batch ID,File #,First Name,Last Name,Week,Reg Hours,O/T Hours
+ABC,001,101,John,Smith,01,40.00,5.00
+ABC,001,102,Jane,Doe,01,32.00,0.00
+`;
+
+const UNKNOWN_CSV = `Company,Invoice,Amount,Date
+Acme Corp,INV-001,500.00,2025-01-06
+Acme Corp,INV-002,750.00,2025-01-07
+`;
+
+// ── Tests: POST /api/payroll/import/preview ───────────────────────────────
+
+describe('POST /api/payroll/import/preview', () => {
+  it('returns 401 when not authenticated', async () => {
+    const res = await supertest(app)
+      .post('/api/payroll/import/preview')
+      .field('weekId', 'any-week-id')
+      .attach('file', Buffer.from(QB_CSV_JOHN_ONLY), { filename: 'test.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 when no file uploaded', async () => {
+    const cookie = await registerAndLogin('preview-nofile');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/preview')
+      .set('Cookie', cookie)
+      .field('weekId', weekId);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/No file uploaded/i);
+  });
+
+  it('returns 400 for unknown CSV format', async () => {
+    const cookie = await registerAndLogin('preview-unknown');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/preview')
+      .set('Cookie', cookie)
+      .field('weekId', weekId)
+      .attach('file', Buffer.from(UNKNOWN_CSV), { filename: 'unknown.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Could not detect payroll provider/i);
+  });
+
+  it('returns 423 when week is submitted', async () => {
+    const cookie = await registerAndLogin('preview-submitted');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await submitWeek(cookie, weekId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/preview')
+      .set('Cookie', cookie)
+      .field('weekId', weekId)
+      .attach('file', Buffer.from(QB_CSV_JOHN_ONLY), { filename: 'test.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(423);
+    expect(res.body.error).toMatch(/submitted/i);
+  });
+
+  it('QB CSV: matched worker appears in matched[], unmatched in unmatched[]', async () => {
+    const cookie = await registerAndLogin('preview-qb-matched');
+    const projectId = await createProject(cookie);
+    // Create "John Smith" in the project — will match CSV
+    await createWorker(cookie, projectId, 'John Smith');
+    // "Jane Doe" is in CSV but NOT in the project — will be unmatched
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/preview')
+      .set('Cookie', cookie)
+      .field('weekId', weekId)
+      .attach('file', Buffer.from(QB_CSV_WITH_JOHN_SMITH), { filename: 'qb.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.provider).toBe('quickbooks');
+    expect(Array.isArray(res.body.matched)).toBe(true);
+    expect(Array.isArray(res.body.unmatched)).toBe(true);
+    expect(Array.isArray(res.body.conflicts)).toBe(true);
+
+    // John Smith should be matched
+    const johnMatch = res.body.matched.find((r: any) => r.csvName === 'John Smith');
+    expect(johnMatch).toBeDefined();
+    // mon=01/06 => monSt=8, tueSt=8, monOt=2
+    expect(johnMatch.monSt).toBe(8);
+    expect(johnMatch.tueSt).toBe(8);
+    expect(johnMatch.monOt).toBe(2);
+
+    // Jane Doe should be unmatched (not in project)
+    const janeDoeUnmatched = res.body.unmatched.find((r: any) => r.csvName === 'Jane Doe');
+    expect(janeDoeUnmatched).toBeDefined();
+  });
+
+  it('ADP CSV: returns provider=adp, adpWeeklyTotalsOnly=true, hours on Monday', async () => {
+    const cookie = await registerAndLogin('preview-adp');
+    const projectId = await createProject(cookie);
+    // Create "John Smith" in project
+    await createWorker(cookie, projectId, 'John Smith');
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/preview')
+      .set('Cookie', cookie)
+      .field('weekId', weekId)
+      .attach('file', Buffer.from(ADP_CSV), { filename: 'adp.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.provider).toBe('adp');
+    expect(res.body.adpWeeklyTotalsOnly).toBe(true);
+
+    // John Smith matched — hours placed on Monday
+    const johnMatch = res.body.matched.find((r: any) => r.csvName === 'John Smith');
+    expect(johnMatch).toBeDefined();
+    expect(johnMatch.monSt).toBe(40);
+    expect(johnMatch.monOt).toBe(5);
+    // All other days should be 0
+    expect(johnMatch.tueSt).toBe(0);
+    expect(johnMatch.wedSt).toBe(0);
+  });
+});
+
+// ── Tests: POST /api/payroll/import/commit ────────────────────────────────
+
+describe('POST /api/payroll/import/commit', () => {
+  it('returns 401 when not authenticated', async () => {
+    const res = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .send({ weekId: 'any', provider: 'quickbooks', matched: [] });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 423 when week is submitted', async () => {
+    const cookie = await registerAndLogin('commit-submitted');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await submitWeek(cookie, weekId);
+    const { workerId, classificationId } = await createWorker(cookie, projectId, 'Test Worker Commit Sub');
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'quickbooks',
+        matched: [
+          {
+            csvName: 'Test Worker Commit Sub',
+            workerId,
+            workerName: 'Test Worker Commit Sub',
+            classificationId,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+          },
+        ],
+        unmatchedCount: 0,
+        sourceFilename: 'payroll.csv',
+      });
+
+    expect(res.status).toBe(423);
+    expect(res.body.error).toMatch(/submitted/i);
+  });
+
+  it('creates payrollEntries and payrollImports audit row on success', async () => {
+    const cookie = await registerAndLogin('commit-success');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-09');
+    const { workerId, classificationId } = await createWorker(cookie, projectId, 'Commit Worker One');
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'quickbooks',
+        matched: [
+          {
+            csvName: 'Commit Worker One',
+            workerId,
+            workerName: 'Commit Worker One',
+            classificationId,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+          },
+        ],
+        unmatchedCount: 1,
+        sourceFilename: 'payroll-week5.csv',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.committed).toBe(1);
+
+    // Verify payrollEntry was created via GET week endpoint
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.entries.length).toBe(1);
+    // getPayrollEntries returns { entry: { workerId, monSt, ... }, workerName, ... }
+    const { entry } = getRes.body.entries[0];
+    expect(entry.workerId).toBe(workerId);
+    expect(entry.monSt).toBe(8);
+    expect(entry.tueSt).toBe(8);
+    expect(entry.friSt).toBe(8);
+    expect(entry.monOt).toBe(0);
+
+    // Verify payrollImports audit row via test DB
+    const db = (globalThis as any).__testDb;
+    const { payrollImports } = await import('../../src/server/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+    const auditRows = await db
+      .select()
+      .from(payrollImports)
+      .where(eq(payrollImports.payrollWeekId, weekId));
+
+    expect(auditRows.length).toBe(1);
+    const audit = auditRows[0];
+    expect(audit.provider).toBe('quickbooks');
+    expect(audit.committedCount).toBe(1);
+    expect(audit.unmatchedCount).toBe(1);
+    expect(audit.sourceFilename).toBe('payroll-week5.csv');
+  });
+
+  it('returns 409 when worker already has an entry for the week', async () => {
+    const cookie = await registerAndLogin('commit-conflict');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-03-09');
+    const { workerId, classificationId } = await createWorker(cookie, projectId, 'Conflict Worker');
+
+    // First commit succeeds
+    const firstCommit = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'quickbooks',
+        matched: [
+          {
+            csvName: 'Conflict Worker',
+            workerId,
+            workerName: 'Conflict Worker',
+            classificationId,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 8, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+          },
+        ],
+        unmatchedCount: 0,
+      });
+    expect(firstCommit.status).toBe(200);
+
+    // Second commit on same worker/week => 409
+    const secondCommit = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'quickbooks',
+        matched: [
+          {
+            csvName: 'Conflict Worker',
+            workerId,
+            workerName: 'Conflict Worker',
+            classificationId,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 8, tueSt: 8, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+          },
+        ],
+        unmatchedCount: 0,
+      });
+    expect(secondCommit.status).toBe(409);
+    expect(secondCommit.body.error).toMatch(/already have entries/i);
+  });
+
+  it('commits multiple workers and returns correct committed count', async () => {
+    const cookie = await registerAndLogin('commit-multi');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-04-06');
+    const { workerId: worker1Id, classificationId: class1Id } = await createWorker(cookie, projectId, 'Multi Worker A');
+    const { workerId: worker2Id, classificationId: class2Id } = await createWorker(cookie, projectId, 'Multi Worker B');
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'adp',
+        matched: [
+          {
+            csvName: 'Multi Worker A',
+            workerId: worker1Id,
+            workerName: 'Multi Worker A',
+            classificationId: class1Id,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 40, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
+            monOt: 5, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+          },
+          {
+            csvName: 'Multi Worker B',
+            workerId: worker2Id,
+            workerName: 'Multi Worker B',
+            classificationId: class2Id,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 32, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+          },
+        ],
+        unmatchedCount: 0,
+        sourceFilename: 'adp-import.csv',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.committed).toBe(2);
+
+    // Verify both entries created
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.entries.length).toBe(2);
+
+    // Verify audit row has committedCount=2
+    const db = (globalThis as any).__testDb;
+    const { payrollImports } = await import('../../src/server/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+    const auditRows = await db
+      .select()
+      .from(payrollImports)
+      .where(eq(payrollImports.payrollWeekId, weekId));
+    expect(auditRows[0].committedCount).toBe(2);
+    expect(auditRows[0].provider).toBe('adp');
+  });
+});
