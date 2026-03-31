@@ -844,6 +844,6 @@ Plans:
 
 | 34. Agency Submission Status Tracking | v3.0 | 2/2 | Complete    | 2026-03-30 |
 
-| 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete   | 2026-03-31 |
+| 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
 
 | 36. Payroll Import — React UI | v3.0 | 0/TBD | Not started | - |
