@@ -321,6 +321,10 @@ export function PayrollWeekDetailPage() {
   });
   const projectWorkers = workersData?.data?.workers ?? [];
 
+  // Step 2 state: row selection + unmatched worker remapping
+  const [importCheckedRows, setImportCheckedRows] = useState<Record<number, boolean>>({});
+  const [importRemaps, setImportRemaps] = useState<Record<number, string>>({});
+
   function closeImportModal() {
     setShowImportModal(false);
     setImportStep(1);
@@ -328,6 +332,8 @@ export function PayrollWeekDetailPage() {
     setImportFile(null);
     setImportParsing(false);
     setImportError(null);
+    setImportCheckedRows({});
+    setImportRemaps({});
   }
 
   async function handleImportPreview(file: File) {
@@ -372,6 +378,23 @@ export function PayrollWeekDetailPage() {
       return () => clearTimeout(timer);
     }
   }, [importSuccessBanner]);
+
+  // Initialize all matched rows as checked when preview loads
+  useEffect(() => {
+    if (importPreview) {
+      const checked: Record<number, boolean> = {};
+      importPreview.matched.forEach((_, i) => { checked[i] = true; });
+      setImportCheckedRows(checked);
+      setImportRemaps({});
+    }
+  }, [importPreview]);
+
+  function sumSt(h: { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number }): number {
+    return h.monSt + h.tueSt + h.wedSt + h.thuSt + h.friSt + h.satSt + h.sunSt;
+  }
+  function sumOt(h: { monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }): number {
+    return h.monOt + h.tueOt + h.wedOt + h.thuOt + h.friOt + h.satOt + h.sunOt;
+  }
 
   // Pre-fill eCPR modal fields from project record when data loads
   useEffect(() => {
