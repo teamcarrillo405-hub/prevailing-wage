@@ -283,6 +283,89 @@ export function PayrollWeekDetailPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] }); },
   });
 
+  const importCommitMutation = useMutation({
+    mutationFn: async () => {
+      if (!importPreview) throw new Error('No preview data');
+
+      // Build resolved rows: checked matched rows + remapped unmatched rows promoted to ImportedRow (D-11)
+      const resolvedRows: ImportedRow[] = [];
+
+      // Add checked matched rows
+      importPreview.matched.forEach((row, i) => {
+        if (importCheckedRows[i]) {
+          resolvedRows.push(row);
+        }
+      });
+
+      // Promote remapped unmatched rows to ImportedRow (D-11, D-15)
+      importPreview.unmatched.forEach((u, i) => {
+        const selectedWorkerId = importRemaps[i];
+        if (!selectedWorkerId) return; // not remapped — skip
+        const worker = projectWorkers.find((w) => w.id === selectedWorkerId);
+        if (!worker || worker.classifications.length === 0) return; // no classifications — cannot commit (D-15)
+        const cls = worker.classifications[0]; // first active classification per D-15
+        resolvedRows.push({
+          csvName: u.csvName,
+          workerId: worker.id,
+          workerName: worker.name,
+          classificationId: cls.id,
+          classificationName: cls.tradeDescription,
+          baseRateSnapshot: cls.baseRate ?? 0,
+          fringeRateSnapshot: cls.fringeRate ?? 0,
+          monSt: u.hours.monSt,
+          tueSt: u.hours.tueSt,
+          wedSt: u.hours.wedSt,
+          thuSt: u.hours.thuSt,
+          friSt: u.hours.friSt,
+          satSt: u.hours.satSt,
+          sunSt: u.hours.sunSt,
+          monOt: u.hours.monOt,
+          tueOt: u.hours.tueOt,
+          wedOt: u.hours.wedOt,
+          thuOt: u.hours.thuOt,
+          friOt: u.hours.friOt,
+          satOt: u.hours.satOt,
+          sunOt: u.hours.sunOt,
+        });
+      });
+
+      // Count skipped unmatched (for audit)
+      const unmatchedSkipped = importPreview.unmatched.length -
+        importPreview.unmatched.filter((_, i) => {
+          const wid = importRemaps[i];
+          if (!wid) return false;
+          const w = projectWorkers.find((pw) => pw.id === wid);
+          return w && w.classifications.length > 0;
+        }).length;
+
+      return api.post<{ committed: number }>('/payroll/import/commit', {
+        weekId: importPreview.weekId,
+        provider: importPreview.provider,
+        matched: resolvedRows,
+        unmatchedCount: unmatchedSkipped,
+        sourceFilename: importFile?.name,
+      });
+    },
+    onSuccess: (data) => {
+      const provider = importPreview?.provider === 'quickbooks' ? 'QuickBooks' : 'ADP';
+      const count = (data as { committed: number }).committed;
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+      queryClient.invalidateQueries({ queryKey: ['payroll-weeks', projectId] });
+      closeImportModal();
+      setImportSuccessBanner(`Imported ${count} entries from ${provider}.`);
+    },
+    onError: (error: Error) => {
+      // Parse specific error codes from the error message
+      if (error.message.includes('already have entries') || error.message.includes('conflict')) {
+        setImportCommitError('Import conflict detected. Delete existing entries for the conflicting workers and try again.');
+      } else if (error.message.includes('submitted') || error.message.includes('423')) {
+        setImportCommitError('This payroll week was submitted during your session and can no longer be modified.');
+      } else {
+        setImportCommitError(error.message || 'Import failed. Please try again.');
+      }
+    },
+  });
+
   const {
     data: weekData,
     isLoading: weekLoading,
@@ -324,6 +407,7 @@ export function PayrollWeekDetailPage() {
   // Step 2 state: row selection + unmatched worker remapping
   const [importCheckedRows, setImportCheckedRows] = useState<Record<number, boolean>>({});
   const [importRemaps, setImportRemaps] = useState<Record<number, string>>({});
+  const [importCommitError, setImportCommitError] = useState<string | null>(null);
 
   function closeImportModal() {
     setShowImportModal(false);
@@ -334,6 +418,7 @@ export function PayrollWeekDetailPage() {
     setImportError(null);
     setImportCheckedRows({});
     setImportRemaps({});
+    setImportCommitError(null);
   }
 
   async function handleImportPreview(file: File) {
@@ -1951,24 +2036,102 @@ export function PayrollWeekDetailPage() {
                 </>
               )}
 
-              {importStep === 3 && (
-                <>
-                  {/* Step 3 content — implemented in Plan 36-03 */}
-                  <p className="text-xs text-text-secondary">Step 3 of 3</p>
-                  <h3 className="text-xl font-headline font-semibold text-gray-900">
-                    Import Payroll — Step 3: Confirm Import
-                  </h3>
-                  <p className="mt-4 text-sm text-text-secondary">Step 3 confirm content goes here.</p>
-                  <div className="mt-6 flex justify-between items-center pt-4 border-t border-border-default">
-                    <Button variant="ghost" size="md" onClick={() => setImportStep(2)}>
-                      Back
-                    </Button>
-                    <Button variant="primary" size="md" disabled>
-                      Confirm Import
-                    </Button>
-                  </div>
-                </>
-              )}
+              {importStep === 3 && importPreview && (() => {
+                // Compute summary values for display
+                const checkedMatched = importPreview.matched.filter((_, i) => importCheckedRows[i]);
+                const remappedUnmatched = importPreview.unmatched.filter((_, i) => {
+                  const wid = importRemaps[i];
+                  if (!wid) return false;
+                  const w = projectWorkers.find((pw) => pw.id === wid);
+                  return w && w.classifications.length > 0;
+                });
+                const totalToImport = checkedMatched.length + remappedUnmatched.length;
+                const deselectedMatched = importPreview.matched.length - checkedMatched.length;
+                const skippedUnmatched = importPreview.unmatched.length - remappedUnmatched.length;
+                const totalSkipped = deselectedMatched + skippedUnmatched;
+                const providerLabel = importPreview.provider === 'quickbooks' ? 'QuickBooks' : 'ADP';
+
+                return (
+                  <>
+                    <p className="text-xs text-text-secondary">Step 3 of 3</p>
+                    <h3 className="text-xl font-headline font-semibold text-gray-900">
+                      Import Payroll — Step 3: Confirm Import
+                    </h3>
+
+                    <div className="mt-4 max-h-[70vh] overflow-y-auto">
+                      {/* Summary heading (D-07) */}
+                      <p className="text-sm">
+                        Ready to import <strong>{totalToImport}</strong> entries from {providerLabel}.
+                      </p>
+
+                      {/* Worker names list */}
+                      {totalToImport > 0 && (
+                        <ul className="mt-2 list-disc pl-5 text-sm">
+                          {checkedMatched.map((row, i) => (
+                            <li key={`m-${i}`}>{row.workerName} — {row.classificationName}</li>
+                          ))}
+                          {remappedUnmatched.map((u, i) => {
+                            const wid = importRemaps[importPreview.unmatched.indexOf(u)];
+                            const worker = projectWorkers.find((w) => w.id === wid);
+                            return (
+                              <li key={`u-${i}`}>
+                                {worker?.name ?? u.csvName} (remapped from &ldquo;{u.csvName}&rdquo;)
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+
+                      {/* Skipped count */}
+                      {totalSkipped > 0 && (
+                        <p className="mt-3 text-sm text-text-secondary">
+                          {totalSkipped} row{totalSkipped !== 1 ? 's' : ''} will be skipped.
+                        </p>
+                      )}
+
+                      {/* Conflict warning repeat (D-07) */}
+                      {importPreview.conflicts.length > 0 && (
+                        <Card padding="sm" className="mt-3 border border-status-warning/30 bg-status-warning/10">
+                          <p className="text-sm font-semibold text-status-warning">Cannot import — existing entries conflict</p>
+                          <p className="mt-1 text-sm text-status-warning">
+                            These workers already have manual entries this week:{' '}
+                            {importPreview.conflicts.map((c) => c.workerName).join(', ')}.
+                            Delete their existing entries on the Payroll Entry page, then re-import.
+                          </p>
+                        </Card>
+                      )}
+
+                      {/* Commit error (D-09) */}
+                      {importCommitError && (
+                        <p className="mt-3 text-sm text-status-violation">{importCommitError}</p>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-6 flex justify-between items-center pt-4 border-t border-border-default">
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="md" onClick={() => setImportStep(2)}>
+                          Back
+                        </Button>
+                        <Button variant="ghost" size="md" onClick={closeImportModal}>
+                          Discard Import
+                        </Button>
+                      </div>
+                      <Button
+                        variant="primary"
+                        size="md"
+                        disabled={totalToImport === 0 || importCommitMutation.isPending}
+                        onClick={() => {
+                          setImportCommitError(null);
+                          importCommitMutation.mutate();
+                        }}
+                      >
+                        {importCommitMutation.isPending ? 'Importing...' : 'Confirm Import'}
+                      </Button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}
