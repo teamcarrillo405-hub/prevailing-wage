@@ -89,6 +89,75 @@ interface ComplianceResult {
   certAccuratePayroll: boolean;
 }
 
+// ── Payroll Import types (Phase 36 — mirrors src/server/services/importTypes.ts) ──
+
+interface ImportedRow {
+  csvName: string;
+  workerId: string;
+  workerName: string;
+  classificationId: string;
+  classificationName: string;
+  baseRateSnapshot: number;
+  fringeRateSnapshot: number;
+  monSt: number;
+  tueSt: number;
+  wedSt: number;
+  thuSt: number;
+  friSt: number;
+  satSt: number;
+  sunSt: number;
+  monOt: number;
+  tueOt: number;
+  wedOt: number;
+  thuOt: number;
+  friOt: number;
+  satOt: number;
+  sunOt: number;
+}
+
+interface UnmatchedRow {
+  csvName: string;
+  hours: {
+    monSt: number; tueSt: number; wedSt: number; thuSt: number;
+    friSt: number; satSt: number; sunSt: number;
+    monOt: number; tueOt: number; wedOt: number; thuOt: number;
+    friOt: number; satOt: number; sunOt: number;
+  };
+}
+
+interface ConflictRow {
+  csvName: string;
+  workerId: string;
+  workerName: string;
+  reason: string;
+}
+
+interface ImportPreviewResult {
+  provider: 'quickbooks' | 'adp';
+  weekId: string;
+  matched: ImportedRow[];
+  unmatched: UnmatchedRow[];
+  conflicts: ConflictRow[];
+  adpWeeklyTotalsOnly?: boolean;
+}
+
+interface ImportWorkerClassification {
+  id: string;
+  workerId: string;
+  projectId: string;
+  tradeCode: string;
+  tradeDescription: string;
+  laborType: string;
+  baseRate?: number;
+  fringeRate?: number;
+}
+
+interface ImportWorker {
+  id: string;
+  name: string;
+  classifications: ImportWorkerClassification[];
+}
+
 interface ProjectData {
   id: string;
   state: string;
@@ -158,6 +227,15 @@ export function PayrollWeekDetailPage() {
   const [waCprGenerating, setWaCprGenerating] = useState(false);
   const waCprGeneratingRef = useRef(false);
   const [waCprStep, setWaCprStep] = useState<1 | 2>(1);
+
+  // ── Payroll Import modal state (Phase 36 — mirrors ecprStep/showEcprModal pattern per D-02) ──
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
+  const [importPreview, setImportPreview] = useState<ImportPreviewResult | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importParsing, setImportParsing] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccessBanner, setImportSuccessBanner] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const [showSubmitForm, setShowSubmitForm] = useState(false);
@@ -233,6 +311,67 @@ export function PayrollWeekDetailPage() {
   });
   const isCA = projectData?.data?.project?.state === 'CA';
   const isWA = projectData?.data?.project?.state === 'WA';
+
+  // Workers query — needed for import unmatched worker remap dropdown (Phase 36)
+  const { data: workersData } = useQuery({
+    queryKey: ['workers', projectId],
+    queryFn: () =>
+      api.get<{ data: { workers: ImportWorker[] } }>(`/projects/${projectId}/workers`),
+    enabled: !!projectId,
+  });
+  const projectWorkers = workersData?.data?.workers ?? [];
+
+  function closeImportModal() {
+    setShowImportModal(false);
+    setImportStep(1);
+    setImportPreview(null);
+    setImportFile(null);
+    setImportParsing(false);
+    setImportError(null);
+  }
+
+  async function handleImportPreview(file: File) {
+    setImportParsing(true);
+    setImportError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('weekId', weekId!);
+      // CRITICAL: Use raw fetch, NOT api.post — api.post does JSON.stringify + sets Content-Type: application/json
+      // Do NOT set Content-Type manually — browser must set multipart boundary
+      const res = await fetch('/api/payroll/import/preview', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 423) {
+          setImportError('This payroll week has been submitted and cannot be modified.');
+        } else if (res.status === 400) {
+          setImportError((body as { error?: string }).error || 'Could not detect payroll provider. Upload a QuickBooks Time by Employee Detail or ADP payroll export.');
+        } else {
+          setImportError('Upload failed. Check your connection and try again.');
+        }
+        setImportParsing(false);
+        return;
+      }
+      const result = (await res.json()) as ImportPreviewResult;
+      setImportPreview(result);
+      setImportStep(2);
+    } catch {
+      setImportError('Upload failed. Check your connection and try again.');
+    } finally {
+      setImportParsing(false);
+    }
+  }
+
+  useEffect(() => {
+    if (importSuccessBanner) {
+      const timer = setTimeout(() => setImportSuccessBanner(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [importSuccessBanner]);
 
   // Pre-fill eCPR modal fields from project record when data loads
   useEffect(() => {
@@ -562,6 +701,17 @@ export function PayrollWeekDetailPage() {
                 Download WA CPR XML
               </Button>
             )}
+            {weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!!week?.submittedAt}
+                title={week?.submittedAt ? 'This payroll week has been submitted and cannot be modified.' : undefined}
+                onClick={() => { setImportStep(1); setShowImportModal(true); }}
+              >
+                Import from Payroll Provider
+              </Button>
+            )}
           </div>
         </div>
 
@@ -570,6 +720,12 @@ export function PayrollWeekDetailPage() {
           title="Review Before You Submit"
           body={<>Verify all hours and rates are correct. Once you download the <TermTooltip term="WH-347" definition={WH347_DEF} />, it becomes your certified payroll record. Violations shown here must be corrected or documented.</>}
         />
+
+        {importSuccessBanner && (
+          <div className="mb-4 rounded-sm border border-status-compliant/30 bg-status-compliant/10 px-4 py-2 text-sm text-status-compliant">
+            {importSuccessBanner}
+          </div>
+        )}
 
         {/* Loading state */}
         {isLoading && <LoadingSpinner />}
@@ -1531,6 +1687,98 @@ export function PayrollWeekDetailPage() {
                 </Button>
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* Payroll Import Modal — 3-step (Phase 36, per D-01 through D-09) */}
+        {showImportModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={closeImportModal}
+          >
+            <div
+              className="mx-4 max-w-3xl w-full rounded-lg bg-surface-card shadow-card-elevated p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {importStep === 1 && (
+                <>
+                  <p className="text-xs text-text-secondary">Step 1 of 3</p>
+                  <h3 className="text-xl font-headline font-semibold text-gray-900">
+                    Import Payroll — Step 1: Select File
+                  </h3>
+                  <div className="mt-4">
+                    <label className="inline-block cursor-pointer rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50">
+                      Browse file
+                      <input
+                        type="file"
+                        accept=".csv"
+                        className="hidden"
+                        disabled={importParsing}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] ?? null;
+                          setImportFile(f);
+                          setImportError(null);
+                          if (f) handleImportPreview(f);
+                        }}
+                      />
+                    </label>
+                    {importFile && !importParsing && !importError && (
+                      <span className="ml-3 text-sm text-text-secondary">{importFile.name}</span>
+                    )}
+                    {importParsing && (
+                      <span className="ml-3 text-sm text-text-secondary italic">Parsing...</span>
+                    )}
+                    {importError && (
+                      <p className="mt-2 text-sm text-status-violation">{importError}</p>
+                    )}
+                  </div>
+                  <div className="mt-6 flex justify-between items-center pt-4 border-t border-border-default">
+                    <Button variant="ghost" size="md" onClick={closeImportModal}>
+                      Close Import
+                    </Button>
+                    <div />
+                  </div>
+                </>
+              )}
+
+              {importStep === 2 && (
+                <>
+                  {/* Step 2 content — implemented in Plan 36-02 */}
+                  <p className="text-xs text-text-secondary">Step 2 of 3</p>
+                  <h3 className="text-xl font-headline font-semibold text-gray-900">
+                    Import Payroll — Step 2: Review Entries
+                  </h3>
+                  <p className="mt-4 text-sm text-text-secondary">Step 2 preview content goes here.</p>
+                  <div className="mt-6 flex justify-between items-center pt-4 border-t border-border-default">
+                    <Button variant="ghost" size="md" onClick={() => { setImportStep(1); setImportFile(null); }}>
+                      Back
+                    </Button>
+                    <Button variant="primary" size="md" onClick={() => setImportStep(3)}>
+                      Review Import &rarr;
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {importStep === 3 && (
+                <>
+                  {/* Step 3 content — implemented in Plan 36-03 */}
+                  <p className="text-xs text-text-secondary">Step 3 of 3</p>
+                  <h3 className="text-xl font-headline font-semibold text-gray-900">
+                    Import Payroll — Step 3: Confirm Import
+                  </h3>
+                  <p className="mt-4 text-sm text-text-secondary">Step 3 confirm content goes here.</p>
+                  <div className="mt-6 flex justify-between items-center pt-4 border-t border-border-default">
+                    <Button variant="ghost" size="md" onClick={() => setImportStep(2)}>
+                      Back
+                    </Button>
+                    <Button variant="primary" size="md" disabled>
+                      Confirm Import
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
