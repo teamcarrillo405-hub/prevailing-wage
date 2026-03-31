@@ -321,6 +321,10 @@ export function PayrollWeekDetailPage() {
   });
   const projectWorkers = workersData?.data?.workers ?? [];
 
+  // Step 2 state: row selection + unmatched worker remapping
+  const [importCheckedRows, setImportCheckedRows] = useState<Record<number, boolean>>({});
+  const [importRemaps, setImportRemaps] = useState<Record<number, string>>({});
+
   function closeImportModal() {
     setShowImportModal(false);
     setImportStep(1);
@@ -328,6 +332,8 @@ export function PayrollWeekDetailPage() {
     setImportFile(null);
     setImportParsing(false);
     setImportError(null);
+    setImportCheckedRows({});
+    setImportRemaps({});
   }
 
   async function handleImportPreview(file: File) {
@@ -372,6 +378,23 @@ export function PayrollWeekDetailPage() {
       return () => clearTimeout(timer);
     }
   }, [importSuccessBanner]);
+
+  // Initialize all matched rows as checked when preview loads
+  useEffect(() => {
+    if (importPreview) {
+      const checked: Record<number, boolean> = {};
+      importPreview.matched.forEach((_, i) => { checked[i] = true; });
+      setImportCheckedRows(checked);
+      setImportRemaps({});
+    }
+  }, [importPreview]);
+
+  function sumSt(h: { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number }): number {
+    return h.monSt + h.tueSt + h.wedSt + h.thuSt + h.friSt + h.satSt + h.sunSt;
+  }
+  function sumOt(h: { monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }): number {
+    return h.monOt + h.tueOt + h.wedOt + h.thuOt + h.friOt + h.satOt + h.sunOt;
+  }
 
   // Pre-fill eCPR modal fields from project record when data loads
   useEffect(() => {
@@ -1741,14 +1764,182 @@ export function PayrollWeekDetailPage() {
                 </>
               )}
 
-              {importStep === 2 && (
+              {importStep === 2 && importPreview && (
                 <>
-                  {/* Step 2 content — implemented in Plan 36-02 */}
                   <p className="text-xs text-text-secondary">Step 2 of 3</p>
                   <h3 className="text-xl font-headline font-semibold text-gray-900">
                     Import Payroll — Step 2: Review Entries
                   </h3>
-                  <p className="mt-4 text-sm text-text-secondary">Step 2 preview content goes here.</p>
+
+                  {/* Provider badge (D-04) */}
+                  <div className="mt-3">
+                    <Badge variant="neutral">
+                      {importPreview.provider === 'quickbooks' ? 'QuickBooks' : 'ADP'}
+                    </Badge>
+                  </div>
+
+                  {/* ADP amber banner — only when adpWeeklyTotalsOnly (D-13) */}
+                  {importPreview.adpWeeklyTotalsOnly && (
+                    <Card padding="sm" className="mt-3 border border-status-warning/30 bg-status-warning/10">
+                      <p className="text-sm text-status-warning">
+                        ADP export does not include daily breakdown. Hours are shown as weekly totals placed on Monday.
+                      </p>
+                    </Card>
+                  )}
+
+                  {/* Conflict warning panel — only when conflicts exist (D-12) */}
+                  {importPreview.conflicts.length > 0 && (
+                    <Card padding="sm" className="mt-3 border border-status-warning/30 bg-status-warning/10">
+                      <p className="text-sm font-semibold text-status-warning">Cannot import — existing entries conflict</p>
+                      <p className="mt-1 text-sm text-status-warning">
+                        These workers already have manual entries this week:{' '}
+                        {importPreview.conflicts.map((c) => c.workerName).join(', ')}.
+                        Delete their existing entries on the Payroll Entry page, then re-import.
+                      </p>
+                    </Card>
+                  )}
+
+                  {/* Scrollable content area */}
+                  <div className="mt-4 max-h-[70vh] overflow-y-auto">
+
+                    {/* Matched workers table (D-04, D-05) */}
+                    {importPreview.matched.length > 0 ? (
+                      <Card padding="none">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-border-default">
+                                <th className="w-8 px-2 py-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={importPreview.matched.every((_, i) => importCheckedRows[i])}
+                                    onChange={(e) => {
+                                      const next: Record<number, boolean> = {};
+                                      importPreview.matched.forEach((_, i) => { next[i] = e.target.checked; });
+                                      setImportCheckedRows(next);
+                                    }}
+                                  />
+                                </th>
+                                <th className="px-2 py-2 text-left text-xs font-semibold text-text-secondary">Worker</th>
+                                <th className="px-2 py-2 text-left text-xs font-semibold text-text-secondary">Classification</th>
+                                {importPreview.adpWeeklyTotalsOnly ? (
+                                  <>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Total ST</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Total OT</th>
+                                  </>
+                                ) : (
+                                  <>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">M ST</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">M OT</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">T ST</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">T OT</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">W ST</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">W OT</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Th ST</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Th OT</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">F ST</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">F OT</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Sa ST</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Sa OT</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Su ST</th>
+                                    <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Su OT</th>
+                                  </>
+                                )}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {importPreview.matched.map((row, i) => (
+                                <tr key={i} className="border-b border-border-default last:border-0">
+                                  <td className="px-2 py-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!importCheckedRows[i]}
+                                      onChange={(e) => setImportCheckedRows((prev) => ({ ...prev, [i]: e.target.checked }))}
+                                    />
+                                  </td>
+                                  <td className="px-2 py-2">{row.workerName}</td>
+                                  <td className="px-2 py-2">{row.classificationName}</td>
+                                  {importPreview.adpWeeklyTotalsOnly ? (
+                                    <>
+                                      <td className="px-2 py-2 text-right">{sumSt(row)}</td>
+                                      <td className="px-2 py-2 text-right">{sumOt(row)}</td>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <td className="px-2 py-2 text-right">{row.monSt}</td>
+                                      <td className="px-2 py-2 text-right">{row.monOt}</td>
+                                      <td className="px-2 py-2 text-right">{row.tueSt}</td>
+                                      <td className="px-2 py-2 text-right">{row.tueOt}</td>
+                                      <td className="px-2 py-2 text-right">{row.wedSt}</td>
+                                      <td className="px-2 py-2 text-right">{row.wedOt}</td>
+                                      <td className="px-2 py-2 text-right">{row.thuSt}</td>
+                                      <td className="px-2 py-2 text-right">{row.thuOt}</td>
+                                      <td className="px-2 py-2 text-right">{row.friSt}</td>
+                                      <td className="px-2 py-2 text-right">{row.friOt}</td>
+                                      <td className="px-2 py-2 text-right">{row.satSt}</td>
+                                      <td className="px-2 py-2 text-right">{row.satOt}</td>
+                                      <td className="px-2 py-2 text-right">{row.sunSt}</td>
+                                      <td className="px-2 py-2 text-right">{row.sunOt}</td>
+                                    </>
+                                  )}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </Card>
+                    ) : (
+                      <p className="mt-4 text-sm text-text-secondary">No importable entries found in this file.</p>
+                    )}
+
+                    {/* Unmatched workers section (D-06, D-10, D-11, D-15) */}
+                    {importPreview.unmatched.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="text-sm font-semibold text-gray-900">Unmatched Workers</h4>
+                        <div className="mt-2 space-y-3">
+                          {importPreview.unmatched.map((u, i) => {
+                            const selectedWorkerId = importRemaps[i] || '';
+                            const selectedWorker = projectWorkers.find((w) => w.id === selectedWorkerId);
+                            const hasNoClassifications = selectedWorker && selectedWorker.classifications.length === 0;
+                            return (
+                              <div key={i} className="flex items-start gap-3 rounded border border-border-default p-3">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">{u.csvName}</p>
+                                  <p className="text-xs text-text-secondary">
+                                    {importPreview.adpWeeklyTotalsOnly
+                                      ? `ST: ${sumSt(u.hours)} / OT: ${sumOt(u.hours)}`
+                                      : `Total: ${sumSt(u.hours) + sumOt(u.hours)} hrs`}
+                                  </p>
+                                </div>
+                                <div>
+                                  <select
+                                    className="rounded border border-gray-300 px-2 py-1 text-sm"
+                                    value={selectedWorkerId}
+                                    onChange={(e) => setImportRemaps((prev) => ({ ...prev, [i]: e.target.value }))}
+                                  >
+                                    <option value="">&mdash; Select worker &mdash;</option>
+                                    {projectWorkers.map((w) => (
+                                      <option key={w.id} value={w.id}>{w.name}</option>
+                                    ))}
+                                  </select>
+                                  {hasNoClassifications && (
+                                    <p className="mt-1 text-xs text-status-violation">
+                                      This worker has no classifications. Add one on the Workers page before importing.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p className="mt-2 text-xs text-text-secondary">
+                          Workers not remapped will be skipped. To import a new worker, add them on the Workers page first.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer navigation */}
                   <div className="mt-6 flex justify-between items-center pt-4 border-t border-border-default">
                     <Button variant="ghost" size="md" onClick={() => { setImportStep(1); setImportFile(null); }}>
                       Back
