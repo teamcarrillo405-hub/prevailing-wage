@@ -221,6 +221,18 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   ),
 }));
 
+// ── Phase 35: Payroll Import Audit ─────────────────────────────────────────
+export const payrollImports = sqliteTable('payroll_imports', {
+  id: text('id').primaryKey(),
+  payrollWeekId: text('payroll_week_id').notNull().references(() => payrollWeeks.id),
+  importedByUserId: text('imported_by_user_id').notNull().references(() => users.id),
+  provider: text('provider').notNull().$type<'quickbooks' | 'adp'>(),
+  sourceFilename: text('source_filename'),
+  committedCount: integer('committed_count').notNull(),
+  unmatchedCount: integer('unmatched_count').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
 // ── Phase 5: Union Trade Configurations ─────────────────────────────────
 // Stores named trade/union configs per project. Wage rate fields are
 // informational labels — actual cost is always derived from payroll_entries
