@@ -120,6 +120,13 @@
       "when": 1775200000000,
       "tag": "0020_payroll_imports",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1775300000000,
+      "tag": "0021_audit_logs",
+      "breakpoints": true
     }
   ]
 }
