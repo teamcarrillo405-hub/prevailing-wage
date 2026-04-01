@@ -684,3 +684,230 @@ _v3.0 phase details archived to `.planning/milestones/v3.0-ROADMAP.md`_
 | 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
 
 | 36. Payroll Import — React UI | v3.0 | 3/3 | Complete    | 2026-04-01 |
+
+
+---
+
+### v4.0 Compliance Depth + Operations (Phases 37-46)
+
+- [ ] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog()
+- [ ] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage
+- [ ] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week
+- [ ] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance()
+- [ ] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal
+- [ ] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers
+- [ ] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal
+- [ ] **Phase 44: Import Provider Foundation** - payroll_provider_mappings table, Gusto parser, provider auto-detection
+- [ ] **Phase 45: Import ID-Mapped Providers** - Paychex Flex + Sage 300 CRE parsers, Step 2b mapping UI
+- [ ] **Phase 46: Notifications** - violation/reminder/activity/submission emails, per-project preferences UI
+
+---
+
+### Phase 37: Audit Trail Foundation
+
+**Goal**: An append-only audit log table exists in the database and a single `auditService.ts` provides the `insertAuditLog()` function with SSN redaction and hybrid diff/snapshot payload strategy. No existing behavior changes - this phase only creates the infrastructure that Phase 38 wires up.
+
+**Depends on**: Phase 36 (v3.0 complete; service layer patterns established)
+
+**Requirements**: AUDIT-01, AUDIT-02, NFR-01, NFR-04, NFR-05
+
+**Success Criteria** (what must be TRUE):
+  1. The `audit_logs` table exists in the DB with all required columns (id as UUIDv4, createdAt UTC, userId, userEmail, ipAddress, projectId, entityType, entityId, action, diff, snapshot, meta) and three indexes on (project_id, created_at DESC), (entity_type, entity_id, created_at DESC), (user_id, created_at DESC)
+  2. `auditService.ts` exports only `insertAuditLog()` - no update or delete functions exist on the module
+  3. Calling `insertAuditLog()` with a worker payload that includes `ssnEncrypted` writes `"[REDACTED]"` to the diff column, not the encrypted value
+  4. The Drizzle schema file reflects the new table and the migration file uses `-->  statement-breakpoint` separators
+
+**Plans**: TBD
+
+---
+
+### Phase 38: Audit Trail Wiring + Activity UI
+
+**Goal**: All Tier-1 compliance actions (worker CRUD, payroll entry CRUD, submissions, downloads, imports) are wired to `insertAuditLog()` in the service layer, and project members can view a reverse-chronological activity feed with date-range filtering.
+
+**Depends on**: Phase 37 (audit_logs table and auditService must exist before any wiring)
+
+**Requirements**: AUDIT-03, AUDIT-04, AUDIT-05, NFR-03
+
+**Success Criteria** (what must be TRUE):
+  1. Creating, editing, or deleting a worker or payroll entry produces an audit log row with correct entityType, entityId, action, actor userId/email, and diff/snapshot payload
+  2. Downloading a WH-347, CA eCPR XML, WA CPR XML, or marking any week as submitted produces an audit log row with a meta-only payload
+  3. User can navigate to `/projects/:id/activity` and see a reverse-chronological timeline of all project events with actor email, human-readable action description, and timestamp
+  4. User can filter the activity feed by date range and the URL updates so the filtered view is bookmarkable
+  5. The `GET /api/audit/:projectId` endpoint returns 403 for non-members and paginates at 25 rows per page
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 39: Worker Profile Depth
+
+**Goal**: Worker records support structured addresses (replacing the freetext field), union local and book number, apprenticeship committee details, and per-week trade classification overrides - giving contractors the richer data model required for NY, IL, and audit-readiness.
+
+**Depends on**: Phase 37 (audit trail is live so worker schema changes are logged from the start)
+
+**Requirements**: WORKER-01, WORKER-02, WORKER-03, WORKER-04, NFR-01, NFR-05
+
+**Success Criteria** (what must be TRUE):
+  1. The worker form on WorkersPage shows four separate address inputs (street, city, state, zip); existing workers with data in the old `address` text column have that value backfilled into `addressStreet`
+  2. WorkersPage shows a "Union Information" section with optional Union Local and Book Number fields for any worker
+  3. WorkersPage shows an "Apprenticeship" section with Committee and Registration Number fields that are only visible when the worker's labor type is "apprentice"
+  4. On PayrollWeekDetailPage, each worker row has a "Change Classification for This Week" override dropdown; WH-347 uses the week-specific classification when set, falling back to the worker's default
+  5. The `payroll_week_classifications` table exists and the WH-347 generator correctly reads week-specific classifications over default classifications
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 40: NY Schema + Compliance Rule
+
+**Goal**: New York is a selectable project state, the database has all NY-specific fields, and the compliance engine enforces the NY 8-hours/day overtime rule on NY projects - so the foundation is correct before any PDF or XML is generated.
+
+**Depends on**: Phase 39 (worker schema stabilized; nysRegisteredApprentice is a worker column added here)
+
+**Requirements**: STATE-01, STATE-06, STATE-04, NFR-01, NFR-05
+
+**Success Criteria** (what must be TRUE):
+  1. The project creation and edit form includes "NY" as a selectable state alongside CA and WA
+  2. NY projects store `nyprcNumber` and `nysContractorRegNumber` fields on the project record; the project form surfaces these fields when state is NY
+  3. Workers on any project have a `nysRegisteredApprentice` boolean field visible in their profile
+  4. For an NY project payroll week where a worker exceeds 8 hours on any single day, `computeCompliance()` flags a CWHSSA OT violation and PayrollWeekDetailPage shows the violation badge - a worker with exactly 8 hours/day has no OT violation flagged
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 41: NY State Forms
+
+**Goal**: Contractors on NY projects can generate a PW-12 PDF for offline records and an MPWR-compliant XML file for portal upload, and a 3-step modal guides them through the MPWR submission checklist.
+
+**Depends on**: Phase 40 (NY schema and compliance rule must exist before generators can use nyprcNumber, nysContractorRegNumber, nysRegisteredApprentice, and daily OT data)
+
+**Requirements**: STATE-02, STATE-03, STATE-05, NFR-03
+
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Download NY PW-12" on an NY project payroll week generates a PDF with contractor header fields, per-employee rows (name + last4 SSN, classifications with ST/OT, Mon-Sun daily hours, rate, gross pay, deductions, net wages), and the Statement of Compliance certification text including fringe sub-clauses (b) and (c)
+  2. Clicking "Download NY MPWR XML" generates an XML file that includes PRC Number, NYS Contractor Registration Number, `nysRegisteredApprentice` boolean per worker, and supplement type rates with separate ST/OT hourly rates
+  3. Workers without a full SSN on file produce `000000` + last4 as a placeholder in the XML (same pattern as CA eCPR)
+  4. The NY MPWR submission modal is a 3-step flow: Step 1 collects/persists PRC Number + NYS Contractor Registration Number, Step 2 downloads XML + PW-12, Step 3 shows the MPWR portal checklist with the 30-day deadline reminder
+  5. "Mark as Submitted to NY MPWR" writes an `agency_submissions` row and the button is only visible on NY projects
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 42: IL Schema + Project Flag
+
+**Goal**: Illinois is a selectable project state and the database has all IL-specific columns - non-PW hours on payroll entries and demographic fields on workers - so the IL PDF generator and UI can use real data.
+
+**Depends on**: Phase 39 (worker schema stabilized before demographic columns are added)
+
+**Requirements**: STATE-07, STATE-09, STATE-10, NFR-01, NFR-05
+
+**Success Criteria** (what must be TRUE):
+  1. The project creation and edit form includes "IL" as a selectable state
+  2. For IL projects, the payroll entry form on PayrollWeekDetailPage shows a "Non-PW Hours" decimal input per worker row; the value is stored in `nonPwHours` on the payroll entry
+  3. WorkersPage shows a collapsible "IL Compliance Demographics" section for IL projects with nullable fields for race, ethnicity, gender, veteran status, and skill level (journeyman / apprentice); the section is hidden for non-IL projects
+  4. The Drizzle schema and migration reflect both new columns with `-->  statement-breakpoint` separators
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 43: IL State Forms
+
+**Goal**: Contractors on IL projects can generate a two-page IL DOL Certified Transcript of Payroll PDF and a 2-step modal guides them through the IDOL portal submission checklist.
+
+**Depends on**: Phase 42 (IL schema must exist so the PDF generator can access nonPwHours and demographic fields)
+
+**Requirements**: STATE-08, STATE-11, NFR-03
+
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Download IL Certified Transcript" on an IL project payroll week generates a two-page PDF: page 1 has contractor/project header and per-employee rows with PW hours, non-PW hours, base rate, fringe rates (Pension/Health+Welfare/Vacation/Training with "F" fund flags), gross pay, deductions, and net pay; page 2 has the affidavit with subcontractor list and fund details fields
+  2. The daily hour columns on the PDF distinguish PW hours from non-PW hours for each employee
+  3. The IL IDOL submission modal is a 2-step flow: Step 1 downloads the IL Certified Transcript PDF, Step 2 shows the IDOL portal checklist (due by 15th of following month, portal URL, Excel template note)
+  4. "Mark as Submitted to IL IDOL" writes an `agency_submissions` row and the button is only visible on IL projects
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 44: Import Provider Foundation
+
+**Goal**: The `payroll_provider_mappings` table is in place, Gusto CSV imports work end-to-end using name matching, and the import modal auto-detects the provider from column signatures and shows a provider badge.
+
+**Depends on**: Phase 36 (existing preview-then-commit pipeline and importService.ts must be stable before adding new providers; mappings table must be created before Phase 45 parsers can use it)
+
+**Requirements**: IMPORT-04, IMPORT-01, IMPORT-06, NFR-01, NFR-05
+
+**Success Criteria** (what must be TRUE):
+  1. The `payroll_provider_mappings` table exists with columns (id, projectId, provider, providerWorkerId, workerId, createdAt) and a UNIQUE constraint on (projectId, provider, providerWorkerId)
+  2. Uploading a Gusto Payroll Journal Report CSV (with `Employee first name`, `Employee last name`, `Payroll end date`, `Regular hours`, `Overtime hours`) processes correctly through the existing matched/unmatched preview flow
+  3. If required Gusto columns are missing, the import rejects with a clear error listing the missing columns by name
+  4. The Step 2 header of the import modal shows a provider badge (Gusto / Paychex / Sage / QB / ADP) based on column signature detection; if detection is ambiguous, a manual provider dropdown appears
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 45: Import ID-Mapped Providers
+
+**Goal**: Paychex Flex and Sage 300 CRE CSV imports work end-to-end, with a Step 2b "Map Employees" screen that lets contractors link numeric provider worker IDs to internal workers; mappings persist for future imports.
+
+**Depends on**: Phase 44 (payroll_provider_mappings table and provider detection badge must exist before Paychex/Sage parsers are added)
+
+**Requirements**: IMPORT-02, IMPORT-03, IMPORT-05, NFR-03
+
+**Success Criteria** (what must be TRUE):
+  1. Uploading a Paychex Flex CSV aggregates rows per Worker ID (summing Regular and Overtime `Hours` by `Pay Component`) and produces correct regular/OT hour totals per worker for the week
+  2. Uploading a Sage 300 CRE time entry CSV detects unique PayID codes and requires the contractor to classify each as Regular, Overtime, or Double Time before proceeding
+  3. For Paychex and Sage 300 imports, the import modal inserts a Step 2b "Map Employees" table between preview parse and the existing preview table; rows with unmapped provider IDs are shown as skipped with a count in the summary
+  4. After a contractor confirms a mapping, subsequent imports of the same provider automatically match previously mapped workers without showing the mapping step for already-known IDs
+  5. Mappings are project-scoped - a Paychex Worker ID mapped on Project A does not auto-map on Project B
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 46: Notifications
+
+**Goal**: Project owners and members receive email notifications for compliance violations, upcoming payroll due dates, team member activity, and submission confirmations; owners can configure which notifications fire per project via a settings panel.
+
+**Depends on**: Phase 41, Phase 43 (NY MPWR and IL IDOL submission events referenced in NOTIF-04 must exist; NOTIF-05 settings schema is added here)
+
+**Requirements**: NOTIF-01, NOTIF-02, NOTIF-03, NOTIF-04, NOTIF-05, NFR-02, NFR-05
+
+**Success Criteria** (what must be TRUE):
+  1. When `computeCompliance()` detects a new violation on a payroll week, all project members receive an email listing the affected workers, violation type (under-wage or CWHSSA OT), and a link to PayrollWeekDetailPage; email failure logs to console and does not 500 the request
+  2. When a payroll week end date is within the configured due-soon threshold (default 3 days, stored in `projects.settings`), the project owner receives a reminder email; the threshold is configurable 1-7 days
+  3. When a non-owner team member creates or modifies a payroll entry or worker record, the project owner receives one summary email per save action
+  4. When any agency submission is marked (CA DIR, WA L&I, NY MPWR, IL IDOL), the acting user receives a confirmation email with submission date, agency name, and project name
+  5. ProjectDetailPage has a gear-icon settings panel where the project owner can enable/disable each notification type and set the due-soon threshold; settings persist in `projects.settings` JSON column
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### v4.0 Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 37. Audit Trail Foundation | v4.0 | 0/TBD | Not started | - |
+| 38. Audit Trail Wiring + Activity UI | v4.0 | 0/TBD | Not started | - |
+| 39. Worker Profile Depth | v4.0 | 0/TBD | Not started | - |
+| 40. NY Schema + Compliance Rule | v4.0 | 0/TBD | Not started | - |
+| 41. NY State Forms | v4.0 | 0/TBD | Not started | - |
+| 42. IL Schema + Project Flag | v4.0 | 0/TBD | Not started | - |
+| 43. IL State Forms | v4.0 | 0/TBD | Not started | - |
+| 44. Import Provider Foundation | v4.0 | 0/TBD | Not started | - |
+| 45. Import ID-Mapped Providers | v4.0 | 0/TBD | Not started | - |
+| 46. Notifications | v4.0 | 0/TBD | Not started | - |
