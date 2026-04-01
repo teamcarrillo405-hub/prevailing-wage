@@ -717,7 +717,11 @@ _v3.0 phase details archived to `.planning/milestones/v3.0-ROADMAP.md`_
   3. Calling `insertAuditLog()` with a worker payload that includes `ssnEncrypted` writes `"[REDACTED]"` to the diff column, not the encrypted value
   4. The Drizzle schema file reflects the new table and the migration file uses `-->  statement-breakpoint` separators
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 37-01-PLAN.md — Schema + migration: audit_logs table, 3 indexes, journal entry
+- [ ] 37-02-PLAN.md — auditService.ts + tests: insertAuditLog(), diffObjects(), SSN redaction
 
 ---
 
