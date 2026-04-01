@@ -194,7 +194,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 35: Payroll Import — Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02) (completed 2026-03-31)
 
-- [ ] **Phase 36: Payroll Import — React UI** - PayrollImportModal with file picker, preview table, unmatched worker review & match screen, confirm-commit flow (PI-03)
+- [x] **Phase 36: Payroll Import — React UI** - PayrollImportModal with file picker, preview table, unmatched worker review & match screen, confirm-commit flow (PI-03) (completed 2026-03-31)
 
 
 
@@ -764,7 +764,7 @@ Plans:
 
   2. After file selection the modal shows a preview table with one row per CSV entry — displaying matched worker name, classification, and estimated daily hours; unmatched workers are highlighted in a distinct warning state
 
-  3. For each unmatched worker, the contractor can either map the CSV name to an existing project worker via a dropdown, or confirm creation of a new worker record — no rows are silently skipped
+  3. For each unmatched worker, the contractor can map the CSV name to an existing project worker via a dropdown; rows left unmapped are skipped with explicit user visibility (skipped count shown); new workers must be added via the Workers page before importing (no inline creation in v3.0)
 
   4. The contractor must explicitly click "Confirm Import" to write entries to the database; closing the modal or clicking Cancel at any point leaves the payroll week unchanged
 
@@ -778,7 +778,7 @@ Plans:
 
 - [x] 36-02-PLAN.md — Step 2 preview/resolve UI (provider table, unmatched remaps, conflict panel)
 
-- [ ] 36-03-PLAN.md — Step 3 confirm/commit UI + mutation + success banner + human verify
+- [x] 36-03-PLAN.md — Step 3 confirm/commit UI + mutation + success banner + human verify
 
 **UI hint**: yes
 
@@ -854,4 +854,4 @@ Plans:
 
 | 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
 
-| 36. Payroll Import — React UI | v3.0 | 2/3 | In Progress|  |
+| 36. Payroll Import — React UI | v3.0 | 3/3 | Complete   | 2026-03-31 |
