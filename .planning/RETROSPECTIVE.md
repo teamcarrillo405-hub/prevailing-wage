@@ -202,14 +202,62 @@
 
 ---
 
+## Milestone: v3.0 — Team & Integration
+
+**Shipped:** 2026-03-31
+**Phases:** 6 (31-36) | **Plans:** 17 | **Commits:** 83
+
+### What Was Built
+
+- AES-256-GCM SSN encryption: versioned JSON envelope, full 9-digit SSN input, masked UI display, real SSN in CA eCPR + WA PWIA XML export
+- Multi-user foundation: `project_members` table, `assertProjectAccess()` replacing 21 inline IDOR checks, cross-tenant regression suite
+- Team invite flow: email invite via Resend SDK (console fallback), tokenized `/accept-invite`, TeamPage, ownership transfer, soft-delete removal
+- Agency submission status tracking: per-agency timestamps, "Mark as Submitted" buttons in CA/WA export modals, independent badge rows
+- Payroll import server pipeline: QB "Time by Employee Detail" + ADP Run CSV parsing, provider auto-detection, conflict detection, preview/commit routes, `payroll_imports` audit table
+- Payroll import React UI: 3-step modal — file picker (Step 1), preview/resolve table with remap dropdowns (Step 2), confirm/commit with success banner (Step 3)
+
+### What Worked
+
+- **Research-before-roadmap discipline**: Running 4 parallel research agents before defining requirements confirmed no public CA DIR or WA L&I API exists. This prevented building an auto-submit feature against a non-existent API.
+- **assertProjectAccess centralization**: Replacing 21 scattered IDOR guards with a single utility + cross-tenant test suite was worth the Phase 32 investment. Every subsequent phase (33-36) got IDOR safety for free.
+- **CONTEXT.md per phase**: Having a dedicated CONTEXT.md with decisions (D-01 through D-15+) for each phase prevented rework when options were revisited. The D-10 escape-hatch decision in Phase 36 avoided scope creep.
+- **Two-route strategy for file upload**: Documenting `raw fetch() for FormData / api.post for JSON` in SUMMARY.md prevented the same trap in future phases — FormData + Content-Type collision is a silent failure that's easy to re-introduce.
+- **Plan wave sequencing within Phase 36**: 3 plans in tight dependency order (state foundation → UI skeleton → commit flow) meant each plan's executor had all state variables and functions it needed without guessing.
+
+### What Was Inefficient
+
+- **Stale worktrees polluting test runs**: `.claude/worktrees/agent-*/tests/` directories accumulated from parallel executor agents and were included by vitest's default glob. Running `npm test` without `--exclude ".claude/**"` gave misleading failure counts. Should add worktree exclusion to `vitest.config.ts` for next milestone.
+- **PI-03 requirement drift**: The requirement said "confirm creation of a new worker record" but the design decision (D-10) scoped that out early. The mismatch wasn't caught until verification. Better to update requirements immediately when a scoping decision is made, not wait for the verifier to flag it.
+
+### Patterns Established
+
+- **`IIFE (() => {...})()` in JSX**: Compute derived display values inside JSX without polluting component scope or adding `useMemo`. Established in Phase 36, applicable wherever you have 3+ local variables from the same computation.
+- **Two-mutation pattern for preview/commit**: Preview uses `raw fetch()` with `FormData`, commit uses `api.post()` with JSON. Pattern is documented and should be referenced when building other multi-step file-import flows.
+- **`assertProjectAccess()` before any route handler**: Centralized IDOR check on every resource route. Phase 32+ route files all use this pattern — new phases must follow it.
+
+### Key Lessons
+
+1. **Update requirements when scoping decisions are made, not at verification time**: PI-03 drift cost one verification cycle and a conversation with the user. The fix was easy (Option A), but the pattern of "requirement text diverges from CONTEXT.md decision" is worth preventing upstream.
+2. **Exclude `.claude/worktrees/` from vitest**: Worktree test files accumulate silently and produce hundreds of false failures. One vitest config change would have saved confusion across multiple milestone phases.
+3. **Versioned encryption envelopes are non-negotiable for new encrypted fields**: The AES-256-GCM envelope (version + iv + tag + ciphertext) costs 30 extra characters per record and saves a complete DB migration if the key ever needs rotation. Always use envelopes.
+
+### Cost Observations
+
+- Sessions: 4 (Phases 31-33, 34, 35, 36)
+- 83 commits across phases 31-36
+- 32 src files changed, ~2,818 net lines added
+- 4 days (2026-03-28 → 2026-03-31)
+
+---
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v2.0 | v2.1 | v2.2 | v2.3 |
-|--------|------|------|------|------|------|
-| Phases | 5 | 4 | 5 | 2 | 6 |
-| Plans | — | 16 | 14 | 4 | 10 |
-| Tests | — | 181 | 181 | 188 | 1,522 |
-| Files changed | — | 70 | ~45 | ~15 | 74 |
-| LOC (src/) | — | ~10,774 | ~10,375 | ~10,800 | ~12,150 net |
-| Days | — | 1 | 2 | 1 | 2 |
-| Regressions | — | 0 | 0 | 0 | 0 |
+| Metric | v1.0 | v2.0 | v2.1 | v2.2 | v2.3 | v3.0 |
+|--------|------|------|------|------|------|------|
+| Phases | 5 | 4 | 5 | 2 | 6 | 6 |
+| Plans | — | 16 | 14 | 4 | 10 | 17 |
+| Tests | — | 181 | 181 | 188 | 1,522 | 387+ |
+| Files changed (src/) | — | 70 | ~45 | ~15 | 74 | 32 |
+| LOC (src/) | — | ~10,774 | ~10,375 | ~10,800 | ~12,150 net | ~2,818 net |
+| Days | — | 1 | 2 | 1 | 2 | 4 |
+| Regressions | — | 0 | 0 | 0 | 0 | 0 |
