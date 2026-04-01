@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -296,3 +296,27 @@ export const projectBudgets = sqliteTable('project_budgets', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+// ── Audit Trail ──────────────────────────────────────────────────────
+export const auditLogs = sqliteTable('audit_logs', {
+  id:          text('id').primaryKey(),
+  createdAt:   text('created_at').notNull(),
+
+  userId:      text('user_id').references(() => users.id),
+  userEmail:   text('user_email'),
+  ipAddress:   text('ip_address'),
+
+  projectId:   text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+
+  entityType:  text('entity_type').notNull(),
+  entityId:    text('entity_id').notNull(),
+  action:      text('action').notNull(),
+
+  diff:        text('diff'),
+  snapshot:    text('snapshot'),
+  meta:        text('meta'),
+}, (table) => ({
+  idxAuditProject: index('idx_audit_project_time').on(table.projectId, table.createdAt),
+  idxAuditEntity:  index('idx_audit_entity').on(table.entityType, table.entityId, table.createdAt),
+  idxAuditUser:    index('idx_audit_user').on(table.userId, table.createdAt),
+}));
