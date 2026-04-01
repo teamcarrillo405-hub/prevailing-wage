@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: Compliance Depth + Operations
-status: Defining requirements
-stopped_at: v4.0 milestone started — defining requirements and roadmap
-last_updated: "2026-04-01T00:00:00.000Z"
+milestone: v2.5
+milestone_name: State Portal Integration
+status: Executing Phase 37
+stopped_at: Phase 37 Plan 01 complete — audit_logs schema + migration
+last_updated: "2026-04-01T22:00:00.000Z"
 progress:
-  total_phases: 37
-  completed_phases: 36
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 24
+  completed_phases: 14
+  total_plans: 32
+  completed_plans: 31
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** v4.0 — Compliance Depth + Operations (notifications, NY/IL state forms, Gusto/Paychex/Sage import, audit trail, worker profile depth)
+**Current focus:** Phase 37 — Audit Trail Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
+Phase: 37 (Audit Trail Foundation) — EXECUTING
+Plan: 2 of 2 (Plan 01 complete)
 
 ## Performance Metrics
 
@@ -42,6 +42,11 @@ Plan: —
 ## Accumulated Context
 
 ### Decisions
+
+Phase 37 Plan 01 decisions:
+- Drizzle index() (not uniqueIndex()) for audit log composite indexes — they are non-unique
+- DESC ordering in raw SQL migration only — Drizzle index() builder lacks .desc() for composite indexes in installed version
+- projectId FK uses onDelete: set null so audit rows survive project deletion
 
 Key decisions carried forward from v3.0:
 
@@ -81,7 +86,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T00:00:00.000Z
-Stopped at: v3.0 milestone archived; v4.0 milestone started; defining requirements
+Last session: 2026-04-01T22:00:00.000Z
+Stopped at: Phase 37 Plan 01 complete — audit_logs schema + migration committed (52cc6e3, bf851db)
 Resume file: None
-Next action: Define REQUIREMENTS.md then run `/gsd:plan-phase 37`
+Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)

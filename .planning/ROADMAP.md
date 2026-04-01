@@ -720,7 +720,7 @@ _v3.0 phase details archived to `.planning/milestones/v3.0-ROADMAP.md`_
 **Plans**: 2 plans
 
 Plans:
-- [ ] 37-01-PLAN.md — Schema + migration: audit_logs table, 3 indexes, journal entry
+- [x] 37-01-PLAN.md — Schema + migration: audit_logs table, 3 indexes, journal entry (2026-04-01)
 - [ ] 37-02-PLAN.md — auditService.ts + tests: insertAuditLog(), diffObjects(), SSN redaction
 
 ---
@@ -905,7 +905,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 37. Audit Trail Foundation | v4.0 | 0/TBD | Not started | - |
+| 37. Audit Trail Foundation | v4.0 | 1/2 | In progress | - |
 | 38. Audit Trail Wiring + Activity UI | v4.0 | 0/TBD | Not started | - |
 | 39. Worker Profile Depth | v4.0 | 0/TBD | Not started | - |
 | 40. NY Schema + Compliance Rule | v4.0 | 0/TBD | Not started | - |
