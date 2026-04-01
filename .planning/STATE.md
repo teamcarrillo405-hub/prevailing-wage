@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Team & Integration
-status: Milestone v3.0 archived — ready for v4.0 planning
-stopped_at: v3.0 milestone complete — 6 phases, 17 plans shipped
+milestone: v4.0
+milestone_name: Compliance Depth + Operations
+status: Defining requirements
+stopped_at: v4.0 milestone started — defining requirements and roadmap
 last_updated: "2026-04-01T00:00:00.000Z"
 progress:
-  total_phases: 36
+  total_phases: 37
   completed_phases: 36
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # State
@@ -18,73 +18,51 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-04-01)
 
-**Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Now team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Planning v4.0 — run `/gsd:new-milestone` to start
+**Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
+**Current focus:** v4.0 — Compliance Depth + Operations (notifications, NY/IL state forms, Gusto/Paychex/Sage import, audit trail, worker profile depth)
 
 ## Current Position
 
-Phase: 36
-Plan: Not started
+Phase: Not started (defining requirements)
+Plan: —
 
 ## Performance Metrics
 
-**Velocity (v2.5 — completed):**
-
-- Total phases: 2 (phases 29–30)
-- Total plans: 6
-- Shipped: 2026-03-27
-
-**v3.0 target:**
+**Velocity (v3.0 — completed):**
 
 - Total phases: 6 (phases 31–36)
+- Total plans: 17
+- Shipped: 2026-04-01
+
+**v4.0 target:**
+
+- Total phases: TBD (set during roadmap)
 - Total plans: TBD (set during plan-phase)
 
 ## Accumulated Context
 
 ### Decisions
 
-Key decisions locked for v3.0 scope:
+Key decisions carried forward from v3.0:
 
 - Multi-user: flat model — owner invites by email; all members see all projects; no per-project permission tiers; max 2 users (owner + 1 member)
 - Payroll import: QuickBooks + ADP CSV/export formats; preview-then-commit pattern; rate snapshots always from WD cache, never from CSV
 - Auto-submit: research confirmed no public machine-to-machine API for CA DIR eCPR or WA L&I PWIA as of 2026-03; replaced with "Mark as Submitted" tracking only
 - SSN encryption: AES-256-GCM at rest using node:crypto; key versioning JSON envelope; decrypt only at CA eCPR / WA PWIA XML export; never in API responses or WH-347
-- New production dependency: nodemailer@8.0.4 for invite email (only new dep; multer + papaparse already installed)
-- Auth refactor: assertProjectAccess(projectId, userId, db) replaces all inline project.userId checks across 9 route files — must land in Phase 32 before any team data exists
-- [Phase 31]: AES-256-GCM cryptoService with versioned JSON envelope; ENCRYPTION_KEY_V1 env var as 64-char hex; ssnLast4 kept unchanged for WH-347 and compliance history
-- [Phase 31]: encryptSsn envelope includes len field — hasFullSsn derivable without decrypting (avoids D-15 decrypt-in-list-route violation)
-- [Phase 31]: resolveEcprSsn() extracted as testable pure function in export.ts — CA eCPR SSN logic testable without route mocking
-- [Phase 32]: assertProjectAccess throws plain { status, message } objects — no app-wide error handler needed
-- [Phase 32]: Drizzle better-sqlite3 migrator requires --> statement-breakpoint separators between SQL statements in migration files
-- [Phase 32-02]: PATCH/DELETE WHERE clauses simplified to id-only after assertProjectAccess membership check
-- [Phase 32-02]: amendPayrollWeek copies use null for createdByUserId/updatedByUserId (system-generated clones, not direct user edits)
-- [Phase 32]: workers.ts routes mounted at /api/projects (not /api/workers) — cross-tenant test corrected to use actual mount path
-- [Phase 32-multi-user-auth-foundation]: workers.ts routes mounted at /api/projects (not /api/workers) — cross-tenant test corrected to use actual mount path
-- [Phase 32]: Inline projectMembers join in service functions rather than calling assertProjectAccess (which expects req-style callers — services receive db directly)
-- [Phase 33-01]: Migration breakpoint format is --> statement-breakpoint (one space) — two-space variant not recognized by this project's Drizzle migrator
-- [Phase 33-01]: Resend SDK lazy-initialized at first use — null if RESEND_API_KEY absent; email failure non-fatal (console fallback per D-02)
-- [Phase 33]: GET /invite/:token mounted before requireAuth so unauthenticated users can validate tokens
-- [Phase 33]: isOwner() helper queries project_members for any active owner row — accepts users with multiple projects
-- [Phase 33-03]: /accept-invite is fully public route (no PublicRoute wrapper) per D-09 — authenticated user visiting used token sees 410 from API
-- [Phase 33-03]: Inline confirm row pattern replaces member row in-place for remove and transfer ownership destructive actions — no modal needed
-- [Phase 34]: CA/WA submission tracking independent of WH-347 edit lock — no assertWeekNotSubmitted guard on ca-submit/wa-submit routes (D-05)
-- [Phase 34]: Mark as Submitted action is only available in modal flows (D-12) — detail page shows status and un-submit only
-- [Phase 34]: waCprStep resets to 1 on all close paths to prevent stale modal state on re-open
-- [Phase 35]: QB mapper manual MM/DD/YYYY parse avoids timezone bugs; ADP hours placed on Monday; Double Time maps to OT bucket; conflict detection pre-queries payrollEntries
-- [Phase 35-payroll-import-server-pipeline]: multer wrapped in manual invocation so MulterError is caught as 400; commit route does not re-parse CSV (D-09)
-- [Phase 36]: Raw fetch() for FormData preview upload — api.post JSON.stringifies body and sets Content-Type: application/json, breaking multipart upload
-- [Phase 36]: Client-side import types re-declared locally — Vite client bundle cannot import from src/server/
-- [Phase 36-01]: importStep resets to 1 on all modal close paths to prevent stale step state on re-open (mirrors waCprStep pattern)
-- [Phase 36-02]: Guard Step 2 with importStep === 2 && importPreview && — eliminates non-null assertions inside block
-- [Phase 36-02]: sumSt/sumOt use structural typing — work on both ImportedRow and UnmatchedRow.hours without overloading
-- [Phase 36]: [Phase 36-03]: IIFE pattern in JSX for Step 3 computed values; api.post JSON body correct for commit (not FormData); onError parses error.message string per api.ts throw pattern; worker.classifications[0] per D-15 for remapped unmatched row promotion
+- nodemailer@8.0.4 installed for invite email (available for notification emails in v4.0)
+- assertProjectAccess(projectId, userId, db) is the centralized IDOR guard across all route files
+
+Key decisions locked for v4.0 scope:
+
+- Notifications: email only via nodemailer; 4 triggers: compliance violation detected, payroll due-soon (configurable threshold), team member activity, submission confirmed
+- Additional state forms: NY DOL and IL DOL certified payroll PDFs only (PDF generation, no XML); TX deferred pending research
+- More payroll providers: Gusto, Paychex, Sage/Timberline CSV import; same preview-then-commit pattern as QB/ADP
+- Audit trail: activity_log table (who + what + when); viewable per project; immutable append-only rows
+- Worker profile depth: structured address (street/city/state/zip), union local + book number, apprenticeship committee + registration number, multiple trade classifications per payroll week
 
 ### Phase Order Rationale
 
-- Phase 31 (SSN) first: zero dependencies; unblocks CA eCPR real-SSN fix deferred from v2.5
-- Phase 32 (Auth foundation) before Phase 33 (Invite flow): project_members table must exist before invite routes create member rows; cross-tenant test suite is regression gate
-- Phase 34 (Submission tracking) after Phase 30 is shipped: independent, additive; placed before import to avoid import blocking on unrelated status UI work
-- Phase 35 (Import server) before Phase 36 (Import UI): natural dependency; pipeline tested before UI reduces debugging surface
+TBD — set during roadmap creation.
 
 ### Critical Pitfalls (from research)
 
@@ -95,7 +73,7 @@ Key decisions locked for v3.0 scope:
 
 ### Pending Todos
 
-- Phase 24: 24-03-PLAN.md not yet executed (A-1-131 PDF generator + export route). Pre-existing v2.4 work. Deferred — user chose to proceed with v3.0 milestone.
+- Phase 24: 24-03-PLAN.md not yet executed (A-1-131 PDF generator + export route). Pre-existing v2.4 work. Deferred — user chose to proceed with v3.0 → v4.0 milestones.
 
 ### Blockers/Concerns
 
@@ -103,7 +81,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T22:21:43.876Z
-Stopped at: Completed Phase 36 Plan 03 — payroll import React UI complete
+Last session: 2026-04-01T00:00:00.000Z
+Stopped at: v3.0 milestone archived; v4.0 milestone started; defining requirements
 Resume file: None
-Next action: `/gsd:plan-phase 31`
+Next action: Define REQUIREMENTS.md then run `/gsd:plan-phase 37`

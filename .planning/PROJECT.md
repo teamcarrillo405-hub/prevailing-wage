@@ -8,7 +8,18 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v3.0 — Team & Integration ✅ SHIPPED 2026-03-31
+## Current Milestone: v4.0 — Compliance Depth + Operations
+
+**Goal:** Deepen compliance coverage with NY and IL state-specific certified payroll forms, richer worker profiles (structured address, union card, apprenticeship, multi-classification), three additional payroll import providers (Gusto, Paychex, Sage), a DOL-audit-ready activity log, and contractor notifications for violations, due dates, team activity, and submissions.
+
+**Target features:**
+- Notifications: compliance violation alerts, payroll due-soon reminders, team member activity alerts, submission confirmations (email via nodemailer)
+- Additional state forms: New York DOL and Illinois DOL certified payroll PDFs
+- More payroll providers: Gusto, Paychex, Sage/Timberline CSV import
+- Audit trail: who + what + when activity log, viewable per project
+- Worker profile depth: structured address, union local + book number, apprenticeship committee + registration number, multiple trade classifications per payroll week
+
+## Previous Milestone: v3.0 — Team & Integration ✅ SHIPPED 2026-03-31
 
 **Delivered:** Transformed HCC Prevailing Wage from a single-contractor tool into a team-ready platform with encrypted SSN storage, multi-user team accounts, payroll provider imports (QuickBooks + ADP), and agency submission status tracking. Research confirmed no public CA DIR or WA L&I APIs exist — auto-submit deferred to v4+.
 
