@@ -690,7 +690,7 @@ _v3.0 phase details archived to `.planning/milestones/v3.0-ROADMAP.md`_
 
 ### v4.0 Compliance Depth + Operations (Phases 37-46)
 
-- [ ] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog()
+- [x] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog() (completed 2026-04-01)
 - [ ] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage
 - [ ] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week
 - [ ] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance()
@@ -721,7 +721,7 @@ _v3.0 phase details archived to `.planning/milestones/v3.0-ROADMAP.md`_
 
 Plans:
 - [x] 37-01-PLAN.md — Schema + migration: audit_logs table, 3 indexes, journal entry (2026-04-01)
-- [ ] 37-02-PLAN.md — auditService.ts + tests: insertAuditLog(), diffObjects(), SSN redaction
+- [x] 37-02-PLAN.md — auditService.ts + tests: insertAuditLog(), diffObjects(), SSN redaction
 
 ---
 
@@ -905,7 +905,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 37. Audit Trail Foundation | v4.0 | 1/2 | In progress | - |
+| 37. Audit Trail Foundation | v4.0 | 2/2 | Complete   | 2026-04-01 |
 | 38. Audit Trail Wiring + Activity UI | v4.0 | 0/TBD | Not started | - |
 | 39. Worker Profile Depth | v4.0 | 0/TBD | Not started | - |
 | 40. NY Schema + Compliance Rule | v4.0 | 0/TBD | Not started | - |
