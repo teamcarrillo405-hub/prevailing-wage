@@ -60,7 +60,7 @@ Extend the existing preview-then-commit pipeline (built in Phases 35–36) to su
 
 DOL-audit-ready append-only activity log. Retention: 3 years federal minimum (6 years for NY projects, 5 years for IL — enforced by display, not auto-delete).
 
-- [ ] **AUDIT-01** — `audit_logs` table: columns: `id` (UUIDv4), `createdAt` (ISO 8601 UTC), `userId` (FK → users, nullable), `userEmail` (denormalized snapshot), `ipAddress`, `projectId` (FK → projects, onDelete: 'set null'), `entityType`, `entityId`, `action`, `diff` (JSON text: before/after for updates), `snapshot` (JSON text: full state for creates/deletes), `meta` (JSON text: free-form context). Three indexes: `(project_id, created_at DESC)`, `(entity_type, entity_id, created_at DESC)`, `(user_id, created_at DESC)`.
+- [x] **AUDIT-01** — `audit_logs` table: columns: `id` (UUIDv4), `createdAt` (ISO 8601 UTC), `userId` (FK → users, nullable), `userEmail` (denormalized snapshot), `ipAddress`, `projectId` (FK → projects, onDelete: 'set null'), `entityType`, `entityId`, `action`, `diff` (JSON text: before/after for updates), `snapshot` (JSON text: full state for creates/deletes), `meta` (JSON text: free-form context). Three indexes: `(project_id, created_at DESC)`, `(entity_type, entity_id, created_at DESC)`, `(user_id, created_at DESC)`.
 - [x] **AUDIT-02** — `auditService.ts`: exports only `insertAuditLog()` — no update or delete functions. Hybrid payload strategy: full snapshot on create/delete, field-level diff on update, meta-only on export/submission events. Always redact `ssnEncrypted` → `"[REDACTED]"` before writing diff. Called from service layer (workerService, payrollEntryService), not route handlers.
 - [ ] **AUDIT-03** — Tier-1 logged actions: `worker.created`, `worker.updated`, `worker.deleted`, `payroll_entry.created`, `payroll_entry.updated`, `payroll_entry.deleted`, `payroll_week.submitted`, `payroll_week.unsubmitted`, `wh347.downloaded`, `ecpr_xml.downloaded`, `wa_pwia_xml.downloaded`, `ny_mpwr_xml.downloaded`, `il_pdf.downloaded`, `payroll_import.committed`, `agency_submission.created`.
 - [ ] **AUDIT-04** — Project activity feed: GET `/api/audit/:projectId` returns paginated audit log (25 rows/page, offset pagination, optional `entityType` filter). Response includes actor name, action label (human-readable), entity description, timestamp.
@@ -79,11 +79,11 @@ DOL-audit-ready append-only activity log. Retention: 3 years federal minimum (6 
 
 ## Non-Functional Requirements
 
-- [ ] **NFR-01** — All new Drizzle migrations use `-->  statement-breakpoint` (one space) separator between SQL statements.
+- [x] **NFR-01** — All new Drizzle migrations use `-->  statement-breakpoint` (one space) separator between SQL statements.
 - [ ] **NFR-02** — All new email triggers are non-fatal: log to console on failure, do not 500 the request.
 - [ ] **NFR-03** — All new routes apply `assertProjectAccess` before any data access.
 - [x] **NFR-04** — Audit log `ssnEncrypted` field is always redacted before write; `hasFullSsn` boolean carries SSN-present signal in place of encrypted value.
-- [ ] **NFR-05** — All new migration files have a corresponding Drizzle schema update in `src/server/db/schema.ts`.
+- [x] **NFR-05** — All new migration files have a corresponding Drizzle schema update in `src/server/db/schema.ts`.
 
 ---
 
