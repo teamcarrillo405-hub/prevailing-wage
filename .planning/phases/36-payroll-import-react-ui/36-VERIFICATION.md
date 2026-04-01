@@ -1,7 +1,7 @@
 ---
 phase: 36-payroll-import-react-ui
 verified: 2026-03-31T21:00:00Z
-status: human_needed
+status: passed
 score: 5/5 must-haves verified
 re_verification: false
 gaps:
@@ -34,7 +34,7 @@ human_verification:
 
 **Phase Goal:** Contractors can upload a payroll export file from the Payroll Week Detail page, review a parsed preview of matched and unmatched workers, resolve any worker mismatches, and commit the import — or cancel without any data being written.
 **Verified:** 2026-03-31T21:00:00Z
-**Status:** human_needed
+**Status:** passed
 **Re-verification:** No — initial verification
 
 ---

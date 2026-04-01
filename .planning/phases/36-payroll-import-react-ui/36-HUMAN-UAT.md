@@ -1,5 +1,5 @@
 ---
-status: partial
+status: approved
 phase: 36-payroll-import-react-ui
 source: [36-VERIFICATION.md]
 started: 2026-03-31T23:00:00Z
