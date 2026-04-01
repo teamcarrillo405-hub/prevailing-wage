@@ -23,9 +23,11 @@ A contractor can run a full project end-to-end — create project → add worker
 
 **Delivered:** Transformed HCC Prevailing Wage from a single-contractor tool into a team-ready platform with encrypted SSN storage, multi-user team accounts, payroll provider imports (QuickBooks + ADP), and agency submission status tracking. Research confirmed no public CA DIR or WA L&I APIs exist — auto-submit deferred to v4+.
 
-## Current State (v3.0)
+## Current State (v4.0 in progress — Phase 37 complete)
 
-**Shipped:** 2026-03-31
+Phase 37 complete: `audit_logs` table (12 columns, 3 DESC indexes) + `auditService.ts` with `insertAuditLog()`, SSN redaction, hybrid diff/snapshot. 396 tests passing. Infrastructure ready for Phase 38 wiring.
+
+**Shipped:** 2026-03-31 (v3.0); v4.0 in progress
 **Tests:** 387+ passing (main suite, excluding worktrees)
 **Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation, xmlbuilder2 for XML export, nodemailer (team invites)
 **LOC:** ~15,000+ net new lines (v3.0 added ~2,818 across 32 files)
