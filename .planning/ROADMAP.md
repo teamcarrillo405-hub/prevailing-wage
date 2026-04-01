@@ -854,4 +854,4 @@ Plans:
 
 | 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
 
-| 36. Payroll Import — React UI | v3.0 | 3/3 | Complete   | 2026-03-31 |
+| 36. Payroll Import — React UI | v3.0 | 3/3 | Complete    | 2026-04-01 |
