@@ -1,25 +1,25 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.5
-milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed Phase 36 Plan 03 — payroll import React UI complete
-last_updated: "2026-04-01T06:37:53.773Z"
+milestone: v3.0
+milestone_name: Team & Integration
+status: Milestone v3.0 archived — ready for v4.0 planning
+stopped_at: v3.0 milestone complete — 6 phases, 17 plans shipped
+last_updated: "2026-04-01T00:00:00.000Z"
 progress:
-  total_phases: 32
-  completed_phases: 31
-  total_plans: 81
-  completed_plans: 83
+  total_phases: 36
+  completed_phases: 36
+  total_plans: 17
+  completed_plans: 17
 ---
 
 # State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-27)
+See: .planning/PROJECT.md (updated 2026-04-01)
 
-**Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps.
-**Current focus:** Phase 36 — payroll-import-react-ui
+**Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Now team-ready with encrypted SSN storage and payroll imports.
+**Current focus:** Planning v4.0 — run `/gsd:new-milestone` to start
 
 ## Current Position
 

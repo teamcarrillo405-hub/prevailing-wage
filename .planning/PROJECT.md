@@ -8,35 +8,27 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v3.0 — Team & Integration
+## Current Milestone: v3.0 — Team & Integration ✅ SHIPPED 2026-03-31
 
-**Goal:** Transform HCC Prevailing Wage from a single-contractor tool into a team-ready platform with payroll imports, encrypted SSN storage, and agency portal auto-submit where APIs exist.
+**Delivered:** Transformed HCC Prevailing Wage from a single-contractor tool into a team-ready platform with encrypted SSN storage, multi-user team accounts, payroll provider imports (QuickBooks + ADP), and agency submission status tracking. Research confirmed no public CA DIR or WA L&I APIs exist — auto-submit deferred to v4+.
 
-**Target features:**
-- Multi-user team accounts — owner invites contractors by email; flat model (all members see all projects); no per-project permission tiers
-- Payroll provider import — QuickBooks and ADP CSV/export import to pre-populate weekly payroll entries
-- Agency portal auto-submit — research-gated; CA DIR eCPR and WA L&I PWIA direct submission only if public APIs are confirmed
-- SSN encryption — AES-256 at rest; used for CA eCPR and WA portal pre-fill only (not WH-347)
+## Current State (v3.0)
 
-## Current State (v2.5)
-
-**Shipped:** 2026-03-27
-**Tests:** 1,522+ passing
-**Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation, xmlbuilder2 for XML export
-**LOC:** ~12,150+ net new lines
+**Shipped:** 2026-03-31
+**Tests:** 387+ passing (main suite, excluding worktrees)
+**Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation, xmlbuilder2 for XML export, nodemailer (team invites)
+**LOC:** ~15,000+ net new lines (v3.0 added ~2,818 across 32 files)
 
 **What works end-to-end:**
 - Full marketing landing page at "/" (HCC brand, WH-347/Davis-Bacon/SAM.gov above fold, CTA to /register)
 - Auth-aware routing: authenticated → /dashboard, unauthenticated → /, wildcard handled
-- Separate RegisterPage at /register — no embedded form toggle in LoginPage
+- Multi-user team accounts: owner invites 1 member by email, flat model (all members see all projects), ownership transfer, member removal with 1-year data retention
+- AES-256-GCM encrypted SSN storage: full 9-digit SSN collected, stored encrypted, masked in UI (***-**-1234), decrypted server-side for CA eCPR and WA PWIA XML export only
+- Payroll import: QuickBooks "Time by Employee Detail" + ADP Run CSV → 3-step modal (upload → preview/resolve → confirm commit); unmatched worker remap, conflict detection, payroll_imports audit table
+- Agency submission status tracking: per-agency "Mark as Submitted" in CA eCPR + WA CPR modals; independent badge rows for CA and WA on Payroll Week Detail
 - All pages use design token classes (no hardcoded hex), Oswald/Inter typography, Card/Badge/Button/PageHeader/EmptyState primitives
-- Dashboard empty state via EmptyState component; compliance badges use Badge variants
-- Workers: missing-data Badge, Button primary for form actions, PageHeader
-- Payroll Entry: EmptyState for no-workers branch
-- Project Detail: Badge for funding type, secondary button styling for nav links; 4-step workflow progress indicator driven by live data
-- Payroll Week Detail: Badge for violation/compliant status (entry-level + per-week apprentice ratio), WH-347 fetch-driven download with preflight modal + generating state + double-click guard
-- Reports: token-clean tab active state, print CSS with repeating table headers, totals row, no UI chrome
-- Login: login-only with bg-surface-page, border-brand-gold, Link to /register
+- CA A-1-131 form (CA-gated, fringe disaggregation), WA F700-065-000 form (WA-gated, manual rate entry), CA eCPR XML, WA PWIA XML
+- WH-347 PDF generation (January 2025 revision), per-entry compliance badges, submission tracking, copy/amend workflows
 
 ## Requirements
 
@@ -101,19 +93,23 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ Payroll amendment workflow: amend submitted week, "N (AMENDED M)" WH-347 label, pre-filled from original — v2.3
 - ✓ Per-worker compliance history: cross-project violation aggregation by (name, ssnLast4) identity — v2.3
 
-### Active
-
-<!-- v2.4 — in progress -->
+<!-- Shipped in v2.4 (phases 23-28) -->
 
 - ✓ Dashboard compliance status filter + batch summary endpoint (no N+1) — v2.4 Phase 23
 - ✓ CSV export from per-worker compliance history page (17 cols, UTF-8 BOM) — v2.4 Phase 23
 - ✓ Contractor guidance: HelpCallout on 5 pages, TermTooltip for 5 compliance terms, instructional empty states with action buttons, 4-step landing page how-it-works — v2.4 Phase 26
 - ✓ UI/UX overhaul: full-bleed hero photography, floating nav, clamp headline, elevated dashboard card shadow, tracking-tight PageHeader h1, 7-page h1 migration — v2.4 Phase 27 (placeholder WebPs — swap real photos before launch)
 - ✓ California A-1-131 certified payroll form (CA-gated, eCPR modal, CSLB/WC fields) — v2.4 Phase 24
-- ✓ Washington F700-065-000 certified payroll form (WA-gated, PWIA modal, UBI/L&I cert/WC fields, manual rate entry, WA trade codes) — v2.4 Phase 25 (NOTE: PDF field coordinates are placeholder until official LNI form is obtained)
+- ✓ Washington F700-065-000 certified payroll form (WA-gated, PWIA modal, UBI/L&I cert/WC fields, manual rate entry, WA trade codes) — v2.4 Phase 25
 - ✓ Operational: Render.com deployment, SQLite on persistent disk (/var/data), invite-only registration, Express static serving for React SPA — v2.4 Phase 28
+
+<!-- Shipped in v2.5 (phases 29-30) -->
+
 - ✓ CA eCPR XML export: fringe disaggregation (4 sub-columns), pre-generation modal, post-download portal checklist, amendment marker — v2.5 Phase 29
 - ✓ WA PWIA submission assist: CPR XML export gated on intentId + trade codes, WAL-04 submission guide panel (Intent to Pay + Affidavit of Wages Paid) — v2.5 Phase 30
+
+<!-- Shipped in v3.0 (phases 31-36) -->
+
 - ✓ SSN encryption: AES-256-GCM at rest, versioned envelope, full 9-digit SSN input, masked display, hasFullSsn badge — v3.0 Phase 31
 - ✓ Multi-user foundation: project_members join table, assertProjectAccess utility, all 21 ownership checks centralized, cross-tenant IDOR protection — v3.0 Phase 32
 - ✓ Team invite flow + UI: email invite (Resend SDK / console fallback), tokenized /accept-invite page, TeamPage at /team, soft-delete member removal, ownership transfer — v3.0 Phase 33
@@ -121,12 +117,15 @@ A contractor can run a full project end-to-end — create project → add worker
 - ✓ Payroll import server pipeline: QuickBooks "Time by Employee Detail" + ADP Run CSV parsing, provider auto-detection, per-entry row aggregation (QB), weekly-total Monday placement (ADP), worker matching (case-insensitive), conflict detection, preview/commit API, payroll_imports audit table — v3.0 Phase 35
 - ✓ Payroll Import React UI: 3-step PayrollImportModal on PayrollWeekDetailPage — Step 1 file picker (FormData/raw fetch), Step 2 preview/resolve (QB 14-col / ADP 2-col, remap dropdowns, conflict panel), Step 3 confirm/commit (IIFE payload builder, success banner, error inline) — v3.0 Phase 36
 
+### Active
+
+_(empty — v3.0 shipped; start `/gsd:new-milestone` to define v4.0 requirements)_
+
 ### Out of Scope
 
 - Mobile native app — web-first; browser on tablet is sufficient
-- ~~Multi-user / team accounts — single contractor user per account~~ (Shipped v3.0 Phase 31-33)
-- Payroll provider integrations (QuickBooks, ADP) — manual entry is intentional for compliance audit trail
-- State-specific prevailing wage forms (CA DIR, WA L&I) — federal WH-347 only
+- Agency portal auto-submit (CA DIR eCPR + WA L&I PWIA) — no public API exists as of 2026-03; monitor for availability; deferred to v4+
+- State-specific prevailing wage forms (CA DIR, WA L&I) — federal WH-347 only (CA A-1-131 + WA F700 shipped as bonus)
 - Missing-data hard block on WH-347 submission — warning only (UX-03); hard block deferred
 - Dark mode toggle — CSS complexity, compliance software is often printed or screen-shared; not needed
 - Customizable dashboard widgets — fixed well-designed layout preferred
@@ -181,6 +180,13 @@ A contractor can run a full project end-to-end — create project → add worker
 | ssnLast4=null scopes to source project only | Null identity cannot safely assert cross-project worker match | ✓ Good — v2.3 |
 | Route ordering: specific before wildcard | All new routes must register before /:id wildcards on Express routers | ✓ Good — v2.3 |
 | Preview-then-commit on copy | preview:true returns {copied,skipped} without DB write; user confirms before commit | ✓ Good — v2.3 |
+| AES-256-GCM with versioned JSON envelope | Key rotation support built in from day one; envelope stores version + iv + tag + ciphertext | ✓ Good — v3.0 |
+| ssnEncrypted additive column (keep ssnLast4) | ssnLast4 derivable from full SSN; kept for backward compat; derived last-4 from full SSN going forward | ✓ Good — v3.0 |
+| assertProjectAccess centralized utility | 21 scattered inline IDOR checks replaced with single utility; cross-tenant regression suite proves coverage | ✓ Good — v3.0 |
+| Owner + 1 member cap, flat model | No per-project permission tiers for v3.0; complexity vs. use case not justified | ✓ Good — v3.0 |
+| No inline worker creation in import modal | Escape hatch to Workers page sufficient for v3.0; D-10 in 36-CONTEXT.md — deferred to future milestone | ✓ Good — v3.0 |
+| Raw fetch() for FormData upload, api.post for JSON commit | api.post JSON.stringifies body, breaking multipart upload; two strategies for two HTTP shapes in one feature | ✓ Good — v3.0 |
+| Agency auto-submit deferred (no public CA DIR / WA L&I API) | Research confirmed no public machine-to-machine API as of 2026-03; replaced with "Mark as Submitted" tracking | ✓ Good — v3.0 |
 
 ---
-*Last updated: 2026-03-31 — Phase 36 complete (Payroll Import React UI — PI-03 shipped; v3.0 milestone complete)
+*Last updated: 2026-04-01 — v3.0 milestone complete (Team & Integration — 6 phases, 17 plans shipped)*
