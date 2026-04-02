@@ -6,21 +6,21 @@
 
 
 
-- ✅ **v1.0** Foundation + Wage Engine + Payroll + Differentiators — Phases 1-5 (shipped 2026-03-19)
+- â **v1.0** Foundation + Wage Engine + Payroll + Differentiators â Phases 1-5 (shipped 2026-03-19)
 
-- ✅ **v2.0** Contractor UX Overhaul + Compliance — Phases 6-9 (shipped 2026-03-20)
+- â **v2.0** Contractor UX Overhaul + Compliance â Phases 6-9 (shipped 2026-03-20)
 
-- ✅ **v2.1** Design Polish + Landing Page — Phases 10-14 (shipped 2026-03-22)
+- â **v2.1** Design Polish + Landing Page â Phases 10-14 (shipped 2026-03-22)
 
-- ✅ **v2.2** UX Completion + Compliance Hardening — Phases 15-16 (shipped 2026-03-23)
+- â **v2.2** UX Completion + Compliance Hardening â Phases 15-16 (shipped 2026-03-23)
 
-- ✅ **v2.3** Contractor Workflow Efficiency + Audit Readiness — Phases 17-22 (shipped 2026-03-24)
+- â **v2.3** Contractor Workflow Efficiency + Audit Readiness â Phases 17-22 (shipped 2026-03-24)
 
-- ✅ **v2.4** Ship-Ready + Design Elevation — Phases 23-28 (shipped 2026-03-27)
+- â **v2.4** Ship-Ready + Design Elevation â Phases 23-28 (shipped 2026-03-27)
 
-- ✅ **v2.5** State Portal Integration — Phases 29-30 (shipped 2026-03-27)
+- â **v2.5** State Portal Integration â Phases 29-30 (shipped 2026-03-27)
 
-- ✅ **v3.0** Team & Integration — Phases 31-36 (shipped 2026-03-31)
+- â **v3.0** Team & Integration â Phases 31-36 (shipped 2026-03-31)
 
 
 
@@ -30,7 +30,7 @@
 
 <details>
 
-<summary>✅ v1.0 Foundation + Wage Engine + Payroll + Differentiators (Phases 1-5) — SHIPPED 2026-03-19</summary>
+<summary>â v1.0 Foundation + Wage Engine + Payroll + Differentiators (Phases 1-5) â SHIPPED 2026-03-19</summary>
 
 
 
@@ -38,7 +38,7 @@ Auth, project creation, SAM.gov wage determination fetch and cache, workers/clas
 
 
 
-Plans are not archived here — built before GSD structure. See MILESTONES.md.
+Plans are not archived here â built before GSD structure. See MILESTONES.md.
 
 
 
@@ -48,17 +48,17 @@ Plans are not archived here — built before GSD structure. See MILESTONES.md.
 
 <details>
 
-<summary>✅ v2.0 Contractor UX Overhaul + Compliance (Phases 6-9) — SHIPPED 2026-03-20</summary>
+<summary>â v2.0 Contractor UX Overhaul + Compliance (Phases 6-9) â SHIPPED 2026-03-20</summary>
 
 
 
-- [x] **Phase 6: WH-347 2025 Compliance Foundation** — programName/J/RA field, multi-page WH-347, certApprentices boolean from real data (4/4 plans — 2026-03-20)
+- [x] **Phase 6: WH-347 2025 Compliance Foundation** â programName/J/RA field, multi-page WH-347, certApprentices boolean from real data (4/4 plans â 2026-03-20)
 
-- [x] **Phase 7: Compliance Engine + Payroll Week View** — under-wage/CWHSSA OT detection, PayrollWeekDetailPage, one-click WH-347 (4/4 plans — 2026-03-20)
+- [x] **Phase 7: Compliance Engine + Payroll Week View** â under-wage/CWHSSA OT detection, PayrollWeekDetailPage, one-click WH-347 (4/4 plans â 2026-03-20)
 
-- [x] **Phase 8: Dashboard + UX Polish** — compliance badges on project cards, nav links, missing-data warnings, WH-347 per row (4/4 plans — 2026-03-20)
+- [x] **Phase 8: Dashboard + UX Polish** â compliance badges on project cards, nav links, missing-data warnings, WH-347 per row (4/4 plans â 2026-03-20)
 
-- [x] **Phase 9: Reports** — fringe benefit summary and worker pay history reports (4/4 plans — 2026-03-20)
+- [x] **Phase 9: Reports** â fringe benefit summary and worker pay history reports (4/4 plans â 2026-03-20)
 
 
 
@@ -72,19 +72,19 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
 
 <details>
 
-<summary>✅ v2.1 Design Polish + Landing Page (Phases 10-14) — SHIPPED 2026-03-22</summary>
+<summary>â v2.1 Design Polish + Landing Page (Phases 10-14) â SHIPPED 2026-03-22</summary>
 
 
 
-- [x] **Phase 10: CSS Design Token Foundation** — HCC brand tokens in @theme, Google Fonts, inline style migration, focus utility fix (3/3 plans — 2026-03-20)
+- [x] **Phase 10: CSS Design Token Foundation** â HCC brand tokens in @theme, Google Fonts, inline style migration, focus utility fix (3/3 plans â 2026-03-20)
 
-- [x] **Phase 11: UI Primitives** — Card, Button, Badge, PageHeader, EmptyState reusable components (2/2 plans — 2026-03-20)
+- [x] **Phase 11: UI Primitives** â Card, Button, Badge, PageHeader, EmptyState reusable components (2/2 plans â 2026-03-20)
 
-- [x] **Phase 12: App Shell + Global Layout** — dark nav on all protected pages, typography hierarchy, consistent card spacing (3/3 plans — 2026-03-20)
+- [x] **Phase 12: App Shell + Global Layout** â dark nav on all protected pages, typography hierarchy, consistent card spacing (3/3 plans â 2026-03-20)
 
-- [x] **Phase 13: Landing Page + Routing** — full marketing homepage at public route "/", auth-aware routing (3/3 plans — 2026-03-20)
+- [x] **Phase 13: Landing Page + Routing** â full marketing homepage at public route "/", auth-aware routing (3/3 plans â 2026-03-20)
 
-- [x] **Phase 14: Page-by-Page Polish** — Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register (3/3 plans — 2026-03-22)
+- [x] **Phase 14: Page-by-Page Polish** â Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register (3/3 plans â 2026-03-22)
 
 
 
@@ -98,13 +98,13 @@ Archive: `.planning/milestones/v2.1-ROADMAP.md`
 
 <details>
 
-<summary>✅ v2.2 UX Completion + Compliance Hardening (Phases 15-16) — SHIPPED 2026-03-23</summary>
+<summary>â v2.2 UX Completion + Compliance Hardening (Phases 15-16) â SHIPPED 2026-03-23</summary>
 
 
 
-- [x] **Phase 15: Compliance Engine Hardening + Independent Frontend** — Apprentice ratio check in computeCompliance(), workflow progress indicator on Project Detail, print CSS for both reports (3/3 plans — 2026-03-22)
+- [x] **Phase 15: Compliance Engine Hardening + Independent Frontend** â Apprentice ratio check in computeCompliance(), workflow progress indicator on Project Detail, print CSS for both reports (3/3 plans â 2026-03-22)
 
-- [x] **Phase 16: WH-347 Submission UX** — Preflight modal with violation summary + confirmation, fetch-driven download with generating state and double-click guard (1/1 plans — 2026-03-22)
+- [x] **Phase 16: WH-347 Submission UX** â Preflight modal with violation summary + confirmation, fetch-driven download with generating state and double-click guard (1/1 plans â 2026-03-22)
 
 
 
@@ -118,21 +118,21 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 
 <details>
 
-<summary>✅ v2.3 Contractor Workflow Efficiency + Audit Readiness (Phases 17-22) — SHIPPED 2026-03-24</summary>
+<summary>â v2.3 Contractor Workflow Efficiency + Audit Readiness (Phases 17-22) â SHIPPED 2026-03-24</summary>
 
 
 
-- [x] **Phase 17: DB Migration + Project Archive** — 4-column payrollWeeks migration, project archive/restore, archived badge, compliance pre-check before archive (2/2 plans — 2026-03-23)
+- [x] **Phase 17: DB Migration + Project Archive** â 4-column payrollWeeks migration, project archive/restore, archived badge, compliance pre-check before archive (2/2 plans â 2026-03-23)
 
-- [x] **Phase 18: Dashboard Search + Filter** — name search, funding type filter, URL-persisted filter state, zero-results empty state (1/1 plans — 2026-03-23)
+- [x] **Phase 18: Dashboard Search + Filter** â name search, funding type filter, URL-persisted filter state, zero-results empty state (1/1 plans â 2026-03-23)
 
-- [x] **Phase 19: WH-347 Submission Tracking** — mark weeks submitted with date/agency, server-side edit lock, un-submit, submitted badges on payroll list (2/2 plans — 2026-03-23)
+- [x] **Phase 19: WH-347 Submission Tracking** â mark weeks submitted with date/agency, server-side edit lock, un-submit, submitted badges on payroll list (2/2 plans â 2026-03-23)
 
-- [x] **Phase 20: Copy Previous Payroll Week** — copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning (2/2 plans — 2026-03-23)
+- [x] **Phase 20: Copy Previous Payroll Week** â copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning (2/2 plans â 2026-03-23)
 
-- [x] **Phase 21: Payroll Amendment Workflow** — amend submitted week as new row, "N (AMENDED M)" WH-347 label, pre-filled entries from original (2/2 plans — 2026-03-23)
+- [x] **Phase 21: Payroll Amendment Workflow** â amend submitted week as new row, "N (AMENDED M)" WH-347 label, pre-filled entries from original (2/2 plans â 2026-03-23)
 
-- [x] **Phase 22: Per-Worker Compliance History** — cross-project violation history page, compliance history link per worker row (2/2 plans — 2026-03-24)
+- [x] **Phase 22: Per-Worker Compliance History** â cross-project violation history page, compliance history link per worker row (2/2 plans â 2026-03-24)
 
 
 
@@ -146,7 +146,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 <details>
 
-<summary>✅ v2.4 Ship-Ready + Design Elevation (Phases 23-28) — SHIPPED 2026-03-27</summary>
+<summary>â v2.4 Ship-Ready + Design Elevation (Phases 23-28) â SHIPPED 2026-03-27</summary>
 
 
 
@@ -168,7 +168,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 
 
-### v2.5 State Portal Integration (Phases 29-30) — SHIPPED 2026-03-27
+### v2.5 State Portal Integration (Phases 29-30) â SHIPPED 2026-03-27
 
 
 
@@ -181,7 +181,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 <details>
 
-<summary>✅ v3.0 Team & Integration (Phases 31-36) — SHIPPED 2026-03-31</summary>
+<summary>â v3.0 Team & Integration (Phases 31-36) â SHIPPED 2026-03-31</summary>
 
 
 
@@ -193,9 +193,9 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 34: Agency Submission Status Tracking** - caEcprSubmittedAt + waLniSubmittedAt columns, SubmissionStatusBadge, "Mark as Submitted" UI in CA/WA export modals (AS-01, AS-02) (completed 2026-03-30)
 
-- [x] **Phase 35: Payroll Import — Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02) (completed 2026-03-31)
+- [x] **Phase 35: Payroll Import â Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02) (completed 2026-03-31)
 
-- [x] **Phase 36: Payroll Import — React UI** - PayrollImportModal with file picker, preview table, unmatched worker review & match screen, confirm-commit flow (PI-03) (completed 2026-03-31)
+- [x] **Phase 36: Payroll Import â React UI** - PayrollImportModal with file picker, preview table, unmatched worker review & match screen, confirm-commit flow (PI-03) (completed 2026-03-31)
 
 
 
@@ -233,9 +233,9 @@ Archive: `.planning/milestones/v3.0-ROADMAP.md`
 
 Plans:
 
-- [x] 17-01-PLAN.md — DB migration (4 payrollWeeks columns) + status-filtered GET /api/projects route + tests
+- [x] 17-01-PLAN.md â DB migration (4 payrollWeeks columns) + status-filtered GET /api/projects route + tests
 
-- [x] 17-02-PLAN.md — Archive/Restore UI (ProjectDetailPage buttons, compliance advisory modal, ProjectCard badge, DashboardPage toggle)
+- [x] 17-02-PLAN.md â Archive/Restore UI (ProjectDetailPage buttons, compliance advisory modal, ProjectCard badge, DashboardPage toggle)
 
 
 
@@ -261,7 +261,7 @@ Plans:
 
 Plans:
 
-- [x] 18-01-PLAN.md — Search input + funding dropdown + useMemo filtered list + URL-persisted params + empty state (DashboardPage.tsx only)
+- [x] 18-01-PLAN.md â Search input + funding dropdown + useMemo filtered list + URL-persisted params + empty state (DashboardPage.tsx only)
 
 
 
@@ -277,7 +277,7 @@ Plans:
 
   1. User can mark a payroll week as submitted by entering a submission date and agency name, and the week shows a submitted badge
 
-  2. Attempting to edit payroll entries on a submitted week is rejected — both in the UI and at the API level
+  2. Attempting to edit payroll entries on a submitted week is rejected â both in the UI and at the API level
 
   3. User can un-submit a week to clear its submission status and re-enable editing
 
@@ -287,9 +287,9 @@ Plans:
 
 Plans:
 
-- [x] 19-01-PLAN.md — Wave 0 tests + PATCH/DELETE submit routes + assertWeekNotSubmitted lock guard in both entry write routes
+- [x] 19-01-PLAN.md â Wave 0 tests + PATCH/DELETE submit routes + assertWeekNotSubmitted lock guard in both entry write routes
 
-- [ ] 19-02-PLAN.md — PayrollListPage submission badges + PayrollWeekDetailPage submit form + lock UI + WorkflowProgress step 4 fix
+- [ ] 19-02-PLAN.md â PayrollListPage submission badges + PayrollWeekDetailPage submit form + lock UI + WorkflowProgress step 4 fix
 
 
 
@@ -315,9 +315,9 @@ Plans:
 
 Plans:
 
-- [x] 20-01-PLAN.md — copyPayrollWeek() service + POST /api/payroll/weeks/copy route (preview + commit modes) + integration tests
+- [x] 20-01-PLAN.md â copyPayrollWeek() service + POST /api/payroll/weeks/copy route (preview + commit modes) + integration tests
 
-- [x] 20-02-PLAN.md — Copy modal UI on PayrollListPage (source week selector, preview warning, confirm/cancel) + browser verification
+- [x] 20-02-PLAN.md â Copy modal UI on PayrollListPage (source week selector, preview warning, confirm/cancel) + browser verification
 
 
 
@@ -343,15 +343,15 @@ Plans:
 
 Plans:
 
-- [x] 21-01-PLAN.md — amendPayrollWeek() service + POST /weeks/amend route + "N (AMENDED M)" PDF label + integration tests
+- [x] 21-01-PLAN.md â amendPayrollWeek() service + POST /weeks/amend route + "N (AMENDED M)" PDF label + integration tests
 
-- [x] 21-02-PLAN.md — "Amend This Week" button on PayrollWeekDetailPage + amendment badge on PayrollListPage + browser verification
+- [x] 21-02-PLAN.md â "Amend This Week" button on PayrollWeekDetailPage + amendment badge on PayrollListPage + browser verification
 
 
 
 ### Phase 22: Per-Worker Compliance History
 
-**Goal**: Contractors can see a single page showing all compliance violations for a specific worker across every project and payroll week — ready for audit response
+**Goal**: Contractors can see a single page showing all compliance violations for a specific worker across every project and payroll week â ready for audit response
 
 **Depends on**: Nothing (read-only reporting; fully independent of Phases 17-21)
 
@@ -371,9 +371,9 @@ Plans:
 
 Plans:
 
-- [ ] 22-01-PLAN.md — getWorkerComplianceHistory() service + GET /worker/:workerId/history endpoint + multi-project integration tests (TDD)
+- [ ] 22-01-PLAN.md â getWorkerComplianceHistory() service + GET /worker/:workerId/history endpoint + multi-project integration tests (TDD)
 
-- [x] 22-02-PLAN.md — WorkerComplianceHistoryPage + "Compliance History" link on WorkersPage + route registration + browser verification
+- [x] 22-02-PLAN.md â WorkerComplianceHistoryPage + "Compliance History" link on WorkersPage + route registration + browser verification
 
 
 
@@ -401,9 +401,9 @@ Plans:
 
 Plans:
 
-- [x] 23-01-PLAN.md — Batch compliance summary endpoint + CSV export route + csv-stringify install + integration tests
+- [x] 23-01-PLAN.md â Batch compliance summary endpoint + CSV export route + csv-stringify install + integration tests
 
-- [x] 23-02-PLAN.md — Dashboard filter chips UI + CSV download button + browser verification
+- [x] 23-02-PLAN.md â Dashboard filter chips UI + CSV download button + browser verification
 
 
 
@@ -425,17 +425,17 @@ Plans:
 
   4. The CA download preflight modal includes a persistent disclosure that electronic submission requires the DIR eCPR portal at efiling.dir.ca.gov/eCPR
 
-  5. A WA or federal-only project has no CA form download button — the button is state-gated
+  5. A WA or federal-only project has no CA form download button â the button is state-gated
 
 **Plans**: 3 plans
 
 Plans:
 
-- [x] 24-01-PLAN.md — PDF download + DB migrations (DT columns + CA project fields) + schema.ts + server Zod schemas + test stubs
+- [x] 24-01-PLAN.md â PDF download + DB migrations (DT columns + CA project fields) + schema.ts + server Zod schemas + test stubs
 
-- [x] 24-02-PLAN.md — CA-conditional project fields in ProjectForm + DT columns in PayrollWeekForm + turn CAL-01/CAL-03 tests GREEN
+- [x] 24-02-PLAN.md â CA-conditional project fields in ProjectForm + DT columns in PayrollWeekForm + turn CAL-01/CAL-03 tests GREEN
 
-- [ ] 24-03-PLAN.md — A-1-131 PDF generator + export route + state-gated download button + eCPR preflight modal + browser verification
+- [ ] 24-03-PLAN.md â A-1-131 PDF generator + export route + state-gated download button + eCPR preflight modal + browser verification
 
 
 
@@ -457,7 +457,7 @@ Plans:
 
   4. WA trade codes not automatically matched show a dropdown allowing the contractor to select the correct L&I code per worker
 
-  5. A CA or federal-only project has no WA form download button — the button is state-gated
+  5. A CA or federal-only project has no WA form download button â the button is state-gated
 
 **Plans**: 2 plans
 
@@ -467,7 +467,7 @@ Plans:
 
 **Goal**: First-time contractors understand what to do at every step of the workflow without needing external documentation
 
-**Depends on**: Phase 27 (HelpText primitive uses design tokens that Phase 27 finalizes — sequence after design tokens are locked; however if design tokens are locked early, Phase 26 can run before Phase 27)
+**Depends on**: Phase 27 (HelpText primitive uses design tokens that Phase 27 finalizes â sequence after design tokens are locked; however if design tokens are locked early, Phase 26 can run before Phase 27)
 
 **Requirements**: UX-05, UX-06, UX-07, UX-08
 
@@ -477,23 +477,23 @@ Plans:
 
   2. Each major page (Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail) shows a contextual help callout explaining what to do at that step and why it matters for compliance
 
-  3. Empty states on all pages give specific next-step instructions — a contractor who lands on an empty Workers page knows exactly what to do next, not just that there are no workers
+  3. Empty states on all pages give specific next-step instructions â a contractor who lands on an empty Workers page knows exactly what to do next, not just that there are no workers
 
-  4. Clicking or tapping a "?" icon next to terms like "Davis-Bacon," "WH-347," "prevailing wage," "CWHSSA," and "WD" shows a plain-English definition — works on both desktop hover and iPad tap
+  4. Clicking or tapping a "?" icon next to terms like "Davis-Bacon," "WH-347," "prevailing wage," "CWHSSA," and "WD" shows a plain-English definition â works on both desktop hover and iPad tap
 
 **Plans**: 2 plans
 
 Plans:
 
-- [x] 26-01-PLAN.md — HelpCallout + TermTooltip primitives, landing page 4-step rewrite, HelpCallout on all 5 pages + PayrollListPage migration
+- [x] 26-01-PLAN.md â HelpCallout + TermTooltip primitives, landing page 4-step rewrite, HelpCallout on all 5 pages + PayrollListPage migration
 
-- [x] 26-02-PLAN.md — Empty state content updates with action buttons + TermTooltip inline placement across all pages
+- [x] 26-02-PLAN.md â Empty state content updates with action buttons + TermTooltip inline placement across all pages
 
 
 
 ### Phase 27: Design Elevation
 
-**Goal**: The app visual design matches HCC website quality — construction photography, dark gold gradients, and elevated card depth that distinguishes HCC from generic compliance software
+**Goal**: The app visual design matches HCC website quality â construction photography, dark gold gradients, and elevated card depth that distinguishes HCC from generic compliance software
 
 **Depends on**: Phase 23 (independent of form generation work; can begin any time after v2.3 baseline)
 
@@ -505,7 +505,7 @@ Plans:
 
   2. Dashboard project cards use an elevated shadow variant (0 8px 24px rgba(0,0,0,0.12)) visually distinct from the flat card used in v2.3
 
-  3. All pages use tighter Oswald letter-spacing and improved vertical rhythm matching HCC website typography — no page uses a raw h1/h2 outside the PageHeader primitive
+  3. All pages use tighter Oswald letter-spacing and improved vertical rhythm matching HCC website typography â no page uses a raw h1/h2 outside the PageHeader primitive
 
   4. Photography assets are WebP format, under 200KB each, loaded via CSS background-image (not Vite import), with a print media override preventing dark overlays from printing on white paper
 
@@ -513,9 +513,9 @@ Plans:
 
 Plans:
 
-- [x] 27-01-PLAN.md — Shadow-card-elevated token + print CSS + PageHeader tracking-tight + ProjectCard className prop + HelpCallout shadow + h1 migration (7 pages)
+- [x] 27-01-PLAN.md â Shadow-card-elevated token + print CSS + PageHeader tracking-tight + ProjectCard className prop + HelpCallout shadow + h1 migration (7 pages)
 
-- [x] 27-02-PLAN.md — Placeholder WebP photos + hero section rewrite (photo overlay, floating nav, clamp headline) + dashboard photo background strip + visual checkpoint
+- [x] 27-02-PLAN.md â Placeholder WebP photos + hero section rewrite (photo overlay, floating nav, clamp headline) + dashboard photo background strip + visual checkpoint
 
 
 
@@ -531,11 +531,11 @@ Plans:
 
   1. App is reachable at a public HTTPS URL and the landing page loads without errors
 
-  2. A project created after the first deploy survives a second redeploy — confirming the SQLite database is on the persistent disk at /var/data and not the ephemeral container filesystem
+  2. A project created after the first deploy survives a second redeploy â confirming the SQLite database is on the persistent disk at /var/data and not the ephemeral container filesystem
 
-  3. Attempting to register without a valid invitation code returns a clear error — open registration is disabled
+  3. Attempting to register without a valid invitation code returns a clear error â open registration is disabled
 
-  4. All secrets (SAM.gov API key, JWT secret, database path) are set as Render runtime environment variables and are absent from the deployed JavaScript bundle — no VITE_-prefixed secrets exist
+  4. All secrets (SAM.gov API key, JWT secret, database path) are set as Render runtime environment variables and are absent from the deployed JavaScript bundle â no VITE_-prefixed secrets exist
 
   5. The Vite production build is served as static files by Express, and all React routes resolve correctly on hard refresh (SPA catch-all in place)
 
@@ -543,9 +543,9 @@ Plans:
 
 Plans:
 
-- [x] 28-01-PLAN.md — Wave 0 invite code tests + tsconfig.server.json + build script + db mkdirSync fix + static file serving + invite code gate + .env.example + render.yaml
+- [x] 28-01-PLAN.md â Wave 0 invite code tests + tsconfig.server.json + build script + db mkdirSync fix + static file serving + invite code gate + .env.example + render.yaml
 
-- [x] 28-02-PLAN.md — RegisterForm invite code field + brand token fix + Render deploy smoke test checkpoint
+- [x] 28-02-PLAN.md â RegisterForm invite code field + brand token fix + Render deploy smoke test checkpoint
 
 
 
@@ -559,25 +559,25 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
 
-  1. Payroll entry for a CA project shows four separate fringe contribution fields — health/welfare, pension, vacation, and training — each stored as its own DB column per entry
+  1. Payroll entry for a CA project shows four separate fringe contribution fields â health/welfare, pension, vacation, and training â each stored as its own DB column per entry
 
   2. User can click a CA eCPR XML export button on a CA project's payroll week; if contractor FEIN, DIR project ID, awarding agency, or contract number are absent, a pre-generation modal collects them before the file is generated
 
   3. After the XML file downloads, the app displays a step-by-step portal upload checklist informing the contractor how to submit to the CA DIR eCPR portal, including the disclosure that SSNs must be entered directly in the portal
 
-  4. When the payroll week is an amendment (created via the v2.3 amendment workflow), the exported XML carries the correct amendment/resubmit marker — a non-amendment week produces no amendment marker
+  4. When the payroll week is an amendment (created via the v2.3 amendment workflow), the exported XML carries the correct amendment/resubmit marker â a non-amendment week produces no amendment marker
 
-  5. A WA or federal-only project has no CA eCPR XML export button — the export is state-gated to CA projects only
+  5. A WA or federal-only project has no CA eCPR XML export button â the export is state-gated to CA projects only
 
 **Plans**: 3 plans
 
 Plans:
 
-- [x] 29-01-PLAN.md — xmlbuilder2 install + DB migration (8 columns) + schema + extended payroll join + CA fringe entry UI
+- [x] 29-01-PLAN.md â xmlbuilder2 install + DB migration (8 columns) + schema + extended payroll join + CA fringe entry UI
 
-- [x] 29-02-PLAN.md — ecprXmlGenerator.ts (CPR.xsd v1.3 XML) + unit tests + GET /api/export/ecpr-xml/:weekId route
+- [x] 29-02-PLAN.md â ecprXmlGenerator.ts (CPR.xsd v1.3 XML) + unit tests + GET /api/export/ecpr-xml/:weekId route
 
-- [x] 29-03-PLAN.md — CA eCPR XML download button + 2-step pre-generation modal + post-download portal checklist
+- [x] 29-03-PLAN.md â CA eCPR XML download button + 2-step pre-generation modal + post-download portal checklist
 
 
 
@@ -597,16 +597,16 @@ Plans:
 
   3. User can download a WA L&I CPR XML file for a WA project's payroll week; the file is gated to WA projects only
 
-  4. User can view a WA submission assist summary panel — pre-populated with trade codes, hours by day, rates, and gross pay per worker — formatted as a reference for manual entry into the PWIA portal's Intent to Pay and Affidavit of Wages forms
+  4. User can view a WA submission assist summary panel â pre-populated with trade codes, hours by day, rates, and gross pay per worker â formatted as a reference for manual entry into the PWIA portal's Intent to Pay and Affidavit of Wages forms
 
   5. The submission assist panel is clearly labeled as a data-entry guide, not a submission mechanism; no HTTP calls are made to PWIA portal domains from the app backend
 
 **Plans**: 3 plans
 
 Plans:
-- [x] 30-01-PLAN.md — DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
-- [x] 30-02-PLAN.md — waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
-- [x] 30-03-PLAN.md — PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
+- [x] 30-01-PLAN.md â DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
+- [x] 30-02-PLAN.md â waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
+- [x] 30-03-PLAN.md â PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
 
 **UI hint**: yes
 
@@ -630,8 +630,8 @@ _v3.0 phase details archived to `.planning/milestones/v3.0-ROADMAP.md`_
 **Plans**: 2 plans
 
 Plans:
-- [x] 37-01-PLAN.md — Schema + migration: audit_logs table, 3 indexes, journal entry (2026-04-01)
-- [x] 37-02-PLAN.md — auditService.ts + tests: insertAuditLog(), diffObjects(), SSN redaction
+- [x] 37-01-PLAN.md â Schema + migration: audit_logs table, 3 indexes, journal entry (2026-04-01)
+- [x] 37-02-PLAN.md â auditService.ts + tests: insertAuditLog(), diffObjects(), SSN redaction
 
 ---
 
@@ -653,9 +653,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [x] 38-01-PLAN.md — Service wiring: workerService.ts + payroll entry audit + export/submission/import audit + trust proxy
-- [x] 38-02-PLAN.md — GET /api/audit/:projectId route with assertProjectAccess, pagination, date filter
-- [x] 38-03-PLAN.md — ProjectActivityPage React component + route wiring + ProjectDetailPage nav link
+- [x] 38-01-PLAN.md â Service wiring: workerService.ts + payroll entry audit + export/submission/import audit + trust proxy
+- [x] 38-02-PLAN.md â GET /api/audit/:projectId route with assertProjectAccess, pagination, date filter
+- [x] 38-03-PLAN.md â ProjectActivityPage React component + route wiring + ProjectDetailPage nav link
 **UI hint**: yes
 
 ---
@@ -675,7 +675,10 @@ Plans:
   4. On PayrollWeekDetailPage, each worker row has a "Change Classification for This Week" override dropdown; WH-347 uses the week-specific classification when set, falling back to the worker's default
   5. The `payroll_week_classifications` table exists and the WH-347 generator correctly reads week-specific classifications over default classifications
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 39-01-schema-server.md -- SQL migration + Drizzle schema + workerService + routes + payrollService override JOIN + new classification override endpoints
+- [ ] 39-02-react-ui.md -- WorkersPage structured address/union/apprenticeship form + PayrollWeekDetailPage classification override dropdown
 **UI hint**: yes
 
 ---
@@ -824,7 +827,7 @@ Plans:
 
 |-------|-----------|----------------|--------|-----------|
 
-| 1-5. Foundation → Differentiators | v1.0 | All | Complete | 2026-03-19 |
+| 1-5. Foundation â Differentiators | v1.0 | All | Complete | 2026-03-19 |
 
 | 6. WH-347 2025 Compliance Foundation | v2.0 | 4/4 | Complete | 2026-03-20 |
 
@@ -884,9 +887,9 @@ Plans:
 
 | 34. Agency Submission Status Tracking | v3.0 | 2/2 | Complete    | 2026-03-30 |
 
-| 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
+| 35. Payroll Import â Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
 
-| 36. Payroll Import — React UI | v3.0 | 3/3 | Complete    | 2026-04-01 |
+| 36. Payroll Import â React UI | v3.0 | 3/3 | Complete    | 2026-04-01 |
 
 
 ---
