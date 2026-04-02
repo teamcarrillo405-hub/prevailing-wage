@@ -75,7 +75,18 @@ export const workers = sqliteTable('workers', {
   ssnLast4: text('ssn_last4'),
   ssnEncrypted: text('ssn_encrypted'),
   tradeUnion: text('trade_union'),
-  address: text('address'),   // street, city, state zip — required for WH-347
+  address: text('address'),   // street, city, state zip — keep for backward compat; stop writing for new records
+  // Phase 39 — structured address fields (replacing single address column for new records)
+  addressStreet: text('address_street'),
+  addressCity: text('address_city'),
+  addressState: text('address_state'),
+  addressZip: text('address_zip'),
+  // Phase 39 — union card fields
+  unionLocal: text('union_local'),
+  unionBookNumber: text('union_book_number'),
+  // Phase 39 — apprenticeship fields
+  apprenticeshipCommittee: text('apprenticeship_committee'),
+  apprenticeshipRegNumber: text('apprenticeship_reg_number'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -98,6 +109,21 @@ export const workerClassifications = sqliteTable('worker_classifications', {
   waTradeCode: text('wa_trade_code'),
   createdAt: text('created_at').notNull(),
 });
+
+// ── Phase 39: Payroll Week Classification Overrides ────────────────────────
+// Stores per-week classification overrides for workers. When a worker works
+// under a different trade classification for a specific payroll week, this
+// table records the override. The unique index ensures only one override per
+// worker per week.
+export const payrollWeekClassifications = sqliteTable('payroll_week_classifications', {
+  id: text('id').primaryKey(),
+  payrollWeekId: text('payroll_week_id').notNull().references(() => payrollWeeks.id, { onDelete: 'cascade' }),
+  workerId: text('worker_id').notNull().references(() => workers.id, { onDelete: 'cascade' }),
+  classificationId: text('classification_id').notNull().references(() => workerClassifications.id, { onDelete: 'cascade' }),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  pwcUnique: uniqueIndex('pwc_unique').on(table.payrollWeekId, table.workerId),
+}));
 
 // ── Phase 2: Wage Data Tables ─────────────────────────────────────────────
 
