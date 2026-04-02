@@ -45,6 +45,14 @@ interface Worker {
   hasFullSsn: boolean;
   tradeUnion: string | null;
   address: string | null;
+  addressStreet: string | null;
+  addressCity: string | null;
+  addressState: string | null;
+  addressZip: string | null;
+  unionLocal: string | null;
+  unionBookNumber: string | null;
+  apprenticeshipCommittee: string | null;
+  apprenticeshipRegNumber: string | null;
   classifications: Classification[];
 }
 
@@ -69,7 +77,14 @@ function blankWorkerForm() {
     name: '',
     ssn: '',
     tradeUnion: '',
-    address: '',
+    addressStreet: '',
+    addressCity: '',
+    addressState: '',
+    addressZip: '',
+    unionLocal: '',
+    unionBookNumber: '',
+    apprenticeshipCommittee: '',
+    apprenticeshipRegNumber: '',
     tradeCode: '',
     tradeDescription: '',
     laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman',
@@ -85,7 +100,14 @@ function workerToEditForm(w: Worker) {
     name: w.name,
     ssn: '',  // Never pre-populate SSN — it is encrypted server-side; client never has the raw value
     tradeUnion: w.tradeUnion ?? '',
-    address: w.address ?? '',
+    addressStreet: w.addressStreet ?? '',
+    addressCity: w.addressCity ?? '',
+    addressState: w.addressState ?? '',
+    addressZip: w.addressZip ?? '',
+    unionLocal: w.unionLocal ?? '',
+    unionBookNumber: w.unionBookNumber ?? '',
+    apprenticeshipCommittee: w.apprenticeshipCommittee ?? '',
+    apprenticeshipRegNumber: w.apprenticeshipRegNumber ?? '',
   };
 }
 
@@ -99,7 +121,7 @@ export function WorkersPage() {
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', address: '' });
+  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '' });
   const [editError, setEditError] = useState('');
 
   // Add-extra-classification state
@@ -146,7 +168,14 @@ export function WorkersPage() {
         name: f.name.trim(),
         ...(f.ssn ? { ssn: f.ssn } : {}),
         ...(f.tradeUnion.trim() ? { tradeUnion: f.tradeUnion.trim() } : {}),
-        ...(f.address.trim() ? { address: f.address.trim() } : {}),
+        ...(f.addressStreet.trim() ? { addressStreet: f.addressStreet.trim() } : {}),
+        ...(f.addressCity.trim() ? { addressCity: f.addressCity.trim() } : {}),
+        ...(f.addressState.trim() ? { addressState: f.addressState.trim() } : {}),
+        ...(f.addressZip.trim() ? { addressZip: f.addressZip.trim() } : {}),
+        ...(f.unionLocal.trim() ? { unionLocal: f.unionLocal.trim() } : {}),
+        ...(f.unionBookNumber.trim() ? { unionBookNumber: f.unionBookNumber.trim() } : {}),
+        ...(f.apprenticeshipCommittee.trim() ? { apprenticeshipCommittee: f.apprenticeshipCommittee.trim() } : {}),
+        ...(f.apprenticeshipRegNumber.trim() ? { apprenticeshipRegNumber: f.apprenticeshipRegNumber.trim() } : {}),
       });
       const workerId = workerRes.data.worker.id;
       const canAddClass = isWA
@@ -178,8 +207,15 @@ export function WorkersPage() {
       api.put<{ data: { worker: Worker } }>(`/projects/${projectId}/workers/${id}`, {
         name: data.name.trim(),
         ...(data.ssn ? { ssn: data.ssn } : {}),
-        tradeUnion: data.tradeUnion.trim() || null,
-        address: data.address.trim() || null,
+        tradeUnion: data.tradeUnion.trim() || undefined,
+        addressStreet: data.addressStreet.trim() || undefined,
+        addressCity: data.addressCity.trim() || undefined,
+        addressState: data.addressState.trim() || undefined,
+        addressZip: data.addressZip.trim() || undefined,
+        unionLocal: data.unionLocal.trim() || undefined,
+        unionBookNumber: data.unionBookNumber.trim() || undefined,
+        apprenticeshipCommittee: data.apprenticeshipCommittee.trim() || undefined,
+        apprenticeshipRegNumber: data.apprenticeshipRegNumber.trim() || undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workers', projectId] });
@@ -355,15 +391,82 @@ export function WorkersPage() {
                           className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
                       </div>
-                      <div className="col-span-2">
-                        <label className="block text-xs text-gray-600 mb-1">Address <span className="text-gray-400">(required for WH-347)</span></label>
-                        <input type="text" value={editForm.address}
-                          onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))}
-                          placeholder="Street, City, State ZIP"
+                    </div>
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Address <span className="text-gray-400 font-normal normal-case">(required for WH-347)</span></p>
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="Street"
+                          value={editForm.addressStreet}
+                          onChange={e => setEditForm(p => ({ ...p, addressStreet: e.target.value }))}
+                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                        />
+                        <div className="grid grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            placeholder="City"
+                            value={editForm.addressCity}
+                            onChange={e => setEditForm(p => ({ ...p, addressCity: e.target.value }))}
+                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                          />
+                          <input
+                            type="text"
+                            placeholder="State"
+                            value={editForm.addressState}
+                            onChange={e => setEditForm(p => ({ ...p, addressState: e.target.value }))}
+                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Zip"
+                            value={editForm.addressZip}
+                            onChange={e => setEditForm(p => ({ ...p, addressZip: e.target.value }))}
+                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Union Information</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Union Local"
+                          value={editForm.unionLocal}
+                          onChange={e => setEditForm(p => ({ ...p, unionLocal: e.target.value }))}
+                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Book Number"
+                          value={editForm.unionBookNumber}
+                          onChange={e => setEditForm(p => ({ ...p, unionBookNumber: e.target.value }))}
                           className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
                       </div>
                     </div>
+                    {w.classifications?.some(c => c.laborType === 'apprentice') && (
+                      <div className="mt-4 border-t border-gray-100 pt-4">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Apprenticeship</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Committee"
+                            value={editForm.apprenticeshipCommittee}
+                            onChange={e => setEditForm(p => ({ ...p, apprenticeshipCommittee: e.target.value }))}
+                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Registration Number"
+                            value={editForm.apprenticeshipRegNumber}
+                            onChange={e => setEditForm(p => ({ ...p, apprenticeshipRegNumber: e.target.value }))}
+                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                          />
+                        </div>
+                      </div>
+                    )}
                     {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
                     <div className="flex gap-2">
                       <Button onClick={() => handleEditSave(w.id)} disabled={updateWorker.isPending}>
@@ -396,9 +499,13 @@ export function WorkersPage() {
                         <p className="text-xs text-gray-500 mt-0.5">
                           {w.tradeUnion && <span className="mr-3">Union: {w.tradeUnion}</span>}
                           {w.ssnLast4 && <span className="mr-3">SSN: ***-**-{w.ssnLast4}</span>}
-                          {w.address && <span>{w.address}</span>}
+                          {[w.addressStreet, w.addressCity, w.addressState, w.addressZip].some(Boolean) && (
+                            <span className="mr-3">{[w.addressStreet, w.addressCity, w.addressState, w.addressZip].filter(Boolean).join(', ')}</span>
+                          )}
+                          {w.unionLocal && <span className="mr-3">Local: {w.unionLocal}{w.unionBookNumber ? ` #${w.unionBookNumber}` : ''}</span>}
+                          {w.apprenticeshipCommittee && <span className="mr-3">Apprenticeship: {w.apprenticeshipCommittee}{w.apprenticeshipRegNumber ? ` #${w.apprenticeshipRegNumber}` : ''}</span>}
                         </p>
-                        {(!w.address || !w.ssnLast4) && (
+                        {(![w.addressStreet, w.addressCity, w.addressState, w.addressZip].some(Boolean) || !w.ssnLast4) && (
                           <Badge variant="warning" className="mt-1">Missing data — WH-347 blocked</Badge>
                         )}
                       </div>
@@ -638,12 +745,59 @@ export function WorkersPage() {
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Address <span className="text-gray-400">(required for WH-347 certified payroll)</span></label>
-              <input type="text" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
-                placeholder="Street, City, State ZIP"
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-              />
+            <div className="mt-2">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Address <span className="text-gray-400 font-normal normal-case">(required for WH-347)</span></p>
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Street"
+                  value={form.addressStreet}
+                  onChange={e => setForm(p => ({ ...p, addressStreet: e.target.value }))}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    placeholder="City"
+                    value={form.addressCity}
+                    onChange={e => setForm(p => ({ ...p, addressCity: e.target.value }))}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                  />
+                  <input
+                    type="text"
+                    placeholder="State"
+                    value={form.addressState}
+                    onChange={e => setForm(p => ({ ...p, addressState: e.target.value }))}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Zip"
+                    value={form.addressZip}
+                    onChange={e => setForm(p => ({ ...p, addressZip: e.target.value }))}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="mt-2 border-t border-gray-100 pt-4">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Union Information</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Union Local"
+                  value={form.unionLocal}
+                  onChange={e => setForm(p => ({ ...p, unionLocal: e.target.value }))}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                />
+                <input
+                  type="text"
+                  placeholder="Book Number"
+                  value={form.unionBookNumber}
+                  onChange={e => setForm(p => ({ ...p, unionBookNumber: e.target.value }))}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                />
+              </div>
             </div>
 
             {/* Trade selection */}
