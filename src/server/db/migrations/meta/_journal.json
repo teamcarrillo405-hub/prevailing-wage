@@ -127,6 +127,13 @@
       "when": 1775300000000,
       "tag": "0021_audit_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1743552000000,
+      "tag": "0022_worker_profile_depth",
+      "breakpoints": true
     }
   ]
 }
