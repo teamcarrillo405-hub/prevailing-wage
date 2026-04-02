@@ -18,7 +18,15 @@ export interface CreateWorkerInput extends AuditContext {
   name: string;
   ssn?: string;
   tradeUnion?: string | null;
-  address?: string | null;
+  address?: string | null; // keep for type compat but stop writing
+  addressStreet?: string | null;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressZip?: string | null;
+  unionLocal?: string | null;
+  unionBookNumber?: string | null;
+  apprenticeshipCommittee?: string | null;
+  apprenticeshipRegNumber?: string | null;
 }
 
 export interface UpdateWorkerInput extends AuditContext {
@@ -26,7 +34,15 @@ export interface UpdateWorkerInput extends AuditContext {
   name?: string;
   ssn?: string | null;
   tradeUnion?: string | null;
-  address?: string | null;
+  address?: string | null; // keep for type compat but stop writing
+  addressStreet?: string | null;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressZip?: string | null;
+  unionLocal?: string | null;
+  unionBookNumber?: string | null;
+  apprenticeshipCommittee?: string | null;
+  apprenticeshipRegNumber?: string | null;
 }
 
 export interface DeleteWorkerInput extends AuditContext {
@@ -65,7 +81,15 @@ export async function createWorker(
     ssnLast4: input.ssn ? input.ssn.slice(-4) : null,
     ssnEncrypted: input.ssn ? encryptSsn(input.ssn) : null,
     tradeUnion: input.tradeUnion ?? null,
-    address: input.address ?? null,
+    // address column not written for new records (add-only policy) — use structured fields
+    addressStreet: input.addressStreet ?? null,
+    addressCity: input.addressCity ?? null,
+    addressState: input.addressState ?? null,
+    addressZip: input.addressZip ?? null,
+    unionLocal: input.unionLocal ?? null,
+    unionBookNumber: input.unionBookNumber ?? null,
+    apprenticeshipCommittee: input.apprenticeshipCommittee ?? null,
+    apprenticeshipRegNumber: input.apprenticeshipRegNumber ?? null,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -115,7 +139,15 @@ export async function updateWorker(
     }
   }
   if ('tradeUnion' in input) updates.tradeUnion = input.tradeUnion ?? null;
-  if ('address' in input) updates.address = input.address ?? null;
+  // address column not updated for existing records (add-only policy) — use structured fields
+  if ('addressStreet' in input) updates.addressStreet = input.addressStreet ?? null;
+  if ('addressCity' in input) updates.addressCity = input.addressCity ?? null;
+  if ('addressState' in input) updates.addressState = input.addressState ?? null;
+  if ('addressZip' in input) updates.addressZip = input.addressZip ?? null;
+  if ('unionLocal' in input) updates.unionLocal = input.unionLocal ?? null;
+  if ('unionBookNumber' in input) updates.unionBookNumber = input.unionBookNumber ?? null;
+  if ('apprenticeshipCommittee' in input) updates.apprenticeshipCommittee = input.apprenticeshipCommittee ?? null;
+  if ('apprenticeshipRegNumber' in input) updates.apprenticeshipRegNumber = input.apprenticeshipRegNumber ?? null;
 
   await db.update(workers).set(updates).where(eq(workers.id, input.workerId));
   const [updated] = await db.select().from(workers).where(eq(workers.id, input.workerId)).limit(1);
