@@ -25,7 +25,7 @@ A contractor can run a full project end-to-end — create project → add worker
 
 ## Current State (v4.0 in progress — Phase 37 complete)
 
-Phase 37 complete: `audit_logs` table (12 columns, 3 DESC indexes) + `auditService.ts` with `insertAuditLog()`, SSN redaction, hybrid diff/snapshot. 396 tests passing. Infrastructure ready for Phase 38 wiring.
+Phase 38 complete: Full audit trail pipeline shipped — 13 Tier-1 callsites wired (worker/payroll/export/submission/import), paginated `GET /api/audit/:projectId` with date filter, `ProjectActivityPage` with bookmarkable `useSearchParams` filters. 412 tests passing.
 
 **Shipped:** 2026-03-31 (v3.0); v4.0 in progress
 **Tests:** 387+ passing (main suite, excluding worktrees)
