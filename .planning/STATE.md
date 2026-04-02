@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Phase 37 Plan 02 complete — auditService.ts + tests, all 9 tests green, 396 passing
-last_updated: "2026-04-01T21:52:15.770Z"
+status: Ready to execute
+stopped_at: Phase 38 Plan 01 complete — 13 audit callsites wired, workerService.ts created, 7 new tests green, 403 passing
+last_updated: "2026-04-02T04:50:48.428Z"
 progress:
-  total_phases: 14
-  completed_phases: 14
-  total_plans: 30
-  completed_plans: 30
+  total_phases: 24
+  completed_phases: 15
+  total_plans: 35
+  completed_plans: 33
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 37 — Audit Trail Foundation
+**Current focus:** Phase 38 — Audit Trail Wiring + Activity UI
 
 ## Current Position
 
-Phase: 37
-Plan: Not started
+Phase: 38 (Audit Trail Wiring + Activity UI) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -66,6 +66,9 @@ Key decisions locked for v4.0 scope:
 - Audit trail: activity_log table (who + what + when); viewable per project; immutable append-only rows
 - Worker profile depth: structured address (street/city/state/zip), union local + book number, apprenticeship committee + registration number, multiple trade classifications per payroll week
 - [Phase 37]: redactSensitiveFields is NOT exported — internal write-side guard only; diffObjects IS exported for Phase 38+ callers; hasSensitiveNonNull checks key presence never ciphertext; zero cryptoService imports to avoid test process.exit
+- [Phase 38]: trust proxy set to 1 in index.ts for real client IP behind Render.com load balancer
+- [Phase 38]: assertProjectAccess called before deletePayrollEntry for correct NFR-03 authorization ordering
+- [Phase 38]: dynamic import used for auditService in route files to avoid circular dependency risk
 
 ### Phase Order Rationale
 
@@ -88,7 +91,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T21:46:48.065Z
-Stopped at: Phase 37 Plan 02 complete — auditService.ts + tests, all 9 tests green, 396 passing
+Last session: 2026-04-02T04:50:48.425Z
+Stopped at: Phase 38 Plan 01 complete — 13 audit callsites wired, workerService.ts created, 7 new tests green, 403 passing
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
