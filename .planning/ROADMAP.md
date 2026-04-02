@@ -654,7 +654,7 @@ Plans:
 
 Plans:
 - [x] 38-01-PLAN.md — Service wiring: workerService.ts + payroll entry audit + export/submission/import audit + trust proxy
-- [ ] 38-02-PLAN.md — GET /api/audit/:projectId route with assertProjectAccess, pagination, date filter
+- [x] 38-02-PLAN.md — GET /api/audit/:projectId route with assertProjectAccess, pagination, date filter
 - [ ] 38-03-PLAN.md — ProjectActivityPage React component + route wiring + ProjectDetailPage nav link
 **UI hint**: yes
 
@@ -911,7 +911,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 37. Audit Trail Foundation | v4.0 | 2/2 | Complete    | 2026-04-01 |
-| 38. Audit Trail Wiring + Activity UI | v4.0 | 1/3 | In Progress|  |
+| 38. Audit Trail Wiring + Activity UI | v4.0 | 2/3 | In Progress|  |
 | 39. Worker Profile Depth | v4.0 | 0/TBD | Not started | - |
 | 40. NY Schema + Compliance Rule | v4.0 | 0/TBD | Not started | - |
 | 41. NY State Forms | v4.0 | 0/TBD | Not started | - |
