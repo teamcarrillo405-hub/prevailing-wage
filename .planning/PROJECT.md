@@ -23,9 +23,9 @@ A contractor can run a full project end-to-end — create project → add worker
 
 **Delivered:** Transformed HCC Prevailing Wage from a single-contractor tool into a team-ready platform with encrypted SSN storage, multi-user team accounts, payroll provider imports (QuickBooks + ADP), and agency submission status tracking. Research confirmed no public CA DIR or WA L&I APIs exist — auto-submit deferred to v4+.
 
-## Current State (v4.0 in progress — Phase 37 complete)
+## Current State (v4.0 in progress — Phase 39 complete)
 
-Phase 38 complete: Full audit trail pipeline shipped — 13 Tier-1 callsites wired (worker/payroll/export/submission/import), paginated `GET /api/audit/:projectId` with date filter, `ProjectActivityPage` with bookmarkable `useSearchParams` filters. 412 tests passing.
+Phase 39 complete: Worker profile depth shipped — structured address (4 columns + backfill), union local + book number, apprenticeship committee + reg number, `payroll_week_classifications` junction table for per-week trade overrides. WorkersPage updated with conditional Apprenticeship section (apprentice-only), Union Information section, and 4-field address grid. PayrollWeekDetailPage has classification override dropdown with Badge indicator. 412 tests passing.
 
 **Shipped:** 2026-03-31 (v3.0); v4.0 in progress
 **Tests:** 387+ passing (main suite, excluding worktrees)
