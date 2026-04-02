@@ -613,96 +613,6 @@ Plans:
 
 _v3.0 phase details archived to `.planning/milestones/v3.0-ROADMAP.md`_
 
-## Progress
-
-
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-
-|-------|-----------|----------------|--------|-----------|
-
-| 1-5. Foundation → Differentiators | v1.0 | All | Complete | 2026-03-19 |
-
-| 6. WH-347 2025 Compliance Foundation | v2.0 | 4/4 | Complete | 2026-03-20 |
-
-| 7. Compliance Engine + Payroll Week View | v2.0 | 4/4 | Complete | 2026-03-20 |
-
-| 8. Dashboard + UX Polish | v2.0 | 4/4 | Complete | 2026-03-20 |
-
-| 9. Reports | v2.0 | 4/4 | Complete | 2026-03-20 |
-
-| 10. CSS Design Token Foundation | v2.1 | 3/3 | Complete | 2026-03-20 |
-
-| 11. UI Primitives | v2.1 | 2/2 | Complete | 2026-03-20 |
-
-| 12. App Shell + Global Layout | v2.1 | 3/3 | Complete | 2026-03-20 |
-
-| 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
-
-| 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
-
-| 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete | 2026-03-22 |
-
-| 16. WH-347 Submission UX | v2.2 | 1/1 | Complete | 2026-03-22 |
-
-| 17. DB Migration + Project Archive | v2.3 | 2/2 | Complete | 2026-03-23 |
-
-| 18. Dashboard Search + Filter | v2.3 | 1/1 | Complete | 2026-03-23 |
-
-| 19. WH-347 Submission Tracking | v2.3 | 2/2 | Complete | 2026-03-23 |
-
-| 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete | 2026-03-23 |
-
-| 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete | 2026-03-23 |
-
-| 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
-
-| 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete | 2026-03-24 |
-
-| 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress | - |
-
-| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete | 2026-03-26 |
-
-| 26. Contractor Guidance System | v2.4 | 2/2 | Complete | 2026-03-26 |
-
-| 27. Design Elevation | v2.4 | 2/2 | Complete | 2026-03-27 |
-
-| 28. Production Deployment | v2.4 | 2/2 | Complete | 2026-03-27 |
-
-| 29. CA eCPR XML Export | v2.5 | 3/3 | Complete | 2026-03-27 |
-
-| 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete | 2026-03-27 |
-
-| 31. SSN Encryption Foundation | v3.0 | 3/3 | Complete    | 2026-03-28 |
-
-| 32. Multi-User Auth Foundation | v3.0 | 4/4 | Complete    | 2026-03-29 |
-
-| 33. Team Invite Flow + Team UI | v3.0 | 3/3 | Complete    | 2026-03-30 |
-
-| 34. Agency Submission Status Tracking | v3.0 | 2/2 | Complete    | 2026-03-30 |
-
-| 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
-
-| 36. Payroll Import — React UI | v3.0 | 3/3 | Complete    | 2026-04-01 |
-
-
----
-
-### v4.0 Compliance Depth + Operations (Phases 37-46)
-
-- [x] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog() (completed 2026-04-01)
-- [ ] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage
-- [ ] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week
-- [ ] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance()
-- [ ] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal
-- [ ] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers
-- [ ] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal
-- [ ] **Phase 44: Import Provider Foundation** - payroll_provider_mappings table, Gusto parser, provider auto-detection
-- [ ] **Phase 45: Import ID-Mapped Providers** - Paychex Flex + Sage 300 CRE parsers, Step 2b mapping UI
-- [ ] **Phase 46: Notifications** - violation/reminder/activity/submission emails, per-project preferences UI
-
----
-
 ### Phase 37: Audit Trail Foundation
 
 **Goal**: An append-only audit log table exists in the database and a single `auditService.ts` provides the `insertAuditLog()` function with SSN redaction and hybrid diff/snapshot payload strategy. No existing behavior changes - this phase only creates the infrastructure that Phase 38 wires up.
@@ -898,6 +808,96 @@ Plans:
 
 **Plans**: TBD
 **UI hint**: yes
+
+---
+
+## Progress
+
+
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+
+|-------|-----------|----------------|--------|-----------|
+
+| 1-5. Foundation → Differentiators | v1.0 | All | Complete | 2026-03-19 |
+
+| 6. WH-347 2025 Compliance Foundation | v2.0 | 4/4 | Complete | 2026-03-20 |
+
+| 7. Compliance Engine + Payroll Week View | v2.0 | 4/4 | Complete | 2026-03-20 |
+
+| 8. Dashboard + UX Polish | v2.0 | 4/4 | Complete | 2026-03-20 |
+
+| 9. Reports | v2.0 | 4/4 | Complete | 2026-03-20 |
+
+| 10. CSS Design Token Foundation | v2.1 | 3/3 | Complete | 2026-03-20 |
+
+| 11. UI Primitives | v2.1 | 2/2 | Complete | 2026-03-20 |
+
+| 12. App Shell + Global Layout | v2.1 | 3/3 | Complete | 2026-03-20 |
+
+| 13. Landing Page + Routing | v2.1 | 3/3 | Complete | 2026-03-20 |
+
+| 14. Page-by-Page Polish | v2.1 | 3/3 | Complete | 2026-03-22 |
+
+| 15. Compliance Engine Hardening + Independent Frontend | v2.2 | 3/3 | Complete | 2026-03-22 |
+
+| 16. WH-347 Submission UX | v2.2 | 1/1 | Complete | 2026-03-22 |
+
+| 17. DB Migration + Project Archive | v2.3 | 2/2 | Complete | 2026-03-23 |
+
+| 18. Dashboard Search + Filter | v2.3 | 1/1 | Complete | 2026-03-23 |
+
+| 19. WH-347 Submission Tracking | v2.3 | 2/2 | Complete | 2026-03-23 |
+
+| 20. Copy Previous Payroll Week | v2.3 | 2/2 | Complete | 2026-03-23 |
+
+| 21. Payroll Amendment Workflow | v2.3 | 2/2 | Complete | 2026-03-23 |
+
+| 22. Per-Worker Compliance History | v2.3 | 2/2 | Complete | 2026-03-24 |
+
+| 23. Dashboard Compliance Filter + CSV Export | v2.4 | 2/2 | Complete | 2026-03-24 |
+
+| 24. California DIR A-1-131 Form | v2.4 | 2/3 | In Progress | - |
+
+| 25. Washington L&I F700-065-000 Form | v2.4 | 0/2 | Complete | 2026-03-26 |
+
+| 26. Contractor Guidance System | v2.4 | 2/2 | Complete | 2026-03-26 |
+
+| 27. Design Elevation | v2.4 | 2/2 | Complete | 2026-03-27 |
+
+| 28. Production Deployment | v2.4 | 2/2 | Complete | 2026-03-27 |
+
+| 29. CA eCPR XML Export | v2.5 | 3/3 | Complete | 2026-03-27 |
+
+| 30. WA PWIA Submission Assist | v2.5 | 3/3 | Complete | 2026-03-27 |
+
+| 31. SSN Encryption Foundation | v3.0 | 3/3 | Complete    | 2026-03-28 |
+
+| 32. Multi-User Auth Foundation | v3.0 | 4/4 | Complete    | 2026-03-29 |
+
+| 33. Team Invite Flow + Team UI | v3.0 | 3/3 | Complete    | 2026-03-30 |
+
+| 34. Agency Submission Status Tracking | v3.0 | 2/2 | Complete    | 2026-03-30 |
+
+| 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
+
+| 36. Payroll Import — React UI | v3.0 | 3/3 | Complete    | 2026-04-01 |
+
+
+---
+
+### v4.0 Compliance Depth + Operations (Phases 37-46)
+
+- [x] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog() (completed 2026-04-01)
+- [ ] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage
+- [ ] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week
+- [ ] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance()
+- [ ] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal
+- [ ] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers
+- [ ] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal
+- [ ] **Phase 44: Import Provider Foundation** - payroll_provider_mappings table, Gusto parser, provider auto-detection
+- [ ] **Phase 45: Import ID-Mapped Providers** - Paychex Flex + Sage 300 CRE parsers, Step 2b mapping UI
+- [ ] **Phase 46: Notifications** - violation/reminder/activity/submission emails, per-project preferences UI
 
 ---
 
