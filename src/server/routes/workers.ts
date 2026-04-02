@@ -21,14 +21,30 @@ const CreateWorkerSchema = z.object({
   name: z.string().min(1).max(200),
   ssn: z.string().length(9).regex(/^\d{9}$/, 'SSN must contain only digits').optional(),
   tradeUnion: z.string().max(200).optional(),
-  address: z.string().max(500).optional(),
+  // Phase 39 — structured address fields (address removed; use structured fields)
+  addressStreet: z.string().max(500).optional(),
+  addressCity: z.string().max(200).optional(),
+  addressState: z.string().max(50).optional(),
+  addressZip: z.string().max(20).optional(),
+  unionLocal: z.string().max(200).optional(),
+  unionBookNumber: z.string().max(100).optional(),
+  apprenticeshipCommittee: z.string().max(200).optional(),
+  apprenticeshipRegNumber: z.string().max(100).optional(),
 });
 
 const UpdateWorkerSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   ssn: z.string().length(9).regex(/^\d{9}$/, 'SSN must contain only digits').optional().nullable(),
   tradeUnion: z.string().max(200).optional().nullable(),
-  address: z.string().max(500).optional().nullable(),
+  // Phase 39 — structured address fields (address removed; use structured fields)
+  addressStreet: z.string().max(500).optional().nullable(),
+  addressCity: z.string().max(200).optional().nullable(),
+  addressState: z.string().max(50).optional().nullable(),
+  addressZip: z.string().max(20).optional().nullable(),
+  unionLocal: z.string().max(200).optional().nullable(),
+  unionBookNumber: z.string().max(100).optional().nullable(),
+  apprenticeshipCommittee: z.string().max(200).optional().nullable(),
+  apprenticeshipRegNumber: z.string().max(100).optional().nullable(),
 });
 
 const CreateClassificationSchema = z.object({
@@ -160,7 +176,14 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
     name: body.name,
     ssn: body.ssn,
     tradeUnion: body.tradeUnion,
-    address: body.address,
+    addressStreet: body.addressStreet,
+    addressCity: body.addressCity,
+    addressState: body.addressState,
+    addressZip: body.addressZip,
+    unionLocal: body.unionLocal,
+    unionBookNumber: body.unionBookNumber,
+    apprenticeshipCommittee: body.apprenticeshipCommittee,
+    apprenticeshipRegNumber: body.apprenticeshipRegNumber,
   });
   res.status(201).json({ data: { worker: result } });
 });
@@ -190,7 +213,14 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
       name: body.name,
       ssn: body.ssn,
       tradeUnion: body.tradeUnion,
-      address: body.address,
+      addressStreet: body.addressStreet,
+      addressCity: body.addressCity,
+      addressState: body.addressState,
+      addressZip: body.addressZip,
+      unionLocal: body.unionLocal,
+      unionBookNumber: body.unionBookNumber,
+      apprenticeshipCommittee: body.apprenticeshipCommittee,
+      apprenticeshipRegNumber: body.apprenticeshipRegNumber,
     });
     res.json({ data: { worker: result } });
   } catch (err: any) {
