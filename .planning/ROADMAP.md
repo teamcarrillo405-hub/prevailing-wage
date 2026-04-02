@@ -677,7 +677,7 @@ Plans:
 
 **Plans**: 2 plans
 Plans:
-- [ ] 39-01-schema-server.md -- SQL migration + Drizzle schema + workerService + routes + payrollService override JOIN + new classification override endpoints
+- [x] 39-01-schema-server.md -- SQL migration + Drizzle schema + workerService + routes + payrollService override JOIN + new classification override endpoints
 - [ ] 39-02-react-ui.md -- WorkersPage structured address/union/apprenticeship form + PayrollWeekDetailPage classification override dropdown
 **UI hint**: yes
 
@@ -915,7 +915,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 37. Audit Trail Foundation | v4.0 | 2/2 | Complete    | 2026-04-01 |
 | 38. Audit Trail Wiring + Activity UI | v4.0 | 3/3 | Complete    | 2026-04-02 |
-| 39. Worker Profile Depth | v4.0 | 0/TBD | Not started | - |
+| 39. Worker Profile Depth | v4.0 | 1/2 | In Progress|  |
 | 40. NY Schema + Compliance Rule | v4.0 | 0/TBD | Not started | - |
 | 41. NY State Forms | v4.0 | 0/TBD | Not started | - |
 | 42. IL Schema + Project Flag | v4.0 | 0/TBD | Not started | - |

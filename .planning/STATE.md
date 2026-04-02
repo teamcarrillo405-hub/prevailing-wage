@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 38-audit-trail-wiring-activity-ui Plan 03 — Phase 38 complete
-last_updated: "2026-04-02T14:47:19.994Z"
+status: Ready to execute
+stopped_at: Completed 39-worker-profile-depth Plan 01 — backend data model and API surface
+last_updated: "2026-04-02T16:07:53.981Z"
 progress:
   total_phases: 24
   completed_phases: 16
-  total_plans: 35
-  completed_plans: 35
+  total_plans: 37
+  completed_plans: 36
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 38 — Audit Trail Wiring + Activity UI
+**Current focus:** Phase 39 — worker-profile-depth
 
 ## Current Position
 
-Phase: 39
-Plan: Not started
+Phase: 39 (worker-profile-depth) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -72,6 +72,9 @@ Key decisions locked for v4.0 scope:
 - [Phase 38-audit-trail-wiring-activity-ui]: audit route: conditions typed as ReturnType<typeof eq>[], to param appended T23:59:59.999Z for inclusive end-of-day, JSON column parsing at HTTP boundary not in service
 - [Phase 38-audit-trail-wiring-activity-ui]: useSearchParams (not useState) for date filter — makes URLs bookmarkable per AUDIT-05 requirement
 - [Phase 38-audit-trail-wiring-activity-ui]: ACTION_LABELS map (15 entries) covers all audit action types; route uses :id (not :projectId) to match useParams destructuring in ProjectActivityPage
+- [Phase 39-01]: randomUUID from crypto instead of uuid package — no @types/uuid; consistent with all other route files
+- [Phase 39-01]: LEFT JOIN for payrollWeekClassifications — INNER JOIN would exclude entries without override from all exports
+- [Phase 39-01]: DELETE+INSERT upsert for classification override — handles unique constraint; SQLite lacks UPSERT ON CONFLICT UPDATE syntax
 
 ### Phase Order Rationale
 
@@ -94,7 +97,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T14:41:19.305Z
-Stopped at: Completed 38-audit-trail-wiring-activity-ui Plan 03 — Phase 38 complete
+Last session: 2026-04-02T16:07:53.977Z
+Stopped at: Completed 39-worker-profile-depth Plan 01 — backend data model and API surface
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
