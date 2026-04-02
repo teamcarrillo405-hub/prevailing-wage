@@ -397,6 +397,8 @@ export async function getPayrollEntriesWithWorkerDetails(weekId: string) {
       programName: sql<string | null>`COALESCE(${overrideClassifications.programName}, ${workerClassifications.programName})`.as('program_name'),
       // Override classification ID — useful for Plan 02 UI to know which override is active
       overrideClassificationId: payrollWeekClassifications.classificationId,
+      // Override row ID — needed for DELETE /payroll-week-classifications/:id in Plan 02 UI
+      overrideId: payrollWeekClassifications.id,
     })
     .from(payrollEntries)
     .innerJoin(workers, eq(payrollEntries.workerId, workers.id))

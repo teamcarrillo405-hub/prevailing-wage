@@ -59,6 +59,8 @@ interface PayrollEntryRow {
   workerName: string;
   laborType: string;
   tradeDescription: string;
+  overrideClassificationId: string | null;
+  overrideId: string | null;
 }
 
 interface ComplianceViolation {
@@ -281,6 +283,41 @@ export function PayrollWeekDetailPage() {
   const waUnsubmitMutation = useMutation({
     mutationFn: () => api.patch(`/payroll/weeks/${weekId}/wa-submit`, { submitted: false }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] }); },
+  });
+
+  // ── Classification override mutations (Phase 39 — WORKER-04) ──────────────
+
+  const overrideMutation = useMutation({
+    mutationFn: async ({ payrollWeekId, workerId, classificationId }: {
+      payrollWeekId: string;
+      workerId: string;
+      classificationId: string;
+    }) => {
+      const res = await fetch(`/api/projects/${projectId}/payroll-week-classifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ payrollWeekId, workerId, classificationId }),
+      });
+      if (!res.ok) throw new Error('Failed to set classification override');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+    },
+  });
+
+  const removeOverrideMutation = useMutation({
+    mutationFn: async (overrideId: string) => {
+      const res = await fetch(`/api/projects/${projectId}/payroll-week-classifications/${overrideId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to remove classification override');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+    },
   });
 
   const importCommitMutation = useMutation({
@@ -865,6 +902,7 @@ export function PayrollWeekDetailPage() {
                   <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
                     <th className="px-5 py-3">Worker Name</th>
                     <th className="px-5 py-3">Trade</th>
+                    <th className="px-5 py-3">Override</th>
                     <th className="px-5 py-3">Hours (ST/OT)</th>
                     <th className="px-5 py-3">Base Rate</th>
                     <th className="px-5 py-3">Fringe Rate</th>
@@ -884,7 +922,45 @@ export function PayrollWeekDetailPage() {
                     return (
                       <tr key={e.id} className="hover:bg-gray-50">
                         <td className="px-5 py-3 font-medium text-gray-900">{row.workerName}</td>
-                        <td className="px-5 py-3 text-gray-600">{row.tradeDescription}</td>
+                        <td className="px-5 py-3 text-gray-600">
+                          {row.tradeDescription}
+                          {row.overrideClassificationId && (
+                            <Badge variant="warning" className="ml-2">Override</Badge>
+                          )}
+                        </td>
+                        <td className="px-5 py-3">
+                          {(() => {
+                            const worker = projectWorkers.find((w) => w.id === e.workerId);
+                            const classifications = worker?.classifications ?? [];
+                            if (classifications.length <= 1) return <span className="text-xs text-gray-400">—</span>;
+                            return (
+                              <select
+                                value={row.overrideClassificationId ?? ''}
+                                onChange={ev => {
+                                  const val = ev.target.value;
+                                  if (val) {
+                                    overrideMutation.mutate({
+                                      payrollWeekId: e.payrollWeekId,
+                                      workerId: e.workerId,
+                                      classificationId: val,
+                                    });
+                                  } else if (row.overrideId) {
+                                    removeOverrideMutation.mutate(row.overrideId);
+                                  }
+                                }}
+                                className="text-sm border border-gray-200 rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                                disabled={!!week?.submittedAt}
+                              >
+                                <option value="">Default</option>
+                                {classifications.map((c: ImportWorkerClassification) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.tradeDescription} ({c.laborType})
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          })()}
+                        </td>
                         <td className="px-5 py-3 text-gray-600">
                           {totalSt} ST / {totalOt} OT
                         </td>
