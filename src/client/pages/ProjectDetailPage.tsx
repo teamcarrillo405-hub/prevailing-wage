@@ -279,6 +279,12 @@ export function ProjectDetailPage() {
             >
               Reports
             </Link>
+            <Link
+              to={`/projects/${project.id}/activity`}
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
+            >
+              Activity
+            </Link>
           </div>
         </div>
       )}

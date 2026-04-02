@@ -19,6 +19,7 @@ import { PayrollWeekDetailPage } from './pages/PayrollWeekDetailPage.js';
 import { VarianceReportPageRoute } from './pages/VarianceReportPageRoute';
 import { ReportsPage } from './pages/ReportsPage';
 import { WorkerComplianceHistoryPage } from './pages/WorkerComplianceHistoryPage';
+import { ProjectActivityPage } from './pages/ProjectActivityPage';
 import { TeamPage } from './pages/TeamPage.js';
 import { AcceptInvitePage } from './pages/AcceptInvitePage.js';
 
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="/projects/:projectId/workers/:workerId/compliance-history" element={<WorkerComplianceHistoryPage />} />
               <Route path="/projects/:projectId/variance" element={<VarianceReportPageRoute />} />
               <Route path="/projects/:projectId/reports" element={<ReportsPage />} />
+              <Route path="/projects/:id/activity" element={<ProjectActivityPage />} />
               <Route path="/team" element={<TeamPage />} />
             </Route>
 
