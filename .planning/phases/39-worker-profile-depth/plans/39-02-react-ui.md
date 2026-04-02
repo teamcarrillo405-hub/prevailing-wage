@@ -7,6 +7,7 @@ depends_on: [39-01]
 files_modified:
   - src/client/pages/WorkersPage.tsx
   - src/client/pages/PayrollWeekDetailPage.tsx
+  - src/server/services/payrollService.ts
 autonomous: true
 requirements: [WORKER-01, WORKER-02, WORKER-03, WORKER-04, NFR-01, NFR-05]
 
