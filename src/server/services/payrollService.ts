@@ -1,12 +1,14 @@
 // src/server/services/payrollService.ts
 import { randomUUID } from 'crypto';
-import { eq, desc, max, and } from 'drizzle-orm';
+import { eq, desc, max, and, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { getDb } from '../db/index.js';
 import {
   payrollWeeks,
   payrollEntries,
   workers,
   workerClassifications,
+  payrollWeekClassifications,
   projects,
 } from '../db/schema.js';
 import { getCachedWd, getCachedClassifications } from './wageCache.js';
@@ -378,24 +380,41 @@ export async function getPayrollEntries(weekId: string) {
 
 export async function getPayrollEntriesWithWorkerDetails(weekId: string) {
   const db = getDb();
+  const overrideClassifications = alias(workerClassifications, 'override_classifications');
   const rows = await db
     .select({
       entry: payrollEntries,
       workerName: workers.name,
       workerSsnLast4: workers.ssnLast4,
       workerSsnEncrypted: workers.ssnEncrypted,
-      workerAddress: workers.address,
-      tradeDescription: workerClassifications.tradeDescription,
-      tradeCode: workerClassifications.tradeCode,
-      waTradeCode: workerClassifications.waTradeCode,
-      laborType: workerClassifications.laborType,
-      programName: workerClassifications.programName,
+      // Phase 39: concatenate structured address fields (WORKER-01)
+      workerAddress: sql<string>`COALESCE(${workers.addressStreet}, '') || CASE WHEN ${workers.addressCity} IS NOT NULL THEN ', ' || ${workers.addressCity} ELSE '' END || CASE WHEN ${workers.addressState} IS NOT NULL THEN ', ' || ${workers.addressState} ELSE '' END || CASE WHEN ${workers.addressZip} IS NOT NULL THEN ' ' || ${workers.addressZip} ELSE '' END`.as('worker_address'),
+      // Phase 39: COALESCE with override classification (WORKER-04)
+      tradeDescription: sql<string>`COALESCE(${overrideClassifications.tradeDescription}, ${workerClassifications.tradeDescription})`.as('trade_description'),
+      tradeCode: sql<string>`COALESCE(${overrideClassifications.tradeCode}, ${workerClassifications.tradeCode})`.as('trade_code'),
+      waTradeCode: sql<string | null>`COALESCE(${overrideClassifications.waTradeCode}, ${workerClassifications.waTradeCode})`.as('wa_trade_code'),
+      laborType: sql<string>`COALESCE(${overrideClassifications.laborType}, ${workerClassifications.laborType})`.as('labor_type'),
+      programName: sql<string | null>`COALESCE(${overrideClassifications.programName}, ${workerClassifications.programName})`.as('program_name'),
+      // Override classification ID — useful for Plan 02 UI to know which override is active
+      overrideClassificationId: payrollWeekClassifications.classificationId,
     })
     .from(payrollEntries)
     .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
     .innerJoin(
       workerClassifications,
       eq(payrollEntries.classificationId, workerClassifications.id),
+    )
+    // LEFT JOIN: most entries will NOT have an override — INNER JOIN would exclude them
+    .leftJoin(
+      payrollWeekClassifications,
+      and(
+        eq(payrollWeekClassifications.payrollWeekId, payrollEntries.payrollWeekId),
+        eq(payrollWeekClassifications.workerId, payrollEntries.workerId),
+      ),
+    )
+    .leftJoin(
+      overrideClassifications,
+      eq(payrollWeekClassifications.classificationId, overrideClassifications.id),
     )
     .where(eq(payrollEntries.payrollWeekId, weekId));
   return rows;
