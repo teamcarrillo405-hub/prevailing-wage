@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: "Phase 38 Plan 03 checkpoint:human-verify — Tasks 1+2 complete, awaiting visual verification of /projects/:id/activity"
-last_updated: "2026-04-02T05:02:44.361Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 38-audit-trail-wiring-activity-ui Plan 03 — Phase 38 complete
+last_updated: "2026-04-02T14:41:19.308Z"
 progress:
   total_phases: 24
   completed_phases: 16
@@ -70,6 +70,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 38]: assertProjectAccess called before deletePayrollEntry for correct NFR-03 authorization ordering
 - [Phase 38]: dynamic import used for auditService in route files to avoid circular dependency risk
 - [Phase 38-audit-trail-wiring-activity-ui]: audit route: conditions typed as ReturnType<typeof eq>[], to param appended T23:59:59.999Z for inclusive end-of-day, JSON column parsing at HTTP boundary not in service
+- [Phase 38-audit-trail-wiring-activity-ui]: useSearchParams (not useState) for date filter — makes URLs bookmarkable per AUDIT-05 requirement
+- [Phase 38-audit-trail-wiring-activity-ui]: ACTION_LABELS map (15 entries) covers all audit action types; route uses :id (not :projectId) to match useParams destructuring in ProjectActivityPage
 
 ### Phase Order Rationale
 
@@ -92,7 +94,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T05:02:44.358Z
-Stopped at: Phase 38 Plan 03 checkpoint:human-verify — Tasks 1+2 complete, awaiting visual verification of /projects/:id/activity
+Last session: 2026-04-02T14:41:19.305Z
+Stopped at: Completed 38-audit-trail-wiring-activity-ui Plan 03 — Phase 38 complete
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
