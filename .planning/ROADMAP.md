@@ -678,7 +678,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 39-01-schema-server.md -- SQL migration + Drizzle schema + workerService + routes + payrollService override JOIN + new classification override endpoints
-- [ ] 39-02-react-ui.md -- WorkersPage structured address/union/apprenticeship form + PayrollWeekDetailPage classification override dropdown
+- [x] 39-02-react-ui.md -- WorkersPage structured address/union/apprenticeship form + PayrollWeekDetailPage classification override dropdown
 **UI hint**: yes
 
 ---
@@ -898,7 +898,7 @@ Plans:
 
 - [x] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog() (completed 2026-04-01)
 - [x] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage (completed 2026-04-02)
-- [ ] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week
+- [x] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week (completed 2026-04-02)
 - [ ] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance()
 - [ ] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal
 - [ ] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers
@@ -915,7 +915,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 37. Audit Trail Foundation | v4.0 | 2/2 | Complete    | 2026-04-01 |
 | 38. Audit Trail Wiring + Activity UI | v4.0 | 3/3 | Complete    | 2026-04-02 |
-| 39. Worker Profile Depth | v4.0 | 1/2 | In Progress|  |
+| 39. Worker Profile Depth | v4.0 | 2/2 | Complete   | 2026-04-02 |
 | 40. NY Schema + Compliance Rule | v4.0 | 0/TBD | Not started | - |
 | 41. NY State Forms | v4.0 | 0/TBD | Not started | - |
 | 42. IL Schema + Project Flag | v4.0 | 0/TBD | Not started | - |

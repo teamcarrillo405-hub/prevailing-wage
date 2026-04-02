@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 39-worker-profile-depth Plan 01 — backend data model and API surface
-last_updated: "2026-04-02T16:07:53.981Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 39-worker-profile-depth Plan 02 — WorkersPage structured address/union/apprenticeship UI + PayrollWeekDetailPage classification override dropdown
+last_updated: "2026-04-02T16:16:55.283Z"
 progress:
   total_phases: 24
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 37
-  completed_plans: 36
+  completed_plans: 37
 ---
 
 # State
@@ -75,6 +75,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 39-01]: randomUUID from crypto instead of uuid package — no @types/uuid; consistent with all other route files
 - [Phase 39-01]: LEFT JOIN for payrollWeekClassifications — INNER JOIN would exclude entries without override from all exports
 - [Phase 39-01]: DELETE+INSERT upsert for classification override — handles unique constraint; SQLite lacks UPSERT ON CONFLICT UPDATE syntax
+- [Phase 39]: overrideId added to getPayrollEntriesWithWorkerDetails select — enables DELETE /payroll-week-classifications/:id from UI without separate lookup
+- [Phase 39]: Apprenticeship section conditionally shown via w.classifications?.some(c => c.laborType === 'apprentice') — hidden for new workers and journeyworker-only workers
 
 ### Phase Order Rationale
 
@@ -97,7 +99,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T16:07:53.977Z
-Stopped at: Completed 39-worker-profile-depth Plan 01 — backend data model and API surface
+Last session: 2026-04-02T16:16:55.279Z
+Stopped at: Completed 39-worker-profile-depth Plan 02 — WorkersPage structured address/union/apprenticeship UI + PayrollWeekDetailPage classification override dropdown
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
