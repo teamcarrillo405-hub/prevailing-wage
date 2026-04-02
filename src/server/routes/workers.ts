@@ -8,9 +8,9 @@ import { getCachedWd, getCachedClassifications } from '../services/wageCache.js'
 import { lookupWageDetermination } from '../services/wageLookup.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { encryptSsn } from '../services/cryptoService.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import type { Project } from '../utils/assertProjectAccess.js';
+import { createWorker, updateWorker, deleteWorker } from '../services/workerService.js';
 
 const router = Router();
 
@@ -151,28 +151,18 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
   }
 
   const body = req.body as z.infer<typeof CreateWorkerSchema>;
-  const now = new Date().toISOString();
-  const id = randomUUID();
 
-  await db.insert(workers).values({
-    id,
+  const result = await createWorker(db, {
+    userId,
+    userEmail: req.user!.email,
+    ipAddress: req.ip ?? null,
     projectId,
     name: body.name,
-    ssnLast4: body.ssn ? body.ssn.slice(-4) : null,
-    ssnEncrypted: body.ssn ? encryptSsn(body.ssn) : null,
-    tradeUnion: body.tradeUnion ?? null,
-    address: body.address ?? null,
-    isActive: true,
-    createdAt: now,
-    updatedAt: now,
+    ssn: body.ssn,
+    tradeUnion: body.tradeUnion,
+    address: body.address,
   });
-
-  const [worker] = await db.select().from(workers).where(eq(workers.id, id)).limit(1);
-  const hasFullSsn = worker!.ssnEncrypted
-    ? (JSON.parse(worker!.ssnEncrypted) as { len?: number }).len === 9
-    : false;
-  const { ssnEncrypted: _enc, ...safeWorker } = worker!;
-  res.status(201).json({ data: { worker: { ...safeWorker, hasFullSsn } } });
+  res.status(201).json({ data: { worker: result } });
 });
 
 // PUT /api/projects/:projectId/workers/:workerId — update worker profile
@@ -188,32 +178,24 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
     return;
   }
 
-  const [worker] = await db.select().from(workers).where(eq(workers.id, workerId)).limit(1);
-  if (!worker || worker.projectId !== projectId) { res.status(404).json({ error: 'Worker not found' }); return; }
-
   const body = req.body as z.infer<typeof UpdateWorkerSchema>;
-  const now = new Date().toISOString();
-  const updates: Record<string, unknown> = { updatedAt: now };
-  if (body.name !== undefined) updates.name = body.name;
-  if ('ssn' in body) {
-    if (body.ssn) {
-      updates.ssnEncrypted = encryptSsn(body.ssn);
-      updates.ssnLast4 = body.ssn.slice(-4);
-    } else {
-      updates.ssnEncrypted = null;
-      updates.ssnLast4 = null;
-    }
-  }
-  if ('tradeUnion' in body) updates.tradeUnion = body.tradeUnion ?? null;
-  if ('address' in body) updates.address = body.address ?? null;
 
-  await db.update(workers).set(updates).where(eq(workers.id, workerId));
-  const [updated] = await db.select().from(workers).where(eq(workers.id, workerId)).limit(1);
-  const hasFullSsn = updated!.ssnEncrypted
-    ? (JSON.parse(updated!.ssnEncrypted) as { len?: number }).len === 9
-    : false;
-  const { ssnEncrypted: _enc, ...safeWorker } = updated!;
-  res.json({ data: { worker: { ...safeWorker, hasFullSsn } } });
+  try {
+    const result = await updateWorker(db, {
+      userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId,
+      workerId,
+      name: body.name,
+      ssn: body.ssn,
+      tradeUnion: body.tradeUnion,
+      address: body.address,
+    });
+    res.json({ data: { worker: result } });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+  }
 });
 
 // DELETE /api/projects/:projectId/workers/:workerId — remove worker (cascades classifications)
@@ -229,11 +211,18 @@ router.delete('/:projectId/workers/:workerId', async (req, res) => {
     return;
   }
 
-  const [worker] = await db.select().from(workers).where(eq(workers.id, workerId)).limit(1);
-  if (!worker || worker.projectId !== projectId) { res.status(404).json({ error: 'Worker not found' }); return; }
-
-  await db.delete(workers).where(eq(workers.id, workerId));
-  res.json({ data: { deleted: true } });
+  try {
+    const result = await deleteWorker(db, {
+      userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId,
+      workerId,
+    });
+    res.json({ data: result });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+  }
 });
 
 // DELETE /api/projects/:projectId/workers/:workerId/classifications/:classificationId
