@@ -650,7 +650,12 @@ Plans:
   4. User can filter the activity feed by date range and the URL updates so the filtered view is bookmarkable
   5. The `GET /api/audit/:projectId` endpoint returns 403 for non-members and paginates at 25 rows per page
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 38-01-PLAN.md — Service wiring: workerService.ts + payroll entry audit + export/submission/import audit + trust proxy
+- [ ] 38-02-PLAN.md — GET /api/audit/:projectId route with assertProjectAccess, pagination, date filter
+- [ ] 38-03-PLAN.md — ProjectActivityPage React component + route wiring + ProjectDetailPage nav link
 **UI hint**: yes
 
 ---
