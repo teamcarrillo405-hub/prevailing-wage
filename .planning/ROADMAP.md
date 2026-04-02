@@ -655,7 +655,7 @@ Plans:
 Plans:
 - [x] 38-01-PLAN.md — Service wiring: workerService.ts + payroll entry audit + export/submission/import audit + trust proxy
 - [x] 38-02-PLAN.md — GET /api/audit/:projectId route with assertProjectAccess, pagination, date filter
-- [ ] 38-03-PLAN.md — ProjectActivityPage React component + route wiring + ProjectDetailPage nav link
+- [x] 38-03-PLAN.md — ProjectActivityPage React component + route wiring + ProjectDetailPage nav link
 **UI hint**: yes
 
 ---
@@ -894,7 +894,7 @@ Plans:
 ### v4.0 Compliance Depth + Operations (Phases 37-46)
 
 - [x] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog() (completed 2026-04-01)
-- [ ] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage
+- [x] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage (completed 2026-04-02)
 - [ ] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week
 - [ ] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance()
 - [ ] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal
@@ -911,7 +911,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 37. Audit Trail Foundation | v4.0 | 2/2 | Complete    | 2026-04-01 |
-| 38. Audit Trail Wiring + Activity UI | v4.0 | 2/3 | In Progress|  |
+| 38. Audit Trail Wiring + Activity UI | v4.0 | 3/3 | Complete   | 2026-04-02 |
 | 39. Worker Profile Depth | v4.0 | 0/TBD | Not started | - |
 | 40. NY Schema + Compliance Rule | v4.0 | 0/TBD | Not started | - |
 | 41. NY State Forms | v4.0 | 0/TBD | Not started | - |
