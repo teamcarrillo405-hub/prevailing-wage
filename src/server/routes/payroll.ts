@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { payrollEntries } from '../db/schema.js';
+import { payrollEntries, workers } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
@@ -12,6 +12,7 @@ import {
   getPayrollWeek,
   listPayrollWeeks,
   upsertPayrollEntry,
+  deletePayrollEntry,
   getPayrollEntries,
   assertWeekNotSubmitted,
   updateWeekSubmission,
@@ -242,7 +243,21 @@ router.post('/entries', validate(UpsertEntrySchema), async (req, res) => {
     return;
   }
 
-  const entry = await upsertPayrollEntry({ ...body, userId });
+  // Look up worker name for audit meta (best-effort)
+  let workerName: string | undefined;
+  try {
+    const [workerRow] = await db.select().from(workers).where(eq(workers.id, body.workerId)).limit(1);
+    workerName = workerRow?.name;
+  } catch { /* best-effort */ }
+
+  const entry = await upsertPayrollEntry({
+    ...body,
+    userId,
+    userEmail: req.user!.email,
+    ipAddress: req.ip ?? null,
+    workerName,
+    payrollNumber: week.payrollNumber,
+  });
   res.status(201).json({ id: entry?.id ?? null });
 });
 
@@ -273,7 +288,21 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
     return;
   }
 
-  const entry = await upsertPayrollEntry({ ...body, userId });
+  // Look up worker name for audit meta (best-effort)
+  let workerNamePut: string | undefined;
+  try {
+    const [workerRow] = await db.select().from(workers).where(eq(workers.id, body.workerId)).limit(1);
+    workerNamePut = workerRow?.name;
+  } catch { /* best-effort */ }
+
+  const entry = await upsertPayrollEntry({
+    ...body,
+    userId,
+    userEmail: req.user!.email,
+    ipAddress: req.ip ?? null,
+    workerName: workerNamePut,
+    payrollNumber: week.payrollNumber,
+  });
 
   if (!entry) {
     // Fallback: fetch the entry via the payroll week id after upsert
@@ -288,6 +317,40 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
   }
 
   res.json({ id: entry.id });
+});
+
+// DELETE /api/payroll/entries/:entryId — delete a payroll entry (AUDIT-03)
+router.delete('/entries/:entryId', async (req, res) => {
+  const { entryId } = req.params as { entryId: string };
+  const userId = req.user!.userId;
+  const userEmail = req.user!.email;
+  const ipAddress = req.ip ?? null;
+  const db = getDb();
+
+  try {
+    // First look up the entry to get its projectId for access check
+    const { payrollEntries: peTable, payrollWeeks: pwTable } = await import('../db/schema.js');
+    const { eq: eqOp } = await import('drizzle-orm');
+    const [entry] = await db.select().from(peTable).where(eqOp(peTable.id, entryId)).limit(1);
+    if (!entry) {
+      res.status(404).json({ error: 'Payroll entry not found' });
+      return;
+    }
+    const [week] = await db.select().from(pwTable).where(eqOp(pwTable.id, entry.payrollWeekId)).limit(1);
+    if (!week) {
+      res.status(404).json({ error: 'Payroll week not found' });
+      return;
+    }
+
+    // Verify user has access to the project before deleting
+    await assertProjectAccess(db, week.projectId, userId);
+
+    // Now perform the delete with audit
+    const result = await deletePayrollEntry({ entryId, userId, userEmail, ipAddress });
+    res.json({ data: result });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+  }
 });
 
 // PATCH /api/payroll/weeks/:id/submit — mark week as submitted (SUB-01)
@@ -311,6 +374,22 @@ router.patch('/weeks/:id/submit', validate(SubmitWeekSchema), async (req, res) =
   }
 
   await updateWeekSubmission(weekId, body.submittedAt, body.submittedTo);
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'payroll_week.submitted',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, submittedTo: body.submittedTo },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
+
   res.status(200).json({ message: 'Week marked as submitted' });
 });
 
@@ -334,6 +413,22 @@ router.delete('/weeks/:id/submit', async (req, res) => {
   }
 
   await clearWeekSubmission(weekId);
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'payroll_week.unsubmitted',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
+
   res.status(200).json({ message: 'Week submission cleared' });
 });
 
@@ -361,6 +456,24 @@ router.patch('/weeks/:id/ca-submit', validate(AgencySubmitSchema), async (req, r
   const result = submitted
     ? await setCaEcprSubmitted(weekId)
     : await clearCaEcprSubmitted(weekId);
+
+  // Best-effort audit log — only on submit=true (AUDIT-03)
+  if (submitted) {
+    try {
+      const { insertAuditLog } = await import('../services/auditService.js');
+      await insertAuditLog({
+        userId: req.user!.userId,
+        userEmail: req.user!.email,
+        ipAddress: req.ip ?? null,
+        projectId: week.projectId,
+        entityType: 'payroll_week',
+        entityId: weekId,
+        action: 'agency_submission.created',
+        meta: { agency: 'CA_DIR', payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
+      });
+    } catch (auditErr) { console.error('[audit]', auditErr); }
+  }
+
   res.status(200).json(result);
 });
 
@@ -388,6 +501,24 @@ router.patch('/weeks/:id/wa-submit', validate(AgencySubmitSchema), async (req, r
   const result = submitted
     ? await setWaLniSubmitted(weekId)
     : await clearWaLniSubmitted(weekId);
+
+  // Best-effort audit log — only on submit=true (AUDIT-03)
+  if (submitted) {
+    try {
+      const { insertAuditLog } = await import('../services/auditService.js');
+      await insertAuditLog({
+        userId: req.user!.userId,
+        userEmail: req.user!.email,
+        ipAddress: req.ip ?? null,
+        projectId: week.projectId,
+        entityType: 'payroll_week',
+        entityId: weekId,
+        action: 'agency_submission.created',
+        meta: { agency: 'WA_LNI', payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
+      });
+    } catch (auditErr) { console.error('[audit]', auditErr); }
+  }
+
   res.status(200).json(result);
 });
 

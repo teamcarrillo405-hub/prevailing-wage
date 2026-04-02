@@ -227,6 +227,21 @@ router.get('/wh347/:weekId', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Length', filledPdf.length);
   res.end(Buffer.from(filledPdf));
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'wh347.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
 });
 
 // ── GET /api/export/a1131/:weekId ─────────────────────────────────────────
@@ -669,6 +684,21 @@ router.get('/ecpr-xml/:weekId', async (req, res) => {
   res.setHeader('Content-Type', 'application/xml');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send(xml);
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'ecpr_xml.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'xml' },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
 });
 
 // ── GET /api/export/wa-cpr-xml/:weekId ───────────────────────────────────────
@@ -830,6 +860,21 @@ router.get('/wa-cpr-xml/:weekId', async (req, res) => {
   res.setHeader('Content-Type', 'application/xml');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send(xml);
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'wa_pwia_xml.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'xml' },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
 });
 
 export { router as exportRouter };

@@ -202,8 +202,9 @@ importRouter.post('/commit', async (req, res) => {
   }
 
   // Insert payrollImports audit row (D-11)
+  const importId = randomUUID();
   await db.insert(payrollImports).values({
-    id: randomUUID(),
+    id: importId,
     payrollWeekId: body.weekId,
     importedByUserId: userId,
     provider: body.provider,
@@ -212,6 +213,26 @@ importRouter.post('/commit', async (req, res) => {
     unmatchedCount: body.unmatchedCount ?? 0,
     createdAt: now,
   });
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_import',
+      entityId: importId,
+      action: 'payroll_import.committed',
+      meta: {
+        provider: body.provider,
+        committedCount: body.matched.length,
+        sourceFilename: body.sourceFilename ?? null,
+        weekEnding: week.weekEndingDate,
+      },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
 
   res.json({ committed: body.matched.length });
 });

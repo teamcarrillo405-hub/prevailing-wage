@@ -1,6 +1,6 @@
 // src/server/services/payrollService.ts
 import { randomUUID } from 'crypto';
-import { eq, desc, max } from 'drizzle-orm';
+import { eq, desc, max, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import {
   payrollWeeks,
@@ -11,6 +11,7 @@ import {
 } from '../db/schema.js';
 import { getCachedWd, getCachedClassifications } from './wageCache.js';
 import { lookupWageDetermination } from './wageLookup.js';
+import { insertAuditLog, diffObjects } from './auditService.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,11 @@ export interface UpsertPayrollEntryInput {
   fringeVacation?: number | null;
   fringeTraining?: number | null;
   userId?: string; // populated from req.user.id on POST/PUT; undefined for amendment copies
+  // Audit-only fields — threaded from route handler (AUDIT-03)
+  userEmail?: string;
+  ipAddress?: string | null;
+  workerName?: string;
+  payrollNumber?: number;
 }
 
 // ── Service Functions ─────────────────────────────────────────────────────
@@ -133,6 +139,18 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
   const db = getDb();
   const now = new Date().toISOString();
   const id = randomUUID();
+
+  // Detect create vs update for audit logging (AUDIT-03)
+  const [existingEntry] = await db
+    .select()
+    .from(payrollEntries)
+    .where(and(
+      eq(payrollEntries.payrollWeekId, input.payrollWeekId),
+      eq(payrollEntries.workerId, input.workerId),
+      eq(payrollEntries.classificationId, input.classificationId),
+    ))
+    .limit(1);
+  const isCreate = !existingEntry;
 
   const values = {
     id,
@@ -236,7 +254,105 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
       )
     : null;
 
+  // Best-effort audit log (AUDIT-03) — never throws
+  if (match) {
+    try {
+      // Get projectId from payroll week for audit row
+      const [week] = await db
+        .select()
+        .from(payrollWeeks)
+        .where(eq(payrollWeeks.id, input.payrollWeekId))
+        .limit(1);
+      const projectId = week?.projectId ?? null;
+
+      if (isCreate) {
+        await insertAuditLog({
+          userId: input.userId ?? null,
+          userEmail: input.userEmail ?? null,
+          ipAddress: input.ipAddress ?? null,
+          projectId,
+          entityType: 'payroll_entry',
+          entityId: match.id,
+          action: 'payroll_entry.created',
+          snapshot: match as unknown as Record<string, unknown>,
+          meta: {
+            workerName: input.workerName ?? null,
+            payrollNumber: input.payrollNumber ?? week?.payrollNumber ?? null,
+          },
+        });
+      } else {
+        const diff = diffObjects(
+          existingEntry as unknown as Record<string, unknown>,
+          match as unknown as Record<string, unknown>,
+        );
+        if (diff) {
+          await insertAuditLog({
+            userId: input.userId ?? null,
+            userEmail: input.userEmail ?? null,
+            ipAddress: input.ipAddress ?? null,
+            projectId,
+            entityType: 'payroll_entry',
+            entityId: match.id,
+            action: 'payroll_entry.updated',
+            diff,
+            meta: {
+              workerName: input.workerName ?? null,
+              payrollNumber: input.payrollNumber ?? week?.payrollNumber ?? null,
+            },
+          });
+        }
+      }
+    } catch (auditErr) {
+      console.error('[audit] payroll entry audit failed:', auditErr);
+    }
+  }
+
   return match ?? null;
+}
+
+export async function deletePayrollEntry(input: {
+  entryId: string;
+  userId: string;
+  userEmail: string;
+  ipAddress: string | null;
+}) {
+  const db = getDb();
+  const [entry] = await db
+    .select()
+    .from(payrollEntries)
+    .where(eq(payrollEntries.id, input.entryId))
+    .limit(1);
+  if (!entry) throw { status: 404, message: 'Payroll entry not found' };
+
+  // Get projectId from week for audit + access check
+  const [week] = await db
+    .select()
+    .from(payrollWeeks)
+    .where(eq(payrollWeeks.id, entry.payrollWeekId))
+    .limit(1);
+  if (!week) throw { status: 404, message: 'Payroll week not found' };
+  if (week.submittedAt) throw { status: 409, message: 'Cannot delete entries from a submitted week' };
+
+  await db.delete(payrollEntries).where(eq(payrollEntries.id, input.entryId));
+
+  // Best-effort audit log
+  try {
+    await insertAuditLog({
+      userId: input.userId,
+      userEmail: input.userEmail,
+      ipAddress: input.ipAddress,
+      projectId: week.projectId,
+      entityType: 'payroll_entry',
+      entityId: input.entryId,
+      action: 'payroll_entry.deleted',
+      snapshot: entry as unknown as Record<string, unknown>,
+      meta: { payrollNumber: week.payrollNumber },
+    });
+  } catch (auditErr) {
+    console.error('[audit] payroll entry delete audit failed:', auditErr);
+  }
+
+  return { deleted: true, projectId: week.projectId };
 }
 
 export async function getPayrollEntries(weekId: string) {
