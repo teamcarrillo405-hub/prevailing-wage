@@ -23,6 +23,7 @@ import {
   clearCaEcprSubmitted,
   setWaLniSubmitted,
   clearWaLniSubmitted,
+  setNyMpwrSubmitted,
 } from '../services/payrollService.js';
 
 const router = Router();
@@ -518,6 +519,46 @@ router.patch('/weeks/:id/wa-submit', validate(AgencySubmitSchema), async (req, r
       });
     } catch (auditErr) { console.error('[audit]', auditErr); }
   }
+
+  res.status(200).json(result);
+});
+
+// PATCH /api/payroll/weeks/:id/ny-submit — mark NY MPWR as submitted (AS-03)
+router.patch('/weeks/:id/ny-submit', async (req, res) => {
+  const weekId = req.params.id as string;
+  const userId = req.user!.userId;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // NOTE: No submittedAt guard — NY MPWR tracking is independent of WH-347 edit lock
+  const result = await setNyMpwrSubmitted(weekId);
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'agency_submission.created',
+      meta: { agency: 'NY_MPWR', payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
 
   res.status(200).json(result);
 });

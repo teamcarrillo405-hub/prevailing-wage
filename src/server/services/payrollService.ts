@@ -524,6 +524,19 @@ export async function clearWaLniSubmitted(weekId: string): Promise<{ waLniSubmit
   return { waLniSubmittedAt: null };
 }
 
+/**
+ * Records the current ISO timestamp as the NY MPWR submission time.
+ * Independent of WH-347 edit lock.
+ */
+export async function setNyMpwrSubmitted(weekId: string): Promise<{ nyMpwrSubmittedAt: string }> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  await db.update(payrollWeeks)
+    .set({ nyMpwrSubmittedAt: now, updatedAt: now })
+    .where(eq(payrollWeeks.id, weekId));
+  return { nyMpwrSubmittedAt: now };
+}
+
 // ── Copy Payroll Week ──────────────────────────────────────────────────────
 
 /**
