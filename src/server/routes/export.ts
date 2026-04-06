@@ -26,6 +26,11 @@ import {
   type EcprEmployee,
 } from '../services/ecprXmlGenerator.js';
 import {
+  generateMpwrXml,
+  type MpwrXmlInput,
+} from '../services/mpwrXmlGenerator.js';
+import { fillPw12, type Pw12Input } from '../services/pw12Generator.js';
+import {
   generateWaCprXml,
   type WaCprData,
   type WaCprEmployee,
@@ -872,6 +877,218 @@ router.get('/wa-cpr-xml/:weekId', async (req, res) => {
       entityType: 'payroll_week',
       entityId: weekId,
       action: 'wa_pwia_xml.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'xml' },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
+});
+
+// ── GET /api/export/pw12/:weekId ──────────────────────────────────────────
+// NY PW-12 Weekly Payroll PDF — state-gated to NY projects only
+
+router.get('/pw12/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project access (NFR-03)
+  const db = getDb();
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // 3. State gate — PW-12 is NY-only
+  if (project.state?.toUpperCase() !== 'NY') {
+    res.status(400).json({ error: 'PW-12 is only available for New York projects' });
+    return;
+  }
+
+  // 4. Load payroll entries with worker details
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+
+  // 5. Map entries to Pw12Input
+  type Pw12EntryRow = (typeof entries)[number];
+  const pw12Entries: Pw12Input['entries'] = entries.map((row: Pw12EntryRow) => {
+    const e = row.entry;
+    const totalStHours = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
+    const totalOtHours = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
+    return {
+      workerName: row.workerName,
+      workerSsnLast4: row.workerSsnLast4 ?? null,
+      tradeDescription: row.tradeDescription,
+      laborType: row.laborType,
+      monSt: e.monSt, monOt: e.monOt,
+      tueSt: e.tueSt, tueOt: e.tueOt,
+      wedSt: e.wedSt, wedOt: e.wedOt,
+      thuSt: e.thuSt, thuOt: e.thuOt,
+      friSt: e.friSt, friOt: e.friOt,
+      satSt: e.satSt, satOt: e.satOt,
+      sunSt: e.sunSt, sunOt: e.sunOt,
+      totalStHours,
+      totalOtHours,
+      baseRateSnapshot: e.baseRateSnapshot,
+      grossWages: e.grossWages ?? null,
+      deductions: e.deductions,
+      netPay: e.netPay ?? null,
+      fringeHealthWelfare: e.fringeHealthWelfare ?? null,
+      fringePension: e.fringePension ?? null,
+      fringeVacation: e.fringeVacation ?? null,
+      fringeTraining: e.fringeTraining ?? null,
+    };
+  });
+
+  const pw12Data: Pw12Input = {
+    contractor: {
+      name: project.name,
+      fein: project.contractorFein ?? '',
+      address: `${project.county ?? ''}, ${project.state ?? ''}`,
+    },
+    week: {
+      weekEndingDate: week.weekEndingDate,
+      payrollNumber: week.amendmentNumber != null && week.originalWeekId != null
+        ? `${week.payrollNumber} (AMENDED ${week.amendmentNumber})`
+        : String(week.payrollNumber),
+    },
+    project: {
+      name: project.name,
+      nyprcNumber: project.nyprcNumber ?? '',
+      county: project.county ?? '',
+    },
+    entries: pw12Entries,
+  };
+
+  // 6. Generate PDF
+  const filledPdf = await fillPw12(pw12Data);
+
+  // 7. Send as PDF download
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="pw12-${weekId}.pdf"`);
+  res.end(Buffer.from(filledPdf));
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'ny_pw12.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
+});
+
+// ── GET /api/export/ny-mpwr-xml/:weekId ───────────────────────────────────
+// NY MPWR XML export — NYSDOL MPWR portal compliant — state-gated to NY only
+
+router.get('/ny-mpwr-xml/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project access (NFR-03)
+  const db = getDb();
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // 3. State gate — MPWR XML is NY-only
+  if (project.state?.toUpperCase() !== 'NY') {
+    res.status(400).json({ error: 'NY MPWR XML is only available for New York projects' });
+    return;
+  }
+
+  // 4. Load payroll entries with worker details
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+
+  // 5. Map entries to MpwrXmlInput
+  type MpwrEntryRow = (typeof entries)[number];
+  const mpwrEntries: MpwrXmlInput['entries'] = entries.map((row: MpwrEntryRow) => {
+    const e = row.entry;
+    const totalStHours = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
+    const totalOtHours = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
+    return {
+      workerId: e.workerId,
+      workerName: row.workerName,
+      workerSsnLast4: row.workerSsnLast4 ?? null,
+      nysRegisteredApprentice: row.nysRegisteredApprentice ?? false,
+      tradeDescription: row.tradeDescription,
+      laborType: row.laborType,
+      workerAddress: row.workerAddress ?? undefined,
+      monSt: e.monSt, monOt: e.monOt,
+      tueSt: e.tueSt, tueOt: e.tueOt,
+      wedSt: e.wedSt, wedOt: e.wedOt,
+      thuSt: e.thuSt, thuOt: e.thuOt,
+      friSt: e.friSt, friOt: e.friOt,
+      satSt: e.satSt, satOt: e.satOt,
+      sunSt: e.sunSt, sunOt: e.sunOt,
+      totalStHours,
+      totalOtHours,
+      baseRateSnapshot: e.baseRateSnapshot,
+      grossWages: e.grossWages ?? null,
+      deductions: e.deductions,
+      netPay: e.netPay ?? null,
+      fringeHealthWelfare: e.fringeHealthWelfare ?? null,
+      fringePension: e.fringePension ?? null,
+      fringeVacation: e.fringeVacation ?? null,
+      fringeTraining: e.fringeTraining ?? null,
+    };
+  });
+
+  const mpwrData: MpwrXmlInput = {
+    project: {
+      nyprcNumber: project.nyprcNumber ?? '',
+      nysContractorRegNumber: project.nysContractorRegNumber ?? '',
+      name: project.name,
+      contractorFein: project.contractorFein ?? '',
+    },
+    week: {
+      weekEndingDate: week.weekEndingDate,
+    },
+    entries: mpwrEntries,
+  };
+
+  // 6. Generate XML
+  const xml = generateMpwrXml(mpwrData);
+
+  // 7. Send as XML download
+  res.setHeader('Content-Type', 'application/xml');
+  res.setHeader('Content-Disposition', `attachment; filename="mpwr-${weekId}.xml"`);
+  res.send(xml);
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'ny_mpwr_xml.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'xml' },
     });
   } catch (auditErr) { console.error('[audit]', auditErr); }
