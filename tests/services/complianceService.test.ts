@@ -426,6 +426,152 @@ describe('computeCompliance', () => {
     expect(result!.weekViolations).toHaveLength(0);
   });
 
+  // ── NY Daily OT Rule ─────────────────────────────────────────────────────
+
+  describe('NY daily OT rule', () => {
+    async function seedNyProjectAndWorker() {
+      const email = `ny-ot-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
+      const regRes = await supertest(app)
+        .post('/api/auth/register')
+        .send({ email, password: 'password123' });
+      const cookies = regRes.headers['set-cookie'] as string[] | string;
+      const cookie = Array.isArray(cookies) ? cookies.join('; ') : cookies;
+
+      const pRes = await supertest(app)
+        .post('/api/projects')
+        .set('Cookie', cookie)
+        .send({
+          name: 'NY OT Test Project',
+          state: 'NY',
+          county: 'New York',
+          contractType: 'federal-davis-bacon',
+          awardDate: '2025-06-01',
+          fundingType: 'federal',
+        });
+      const projectId = pRes.body.data?.project?.id as string;
+
+      const wRes = await supertest(app)
+        .post(`/api/projects/${projectId}/workers`)
+        .set('Cookie', cookie)
+        .send({ name: 'NY Worker' });
+      const workerId = wRes.body.data?.worker?.id as string;
+
+      const cRes = await supertest(app)
+        .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+        .set('Cookie', cookie)
+        .send({
+          tradeCode: 'ELEC',
+          tradeDescription: 'Electrician',
+          laborType: 'journeyworker',
+        });
+      const classificationId = cRes.body.data?.classification?.id as string;
+
+      return { projectId, workerId, classificationId, cookie };
+    }
+
+    async function seedCaProjectAndWorker() {
+      const email = `ca-ot-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
+      const regRes = await supertest(app)
+        .post('/api/auth/register')
+        .send({ email, password: 'password123' });
+      const cookies = regRes.headers['set-cookie'] as string[] | string;
+      const cookie = Array.isArray(cookies) ? cookies.join('; ') : cookies;
+
+      const pRes = await supertest(app)
+        .post('/api/projects')
+        .set('Cookie', cookie)
+        .send({
+          name: 'CA OT Test Project',
+          state: 'CA',
+          county: 'Los Angeles',
+          contractType: 'federal-davis-bacon',
+          awardDate: '2025-06-01',
+          fundingType: 'federal',
+        });
+      const projectId = pRes.body.data?.project?.id as string;
+
+      const wRes = await supertest(app)
+        .post(`/api/projects/${projectId}/workers`)
+        .set('Cookie', cookie)
+        .send({ name: 'CA Worker' });
+      const workerId = wRes.body.data?.worker?.id as string;
+
+      const cRes = await supertest(app)
+        .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+        .set('Cookie', cookie)
+        .send({
+          tradeCode: 'ELEC',
+          tradeDescription: 'Electrician',
+          laborType: 'journeyworker',
+        });
+      const classificationId = cRes.body.data?.classification?.id as string;
+
+      return { projectId, workerId, classificationId, cookie };
+    }
+
+    it('Test A: NY project with 9 ST hours on Monday flags cwhssa-ot violation', async () => {
+      // NY daily OT rule: any day exceeding 8 total hours (ST + OT) triggers cwhssa-ot
+      // Monday = 9 ST hours (> 8) → should produce a cwhssa-ot violation
+      const { projectId, workerId, classificationId, cookie } = await seedNyProjectAndWorker();
+      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-08', 101);
+
+      // 9 ST on Monday, 8 each other day — Monday exceeds 8h daily threshold
+      await seedEntry(cookie, weekId, workerId, classificationId, {
+        monSt: 9, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
+        baseRateSnapshot: 30,
+        fringeRateSnapshot: 10,
+        grossWages: 1660, // some value — compliance fires on daily hours not grossWages
+      });
+
+      const result = await computeCompliance(db, weekId);
+      expect(result).not.toBeNull();
+      const otViolations = result!.violations.filter(v => v.violationType === 'cwhssa-ot');
+      expect(otViolations.length).toBeGreaterThan(0);
+      // Violation should reference the daily threshold
+      expect(otViolations[0].expected).toBe(8);
+      expect(otViolations[0].actual).toBe(9);
+    });
+
+    it('Test B: NY project with exactly 8 hours/day has NO daily OT violation', async () => {
+      // Exactly 8 hours is NOT a violation — threshold is strictly > 8
+      const { projectId, workerId, classificationId, cookie } = await seedNyProjectAndWorker();
+      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-15', 102);
+
+      // 8 ST on each day — exactly at threshold, no violation
+      await seedEntry(cookie, weekId, workerId, classificationId, {
+        monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
+        baseRateSnapshot: 30,
+        fringeRateSnapshot: 10,
+        grossWages: 1600,
+      });
+
+      const result = await computeCompliance(db, weekId);
+      expect(result).not.toBeNull();
+      const otViolations = result!.violations.filter(v => v.violationType === 'cwhssa-ot');
+      expect(otViolations).toHaveLength(0);
+    });
+
+    it('Test C: Non-NY project (CA) with 9 ST hours on Monday does NOT flag daily OT', async () => {
+      // CA uses weekly 40h rule only — daily 9h on one day should not trigger cwhssa-ot
+      // Total week = 9+8+8+8+7 = 40h (no weekly CWHSSA violation either)
+      const { projectId, workerId, classificationId, cookie } = await seedCaProjectAndWorker();
+      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-22', 103);
+
+      // 9 ST on Monday, total 40h/week — CA weekly rule not triggered, daily OT should not fire
+      await seedEntry(cookie, weekId, workerId, classificationId, {
+        monSt: 9, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 7,
+        baseRateSnapshot: 30,
+        fringeRateSnapshot: 10,
+        grossWages: 1600, // 40h * $30 base + 40h * $10 fringe = 1600
+      });
+
+      const result = await computeCompliance(db, weekId);
+      expect(result).not.toBeNull();
+      const otViolations = result!.violations.filter(v => v.violationType === 'cwhssa-ot');
+      expect(otViolations).toHaveLength(0);
+    });
+  });
+
   it('COMP-03: hasViolations is true when weekViolations is non-empty even if violations[] is empty', async () => {
     // 30 JW hours, 20 apprentice hours — only ratio violation, no wage violations
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
