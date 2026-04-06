@@ -6,6 +6,7 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
+import { getDb } from '../db/index.js';
 import { calculateCwhssaOt } from './calculations.js';
 import { getPayrollWeek, getPayrollEntries, listPayrollWeeks } from './payrollService.js';
 
@@ -49,10 +50,16 @@ export async function computeCompliance(
   const week = await getPayrollWeek(weekId);
   if (!week) return null;
 
-  // 2. Load entries (with worker names and classification info)
+  // 2. Fetch project to determine state (needed for NY daily OT rule)
+  const db = getDb();
+  const [project] = await db.select().from(schema.projects)
+    .where(eq(schema.projects.id, week.projectId)).limit(1);
+  const isNY = project?.state?.toUpperCase() === 'NY';
+
+  // 3. Load entries (with worker names and classification info)
   const rows = await getPayrollEntries(weekId);
 
-  // 3. Process each entry
+  // 4. Process each entry
   const violations: ComplianceViolation[] = [];
 
   for (const row of rows) {
@@ -67,6 +74,35 @@ export async function computeCompliance(
       (e.thuOt ?? 0) + (e.friOt ?? 0) + (e.satOt ?? 0) + (e.sunOt ?? 0);
 
     const totalHours = totalSt + totalOt;
+
+    // NY daily OT check (COMP-04): NY projects flag cwhssa-ot for any day exceeding 8h
+    // Each day is checked independently: (daySt + dayOt) > 8
+    if (isNY) {
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const days = [
+        { st: e.monSt, ot: e.monOt },
+        { st: e.tueSt, ot: e.tueOt },
+        { st: e.wedSt, ot: e.wedOt },
+        { st: e.thuSt, ot: e.thuOt },
+        { st: e.friSt, ot: e.friOt },
+        { st: e.satSt, ot: e.satOt },
+        { st: e.sunSt, ot: e.sunOt },
+      ];
+      for (let i = 0; i < days.length; i++) {
+        const dayTotal = (days[i].st ?? 0) + (days[i].ot ?? 0);
+        if (dayTotal > 8) {
+          violations.push({
+            entryId: e.id,
+            workerId: e.workerId,
+            workerName: row.workerName,
+            violationType: 'cwhssa-ot',
+            expected: 8,
+            actual: dayTotal,
+            delta: dayTotal - 8,
+          });
+        }
+      }
+    }
 
     // Skip entries where gross wages are not yet recorded
     if (e.grossWages == null) continue;
