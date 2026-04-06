@@ -751,7 +751,7 @@ Plans:
 Plans:
 - [x] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
 - [x] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
-- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
+- [x] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
 
 ---
@@ -773,7 +773,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
-- [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
+- [x] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
 - [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
 
@@ -795,7 +795,7 @@ Plans:
 
 **Plans**: 3 plans
 Plans:
-- [ ] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
+- [x] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
 - [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
 - [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
@@ -932,7 +932,7 @@ Plans:
 - [x] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week (completed 2026-04-02)
 - [x] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance() (completed 2026-04-06)
 - [x] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal (completed 2026-04-06)
-- [ ] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers
+- [x] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers (completed 2026-04-06)
 - [ ] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal
 - [ ] **Phase 44: Import Provider Foundation** - payroll_provider_mappings table, Gusto parser, provider auto-detection
 - [ ] **Phase 45: Import ID-Mapped Providers** - Paychex Flex + Sage 300 CRE parsers, Step 2b mapping UI
@@ -949,7 +949,7 @@ Plans:
 | 39. Worker Profile Depth | v4.0 | 2/2 | Complete    | 2026-04-02 |
 | 40. NY Schema + Compliance Rule | v4.0 | 3/3 | Complete    | 2026-04-06 |
 | 41. NY State Forms | v4.0 | 5/5 | Complete   | 2026-04-06 |
-| 42. IL Schema + Project Flag | v4.0 | 2/3 | In Progress|  |
+| 42. IL Schema + Project Flag | v4.0 | 3/3 | Complete   | 2026-04-06 |
 | 43. IL State Forms | v4.0 | 0/TBD | Not started | - |
 | 44. Import Provider Foundation | v4.0 | 0/TBD | Not started | - |
 | 45. Import ID-Mapped Providers | v4.0 | 0/TBD | Not started | - |
