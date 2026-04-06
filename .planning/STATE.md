@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 41-ny-state-forms Plan 02 — MPWR XML generator TDD (RED+GREEN)
-last_updated: "2026-04-06T19:58:48.130Z"
+stopped_at: Completed 41-04-PLAN.md
+last_updated: "2026-04-06T20:10:28.834Z"
 progress:
   total_phases: 24
   completed_phases: 18
   total_plans: 45
-  completed_plans: 43
+  completed_plans: 44
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 41 (ny-state-forms) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 
 ## Performance Metrics
 
@@ -89,6 +89,7 @@ Key decisions locked for v4.0 scope:
 - [Phase 41-ny-state-forms]: nysRegisteredApprentice added to getPayrollEntriesWithWorkerDetails select only — workers table already joined, purely additive
 - [Phase 41-ny-state-forms]: PDFDocument.create() not load() for PW-12 — programmatic drawing required, no fillable template exists
 - [Phase 41-ny-state-forms]: MPWR XML uses plain ProjectRollup root — no namespace prefix; SSN placeholder 000000+ssnLast4 per STATE-03; multi-classification workers grouped into one employeeWorkWeek
+- [Phase 41-ny-state-forms]: No agency_submissions table: followed setCaEcprSubmitted pattern — only update payrollWeeks.nyMpwrSubmittedAt
 
 ### Phase Order Rationale
 
@@ -111,7 +112,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T19:58:48.127Z
-Stopped at: Completed 41-ny-state-forms Plan 02 — MPWR XML generator TDD (RED+GREEN)
+Last session: 2026-04-06T20:10:28.831Z
+Stopped at: Completed 41-04-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
