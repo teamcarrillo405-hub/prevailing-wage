@@ -699,7 +699,7 @@ Plans:
 
 **Plans**: 3 plans
 Plans:
-- [ ] 40-01-PLAN.md — Migration 0023 + Drizzle schema (NY project + worker columns)
+- [x] 40-01-PLAN.md — Migration 0023 + Drizzle schema (NY project + worker columns)
 - [ ] 40-02-PLAN.md — Server routes + React forms (NY project fields + nysRegisteredApprentice)
 - [ ] 40-03-PLAN.md — Compliance engine NY daily OT rule + integration tests
 **UI hint**: yes
@@ -920,7 +920,7 @@ Plans:
 | 37. Audit Trail Foundation | v4.0 | 2/2 | Complete    | 2026-04-01 |
 | 38. Audit Trail Wiring + Activity UI | v4.0 | 3/3 | Complete    | 2026-04-02 |
 | 39. Worker Profile Depth | v4.0 | 2/2 | Complete    | 2026-04-02 |
-| 40. NY Schema + Compliance Rule | v4.0 | 0/3 | Planned | - |
+| 40. NY Schema + Compliance Rule | v4.0 | 1/3 | In Progress|  |
 | 41. NY State Forms | v4.0 | 0/TBD | Not started | - |
 | 42. IL Schema + Project Flag | v4.0 | 0/TBD | Not started | - |
 | 43. IL State Forms | v4.0 | 0/TBD | Not started | - |

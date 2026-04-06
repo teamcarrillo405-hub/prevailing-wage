@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 39-worker-profile-depth Plan 02 — WorkersPage structured address/union/apprenticeship UI + PayrollWeekDetailPage classification override dropdown
-last_updated: "2026-04-02T16:29:56.216Z"
+status: Ready to execute
+stopped_at: Completed 40-ny-schema-compliance-rule Plan 01 — NY schema migration + Drizzle column definitions
+last_updated: "2026-04-06T18:24:34.163Z"
 progress:
   total_phases: 24
   completed_phases: 17
-  total_plans: 37
-  completed_plans: 37
+  total_plans: 40
+  completed_plans: 38
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 39 — worker-profile-depth
+**Current focus:** Phase 40 — ny-schema-compliance-rule
 
 ## Current Position
 
-Phase: 40
-Plan: Not started
+Phase: 40 (ny-schema-compliance-rule) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -77,6 +77,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 39-01]: DELETE+INSERT upsert for classification override — handles unique constraint; SQLite lacks UPSERT ON CONFLICT UPDATE syntax
 - [Phase 39]: overrideId added to getPayrollEntriesWithWorkerDetails select — enables DELETE /payroll-week-classifications/:id from UI without separate lookup
 - [Phase 39]: Apprenticeship section conditionally shown via w.classifications?.some(c => c.laborType === 'apprentice') — hidden for new workers and journeyworker-only workers
+- [Phase 40]: projectSettings stored as text (not json type) — consistent with auditLogs diff/snapshot/meta pattern
+- [Phase 40]: nysRegisteredApprentice uses integer({ mode: 'boolean' }) — standard Drizzle SQLite boolean pattern
 
 ### Phase Order Rationale
 
@@ -99,7 +101,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T16:16:55.279Z
-Stopped at: Completed 39-worker-profile-depth Plan 02 — WorkersPage structured address/union/apprenticeship UI + PayrollWeekDetailPage classification override dropdown
+Last session: 2026-04-06T18:24:34.160Z
+Stopped at: Completed 40-ny-schema-compliance-rule Plan 01 — NY schema migration + Drizzle column definitions
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
