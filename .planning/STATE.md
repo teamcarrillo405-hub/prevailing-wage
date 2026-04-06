@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 41-ny-state-forms Plan 03 — PW-12 PDF generator
-last_updated: "2026-04-06T19:57:39.669Z"
+stopped_at: Completed 41-ny-state-forms Plan 02 — MPWR XML generator TDD (RED+GREEN)
+last_updated: "2026-04-06T19:58:48.130Z"
 progress:
   total_phases: 24
   completed_phases: 18
@@ -88,6 +88,7 @@ Key decisions locked for v4.0 scope:
 - [Phase 41-ny-state-forms]: getPayrollWeek uses select * so nyMpwrSubmittedAt automatically available; no explicit change needed
 - [Phase 41-ny-state-forms]: nysRegisteredApprentice added to getPayrollEntriesWithWorkerDetails select only — workers table already joined, purely additive
 - [Phase 41-ny-state-forms]: PDFDocument.create() not load() for PW-12 — programmatic drawing required, no fillable template exists
+- [Phase 41-ny-state-forms]: MPWR XML uses plain ProjectRollup root — no namespace prefix; SSN placeholder 000000+ssnLast4 per STATE-03; multi-classification workers grouped into one employeeWorkWeek
 
 ### Phase Order Rationale
 
@@ -110,7 +111,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T19:56:57.153Z
-Stopped at: Completed 41-ny-state-forms Plan 03 — PW-12 PDF generator
+Last session: 2026-04-06T19:58:48.127Z
+Stopped at: Completed 41-ny-state-forms Plan 02 — MPWR XML generator TDD (RED+GREEN)
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
