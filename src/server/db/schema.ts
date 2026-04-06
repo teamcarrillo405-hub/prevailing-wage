@@ -93,6 +93,12 @@ export const workers = sqliteTable('workers', {
   apprenticeshipRegNumber: text('apprenticeship_reg_number'),
   // Phase 40 — NYS registered apprentice flag
   nysRegisteredApprentice: integer('nys_registered_apprentice', { mode: 'boolean' }).notNull().default(false),
+  // Phase 42 — IL compliance demographics (nullable; IL projects only)
+  race: text('race'),
+  ethnicity: text('ethnicity'),
+  gender: text('gender'),
+  veteranStatus: text('veteran_status'),
+  skillLevel: text('skill_level'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -242,6 +248,8 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   fringePension: real('fringe_pension'),
   fringeVacation: real('fringe_vacation'),
   fringeTraining: real('fringe_training'),
+  // Phase 42 — IL non-prevailing-wage hours (nullable; IL projects only)
+  nonPwHours: real('non_pw_hours'),
   // Phase 32 — user attribution (nullable for all existing rows per D-09)
   createdByUserId: text('created_by_user_id').references(() => users.id),
   updatedByUserId: text('updated_by_user_id').references(() => users.id),
