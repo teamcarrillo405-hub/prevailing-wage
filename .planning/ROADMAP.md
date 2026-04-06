@@ -721,7 +721,14 @@ Plans:
   4. The NY MPWR submission modal is a 3-step flow: Step 1 collects/persists PRC Number + NYS Contractor Registration Number, Step 2 downloads XML + PW-12, Step 3 shows the MPWR portal checklist with the 30-day deadline reminder
   5. "Mark as Submitted to NY MPWR" writes an `agency_submissions` row and the button is only visible on NY projects
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 41-01-PLAN.md — Migration + getPayrollEntriesWithWorkerDetails patch
+- [ ] 41-02-PLAN.md — MPWR XML generator (TDD)
+- [ ] 41-03-PLAN.md — PW-12 PDF generator (TDD)
+- [ ] 41-04-PLAN.md — Export routes + route tests
+- [ ] 41-05-PLAN.md — PayrollWeekDetailPage NY modal
 **UI hint**: yes
 
 ---
