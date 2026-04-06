@@ -701,7 +701,7 @@ Plans:
 Plans:
 - [x] 40-01-PLAN.md — Migration 0023 + Drizzle schema (NY project + worker columns)
 - [x] 40-02-PLAN.md — Server routes + React forms (NY project fields + nysRegisteredApprentice)
-- [ ] 40-03-PLAN.md — Compliance engine NY daily OT rule + integration tests
+- [x] 40-03-PLAN.md — Compliance engine NY daily OT rule + integration tests
 **UI hint**: yes
 
 ---
@@ -903,7 +903,7 @@ Plans:
 - [x] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog() (completed 2026-04-01)
 - [x] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage (completed 2026-04-02)
 - [x] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week (completed 2026-04-02)
-- [ ] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance()
+- [x] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance() (completed 2026-04-06)
 - [ ] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal
 - [ ] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers
 - [ ] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal
@@ -920,7 +920,7 @@ Plans:
 | 37. Audit Trail Foundation | v4.0 | 2/2 | Complete    | 2026-04-01 |
 | 38. Audit Trail Wiring + Activity UI | v4.0 | 3/3 | Complete    | 2026-04-02 |
 | 39. Worker Profile Depth | v4.0 | 2/2 | Complete    | 2026-04-02 |
-| 40. NY Schema + Compliance Rule | v4.0 | 2/3 | In Progress|  |
+| 40. NY Schema + Compliance Rule | v4.0 | 3/3 | Complete   | 2026-04-06 |
 | 41. NY State Forms | v4.0 | 0/TBD | Not started | - |
 | 42. IL Schema + Project Flag | v4.0 | 0/TBD | Not started | - |
 | 43. IL State Forms | v4.0 | 0/TBD | Not started | - |

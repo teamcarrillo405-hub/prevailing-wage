@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 40-ny-schema-compliance-rule Plan 02 — NY route/form wiring
-last_updated: "2026-04-06T18:33:43.114Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 40-ny-schema-compliance-rule Plan 03 — NY daily OT compliance rule + route integration tests
+last_updated: "2026-04-06T18:43:56.079Z"
 progress:
   total_phases: 24
-  completed_phases: 17
+  completed_phases: 18
   total_plans: 40
-  completed_plans: 39
+  completed_plans: 40
 ---
 
 # State
@@ -81,6 +81,9 @@ Key decisions locked for v4.0 scope:
 - [Phase 40]: nysRegisteredApprentice uses integer({ mode: 'boolean' }) — standard Drizzle SQLite boolean pattern
 - [Phase 40]: isNY uses stateValue?.toUpperCase() === 'NY' — exact isCA/isWA pattern
 - [Phase 40]: nysRegisteredApprentice checkbox shown universally (all workers, not NY-gated)
+- [Phase 40]: getDb() called inline inside computeCompliance for project fetch — avoids renaming _db parameter (research Pitfall 2)
+- [Phase 40]: NY daily OT violation emits before grossWages null check — fires even when wages not yet recorded
+- [Phase 40]: NY daily check is additive to weekly CWHSSA check — not a replacement; both run for NY projects
 
 ### Phase Order Rationale
 
@@ -103,7 +106,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T18:33:43.110Z
-Stopped at: Completed 40-ny-schema-compliance-rule Plan 02 — NY route/form wiring
+Last session: 2026-04-06T18:43:56.076Z
+Stopped at: Completed 40-ny-schema-compliance-rule Plan 03 — NY daily OT compliance rule + route integration tests
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
