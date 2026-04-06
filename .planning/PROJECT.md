@@ -23,9 +23,9 @@ A contractor can run a full project end-to-end — create project → add worker
 
 **Delivered:** Transformed HCC Prevailing Wage from a single-contractor tool into a team-ready platform with encrypted SSN storage, multi-user team accounts, payroll provider imports (QuickBooks + ADP), and agency submission status tracking. Research confirmed no public CA DIR or WA L&I APIs exist — auto-submit deferred to v4+.
 
-## Current State (v4.0 in progress — Phase 39 complete)
+## Current State (v4.0 in progress — Phase 40 complete)
 
-Phase 39 complete: Worker profile depth shipped — structured address (4 columns + backfill), union local + book number, apprenticeship committee + reg number, `payroll_week_classifications` junction table for per-week trade overrides. WorkersPage updated with conditional Apprenticeship section (apprentice-only), Union Information section, and 4-field address grid. PayrollWeekDetailPage has classification override dropdown with Badge indicator. 412 tests passing.
+Phase 40 complete: NY foundation shipped — `0023_ny_schema.sql` migration adds `nyprcNumber`, `nysContractorRegNumber`, `projectSettings` to projects and `nysRegisteredApprentice` to workers. ProjectForm renders green `isNY` conditional panel (PRC Number + Contractor Reg). `computeCompliance()` fetches `project.state` and enforces NY 8-hours/day OT rule (each day checked independently, `cwhssa-ot` violation). 420 tests passing.
 
 **Shipped:** 2026-03-31 (v3.0); v4.0 in progress
 **Tests:** 387+ passing (main suite, excluding worktrees)
