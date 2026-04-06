@@ -195,6 +195,8 @@ export const payrollWeeks = sqliteTable('payroll_weeks', {
   // Phase 34 — Agency submission tracking (CA eCPR, WA L&I)
   caEcprSubmittedAt: text('ca_ecpr_submitted_at'),
   waLniSubmittedAt: text('wa_lni_submitted_at'),
+  // Phase 41 — NY MPWR submission tracking
+  nyMpwrSubmittedAt: text('ny_mpwr_submitted_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
