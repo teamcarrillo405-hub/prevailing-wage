@@ -88,6 +88,7 @@ export interface UpsertPayrollEntryInput {
   fringePension?: number | null;
   fringeVacation?: number | null;
   fringeTraining?: number | null;
+  nonPwHours?: number | null;
   userId?: string; // populated from req.user.id on POST/PUT; undefined for amendment copies
   // Audit-only fields — threaded from route handler (AUDIT-03)
   userEmail?: string;
@@ -189,6 +190,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     fringePension: input.fringePension ?? null,
     fringeVacation: input.fringeVacation ?? null,
     fringeTraining: input.fringeTraining ?? null,
+    nonPwHours: input.nonPwHours ?? null,
     createdByUserId: input.userId ?? null,
     updatedByUserId: input.userId ?? null,
     createdAt: now,
@@ -235,6 +237,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         fringePension: values.fringePension,
         fringeVacation: values.fringeVacation,
         fringeTraining: values.fringeTraining,
+        nonPwHours: values.nonPwHours,
         updatedByUserId: values.updatedByUserId,
         updatedAt: now,
       },
@@ -401,6 +404,8 @@ export async function getPayrollEntriesWithWorkerDetails(weekId: string) {
       overrideId: payrollWeekClassifications.id,
       // Phase 41 — NYS registered apprentice flag (needed for MPWR XML generator)
       nysRegisteredApprentice: workers.nysRegisteredApprentice,
+      // Phase 42 — IL non-PW hours
+      nonPwHours: payrollEntries.nonPwHours,
     })
     .from(payrollEntries)
     .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
@@ -772,6 +777,7 @@ export async function amendPayrollWeek(input: AmendWeekInput): Promise<AmendWeek
       grossWages: null,
       deductions: 0,
       netPay: null,
+      nonPwHours: entry.nonPwHours ?? null,
       createdByUserId: null, // amendment copies are system-generated clones, not direct user edits
       updatedByUserId: null,
       createdAt: now,

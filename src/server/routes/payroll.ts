@@ -75,6 +75,8 @@ const UpsertEntrySchema = z.object({
   fringePension: z.number().min(0).nullable().optional(),
   fringeVacation: z.number().min(0).nullable().optional(),
   fringeTraining: z.number().min(0).nullable().optional(),
+  // Phase 42 — IL non-prevailing-wage hours
+  nonPwHours: z.number().min(0).nullable().optional(),
 });
 
 const SubmitWeekSchema = z.object({
