@@ -42,6 +42,10 @@ export const projects = sqliteTable('projects', {
   contractNumber: text('contract_number'),
   // Phase 30 — WA PWIA export field (persisted from pre-generation modal)
   pwiaIntentId: text('pwia_intent_id'),
+  // Phase 40 — New York-specific fields
+  nyprcNumber: text('nyp_rc_number'),
+  nysContractorRegNumber: text('nys_contractor_reg_number'),
+  projectSettings: text('project_settings'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -87,6 +91,8 @@ export const workers = sqliteTable('workers', {
   // Phase 39 — apprenticeship fields
   apprenticeshipCommittee: text('apprenticeship_committee'),
   apprenticeshipRegNumber: text('apprenticeship_reg_number'),
+  // Phase 40 — NYS registered apprentice flag
+  nysRegisteredApprentice: integer('nys_registered_apprentice', { mode: 'boolean' }).notNull().default(false),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
