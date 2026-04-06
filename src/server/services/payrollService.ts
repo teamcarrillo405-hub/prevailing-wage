@@ -399,6 +399,8 @@ export async function getPayrollEntriesWithWorkerDetails(weekId: string) {
       overrideClassificationId: payrollWeekClassifications.classificationId,
       // Override row ID — needed for DELETE /payroll-week-classifications/:id in Plan 02 UI
       overrideId: payrollWeekClassifications.id,
+      // Phase 41 — NYS registered apprentice flag (needed for MPWR XML generator)
+      nysRegisteredApprentice: workers.nysRegisteredApprentice,
     })
     .from(payrollEntries)
     .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
