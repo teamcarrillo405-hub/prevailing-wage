@@ -2,7 +2,7 @@
 phase: 41
 slug: ny-state-forms
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-06
 ---
@@ -75,4 +75,4 @@ created: 2026-04-06
 - [ ] Feedback latency < 10s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-06
