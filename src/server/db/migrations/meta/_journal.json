@@ -134,6 +134,13 @@
       "when": 1743552000000,
       "tag": "0022_worker_profile_depth",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1743724800000,
+      "tag": "0023_ny_schema",
+      "breakpoints": true
     }
   ]
 }
