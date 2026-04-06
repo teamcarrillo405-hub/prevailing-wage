@@ -111,3 +111,14 @@ None - no external service configuration required.
 ---
 *Phase: 40-ny-schema-compliance-rule*
 *Completed: 2026-04-06*
+
+## Self-Check: PASSED
+
+- FOUND: src/server/services/complianceService.ts
+- FOUND: tests/services/complianceService.test.ts
+- FOUND: tests/routes/projects.test.ts
+- FOUND: tests/routes/workers.test.ts
+- FOUND: .planning/phases/40-ny-schema-compliance-rule/40-03-SUMMARY.md
+- FOUND commit: afcdda6 (RED phase — failing tests)
+- FOUND commit: 3574d7d (GREEN phase — implementation)
+- FOUND commit: 004cd59 (route integration tests)
