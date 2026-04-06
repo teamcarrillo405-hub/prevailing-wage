@@ -29,6 +29,7 @@ interface PayrollWeek {
   originalWeekId: string | null;
   caEcprSubmittedAt: string | null;
   waLniSubmittedAt: string | null;
+  nyMpwrSubmittedAt: string | null;
 }
 
 interface PayrollEntryRow {
@@ -178,6 +179,9 @@ interface ProjectData {
   contractNumber?: string | null;
   // Phase 30 — WA PWIA
   pwiaIntentId?: string | null;
+  // Phase 41 — NY MPWR
+  nyprcNumber?: string | null;
+  nysContractorRegNumber?: string | null;
 }
 
 interface PayrollWeekDetailResponse {
@@ -229,6 +233,13 @@ export function PayrollWeekDetailPage() {
   const [waCprGenerating, setWaCprGenerating] = useState(false);
   const waCprGeneratingRef = useRef(false);
   const [waCprStep, setWaCprStep] = useState<1 | 2>(1);
+
+  // NY MPWR submission modal state (Phase 41)
+  const [showNyMpwrModal, setShowNyMpwrModal] = useState(false);
+  const [nyMpwrStep, setNyMpwrStep] = useState<1 | 2 | 3>(1);
+  const [nyPrcNumber, setNyPrcNumber] = useState('');
+  const [nysContractorRegNumber, setNysContractorRegNumber] = useState('');
+  const [nyMpwrSubmitting, setNyMpwrSubmitting] = useState(false);
 
   // ── Payroll Import modal state (Phase 36 — mirrors ecprStep/showEcprModal pattern per D-02) ──
   const [showImportModal, setShowImportModal] = useState(false);
@@ -431,6 +442,7 @@ export function PayrollWeekDetailPage() {
   });
   const isCA = projectData?.data?.project?.state === 'CA';
   const isWA = projectData?.data?.project?.state === 'WA';
+  const isNY = projectData?.data?.project?.state?.toUpperCase() === 'NY';
 
   // Workers query — needed for import unmatched worker remap dropdown (Phase 36)
   const { data: workersData } = useQuery({
@@ -535,6 +547,14 @@ export function PayrollWeekDetailPage() {
       setWaCprIntentId(projectData.data.project.pwiaIntentId);
     }
   }, [projectData?.data?.project?.pwiaIntentId]);
+
+  // Pre-fill NY PRC Number and Contractor Reg Number from project record (Phase 41)
+  useEffect(() => {
+    if (projectData?.data?.project) {
+      setNyPrcNumber(projectData.data.project.nyprcNumber || '');
+      setNysContractorRegNumber(projectData.data.project.nysContractorRegNumber || '');
+    }
+  }, [projectData?.data?.project]);
 
   const isLoading = weekLoading || complianceLoading;
   const isError = weekError || complianceError;
@@ -698,6 +718,79 @@ export function PayrollWeekDetailPage() {
     }
   }
 
+  // NY MPWR modal close handler — resets step to 1 (prevents stale state per Research Pitfall 5)
+  function closeNyModal() {
+    setShowNyMpwrModal(false);
+    setNyMpwrStep(1);
+  }
+
+  // NY MPWR Step 1: persist PRC + Reg numbers to project, then advance
+  async function handleNyStep1Save() {
+    try {
+      await fetch(`/api/projects/${projectData?.data?.project?.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ nyprcNumber: nyPrcNumber, nysContractorRegNumber }),
+      });
+      setNyMpwrStep(2);
+    } catch (err) {
+      console.error('Failed to persist NY registration numbers:', err);
+      // Still advance — non-blocking
+      setNyMpwrStep(2);
+    }
+  }
+
+  // NY MPWR download helper — fetch + blob + anchor click pattern
+  async function handleNyDownload(url: string, filename: string) {
+    try {
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error || `Download failed: ${res.status}`);
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const filenameMatch = disposition.match(/filename="(.+?)"/);
+      a.href = objectUrl;
+      a.download = filenameMatch?.[1] || filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
+    } catch (err) {
+      console.error('NY download failed:', err);
+      alert('Download failed. Please try again.');
+    }
+  }
+
+  // NY MPWR Step 3: mark as submitted
+  async function handleNyMarkSubmitted() {
+    if (nyMpwrSubmitting) return;
+    setNyMpwrSubmitting(true);
+    try {
+      const res = await fetch(`/api/payroll/weeks/${weekId}/ny-submit`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error || 'Failed to mark as submitted');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+      closeNyModal();
+    } catch (err) {
+      console.error('NY submit failed:', err);
+      alert('Failed to mark as submitted. Please try again.');
+    } finally {
+      setNyMpwrSubmitting(false);
+    }
+  }
+
   // CA eCPR XML download handler
   async function handleEcprXmlDownload() {
     if (ecprGeneratingRef.current) return;
@@ -844,6 +937,15 @@ export function PayrollWeekDetailPage() {
                 onClick={handleWaCprDownloadClick}
               >
                 Download WA CPR XML
+              </Button>
+            )}
+            {isNY && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => { setNyMpwrStep(1); setShowNyMpwrModal(true); }}
+              >
+                NY MPWR Submission
               </Button>
             )}
             {weekId && (
@@ -1174,6 +1276,26 @@ export function PayrollWeekDetailPage() {
                   ) : (
                     <div className="flex items-center gap-2">
                       <Badge variant="neutral">Not Submitted to WA L&amp;I</Badge>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {isNY && (
+              <>
+                <div className="border-t border-gray-100" />
+                <div className="px-5 py-3 flex items-center justify-between">
+                  {week.nyMpwrSubmittedAt ? (
+                    <div className="flex items-center gap-3">
+                      <Badge variant="compliant">NY MPWR Submitted</Badge>
+                      <span className="text-sm text-gray-600">
+                        {week.nyMpwrSubmittedAt.slice(0, 10)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="neutral">Not Submitted to NY MPWR</Badge>
                     </div>
                   )}
                 </div>
@@ -1810,6 +1932,190 @@ export function PayrollWeekDetailPage() {
                       Close
                     </button>
                   </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* NY MPWR Submission — 3-step modal (Phase 41) */}
+        {showNyMpwrModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={closeNyModal}
+          >
+            <div
+              className="mx-4 max-w-lg w-full rounded-lg bg-surface-card p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {nyMpwrStep === 1 && (
+                <>
+                  <h3 className="text-lg font-headline font-bold text-gray-900">
+                    Step 1: Confirm NY Registration Details
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    These values will be saved to your project and pre-filled next time.
+                  </p>
+
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        PRC Number
+                      </label>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Project Registration Certificate number from NYSDOL
+                      </p>
+                      <input
+                        type="text"
+                        value={nyPrcNumber}
+                        onChange={(e) => setNyPrcNumber(e.target.value)}
+                        placeholder="e.g., PRC-2024-001234"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        NYS Contractor Registration Number
+                      </label>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Your NYS contractor registration number
+                      </p>
+                      <input
+                        type="text"
+                        value={nysContractorRegNumber}
+                        onChange={(e) => setNysContractorRegNumber(e.target.value)}
+                        placeholder="e.g., 12345678"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end gap-3">
+                    <button
+                      onClick={closeNyModal}
+                      className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <Button onClick={handleNyStep1Save}>
+                      Save &amp; Continue
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {nyMpwrStep === 2 && (
+                <>
+                  <h3 className="text-lg font-headline font-bold text-gray-900">
+                    Step 2: Download Submission Files
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Download both files, then continue to the submission checklist.
+                  </p>
+
+                  <div className="mt-4 space-y-3">
+                    <div className="rounded border border-gray-200 bg-surface-card p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">PW-12 PDF</p>
+                        <p className="text-xs text-gray-500">NY prevailing wage statement — keep for offline records</p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleNyDownload(`/api/export/pw12/${weekId}`, `pw12-${weekId}.pdf`)}
+                      >
+                        Download PDF
+                      </Button>
+                    </div>
+                    <div className="rounded border border-gray-200 bg-surface-card p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">MPWR XML</p>
+                        <p className="text-xs text-gray-500">Upload this file to the NYSDOL MPWR portal</p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleNyDownload(`/api/export/ny-mpwr-xml/${weekId}`, `mpwr-${weekId}.xml`)}
+                      >
+                        Download XML
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end gap-3">
+                    <button
+                      onClick={closeNyModal}
+                      className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <Button onClick={() => setNyMpwrStep(3)}>
+                      Continue to Checklist
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {nyMpwrStep === 3 && (
+                <>
+                  <h3 className="text-lg font-headline font-bold text-gray-900">
+                    Step 3: Submit to NY MPWR Portal
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Complete these steps in the NYSDOL MPWR portal.
+                  </p>
+
+                  <ul className="mt-4 space-y-2 text-sm text-gray-700 list-disc list-inside">
+                    <li>
+                      Upload the MPWR XML file to the NYSDOL MPWR portal at{' '}
+                      <a
+                        href="https://dol.ny.gov"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-gold underline hover:opacity-80"
+                      >
+                        dol.ny.gov
+                      </a>
+                    </li>
+                    <li>
+                      Submissions must be made within <strong>30 days</strong> of the payroll week ending date
+                    </li>
+                    <li>Keep the PW-12 PDF for your offline records</li>
+                    <li>Verify work category names match the MPWR portal dropdown values</li>
+                  </ul>
+
+                  {week?.nyMpwrSubmittedAt ? (
+                    <div className="mt-6 flex items-center gap-3">
+                      <Badge variant="compliant">NY MPWR Submitted</Badge>
+                      <span className="text-sm text-gray-600">{week.nyMpwrSubmittedAt.slice(0, 10)}</span>
+                    </div>
+                  ) : (
+                    <div className="mt-6 flex justify-end gap-3">
+                      <button
+                        onClick={closeNyModal}
+                        className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                      >
+                        Close
+                      </button>
+                      <Button
+                        disabled={nyMpwrSubmitting}
+                        onClick={handleNyMarkSubmitted}
+                      >
+                        {nyMpwrSubmitting ? 'Saving...' : 'Mark as Submitted to NY MPWR'}
+                      </Button>
+                    </div>
+                  )}
+
+                  {week?.nyMpwrSubmittedAt && (
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        onClick={closeNyModal}
+                        className="text-sm text-gray-500 hover:text-gray-700"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
