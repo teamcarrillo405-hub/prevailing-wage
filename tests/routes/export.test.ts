@@ -295,3 +295,98 @@ describe('GET /api/export/wa-cpr-xml/:weekId', () => {
     expect(res.text).toContain('<intentId>12345</intentId>');
   });
 });
+
+// ── NY PW-12 export tests ──────────────────────────────────────────────────
+
+describe('GET /api/export/pw12/:weekId - STATE-02', () => {
+  it('returns 400 for non-NY project', async () => {
+    const cookie = await registerUser('pw12-non-ny');
+    const projectId = await createProject(cookie, 'CA');
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+
+    const res = await supertest(app)
+      .get(`/api/export/pw12/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('New York');
+  });
+
+  it('returns PDF for NY project', async () => {
+    const cookie = await registerUser('pw12-ny');
+    const projectId = await createProject(cookie, 'NY', { county: 'Kings' });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+
+    const res = await supertest(app)
+      .get(`/api/export/pw12/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+  });
+
+  it('returns 403 without project access', async () => {
+    const cookieA = await registerUser('pw12-owner');
+    const projectId = await createProject(cookieA, 'NY', { county: 'Kings' });
+    const weekId = await createPayrollWeek(cookieA, projectId);
+
+    const cookieB = await registerUser('pw12-intruder');
+    const res = await supertest(app)
+      .get(`/api/export/pw12/${weekId}`)
+      .set('Cookie', cookieB);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+// ── NY MPWR XML export tests ───────────────────────────────────────────────
+
+describe('GET /api/export/ny-mpwr-xml/:weekId - STATE-03', () => {
+  it('returns 400 for non-NY project', async () => {
+    const cookie = await registerUser('mpwr-non-ny');
+    const projectId = await createProject(cookie, 'CA');
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+
+    const res = await supertest(app)
+      .get(`/api/export/ny-mpwr-xml/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('New York');
+  });
+
+  it('returns XML for NY project', async () => {
+    const cookie = await registerUser('mpwr-ny');
+    const projectId = await createProject(cookie, 'NY', { county: 'Kings' });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+
+    const res = await supertest(app)
+      .get(`/api/export/ny-mpwr-xml/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/xml');
+    expect(res.text).toContain('<ProjectRollup>');
+  });
+
+  it('returns 403 without project access', async () => {
+    const cookieA = await registerUser('mpwr-owner');
+    const projectId = await createProject(cookieA, 'NY', { county: 'Kings' });
+    const weekId = await createPayrollWeek(cookieA, projectId);
+
+    const cookieB = await registerUser('mpwr-intruder');
+    const res = await supertest(app)
+      .get(`/api/export/ny-mpwr-xml/${weekId}`)
+      .set('Cookie', cookieB);
+
+    expect(res.status).toBe(403);
+  });
+});

@@ -991,3 +991,72 @@ describe('DT hours - CAL-03', () => {
     expect(entry.sunDt).toBe(0);
   });
 });
+
+// ── NY MPWR submit route tests ─────────────────────────────────────────────
+
+describe('PATCH /api/payroll/weeks/:id/ny-submit - STATE-05', () => {
+  async function createNyProject(cookie: string) {
+    const res = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'NY Test Project',
+        state: 'NY',
+        county: 'Kings',
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-01-01',
+        fundingType: 'federal',
+      });
+    return res.body.data?.project?.id as string;
+  }
+
+  async function createNyWeek(cookie: string, projectId: string) {
+    const res = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2025-01-05', payrollNumber: 1 });
+    return res.body.id as string;
+  }
+
+  it('sets nyMpwrSubmittedAt and returns 200', async () => {
+    const cookie = await registerAndLogin('ny-submit-set');
+    const projectId = await createNyProject(cookie);
+    const weekId = await createNyWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/ny-submit`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.nyMpwrSubmittedAt).toBeDefined();
+    expect(typeof res.body.nyMpwrSubmittedAt).toBe('string');
+
+    // Verify the timestamp is persisted on the week
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.week.nyMpwrSubmittedAt).toBeDefined();
+    expect(typeof getRes.body.week.nyMpwrSubmittedAt).toBe('string');
+  });
+
+  it('returns 403 without project access', async () => {
+    const cookieA = await registerAndLogin('ny-submit-owner');
+    const projectId = await createNyProject(cookieA);
+    const weekId = await createNyWeek(cookieA, projectId);
+
+    const cookieB = await registerAndLogin('ny-submit-intruder');
+    const res = await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/ny-submit`)
+      .set('Cookie', cookieB);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 for non-existent week', async () => {
+    const cookie = await registerAndLogin('ny-submit-notfound');
+    const res = await supertest(app)
+      .patch('/api/payroll/weeks/non-existent-week/ny-submit')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(404);
+  });
+});
