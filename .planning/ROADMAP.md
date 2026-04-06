@@ -747,7 +747,11 @@ Plans:
   3. WorkersPage shows a collapsible "IL Compliance Demographics" section for IL projects with nullable fields for race, ethnicity, gender, veteran status, and skill level (journeyman / apprentice); the section is hidden for non-IL projects
   4. The Drizzle schema and migration reflect both new columns with `-->  statement-breakpoint` separators
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
+- [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
+- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
 
 ---
@@ -766,7 +770,11 @@ Plans:
   3. The IL IDOL submission modal is a 2-step flow: Step 1 downloads the IL Certified Transcript PDF, Step 2 shows the IDOL portal checklist (due by 15th of following month, portal URL, Excel template note)
   4. "Mark as Submitted to IL IDOL" writes an `agency_submissions` row and the button is only visible on IL projects
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
+- [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
+- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
 
 ---
@@ -785,7 +793,11 @@ Plans:
   3. If required Gusto columns are missing, the import rejects with a clear error listing the missing columns by name
   4. The Step 2 header of the import modal shows a provider badge (Gusto / Paychex / Sage / QB / ADP) based on column signature detection; if detection is ambiguous, a manual provider dropdown appears
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
+- [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
+- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
 
 ---
@@ -805,7 +817,11 @@ Plans:
   4. After a contractor confirms a mapping, subsequent imports of the same provider automatically match previously mapped workers without showing the mapping step for already-known IDs
   5. Mappings are project-scoped - a Paychex Worker ID mapped on Project A does not auto-map on Project B
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
+- [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
+- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
 
 ---
@@ -825,7 +841,11 @@ Plans:
   4. When any agency submission is marked (CA DIR, WA L&I, NY MPWR, IL IDOL), the acting user receives a confirmation email with submission date, agency name, and project name
   5. ProjectDetailPage has a gear-icon settings panel where the project owner can enable/disable each notification type and set the due-soon threshold; settings persist in `projects.settings` JSON column
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
+- [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
+- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
 
 ---
