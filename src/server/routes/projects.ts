@@ -28,6 +28,10 @@ const CreateProjectSchema = z.object({
   ubiNumber: z.string().max(50).optional(),
   lniCertificate: z.string().max(100).optional(),
   wcAccount: z.string().max(100).optional(),
+  // Phase 40 — New York-specific fields
+  nyprcNumber: z.string().max(100).optional(),
+  nysContractorRegNumber: z.string().max(100).optional(),
+  projectSettings: z.string().optional(),
 });
 
 // Fields that MUST be rejected in PATCH — immutable by design (WD version lock)
@@ -41,6 +45,10 @@ const UpdateProjectSchema = z.object({
   awardingAgency: z.string().max(56).optional(),
   contractNumber: z.string().max(25).optional(),
   pwiaIntentId: z.string().max(20).optional(),
+  // Phase 40 — New York-specific fields
+  nyprcNumber: z.string().max(100).optional(),
+  nysContractorRegNumber: z.string().max(100).optional(),
+  projectSettings: z.string().optional(),
 });
 
 // POST /api/projects — create a project
@@ -66,6 +74,9 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
     ubiNumber: body.ubiNumber ?? null,
     lniCertificate: body.lniCertificate ?? null,
     wcAccount: body.wcAccount ?? null,
+    nyprcNumber: body.nyprcNumber ?? null,
+    nysContractorRegNumber: body.nysContractorRegNumber ?? null,
+    projectSettings: body.projectSettings ?? null,
     createdAt: now,
     updatedAt: now,
   });
@@ -156,7 +167,13 @@ router.patch('/:id', async (req, res) => {
 
   await db
     .update(projects)
-    .set({ ...updates, updatedAt: now })
+    .set({
+      ...updates,
+      ...(updates.nyprcNumber !== undefined && { nyprcNumber: updates.nyprcNumber }),
+      ...(updates.nysContractorRegNumber !== undefined && { nysContractorRegNumber: updates.nysContractorRegNumber }),
+      ...(updates.projectSettings !== undefined && { projectSettings: updates.projectSettings }),
+      updatedAt: now,
+    })
     .where(eq(projects.id, req.params.id));
 
   const [updated] = await db.select().from(projects).where(eq(projects.id, req.params.id)).limit(1);
