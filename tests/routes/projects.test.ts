@@ -421,6 +421,61 @@ describe('WA project fields - WAL-02', () => {
   });
 });
 
+describe('NY project fields', () => {
+  it('POST project with state=NY is accepted and returns state: NY', async () => {
+    const cookie = await registerUser(`ny-create-${Date.now()}@test.com`);
+    const res = await createProject(cookie, {
+      state: 'NY',
+      county: 'New York',
+      nyprcNumber: 'PRC-12345',
+      nysContractorRegNumber: 'CR-67890',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.project?.state).toBe('NY');
+  });
+
+  it('NY project has nyprcNumber and nysContractorRegNumber in response', async () => {
+    const cookie = await registerUser(`ny-fields-${Date.now()}@test.com`);
+    const createRes = await createProject(cookie, {
+      state: 'NY',
+      county: 'New York',
+      nyprcNumber: 'PRC-12345',
+      nysContractorRegNumber: 'CR-67890',
+    });
+    const projectId = createRes.body.data?.project?.id;
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data?.project?.nyprcNumber).toBe('PRC-12345');
+    expect(res.body.data?.project?.nysContractorRegNumber).toBe('CR-67890');
+  });
+
+  it('PATCH project updates nyprcNumber', async () => {
+    const cookie = await registerUser(`ny-patch-${Date.now()}@test.com`);
+    const createRes = await createProject(cookie, {
+      state: 'NY',
+      county: 'New York',
+      nyprcNumber: 'PRC-ORIGINAL',
+    });
+    const projectId = createRes.body.data?.project?.id;
+
+    await supertest(app)
+      .patch(`/api/projects/${projectId}`)
+      .set('Cookie', cookie)
+      .send({ nyprcNumber: 'PRC-UPDATED' });
+
+    const getRes = await supertest(app)
+      .get(`/api/projects/${projectId}`)
+      .set('Cookie', cookie);
+
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.data?.project?.nyprcNumber).toBe('PRC-UPDATED');
+  });
+});
+
 describe('POST /api/projects/:id/workers/:wid/classifications', () => {
   it('creates classification record and returns 201', async () => {
     const cookie = await registerUser(`classif-create-${Date.now()}@test.com`);

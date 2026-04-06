@@ -208,3 +208,39 @@ describe('GET /workers programName field', () => {
     expect(workers[0].classifications[0]).toHaveProperty('programName');
   });
 });
+
+describe('nysRegisteredApprentice field', () => {
+  it('worker with nysRegisteredApprentice=true is accepted and returned', async () => {
+    const cookie = await registerAndLogin('nys-app-true');
+    const projectId = await createProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'NY Apprentice Worker', nysRegisteredApprentice: true });
+
+    expect(wRes.status).toBe(201);
+    expect(wRes.body.data?.worker?.nysRegisteredApprentice).toBe(true);
+  });
+
+  it('worker defaults nysRegisteredApprentice=false when not provided', async () => {
+    const cookie = await registerAndLogin('nys-app-default');
+    const projectId = await createProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'Regular Worker' });
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    const getRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+
+    expect(getRes.status).toBe(200);
+    const workers = getRes.body.data?.workers ?? [];
+    const worker = workers.find((w: any) => w.id === workerId);
+    expect(worker).toBeDefined();
+    expect(worker.nysRegisteredApprentice).toBeFalsy();
+  });
+});
