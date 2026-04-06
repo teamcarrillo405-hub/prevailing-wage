@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 42-il-schema-project-flag-01-PLAN.md
-last_updated: "2026-04-06T21:04:10.583Z"
+stopped_at: Completed 42-02-PLAN.md
+last_updated: "2026-04-06T21:10:20.215Z"
 progress:
   total_phases: 24
   completed_phases: 19
   total_plans: 48
-  completed_plans: 46
+  completed_plans: 47
 ---
 
 # State
@@ -92,6 +92,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 41-ny-state-forms]: No agency_submissions table: followed setCaEcprSubmitted pattern — only update payrollWeeks.nyMpwrSubmittedAt
 - [Phase 41-ny-state-forms]: Badge variant 'compliant' used for NY MPWR submitted state — no 'success' variant in design system BadgeVariant type
 - [Phase 42-il-schema-project-flag]: skillLevel stored as plain text() in schema.ts; Zod enum enforcement in routes layer only
+- [Phase 42-il-schema-project-flag]: skillLevel uses z.enum(['journeyman', 'apprentice']) in Zod — not z.string() — per STATE-10 requirement
+- [Phase 42-il-schema-project-flag]: nonPwHours copied verbatim in amendment clone because it is user-entered data like ST/OT hours, not a computed field
 
 ### Phase Order Rationale
 
@@ -114,7 +116,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T21:04:10.579Z
-Stopped at: Completed 42-il-schema-project-flag-01-PLAN.md
+Last session: 2026-04-06T21:09:58.891Z
+Stopped at: Completed 42-02-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
