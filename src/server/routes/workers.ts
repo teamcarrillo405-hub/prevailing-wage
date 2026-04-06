@@ -32,6 +32,12 @@ const CreateWorkerSchema = z.object({
   apprenticeshipRegNumber: z.string().max(100).optional(),
   // Phase 40 — NY registered apprentice flag
   nysRegisteredApprentice: z.boolean().optional().default(false),
+  // Phase 42 — IL compliance demographics
+  race: z.string().max(100).optional(),
+  ethnicity: z.string().max(100).optional(),
+  gender: z.string().max(100).optional(),
+  veteranStatus: z.string().max(100).optional(),
+  skillLevel: z.enum(['journeyman', 'apprentice']).optional(),
 });
 
 const UpdateWorkerSchema = z.object({
@@ -49,6 +55,12 @@ const UpdateWorkerSchema = z.object({
   apprenticeshipRegNumber: z.string().max(100).optional().nullable(),
   // Phase 40 — NY registered apprentice flag
   nysRegisteredApprentice: z.boolean().optional(),
+  // Phase 42 — IL compliance demographics
+  race: z.string().max(100).optional().nullable(),
+  ethnicity: z.string().max(100).optional().nullable(),
+  gender: z.string().max(100).optional().nullable(),
+  veteranStatus: z.string().max(100).optional().nullable(),
+  skillLevel: z.enum(['journeyman', 'apprentice']).optional().nullable(),
 });
 
 const CreateClassificationSchema = z.object({
@@ -189,6 +201,11 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
     apprenticeshipCommittee: body.apprenticeshipCommittee,
     apprenticeshipRegNumber: body.apprenticeshipRegNumber,
     nysRegisteredApprentice: body.nysRegisteredApprentice,
+    race: body.race,
+    ethnicity: body.ethnicity,
+    gender: body.gender,
+    veteranStatus: body.veteranStatus,
+    skillLevel: body.skillLevel,
   });
   res.status(201).json({ data: { worker: result } });
 });
@@ -227,6 +244,11 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
       apprenticeshipCommittee: body.apprenticeshipCommittee,
       apprenticeshipRegNumber: body.apprenticeshipRegNumber,
       nysRegisteredApprentice: body.nysRegisteredApprentice,
+      race: body.race,
+      ethnicity: body.ethnicity,
+      gender: body.gender,
+      veteranStatus: body.veteranStatus,
+      skillLevel: body.skillLevel,
     });
     res.json({ data: { worker: result } });
   } catch (err: any) {

@@ -28,6 +28,11 @@ export interface CreateWorkerInput extends AuditContext {
   apprenticeshipCommittee?: string | null;
   apprenticeshipRegNumber?: string | null;
   nysRegisteredApprentice?: boolean;
+  race?: string | null;
+  ethnicity?: string | null;
+  gender?: string | null;
+  veteranStatus?: string | null;
+  skillLevel?: string | null;
 }
 
 export interface UpdateWorkerInput extends AuditContext {
@@ -45,6 +50,11 @@ export interface UpdateWorkerInput extends AuditContext {
   apprenticeshipCommittee?: string | null;
   apprenticeshipRegNumber?: string | null;
   nysRegisteredApprentice?: boolean;
+  race?: string | null;
+  ethnicity?: string | null;
+  gender?: string | null;
+  veteranStatus?: string | null;
+  skillLevel?: string | null;
 }
 
 export interface DeleteWorkerInput extends AuditContext {
@@ -93,6 +103,11 @@ export async function createWorker(
     apprenticeshipCommittee: input.apprenticeshipCommittee ?? null,
     apprenticeshipRegNumber: input.apprenticeshipRegNumber ?? null,
     nysRegisteredApprentice: input.nysRegisteredApprentice ?? false,
+    race: input.race ?? null,
+    ethnicity: input.ethnicity ?? null,
+    gender: input.gender ?? null,
+    veteranStatus: input.veteranStatus ?? null,
+    skillLevel: input.skillLevel ?? null,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -152,6 +167,11 @@ export async function updateWorker(
   if ('apprenticeshipCommittee' in input) updates.apprenticeshipCommittee = input.apprenticeshipCommittee ?? null;
   if ('apprenticeshipRegNumber' in input) updates.apprenticeshipRegNumber = input.apprenticeshipRegNumber ?? null;
   if (input.nysRegisteredApprentice !== undefined) updates.nysRegisteredApprentice = input.nysRegisteredApprentice;
+  if ('race' in input) updates.race = input.race ?? null;
+  if ('ethnicity' in input) updates.ethnicity = input.ethnicity ?? null;
+  if ('gender' in input) updates.gender = input.gender ?? null;
+  if ('veteranStatus' in input) updates.veteranStatus = input.veteranStatus ?? null;
+  if ('skillLevel' in input) updates.skillLevel = input.skillLevel ?? null;
 
   await db.update(workers).set(updates).where(eq(workers.id, input.workerId));
   const [updated] = await db.select().from(workers).where(eq(workers.id, input.workerId)).limit(1);
