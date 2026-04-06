@@ -27,6 +27,7 @@ export interface CreateWorkerInput extends AuditContext {
   unionBookNumber?: string | null;
   apprenticeshipCommittee?: string | null;
   apprenticeshipRegNumber?: string | null;
+  nysRegisteredApprentice?: boolean;
 }
 
 export interface UpdateWorkerInput extends AuditContext {
@@ -43,6 +44,7 @@ export interface UpdateWorkerInput extends AuditContext {
   unionBookNumber?: string | null;
   apprenticeshipCommittee?: string | null;
   apprenticeshipRegNumber?: string | null;
+  nysRegisteredApprentice?: boolean;
 }
 
 export interface DeleteWorkerInput extends AuditContext {
@@ -90,6 +92,7 @@ export async function createWorker(
     unionBookNumber: input.unionBookNumber ?? null,
     apprenticeshipCommittee: input.apprenticeshipCommittee ?? null,
     apprenticeshipRegNumber: input.apprenticeshipRegNumber ?? null,
+    nysRegisteredApprentice: input.nysRegisteredApprentice ?? false,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -148,6 +151,7 @@ export async function updateWorker(
   if ('unionBookNumber' in input) updates.unionBookNumber = input.unionBookNumber ?? null;
   if ('apprenticeshipCommittee' in input) updates.apprenticeshipCommittee = input.apprenticeshipCommittee ?? null;
   if ('apprenticeshipRegNumber' in input) updates.apprenticeshipRegNumber = input.apprenticeshipRegNumber ?? null;
+  if (input.nysRegisteredApprentice !== undefined) updates.nysRegisteredApprentice = input.nysRegisteredApprentice;
 
   await db.update(workers).set(updates).where(eq(workers.id, input.workerId));
   const [updated] = await db.select().from(workers).where(eq(workers.id, input.workerId)).limit(1);

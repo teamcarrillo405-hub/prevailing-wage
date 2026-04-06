@@ -30,6 +30,8 @@ const CreateWorkerSchema = z.object({
   unionBookNumber: z.string().max(100).optional(),
   apprenticeshipCommittee: z.string().max(200).optional(),
   apprenticeshipRegNumber: z.string().max(100).optional(),
+  // Phase 40 — NY registered apprentice flag
+  nysRegisteredApprentice: z.boolean().optional().default(false),
 });
 
 const UpdateWorkerSchema = z.object({
@@ -45,6 +47,8 @@ const UpdateWorkerSchema = z.object({
   unionBookNumber: z.string().max(100).optional().nullable(),
   apprenticeshipCommittee: z.string().max(200).optional().nullable(),
   apprenticeshipRegNumber: z.string().max(100).optional().nullable(),
+  // Phase 40 — NY registered apprentice flag
+  nysRegisteredApprentice: z.boolean().optional(),
 });
 
 const CreateClassificationSchema = z.object({
@@ -184,6 +188,7 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
     unionBookNumber: body.unionBookNumber,
     apprenticeshipCommittee: body.apprenticeshipCommittee,
     apprenticeshipRegNumber: body.apprenticeshipRegNumber,
+    nysRegisteredApprentice: body.nysRegisteredApprentice,
   });
   res.status(201).json({ data: { worker: result } });
 });
@@ -221,6 +226,7 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
       unionBookNumber: body.unionBookNumber,
       apprenticeshipCommittee: body.apprenticeshipCommittee,
       apprenticeshipRegNumber: body.apprenticeshipRegNumber,
+      nysRegisteredApprentice: body.nysRegisteredApprentice,
     });
     res.json({ data: { worker: result } });
   } catch (err: any) {
