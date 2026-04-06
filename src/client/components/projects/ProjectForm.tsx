@@ -27,6 +27,9 @@ const CreateProjectSchema = z.object({
   ubiNumber: z.string().max(20).optional(),
   lniCertificate: z.string().max(50).optional(),
   wcAccount: z.string().max(50).optional(),
+  // Phase 40 — New York-specific fields
+  nyprcNumber: z.string().max(100).optional(),
+  nysContractorRegNumber: z.string().max(100).optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
@@ -50,6 +53,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const stateValue = watch('state');
   const isCA = stateValue?.toUpperCase() === 'CA';
   const isWA = stateValue?.toUpperCase() === 'WA';
+  const isNY = stateValue?.toUpperCase() === 'NY';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
@@ -230,6 +234,34 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               {...register('wcAccount')}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="L&I industrial insurance account number"
+            />
+          </div>
+        </div>
+      )}
+
+      {isNY && (
+        <div className="space-y-4 rounded-lg border border-green-200 bg-green-50 p-4">
+          <p className="text-sm font-medium text-green-800">New York Project Fields</p>
+          <div>
+            <label htmlFor="nyprcNumber" className="block text-sm font-medium text-gray-700">
+              PRC Number
+            </label>
+            <input
+              id="nyprcNumber"
+              type="text"
+              {...register('nyprcNumber')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+            />
+          </div>
+          <div>
+            <label htmlFor="nysContractorRegNumber" className="block text-sm font-medium text-gray-700">
+              NYS Contractor Registration Number
+            </label>
+            <input
+              id="nysContractorRegNumber"
+              type="text"
+              {...register('nysContractorRegNumber')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
             />
           </div>
         </div>

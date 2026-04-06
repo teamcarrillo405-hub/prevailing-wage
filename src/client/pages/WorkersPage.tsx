@@ -53,6 +53,7 @@ interface Worker {
   unionBookNumber: string | null;
   apprenticeshipCommittee: string | null;
   apprenticeshipRegNumber: string | null;
+  nysRegisteredApprentice: boolean | null;
   classifications: Classification[];
 }
 
@@ -85,6 +86,7 @@ function blankWorkerForm() {
     unionBookNumber: '',
     apprenticeshipCommittee: '',
     apprenticeshipRegNumber: '',
+    nysRegisteredApprentice: false,
     tradeCode: '',
     tradeDescription: '',
     laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman',
@@ -108,6 +110,7 @@ function workerToEditForm(w: Worker) {
     unionBookNumber: w.unionBookNumber ?? '',
     apprenticeshipCommittee: w.apprenticeshipCommittee ?? '',
     apprenticeshipRegNumber: w.apprenticeshipRegNumber ?? '',
+    nysRegisteredApprentice: w.nysRegisteredApprentice ?? false,
   };
 }
 
@@ -121,7 +124,7 @@ export function WorkersPage() {
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '' });
+  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false });
   const [editError, setEditError] = useState('');
 
   // Add-extra-classification state
@@ -176,6 +179,7 @@ export function WorkersPage() {
         ...(f.unionBookNumber.trim() ? { unionBookNumber: f.unionBookNumber.trim() } : {}),
         ...(f.apprenticeshipCommittee.trim() ? { apprenticeshipCommittee: f.apprenticeshipCommittee.trim() } : {}),
         ...(f.apprenticeshipRegNumber.trim() ? { apprenticeshipRegNumber: f.apprenticeshipRegNumber.trim() } : {}),
+        nysRegisteredApprentice: f.nysRegisteredApprentice,
       });
       const workerId = workerRes.data.worker.id;
       const canAddClass = isWA
@@ -216,6 +220,7 @@ export function WorkersPage() {
         unionBookNumber: data.unionBookNumber.trim() || undefined,
         apprenticeshipCommittee: data.apprenticeshipCommittee.trim() || undefined,
         apprenticeshipRegNumber: data.apprenticeshipRegNumber.trim() || undefined,
+        nysRegisteredApprentice: data.nysRegisteredApprentice,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workers', projectId] });
@@ -467,6 +472,20 @@ export function WorkersPage() {
                         </div>
                       </div>
                     )}
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`nysRegisteredApprentice-edit-${w.id}`}
+                          checked={editForm.nysRegisteredApprentice ?? false}
+                          onChange={(e) => setEditForm(p => ({ ...p, nysRegisteredApprentice: e.target.checked }))}
+                          className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+                        />
+                        <label htmlFor={`nysRegisteredApprentice-edit-${w.id}`} className="text-sm font-medium text-gray-700">
+                          NYS Registered Apprentice
+                        </label>
+                      </div>
+                    </div>
                     {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
                     <div className="flex gap-2">
                       <Button onClick={() => handleEditSave(w.id)} disabled={updateWorker.isPending}>
@@ -797,6 +816,21 @@ export function WorkersPage() {
                   onChange={e => setForm(p => ({ ...p, unionBookNumber: e.target.value }))}
                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
+              </div>
+            </div>
+
+            <div className="mt-2 border-t border-gray-100 pt-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="nysRegisteredApprentice"
+                  checked={form.nysRegisteredApprentice ?? false}
+                  onChange={(e) => setForm(p => ({ ...p, nysRegisteredApprentice: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+                />
+                <label htmlFor="nysRegisteredApprentice" className="text-sm font-medium text-gray-700">
+                  NYS Registered Apprentice
+                </label>
               </div>
             </div>
 
