@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 40-ny-schema-compliance-rule Plan 01 — NY schema migration + Drizzle column definitions
-last_updated: "2026-04-06T18:24:34.163Z"
+stopped_at: Completed 40-ny-schema-compliance-rule Plan 02 — NY route/form wiring
+last_updated: "2026-04-06T18:33:43.114Z"
 progress:
   total_phases: 24
   completed_phases: 17
   total_plans: 40
-  completed_plans: 38
+  completed_plans: 39
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 40 (ny-schema-compliance-rule) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -79,6 +79,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 39]: Apprenticeship section conditionally shown via w.classifications?.some(c => c.laborType === 'apprentice') — hidden for new workers and journeyworker-only workers
 - [Phase 40]: projectSettings stored as text (not json type) — consistent with auditLogs diff/snapshot/meta pattern
 - [Phase 40]: nysRegisteredApprentice uses integer({ mode: 'boolean' }) — standard Drizzle SQLite boolean pattern
+- [Phase 40]: isNY uses stateValue?.toUpperCase() === 'NY' — exact isCA/isWA pattern
+- [Phase 40]: nysRegisteredApprentice checkbox shown universally (all workers, not NY-gated)
 
 ### Phase Order Rationale
 
@@ -101,7 +103,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T18:24:34.160Z
-Stopped at: Completed 40-ny-schema-compliance-rule Plan 01 — NY schema migration + Drizzle column definitions
+Last session: 2026-04-06T18:33:43.110Z
+Stopped at: Completed 40-ny-schema-compliance-rule Plan 02 — NY route/form wiring
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
