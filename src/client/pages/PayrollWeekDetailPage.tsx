@@ -443,6 +443,7 @@ export function PayrollWeekDetailPage() {
   const isCA = projectData?.data?.project?.state === 'CA';
   const isWA = projectData?.data?.project?.state === 'WA';
   const isNY = projectData?.data?.project?.state?.toUpperCase() === 'NY';
+  const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
 
   // Workers query — needed for import unmatched worker remap dropdown (Phase 36)
   const { data: workersData } = useQuery({
@@ -948,6 +949,16 @@ export function PayrollWeekDetailPage() {
                 NY MPWR Submission
               </Button>
             )}
+            {isIL && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled
+                title="IL Certified Transcript — coming in Phase 43"
+              >
+                Download IL Certified Transcript (coming soon)
+              </Button>
+            )}
             {weekId && (
               <Button
                 variant="secondary"
@@ -1298,6 +1309,17 @@ export function PayrollWeekDetailPage() {
                       <Badge variant="neutral">Not Submitted to NY MPWR</Badge>
                     </div>
                   )}
+                </div>
+              </>
+            )}
+            {isIL && (
+              <>
+                <div className="border-t border-gray-100" />
+                <div className="px-5 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="neutral">IL IDOL Submission</Badge>
+                    <span className="text-sm text-gray-500">Coming in Phase 43</span>
+                  </div>
                 </div>
               </>
             )}

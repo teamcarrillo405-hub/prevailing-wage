@@ -54,6 +54,11 @@ interface Worker {
   apprenticeshipCommittee: string | null;
   apprenticeshipRegNumber: string | null;
   nysRegisteredApprentice: boolean | null;
+  race: string | null;
+  ethnicity: string | null;
+  gender: string | null;
+  veteranStatus: string | null;
+  skillLevel: string | null;
   classifications: Classification[];
 }
 
@@ -87,6 +92,11 @@ function blankWorkerForm() {
     apprenticeshipCommittee: '',
     apprenticeshipRegNumber: '',
     nysRegisteredApprentice: false,
+    race: '',
+    ethnicity: '',
+    gender: '',
+    veteranStatus: '',
+    skillLevel: '',
     tradeCode: '',
     tradeDescription: '',
     laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman',
@@ -111,6 +121,11 @@ function workerToEditForm(w: Worker) {
     apprenticeshipCommittee: w.apprenticeshipCommittee ?? '',
     apprenticeshipRegNumber: w.apprenticeshipRegNumber ?? '',
     nysRegisteredApprentice: w.nysRegisteredApprentice ?? false,
+    race: w.race ?? '',
+    ethnicity: w.ethnicity ?? '',
+    gender: w.gender ?? '',
+    veteranStatus: w.veteranStatus ?? '',
+    skillLevel: w.skillLevel ?? '',
   };
 }
 
@@ -124,7 +139,7 @@ export function WorkersPage() {
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false });
+  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false, race: '', ethnicity: '', gender: '', veteranStatus: '', skillLevel: '' });
   const [editError, setEditError] = useState('');
 
   // Add-extra-classification state
@@ -163,6 +178,7 @@ export function WorkersPage() {
   const selectedTrade = wageClassifications.find(wc => wc.tradeCode === form.tradeCode);
   const selectedExtraTrade = wageClassifications.find(wc => wc.tradeCode === extraClass.tradeCode);
   const isWA = projectData?.data?.project?.state === 'WA';
+  const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const addWorker = useMutation({
@@ -180,6 +196,13 @@ export function WorkersPage() {
         ...(f.apprenticeshipCommittee.trim() ? { apprenticeshipCommittee: f.apprenticeshipCommittee.trim() } : {}),
         ...(f.apprenticeshipRegNumber.trim() ? { apprenticeshipRegNumber: f.apprenticeshipRegNumber.trim() } : {}),
         nysRegisteredApprentice: f.nysRegisteredApprentice,
+        ...(isIL ? {
+          race: f.race || undefined,
+          ethnicity: f.ethnicity || undefined,
+          gender: f.gender || undefined,
+          veteranStatus: f.veteranStatus || undefined,
+          skillLevel: f.skillLevel || undefined,
+        } : {}),
       });
       const workerId = workerRes.data.worker.id;
       const canAddClass = isWA
@@ -221,6 +244,13 @@ export function WorkersPage() {
         apprenticeshipCommittee: data.apprenticeshipCommittee.trim() || undefined,
         apprenticeshipRegNumber: data.apprenticeshipRegNumber.trim() || undefined,
         nysRegisteredApprentice: data.nysRegisteredApprentice,
+        ...(isIL ? {
+          race: data.race || null,
+          ethnicity: data.ethnicity || null,
+          gender: data.gender || null,
+          veteranStatus: data.veteranStatus || null,
+          skillLevel: data.skillLevel || null,
+        } : {}),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workers', projectId] });
@@ -486,6 +516,39 @@ export function WorkersPage() {
                         </label>
                       </div>
                     </div>
+                    {isIL && (
+                      <details className="rounded-lg border border-purple-200 bg-purple-50 p-3" open>
+                        <summary className="cursor-pointer text-sm font-medium text-purple-800">IL Compliance Demographics</summary>
+                        <div className="mt-3 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Race</label>
+                              <input className="w-full rounded border px-2 py-1 text-sm" value={editForm.race} onChange={e => setEditForm(f => ({ ...f, race: e.target.value }))} placeholder="Optional" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Ethnicity</label>
+                              <input className="w-full rounded border px-2 py-1 text-sm" value={editForm.ethnicity} onChange={e => setEditForm(f => ({ ...f, ethnicity: e.target.value }))} placeholder="Optional" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
+                              <input className="w-full rounded border px-2 py-1 text-sm" value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))} placeholder="Optional" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Veteran Status</label>
+                              <input className="w-full rounded border px-2 py-1 text-sm" value={editForm.veteranStatus} onChange={e => setEditForm(f => ({ ...f, veteranStatus: e.target.value }))} placeholder="Optional" />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Skill Level</label>
+                            <select className="w-full rounded border px-2 py-1 text-sm" value={editForm.skillLevel} onChange={e => setEditForm(f => ({ ...f, skillLevel: e.target.value }))}>
+                              <option value="">Not specified</option>
+                              <option value="journeyman">Journeyman</option>
+                              <option value="apprentice">Apprentice</option>
+                            </select>
+                          </div>
+                        </div>
+                      </details>
+                    )}
                     {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
                     <div className="flex gap-2">
                       <Button onClick={() => handleEditSave(w.id)} disabled={updateWorker.isPending}>
@@ -833,6 +896,40 @@ export function WorkersPage() {
                 </label>
               </div>
             </div>
+
+            {isIL && (
+              <details className="rounded-lg border border-purple-200 bg-purple-50 p-3" open>
+                <summary className="cursor-pointer text-sm font-medium text-purple-800">IL Compliance Demographics</summary>
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Race</label>
+                      <input className="w-full rounded border px-2 py-1 text-sm" value={form.race} onChange={e => setForm(f => ({ ...f, race: e.target.value }))} placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Ethnicity</label>
+                      <input className="w-full rounded border px-2 py-1 text-sm" value={form.ethnicity} onChange={e => setForm(f => ({ ...f, ethnicity: e.target.value }))} placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
+                      <input className="w-full rounded border px-2 py-1 text-sm" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Veteran Status</label>
+                      <input className="w-full rounded border px-2 py-1 text-sm" value={form.veteranStatus} onChange={e => setForm(f => ({ ...f, veteranStatus: e.target.value }))} placeholder="Optional" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Skill Level</label>
+                    <select className="w-full rounded border px-2 py-1 text-sm" value={form.skillLevel} onChange={e => setForm(f => ({ ...f, skillLevel: e.target.value }))}>
+                      <option value="">Not specified</option>
+                      <option value="journeyman">Journeyman</option>
+                      <option value="apprentice">Apprentice</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
+            )}
 
             {/* Trade selection */}
             <div className="border-t border-gray-100 pt-4">

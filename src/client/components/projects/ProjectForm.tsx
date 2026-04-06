@@ -54,6 +54,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const isCA = stateValue?.toUpperCase() === 'CA';
   const isWA = stateValue?.toUpperCase() === 'WA';
   const isNY = stateValue?.toUpperCase() === 'NY';
+  const isIL = stateValue?.toUpperCase() === 'IL';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
@@ -264,6 +265,13 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
             />
           </div>
+        </div>
+      )}
+
+      {isIL && (
+        <div className="space-y-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
+          <p className="text-sm font-medium text-purple-800">Illinois Project</p>
+          <p className="text-xs text-purple-600">IL-specific certified payroll export and IDOL submission will be available on payroll weeks.</p>
         </div>
       )}
 
