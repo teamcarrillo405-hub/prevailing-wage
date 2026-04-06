@@ -749,7 +749,7 @@ Plans:
 
 **Plans**: 3 plans
 Plans:
-- [ ] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
+- [x] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
 - [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
 - [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
 **UI hint**: yes
@@ -949,7 +949,7 @@ Plans:
 | 39. Worker Profile Depth | v4.0 | 2/2 | Complete    | 2026-04-02 |
 | 40. NY Schema + Compliance Rule | v4.0 | 3/3 | Complete    | 2026-04-06 |
 | 41. NY State Forms | v4.0 | 5/5 | Complete   | 2026-04-06 |
-| 42. IL Schema + Project Flag | v4.0 | 0/TBD | Not started | - |
+| 42. IL Schema + Project Flag | v4.0 | 1/3 | In Progress|  |
 | 43. IL State Forms | v4.0 | 0/TBD | Not started | - |
 | 44. Import Provider Foundation | v4.0 | 0/TBD | Not started | - |
 | 45. Import ID-Mapped Providers | v4.0 | 0/TBD | Not started | - |

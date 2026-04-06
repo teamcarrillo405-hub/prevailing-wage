@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 41-05-PLAN.md (NY MPWR modal UI — human verified)
-last_updated: "2026-04-06T20:18:17.683Z"
+stopped_at: Completed 42-il-schema-project-flag-01-PLAN.md
+last_updated: "2026-04-06T21:04:10.583Z"
 progress:
   total_phases: 24
   completed_phases: 19
-  total_plans: 45
-  completed_plans: 45
+  total_plans: 48
+  completed_plans: 46
 ---
 
 # State
@@ -91,6 +91,7 @@ Key decisions locked for v4.0 scope:
 - [Phase 41-ny-state-forms]: MPWR XML uses plain ProjectRollup root — no namespace prefix; SSN placeholder 000000+ssnLast4 per STATE-03; multi-classification workers grouped into one employeeWorkWeek
 - [Phase 41-ny-state-forms]: No agency_submissions table: followed setCaEcprSubmitted pattern — only update payrollWeeks.nyMpwrSubmittedAt
 - [Phase 41-ny-state-forms]: Badge variant 'compliant' used for NY MPWR submitted state — no 'success' variant in design system BadgeVariant type
+- [Phase 42-il-schema-project-flag]: skillLevel stored as plain text() in schema.ts; Zod enum enforcement in routes layer only
 
 ### Phase Order Rationale
 
@@ -113,7 +114,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T20:18:17.680Z
-Stopped at: Completed 41-05-PLAN.md (NY MPWR modal UI — human verified)
+Last session: 2026-04-06T21:04:10.579Z
+Stopped at: Completed 42-il-schema-project-flag-01-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
