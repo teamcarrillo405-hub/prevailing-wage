@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 40-ny-schema-compliance-rule Plan 03 — NY daily OT compliance rule + route integration tests
-last_updated: "2026-04-06T19:06:08.387Z"
+status: Ready to execute
+stopped_at: Completed 41-ny-state-forms Plan 01 — migration 0024 + payrollService patch
+last_updated: "2026-04-06T19:49:55.566Z"
 progress:
   total_phases: 24
   completed_phases: 18
-  total_plans: 40
-  completed_plans: 40
+  total_plans: 45
+  completed_plans: 41
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 40 — ny-schema-compliance-rule
+**Current focus:** Phase 41 — ny-state-forms
 
 ## Current Position
 
-Phase: 41
-Plan: Not started
+Phase: 41 (ny-state-forms) — EXECUTING
+Plan: 2 of 5
 
 ## Performance Metrics
 
@@ -84,6 +84,9 @@ Key decisions locked for v4.0 scope:
 - [Phase 40]: getDb() called inline inside computeCompliance for project fetch — avoids renaming _db parameter (research Pitfall 2)
 - [Phase 40]: NY daily OT violation emits before grossWages null check — fires even when wages not yet recorded
 - [Phase 40]: NY daily check is additive to weekly CWHSSA check — not a replacement; both run for NY projects
+- [Phase 41-ny-state-forms]: No statement-breakpoint in 0024 migration — single ALTER TABLE statement needs no separator
+- [Phase 41-ny-state-forms]: getPayrollWeek uses select * so nyMpwrSubmittedAt automatically available; no explicit change needed
+- [Phase 41-ny-state-forms]: nysRegisteredApprentice added to getPayrollEntriesWithWorkerDetails select only — workers table already joined, purely additive
 
 ### Phase Order Rationale
 
@@ -106,7 +109,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T18:43:56.076Z
-Stopped at: Completed 40-ny-schema-compliance-rule Plan 03 — NY daily OT compliance rule + route integration tests
+Last session: 2026-04-06T19:49:55.563Z
+Stopped at: Completed 41-ny-state-forms Plan 01 — migration 0024 + payrollService patch
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)

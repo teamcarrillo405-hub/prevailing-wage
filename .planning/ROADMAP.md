@@ -724,7 +724,7 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 41-01-PLAN.md — Migration + getPayrollEntriesWithWorkerDetails patch
+- [x] 41-01-PLAN.md — Migration + getPayrollEntriesWithWorkerDetails patch
 - [ ] 41-02-PLAN.md — MPWR XML generator (TDD)
 - [ ] 41-03-PLAN.md — PW-12 PDF generator (TDD)
 - [ ] 41-04-PLAN.md — Export routes + route tests
@@ -928,7 +928,7 @@ Plans:
 | 38. Audit Trail Wiring + Activity UI | v4.0 | 3/3 | Complete    | 2026-04-02 |
 | 39. Worker Profile Depth | v4.0 | 2/2 | Complete    | 2026-04-02 |
 | 40. NY Schema + Compliance Rule | v4.0 | 3/3 | Complete    | 2026-04-06 |
-| 41. NY State Forms | v4.0 | 0/TBD | Not started | - |
+| 41. NY State Forms | v4.0 | 1/5 | In Progress|  |
 | 42. IL Schema + Project Flag | v4.0 | 0/TBD | Not started | - |
 | 43. IL State Forms | v4.0 | 0/TBD | Not started | - |
 | 44. Import Provider Foundation | v4.0 | 0/TBD | Not started | - |
