@@ -44,6 +44,7 @@ interface PayrollWeekFormValues {
   friDt: number;
   satDt: number;
   sunDt: number;
+  nonPwHours: number;
 }
 
 interface PayrollWeekFormProps {
@@ -51,6 +52,7 @@ interface PayrollWeekFormProps {
   workers: WorkerRow[];
   onSave: (weekId: string) => void;
   isCA?: boolean;
+  isIL?: boolean;
 }
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -64,7 +66,7 @@ const DAY_LABELS: Record<string, string> = {
   sun: 'Sun',
 };
 
-export function PayrollWeekForm({ projectId, workers, onSave, isCA = false }: PayrollWeekFormProps) {
+export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL = false }: PayrollWeekFormProps) {
   // Single-worker form — uses first worker for live display
   // Full multi-worker grid would iterate workers; this delivers the CPAY-01 behavior
   const firstWorker = workers[0];
@@ -82,6 +84,7 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false }: Pa
       monSt: 0, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
       monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
       monDt: 0, tueDt: 0, wedDt: 0, thuDt: 0, friDt: 0, satDt: 0, sunDt: 0,
+      nonPwHours: 0,
     },
   });
 
@@ -155,6 +158,7 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false }: Pa
             fringeVacation: data.fringeVacation || 0,
             fringeTraining: data.fringeTraining || 0,
           } : {}),
+          ...(isIL ? { nonPwHours: data.nonPwHours || 0 } : {}),
         }),
       });
     }
@@ -226,6 +230,23 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false }: Pa
               </div>
             </div>
             <p className="mt-1 text-xs text-gray-500">Sum auto-fills the fringe rate below.</p>
+          </div>
+        )}
+
+        {isIL && (
+          <div className="space-y-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
+            <p className="text-sm font-medium text-purple-800">IL Non-Prevailing Wage Hours</p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Non-PW Hours</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-full rounded border px-2 py-1 text-sm"
+                {...register('nonPwHours', { valueAsNumber: true })}
+                placeholder="0.00"
+              />
+            </div>
           </div>
         )}
 
