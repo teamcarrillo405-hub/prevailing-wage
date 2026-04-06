@@ -3,7 +3,7 @@ phase: 42
 slug: il-schema-project-flag
 status: draft
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-04-06
 ---
 
