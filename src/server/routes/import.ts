@@ -5,13 +5,13 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { randomUUID } from 'crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { getPayrollWeek } from '../services/payrollService.js';
 import { parseImportFile } from '../services/importService.js';
 import { getDb } from '../db/index.js';
-import { payrollEntries, payrollImports } from '../db/schema.js';
+import { payrollEntries, payrollImports, payrollProviderMappings } from '../db/schema.js';
 import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
 
 export const importRouter = Router();
@@ -235,4 +235,97 @@ importRouter.post('/commit', async (req, res) => {
   } catch (auditErr) { console.error('[audit]', auditErr); }
 
   res.json({ committed: body.matched.length });
+});
+
+// ── GET /mappings/:projectId ───────────────────────────────────────────────
+// Returns existing provider-to-worker ID mappings for a project.
+// Optional ?provider= query param filters by provider.
+
+importRouter.get('/mappings/:projectId', async (req, res) => {
+  const { projectId } = req.params;
+  const provider = typeof req.query.provider === 'string' ? req.query.provider : undefined;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, req.user!.userId);
+  } catch (accessErr: any) {
+    res.status(accessErr.status ?? 500).json({ error: accessErr.message ?? 'Internal server error' });
+    return;
+  }
+
+  const whereClause = provider
+    ? and(eq(payrollProviderMappings.projectId, projectId), eq(payrollProviderMappings.provider, provider))
+    : eq(payrollProviderMappings.projectId, projectId);
+
+  const mappings = await db
+    .select({
+      id: payrollProviderMappings.id,
+      projectId: payrollProviderMappings.projectId,
+      provider: payrollProviderMappings.provider,
+      providerWorkerId: payrollProviderMappings.providerWorkerId,
+      workerId: payrollProviderMappings.workerId,
+      createdAt: payrollProviderMappings.createdAt,
+    })
+    .from(payrollProviderMappings)
+    .where(whereClause);
+
+  res.json({ mappings });
+});
+
+// ── POST /mappings ─────────────────────────────────────────────────────────
+// Batch-upserts provider-to-worker ID mappings for a project.
+// Body: { projectId, provider, mappings: [{ providerWorkerId, workerId }] }
+
+interface MappingEntry {
+  providerWorkerId: string;
+  workerId: string;
+}
+
+interface SaveMappingsBody {
+  projectId: string;
+  provider: string;
+  mappings: MappingEntry[];
+}
+
+importRouter.post('/mappings', async (req, res) => {
+  const body = req.body as SaveMappingsBody;
+
+  if (!body.projectId || !body.provider || !Array.isArray(body.mappings)) {
+    res.status(400).json({ error: 'projectId, provider, and mappings array are required' });
+    return;
+  }
+
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, body.projectId, req.user!.userId);
+  } catch (accessErr: any) {
+    res.status(accessErr.status ?? 500).json({ error: accessErr.message ?? 'Internal server error' });
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  for (const m of body.mappings) {
+    await db
+      .insert(payrollProviderMappings)
+      .values({
+        id: randomUUID(),
+        projectId: body.projectId,
+        provider: body.provider,
+        providerWorkerId: m.providerWorkerId,
+        workerId: m.workerId,
+        createdAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [
+          payrollProviderMappings.projectId,
+          payrollProviderMappings.provider,
+          payrollProviderMappings.providerWorkerId,
+        ],
+        set: { workerId: m.workerId },
+      });
+  }
+
+  res.json({ saved: body.mappings.length });
 });

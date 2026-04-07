@@ -450,3 +450,200 @@ describe('POST /api/payroll/import/commit', () => {
     expect(auditRows[0].provider).toBe('adp');
   });
 });
+
+// ── Tests: GET /api/payroll/import/mappings/:projectId ────────────────────
+
+describe('GET /api/payroll/import/mappings/:projectId', () => {
+  it('returns 200 with mappings for authenticated project owner', async () => {
+    const cookie = await registerAndLogin('mappings-get-owner');
+    const projectId = await createProject(cookie);
+    const { workerId } = await createWorker(cookie, projectId, 'Mapping Worker A');
+
+    // Seed a mapping via POST first
+    const postRes = await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .set('Cookie', cookie)
+      .send({
+        projectId,
+        provider: 'paychex',
+        mappings: [{ providerWorkerId: 'PX-001', workerId }],
+      });
+    expect(postRes.status).toBe(200);
+
+    const res = await supertest(app)
+      .get(`/api/payroll/import/mappings/${projectId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.mappings)).toBe(true);
+    expect(res.body.mappings.length).toBe(1);
+    const mapping = res.body.mappings[0];
+    expect(mapping.projectId).toBe(projectId);
+    expect(mapping.provider).toBe('paychex');
+    expect(mapping.providerWorkerId).toBe('PX-001');
+    expect(mapping.workerId).toBe(workerId);
+    expect(mapping.id).toBeDefined();
+    expect(mapping.createdAt).toBeDefined();
+  });
+
+  it('filters by ?provider= query param', async () => {
+    const cookie = await registerAndLogin('mappings-get-filter');
+    const projectId = await createProject(cookie);
+    const { workerId: worker1Id } = await createWorker(cookie, projectId, 'Filter Worker A');
+    const { workerId: worker2Id } = await createWorker(cookie, projectId, 'Filter Worker B');
+
+    // Insert two mappings for different providers
+    await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .set('Cookie', cookie)
+      .send({
+        projectId,
+        provider: 'paychex',
+        mappings: [{ providerWorkerId: 'PX-100', workerId: worker1Id }],
+      });
+    await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .set('Cookie', cookie)
+      .send({
+        projectId,
+        provider: 'sage_300',
+        mappings: [{ providerWorkerId: '200', workerId: worker2Id }],
+      });
+
+    const res = await supertest(app)
+      .get(`/api/payroll/import/mappings/${projectId}?provider=paychex`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.mappings.length).toBe(1);
+    expect(res.body.mappings[0].provider).toBe('paychex');
+    expect(res.body.mappings[0].providerWorkerId).toBe('PX-100');
+  });
+
+  it('returns 403 without project access (NFR-03)', async () => {
+    const cookieA = await registerAndLogin('mappings-get-owner-nfr');
+    const projectId = await createProject(cookieA);
+
+    const cookieB = await registerAndLogin('mappings-get-intruder-nfr');
+    const res = await supertest(app)
+      .get(`/api/payroll/import/mappings/${projectId}`)
+      .set('Cookie', cookieB);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    const res = await supertest(app)
+      .get('/api/payroll/import/mappings/any-project-id');
+
+    expect(res.status).toBe(401);
+  });
+});
+
+// ── Tests: POST /api/payroll/import/mappings ──────────────────────────────
+
+describe('POST /api/payroll/import/mappings', () => {
+  it('saves mappings and returns count', async () => {
+    const cookie = await registerAndLogin('mappings-post-save');
+    const projectId = await createProject(cookie);
+    const { workerId: worker1Id } = await createWorker(cookie, projectId, 'Post Worker A');
+    const { workerId: worker2Id } = await createWorker(cookie, projectId, 'Post Worker B');
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .set('Cookie', cookie)
+      .send({
+        projectId,
+        provider: 'paychex',
+        mappings: [
+          { providerWorkerId: 'PX-001', workerId: worker1Id },
+          { providerWorkerId: 'PX-002', workerId: worker2Id },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.saved).toBe(2);
+
+    // Verify they're stored
+    const getRes = await supertest(app)
+      .get(`/api/payroll/import/mappings/${projectId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.mappings.length).toBe(2);
+  });
+
+  it('upserts: updating existing providerWorkerId changes workerId', async () => {
+    const cookie = await registerAndLogin('mappings-post-upsert');
+    const projectId = await createProject(cookie);
+    const { workerId: worker1Id } = await createWorker(cookie, projectId, 'Upsert Worker A');
+    const { workerId: worker2Id } = await createWorker(cookie, projectId, 'Upsert Worker B');
+
+    // Initial insert
+    await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .set('Cookie', cookie)
+      .send({
+        projectId,
+        provider: 'paychex',
+        mappings: [{ providerWorkerId: 'PX-UPSERT', workerId: worker1Id }],
+      });
+
+    // Re-map same providerWorkerId to a different worker
+    const res = await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .set('Cookie', cookie)
+      .send({
+        projectId,
+        provider: 'paychex',
+        mappings: [{ providerWorkerId: 'PX-UPSERT', workerId: worker2Id }],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.saved).toBe(1);
+
+    // Verify only one row and it points to worker2
+    const getRes = await supertest(app)
+      .get(`/api/payroll/import/mappings/${projectId}?provider=paychex`)
+      .set('Cookie', cookie);
+    expect(getRes.body.mappings.length).toBe(1);
+    expect(getRes.body.mappings[0].workerId).toBe(worker2Id);
+  });
+
+  it('returns 400 when required fields are missing', async () => {
+    const cookie = await registerAndLogin('mappings-post-400');
+    const projectId = await createProject(cookie);
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .set('Cookie', cookie)
+      .send({ projectId, provider: 'paychex' }); // missing mappings array
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+  });
+
+  it('returns 403 without project access (NFR-03)', async () => {
+    const cookieA = await registerAndLogin('mappings-post-owner-nfr');
+    const projectId = await createProject(cookieA);
+    const { workerId } = await createWorker(cookieA, projectId, 'NFR Worker');
+
+    const cookieB = await registerAndLogin('mappings-post-intruder-nfr');
+    const res = await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .set('Cookie', cookieB)
+      .send({
+        projectId,
+        provider: 'paychex',
+        mappings: [{ providerWorkerId: 'PX-NFR', workerId }],
+      });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    const res = await supertest(app)
+      .post('/api/payroll/import/mappings')
+      .send({ projectId: 'any', provider: 'paychex', mappings: [] });
+
+    expect(res.status).toBe(401);
+  });
+});
