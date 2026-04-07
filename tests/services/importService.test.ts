@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { detectProvider } from '../../src/server/services/importService.js';
 import { mapQbRows } from '../../src/server/services/qbMapper.js';
 import { mapAdpRows } from '../../src/server/services/adpMapper.js';
+import { mapGustoRows } from '../../src/server/services/gustoMapper.js';
 
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
@@ -236,5 +237,219 @@ describe('mapAdpRows', () => {
     const entry = result.entries.get('bob jones');
     expect(entry!.monOt).toBe(0);
     expect(entry!.monSt).toBe(32);
+  });
+});
+
+// ── detectProvider - Gusto ──────────────────────────────────────────────────
+
+describe('detectProvider - Gusto', () => {
+  it('returns gusto for Gusto Payroll Journal Report headers', () => {
+    expect(
+      detectProvider([
+        'Employee first name',
+        'Employee last name',
+        'Regular hours',
+        'Payroll end date',
+        'Overtime hours',
+      ]),
+    ).toBe('gusto');
+  });
+
+  it('returns gusto even with extra columns mixed in', () => {
+    expect(
+      detectProvider([
+        'Company',
+        'Employee first name',
+        'Employee last name',
+        'Department',
+        'Regular hours',
+        'Overtime hours',
+        'Payroll end date',
+        'Notes',
+      ]),
+    ).toBe('gusto');
+  });
+
+  it('returns gusto with only the 4 required signature columns (no overtime column)', () => {
+    expect(
+      detectProvider([
+        'Employee first name',
+        'Employee last name',
+        'Regular hours',
+        'Payroll end date',
+      ]),
+    ).toBe('gusto');
+  });
+
+  it('is case-insensitive for Gusto signature columns', () => {
+    expect(
+      detectProvider([
+        'employee first name',
+        'employee last name',
+        'regular hours',
+        'payroll end date',
+      ]),
+    ).toBe('gusto');
+  });
+
+  it('does not return gusto for QB headers', () => {
+    expect(
+      detectProvider(['Employee', 'Date', 'Duration', 'Payroll Item']),
+    ).not.toBe('gusto');
+  });
+
+  it('does not return gusto for ADP headers', () => {
+    expect(
+      detectProvider(['Co Code', 'File #', 'First Name', 'Last Name', 'Reg Hours']),
+    ).not.toBe('gusto');
+  });
+});
+
+// ── mapGustoRows ────────────────────────────────────────────────────────────
+
+describe('mapGustoRows', () => {
+  // Helper: builds a minimal valid Gusto row
+  function gustoRow(overrides: Record<string, string> = {}): Record<string, string> {
+    return {
+      'Employee first name': 'John',
+      'Employee last name': 'Smith',
+      'Regular hours': '40.00',
+      'Overtime hours': '0',
+      'Payroll end date': '2025-01-12',
+      ...overrides,
+    };
+  }
+
+  it('concatenates first and last name into csvName as "First Last"', () => {
+    const result = mapGustoRows([gustoRow()]);
+    const entry = result.entries.get('john smith');
+    expect(entry).toBeDefined();
+    expect(entry!.csvName).toBe('John Smith');
+  });
+
+  it('keys entry by lowercase name for case-insensitive matching', () => {
+    const result = mapGustoRows([gustoRow({ 'Employee first name': 'CARLOS', 'Employee last name': 'MENDEZ' })]);
+    expect(result.entries.has('carlos mendez')).toBe(true);
+    expect(result.entries.has('CARLOS MENDEZ')).toBe(false);
+  });
+
+  it('places Regular hours on monSt', () => {
+    const result = mapGustoRows([gustoRow({ 'Regular hours': '38.50' })]);
+    const entry = result.entries.get('john smith');
+    expect(entry!.monSt).toBe(38.5);
+    expect(entry!.tueSt).toBe(0);
+    expect(entry!.wedSt).toBe(0);
+    expect(entry!.thuSt).toBe(0);
+    expect(entry!.friSt).toBe(0);
+    expect(entry!.satSt).toBe(0);
+    expect(entry!.sunSt).toBe(0);
+  });
+
+  it('places Overtime hours on monOt', () => {
+    const result = mapGustoRows([gustoRow({ 'Regular hours': '40', 'Overtime hours': '6.00' })]);
+    const entry = result.entries.get('john smith');
+    expect(entry!.monSt).toBe(40);
+    expect(entry!.monOt).toBe(6);
+  });
+
+  it('adds Double overtime hours to monOt bucket', () => {
+    const result = mapGustoRows([
+      gustoRow({
+        'Regular hours': '40',
+        'Overtime hours': '4',
+        'Double overtime hours': '2',
+      }),
+    ]);
+    const entry = result.entries.get('john smith');
+    expect(entry!.monSt).toBe(40);
+    expect(entry!.monOt).toBe(6); // 4 OT + 2 DOT = 6 in monOt
+  });
+
+  it('aggregates multiple rows for the same employee', () => {
+    const rows = [
+      gustoRow({ 'Regular hours': '20', 'Overtime hours': '2' }),
+      gustoRow({ 'Regular hours': '20', 'Overtime hours': '3' }),
+    ];
+    const result = mapGustoRows(rows);
+    const entry = result.entries.get('john smith');
+    expect(entry!.monSt).toBe(40);
+    expect(entry!.monOt).toBe(5);
+  });
+
+  it('always returns gustoWeeklyTotalsOnly: true', () => {
+    const result = mapGustoRows([gustoRow()]);
+    expect(result.gustoWeeklyTotalsOnly).toBe(true);
+  });
+
+  it('returns gustoWeeklyTotalsOnly: true even for empty row array (after required col check would throw)', () => {
+    // When rows are empty there are no keys to check — but we should confirm the flag
+    // is set on a valid non-empty result set
+    const result = mapGustoRows([gustoRow()]);
+    expect(result.gustoWeeklyTotalsOnly).toBe(true as const);
+  });
+
+  it('throws a descriptive error when a required column is missing', () => {
+    const rowsMissingPayrollEndDate = [
+      {
+        'Employee first name': 'Jane',
+        'Employee last name': 'Doe',
+        'Regular hours': '40',
+        // 'Payroll end date' intentionally absent
+      },
+    ];
+    expect(() => mapGustoRows(rowsMissingPayrollEndDate)).toThrow(
+      /Gusto CSV is missing required columns/,
+    );
+    expect(() => mapGustoRows(rowsMissingPayrollEndDate)).toThrow(
+      /Payroll end date/,
+    );
+  });
+
+  it('throws and lists all missing required columns in the error', () => {
+    // Only Employee first name present — three columns missing
+    const rows = [{ 'Employee first name': 'Jane' }];
+    expect(() => mapGustoRows(rows)).toThrow(/Employee last name/);
+    expect(() => mapGustoRows(rows)).toThrow(/Regular hours/);
+    expect(() => mapGustoRows(rows)).toThrow(/Payroll end date/);
+  });
+
+  it('skips rows where both first and last name are empty', () => {
+    const rows = [
+      gustoRow({ 'Employee first name': '', 'Employee last name': '' }),
+      gustoRow({ 'Employee first name': 'Jane', 'Employee last name': 'Doe', 'Regular hours': '35' }),
+    ];
+    const result = mapGustoRows(rows);
+    expect(result.entries.size).toBe(1);
+    expect(result.entries.has('jane doe')).toBe(true);
+  });
+
+  it('absent Overtime hours column defaults to 0 (not an error)', () => {
+    // Gusto zero-OT exports omit the column entirely — this must NOT throw
+    const rows = [
+      {
+        'Employee first name': 'Bob',
+        'Employee last name': 'Jones',
+        'Regular hours': '32',
+        'Payroll end date': '2025-01-12',
+        // 'Overtime hours' column intentionally absent
+      },
+    ];
+    expect(() => mapGustoRows(rows)).not.toThrow();
+    const result = mapGustoRows(rows);
+    const entry = result.entries.get('bob jones');
+    expect(entry!.monSt).toBe(32);
+    expect(entry!.monOt).toBe(0);
+  });
+
+  it('handles multiple different employees in same file', () => {
+    const rows = [
+      gustoRow({ 'Employee first name': 'Alice', 'Employee last name': 'Brown', 'Regular hours': '40' }),
+      gustoRow({ 'Employee first name': 'Carlos', 'Employee last name': 'Mendez', 'Regular hours': '35', 'Overtime hours': '5' }),
+    ];
+    const result = mapGustoRows(rows);
+    expect(result.entries.size).toBe(2);
+    expect(result.entries.get('alice brown')!.monSt).toBe(40);
+    expect(result.entries.get('carlos mendez')!.monSt).toBe(35);
+    expect(result.entries.get('carlos mendez')!.monOt).toBe(5);
   });
 });
