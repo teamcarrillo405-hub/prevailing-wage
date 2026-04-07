@@ -18,6 +18,7 @@ import {
 } from '../db/schema.js';
 import { mapQbRows } from './qbMapper.js';
 import { mapAdpRows } from './adpMapper.js';
+import { mapGustoRows } from './gustoMapper.js';
 import type { ImportPreviewResult, ImportedRow, UnmatchedRow, ConflictRow } from './importTypes.js';
 
 type DrizzleDb = BetterSQLite3Database<typeof schema>;
@@ -34,10 +35,13 @@ const QB_SIGNATURES = [
 
 const ADP_SIGNATURE = ['Co Code', 'File #'];
 
+// Gusto Payroll Journal Report — 4-column signature (most specific, check before ADP)
+const GUSTO_SIGNATURE = ['Employee first name', 'Employee last name', 'Regular hours', 'Payroll end date'];
+
 // ── detectProvider ─────────────────────────────────────────────────────────
 // Detects payroll provider from CSV header row.
 // Case-insensitive match with trim.
-export function detectProvider(headers: string[]): 'quickbooks' | 'adp' | 'unknown' {
+export function detectProvider(headers: string[]): 'quickbooks' | 'adp' | 'gusto' | 'unknown' {
   const normalised = headers.map((h) => h.trim().toLowerCase());
 
   // Check QB signatures
@@ -45,6 +49,11 @@ export function detectProvider(headers: string[]): 'quickbooks' | 'adp' | 'unkno
     if (sig.every((col) => normalised.includes(col.toLowerCase()))) {
       return 'quickbooks';
     }
+  }
+
+  // Check Gusto signature (most specific — 4 columns; check before ADP)
+  if (GUSTO_SIGNATURE.every((col) => normalised.includes(col.toLowerCase()))) {
+    return 'gusto';
   }
 
   // Check ADP signature
@@ -77,7 +86,7 @@ export async function parseImportFile(
   const provider = detectProvider(fields);
   if (provider === 'unknown') {
     throw new Error(
-      'Could not detect payroll provider. Upload a QuickBooks Time by Employee Detail or ADP payroll export.',
+      'Could not detect payroll provider. Upload a QuickBooks, ADP, or Gusto payroll export.',
     );
   }
 
@@ -95,11 +104,17 @@ export async function parseImportFile(
   // 4. Map rows using appropriate mapper
   let entriesMap: Map<string, { csvName: string; monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }>;
   let adpWeeklyTotalsOnly: boolean | undefined;
+  let gustoWeeklyTotalsOnly: boolean | undefined;
 
   if (provider === 'quickbooks') {
     const mapped = mapQbRows(result.data, weekRow.weekEndingDate);
     entriesMap = mapped.entries;
+  } else if (provider === 'gusto') {
+    const mapped = mapGustoRows(result.data);
+    entriesMap = mapped.entries;
+    gustoWeeklyTotalsOnly = mapped.gustoWeeklyTotalsOnly;
   } else {
+    // ADP
     const mapped = mapAdpRows(result.data);
     entriesMap = mapped.entries;
     adpWeeklyTotalsOnly = mapped.adpWeeklyTotalsOnly;
@@ -284,6 +299,10 @@ export async function parseImportFile(
 
   if (adpWeeklyTotalsOnly) {
     previewResult.adpWeeklyTotalsOnly = true;
+  }
+
+  if (gustoWeeklyTotalsOnly) {
+    previewResult.gustoWeeklyTotalsOnly = true;
   }
 
   return previewResult;
