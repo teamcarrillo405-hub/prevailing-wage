@@ -240,6 +240,94 @@ describe('mapAdpRows', () => {
   });
 });
 
+// ── detectProvider - Paychex ───────────────────────────────────────────────
+
+describe('detectProvider - Paychex', () => {
+  it('returns paychex for Paychex Flex headers with Pay Component and Worker ID', () => {
+    expect(
+      detectProvider(['Pay Component', 'Worker ID', 'Hours', 'Line Date']),
+    ).toBe('paychex');
+  });
+
+  it('returns paychex even with extra columns mixed in', () => {
+    expect(
+      detectProvider(['Company', 'Worker ID', 'Pay Component', 'Pay Period', 'Hours', 'Line Date']),
+    ).toBe('paychex');
+  });
+
+  it('is case-insensitive for Paychex detection', () => {
+    expect(
+      detectProvider(['pay component', 'worker id', 'hours', 'line date']),
+    ).toBe('paychex');
+  });
+
+  it('does not return paychex without Worker ID column', () => {
+    expect(
+      detectProvider(['Pay Component', 'Employee Name', 'Hours']),
+    ).not.toBe('paychex');
+  });
+});
+
+// ── detectProvider - Sage 300 ───────────────────────────────────────────────
+
+describe('detectProvider - Sage 300', () => {
+  const SAGE_300_HEADERS = ['Employee', 'Date', 'Job', 'Extra', 'Cost Code', 'Category', 'Certified', 'PayID', 'Units'];
+
+  it('returns sage_300 for Sage 300 CRE positional headers', () => {
+    expect(detectProvider(SAGE_300_HEADERS)).toBe('sage_300');
+  });
+
+  it('returns sage_300 with extra columns after the 9 positional ones', () => {
+    expect(detectProvider([...SAGE_300_HEADERS, 'Extra Column'])).toBe('sage_300');
+  });
+
+  it('is case-insensitive for Sage 300 detection', () => {
+    expect(detectProvider(SAGE_300_HEADERS.map((h) => h.toLowerCase()))).toBe('sage_300');
+  });
+
+  it('does NOT false-positive sage_300 on QB Desktop headers (Employee at index 0)', () => {
+    // QB Desktop starts with Employee but second col is Date, third is Duration (not Job)
+    expect(
+      detectProvider(['Employee', 'Date', 'Duration', 'Customer:Job', 'Payroll Item']),
+    ).not.toBe('sage_300');
+  });
+
+  it('does NOT false-positive sage_300 on QB Online headers', () => {
+    expect(
+      detectProvider(['Employee Name', 'Date', 'Hours', 'Customer/Project']),
+    ).not.toBe('sage_300');
+  });
+
+  it('Sage 300 checked before Paychex — Sage 300 positional does not misfire as Paychex', () => {
+    // Sage 300 has 'Employee' not 'Worker ID' + 'Pay Component', so can't be Paychex anyway
+    // But confirm the right provider is returned
+    expect(detectProvider(SAGE_300_HEADERS)).toBe('sage_300');
+  });
+});
+
+// ── detectProvider - Sage 100 ───────────────────────────────────────────────
+
+describe('detectProvider - Sage 100', () => {
+  it('returns sage_100 for Sage 100 Check Register headers with Employee Name', () => {
+    expect(
+      detectProvider(['Employee Name', 'Date', 'Hours', 'Pay Type']),
+    ).toBe('sage_100');
+  });
+
+  it('does not return sage_100 for QB Online headers (Employee Name + Hours) — QB is more specific', () => {
+    // QB Online also has 'Employee Name' + 'Hours' — QB signature takes priority
+    expect(
+      detectProvider(['Employee Name', 'Date', 'Hours', 'Customer/Project']),
+    ).toBe('quickbooks');
+  });
+
+  it('is case-insensitive for sage_100 detection', () => {
+    expect(
+      detectProvider(['employee name', 'date', 'hours', 'pay type']),
+    ).toBe('sage_100');
+  });
+});
+
 // ── detectProvider - Gusto ──────────────────────────────────────────────────
 
 describe('detectProvider - Gusto', () => {

@@ -4,7 +4,7 @@
 // Phase 35 — Payroll Import Server Pipeline.
 
 import Papa from 'papaparse';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../db/schema.js';
 import {
@@ -15,18 +15,25 @@ import {
   projects,
   wageDeterminations,
   wageClassifications,
+  payrollProviderMappings,
 } from '../db/schema.js';
 import { mapQbRows } from './qbMapper.js';
 import { mapAdpRows } from './adpMapper.js';
 import { mapGustoRows } from './gustoMapper.js';
-import type { ImportPreviewResult, ImportedRow, UnmatchedRow, ConflictRow } from './importTypes.js';
+import { mapPaychexRows } from './paychexMapper.js';
+import { isSage300CRE, mapSage300Rows, mapSage100Rows } from './sage300Mapper.js';
+import type { ImportProvider, ImportPreviewResult, ImportedRow, UnmatchedRow, ConflictRow } from './importTypes.js';
 
 type DrizzleDb = BetterSQLite3Database<typeof schema>;
 
-// ── QB / ADP column signatures for provider detection ─────────────────────
+// ── Column signatures for provider detection ──────────────────────────────
 // QB Desktop: has "Employee" + "Duration"
 // QB Online:  has "Employee Name" + "Hours"
 // ADP Run:    has "Co Code" + "File #"
+// Gusto:      has all 4 Payroll Journal columns
+// Sage 300:   first 9 columns positional (via isSage300CRE)
+// Paychex:    has "Pay Component" + "Worker ID"
+// Sage 100:   has "Employee Name" + "Pay Type" (but NOT matching Sage 300 positional)
 
 const QB_SIGNATURES = [
   ['Employee', 'Duration'],       // QB Desktop Time by Employee Detail
@@ -38,25 +45,56 @@ const ADP_SIGNATURE = ['Co Code', 'File #'];
 // Gusto Payroll Journal Report — 4-column signature (most specific, check before ADP)
 const GUSTO_SIGNATURE = ['Employee first name', 'Employee last name', 'Regular hours', 'Payroll end date'];
 
+// Paychex Flex — 2-column presence check
+const PAYCHEX_SIGNATURE = ['Pay Component', 'Worker ID'];
+
+// Sage 100 Contractor — name-based path (Employee Name + Pay Type distinguishes from QB Online)
+const SAGE_100_SIGNATURE = ['Employee Name', 'Pay Type'];
+
 // ── detectProvider ─────────────────────────────────────────────────────────
 // Detects payroll provider from CSV header row.
 // Case-insensitive match with trim.
-export function detectProvider(headers: string[]): 'quickbooks' | 'adp' | 'gusto' | 'unknown' {
+//
+// Detection priority order (most specific first to avoid misfire):
+//   1. Gusto (4-column signature — most specific)
+//   2. Sage 300 CRE (positional 9-col via isSage300CRE — checked before Paychex)
+//   3. Sage 100 (Employee Name + Pay Type — checked before QB Online to avoid QB misfires)
+//   4. QB Desktop / QB Online signatures
+//   5. Paychex (2-col presence: Pay Component + Worker ID)
+//   6. ADP
+//   7. unknown
+export function detectProvider(headers: string[]): ImportProvider | 'unknown' {
   const normalised = headers.map((h) => h.trim().toLowerCase());
 
-  // Check QB signatures
+  // 1. Check Gusto signature (most specific — 4 columns)
+  if (GUSTO_SIGNATURE.every((col) => normalised.includes(col.toLowerCase()))) {
+    return 'gusto';
+  }
+
+  // 2. Check Sage 300 CRE (positional 9-column check — more specific than presence checks)
+  if (isSage300CRE(headers)) {
+    return 'sage_300';
+  }
+
+  // 3. Check Sage 100 (Employee Name + Pay Type — checked before QB Online)
+  //    Sage 100 has 'Pay Type' which QB does not — this distinguishes the two.
+  if (SAGE_100_SIGNATURE.every((col) => normalised.includes(col.toLowerCase()))) {
+    return 'sage_100';
+  }
+
+  // 4. Check QB signatures (Desktop and Online)
   for (const sig of QB_SIGNATURES) {
     if (sig.every((col) => normalised.includes(col.toLowerCase()))) {
       return 'quickbooks';
     }
   }
 
-  // Check Gusto signature (most specific — 4 columns; check before ADP)
-  if (GUSTO_SIGNATURE.every((col) => normalised.includes(col.toLowerCase()))) {
-    return 'gusto';
+  // 5. Check Paychex signature (2-col presence)
+  if (PAYCHEX_SIGNATURE.every((col) => normalised.includes(col.toLowerCase()))) {
+    return 'paychex';
   }
 
-  // Check ADP signature
+  // 6. Check ADP signature
   if (ADP_SIGNATURE.every((col) => normalised.includes(col.toLowerCase()))) {
     return 'adp';
   }
@@ -86,7 +124,7 @@ export async function parseImportFile(
   const provider = detectProvider(fields);
   if (provider === 'unknown') {
     throw new Error(
-      'Could not detect payroll provider. Upload a QuickBooks, ADP, or Gusto payroll export.',
+      'Could not detect payroll provider. Upload a QuickBooks, ADP, Gusto, Paychex, Sage 300, or Sage 100 payroll export.',
     );
   }
 
@@ -102,22 +140,38 @@ export async function parseImportFile(
   }
 
   // 4. Map rows using appropriate mapper
-  let entriesMap: Map<string, { csvName: string; monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }>;
+  // Name-match providers (QB, ADP, Gusto, Sage 100): csvName field, resolved by name
+  // ID-match providers (Paychex, Sage 300): providerWorkerId field, resolved by payroll_provider_mappings
+
+  type NameEntry = { csvName: string; monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number };
+  type IdEntry = { providerWorkerId: string; monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number };
+
+  let nameEntriesMap: Map<string, NameEntry> | undefined;
+  let idEntriesMap: Map<string, IdEntry> | undefined;
   let adpWeeklyTotalsOnly: boolean | undefined;
   let gustoWeeklyTotalsOnly: boolean | undefined;
 
   if (provider === 'quickbooks') {
     const mapped = mapQbRows(result.data, weekRow.weekEndingDate);
-    entriesMap = mapped.entries;
+    nameEntriesMap = mapped.entries;
   } else if (provider === 'gusto') {
     const mapped = mapGustoRows(result.data);
-    entriesMap = mapped.entries;
+    nameEntriesMap = mapped.entries;
     gustoWeeklyTotalsOnly = mapped.gustoWeeklyTotalsOnly;
-  } else {
-    // ADP
+  } else if (provider === 'adp') {
     const mapped = mapAdpRows(result.data);
-    entriesMap = mapped.entries;
+    nameEntriesMap = mapped.entries;
     adpWeeklyTotalsOnly = mapped.adpWeeklyTotalsOnly;
+  } else if (provider === 'paychex') {
+    const mapped = mapPaychexRows(result.data);
+    idEntriesMap = mapped.entries;
+  } else if (provider === 'sage_300') {
+    const mapped = mapSage300Rows(result.data);
+    idEntriesMap = mapped.entries;
+  } else {
+    // sage_100 — name-based path
+    const mapped = mapSage100Rows(result.data);
+    nameEntriesMap = mapped.entries;
   }
 
   // 5. Fetch project with wageDeterminationId
@@ -189,21 +243,6 @@ export async function parseImportFile(
     }
   }
 
-  // Build name lookup: lowercase name -> first active classification for that worker
-  // (per D-05: use first active classification — contractor can adjust in Phase 36)
-  const nameLookup = new Map<string, WorkerRow>();
-  for (const row of workerRows) {
-    const key = row.workerName.toLowerCase().trim();
-    if (!nameLookup.has(key)) {
-      const rates = rateMap.get(row.tradeCode) ?? { baseRate: 0, fringeRate: 0 };
-      nameLookup.set(key, {
-        ...row,
-        baseRateSnapshot: rates.baseRate,
-        fringeRateSnapshot: rates.fringeRate,
-      });
-    }
-  }
-
   // 7. Fetch existing payrollEntries for conflict detection (per D-06)
   const existingEntries = db
     .select({
@@ -219,74 +258,164 @@ export async function parseImportFile(
   );
 
   // 8. Bucket each CSV employee into matched / unmatched / conflict
+
   const matched: ImportedRow[] = [];
   const unmatched: UnmatchedRow[] = [];
   const conflicts: ConflictRow[] = [];
 
-  for (const [_key, csvEntry] of entriesMap) {
-    const lookupKey = csvEntry.csvName.toLowerCase().trim();
-    const workerMatch = nameLookup.get(lookupKey);
+  // Helper: push an entry's hours into an UnmatchedRow
+  function pushUnmatched(displayName: string, entry: { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }) {
+    unmatched.push({
+      csvName: displayName,
+      hours: {
+        monSt: entry.monSt, tueSt: entry.tueSt, wedSt: entry.wedSt, thuSt: entry.thuSt,
+        friSt: entry.friSt, satSt: entry.satSt, sunSt: entry.sunSt,
+        monOt: entry.monOt, tueOt: entry.tueOt, wedOt: entry.wedOt, thuOt: entry.thuOt,
+        friOt: entry.friOt, satOt: entry.satOt, sunOt: entry.sunOt,
+      },
+    });
+  }
 
-    if (!workerMatch) {
-      // No matching project worker
-      unmatched.push({
-        csvName: csvEntry.csvName,
-        hours: {
-          monSt: csvEntry.monSt,
-          tueSt: csvEntry.tueSt,
-          wedSt: csvEntry.wedSt,
-          thuSt: csvEntry.thuSt,
-          friSt: csvEntry.friSt,
-          satSt: csvEntry.satSt,
-          sunSt: csvEntry.sunSt,
-          monOt: csvEntry.monOt,
-          tueOt: csvEntry.tueOt,
-          wedOt: csvEntry.wedOt,
-          thuOt: csvEntry.thuOt,
-          friOt: csvEntry.friOt,
-          satOt: csvEntry.satOt,
-          sunOt: csvEntry.sunOt,
-        },
-      });
-      continue;
-    }
-
-    const conflictKey = `${workerMatch.workerId}::${workerMatch.classificationId}`;
-    if (conflictSet.has(conflictKey)) {
-      // Worker already has a payroll entry for this week
-      conflicts.push({
-        csvName: csvEntry.csvName,
-        workerId: workerMatch.workerId,
-        workerName: workerMatch.workerName,
-        reason: 'Worker already has a manual entry for this week. Delete it before importing.',
-      });
-      continue;
-    }
-
-    // Matched with no conflict
+  // Helper: push a matched entry
+  function pushMatched(csvName: string, workerMatch: WorkerRow, entry: { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }) {
     matched.push({
-      csvName: csvEntry.csvName,
+      csvName,
       workerId: workerMatch.workerId,
       workerName: workerMatch.workerName,
       classificationId: workerMatch.classificationId,
       classificationName: workerMatch.classificationName,
       baseRateSnapshot: workerMatch.baseRateSnapshot,
       fringeRateSnapshot: workerMatch.fringeRateSnapshot,
-      monSt: csvEntry.monSt,
-      tueSt: csvEntry.tueSt,
-      wedSt: csvEntry.wedSt,
-      thuSt: csvEntry.thuSt,
-      friSt: csvEntry.friSt,
-      satSt: csvEntry.satSt,
-      sunSt: csvEntry.sunSt,
-      monOt: csvEntry.monOt,
-      tueOt: csvEntry.tueOt,
-      wedOt: csvEntry.wedOt,
-      thuOt: csvEntry.thuOt,
-      friOt: csvEntry.friOt,
-      satOt: csvEntry.satOt,
-      sunOt: csvEntry.sunOt,
+      monSt: entry.monSt, tueSt: entry.tueSt, wedSt: entry.wedSt, thuSt: entry.thuSt,
+      friSt: entry.friSt, satSt: entry.satSt, sunSt: entry.sunSt,
+      monOt: entry.monOt, tueOt: entry.tueOt, wedOt: entry.wedOt, thuOt: entry.thuOt,
+      friOt: entry.friOt, satOt: entry.satOt, sunOt: entry.sunOt,
     });
+  }
+
+  // ── ID-match path (Paychex, Sage 300) ─────────────────────────────────────
+  // Resolve workers via payroll_provider_mappings table.
+  let idMappingRequired: boolean | undefined;
+  let unmappedIds: string[] | undefined;
+
+  if (idEntriesMap !== undefined) {
+    const providerWorkerIds = [...idEntriesMap.keys()];
+
+    // Build workerIdLookup: workerId -> WorkerRow (for ID-mapped providers)
+    const workerIdLookup = new Map<string, WorkerRow>();
+    for (const row of workerRows) {
+      if (!workerIdLookup.has(row.workerId)) {
+        const rates = rateMap.get(row.tradeCode) ?? { baseRate: 0, fringeRate: 0 };
+        workerIdLookup.set(row.workerId, {
+          ...row,
+          baseRateSnapshot: rates.baseRate,
+          fringeRateSnapshot: rates.fringeRate,
+        });
+      }
+    }
+
+    // Query existing mappings for this project + provider + providerWorkerIds
+    const existingMappings = providerWorkerIds.length > 0
+      ? db
+          .select({
+            providerWorkerId: payrollProviderMappings.providerWorkerId,
+            workerId: payrollProviderMappings.workerId,
+          })
+          .from(payrollProviderMappings)
+          .where(and(
+            eq(payrollProviderMappings.projectId, projectId),
+            eq(payrollProviderMappings.provider, provider),
+            inArray(payrollProviderMappings.providerWorkerId, providerWorkerIds),
+          ))
+          .all() as Array<{ providerWorkerId: string; workerId: string }>
+      : [];
+
+    // Build mapping lookup: providerWorkerId -> workerId
+    const mappingLookup = new Map<string, string>();
+    for (const m of existingMappings) {
+      mappingLookup.set(m.providerWorkerId, m.workerId);
+    }
+
+    // Resolve entries
+    const unmappedIdsList: string[] = [];
+
+    for (const [providerWorkerId, entry] of idEntriesMap) {
+      const mappedWorkerId = mappingLookup.get(providerWorkerId);
+
+      if (!mappedWorkerId) {
+        // No mapping found — add to unmatched and collect in unmappedIds
+        unmappedIdsList.push(providerWorkerId);
+        pushUnmatched(providerWorkerId, entry);
+        continue;
+      }
+
+      const workerMatch = workerIdLookup.get(mappedWorkerId);
+
+      if (!workerMatch) {
+        // Mapping exists but worker not found in project — treat as unmatched
+        unmappedIdsList.push(providerWorkerId);
+        pushUnmatched(providerWorkerId, entry);
+        continue;
+      }
+
+      const conflictKey = `${workerMatch.workerId}::${workerMatch.classificationId}`;
+      if (conflictSet.has(conflictKey)) {
+        conflicts.push({
+          csvName: providerWorkerId,
+          workerId: workerMatch.workerId,
+          workerName: workerMatch.workerName,
+          reason: 'Worker already has a manual entry for this week. Delete it before importing.',
+        });
+        continue;
+      }
+
+      // Use worker name as csvName for clarity (not the numeric ID)
+      pushMatched(workerMatch.workerName, workerMatch, entry);
+    }
+
+    idMappingRequired = unmappedIdsList.length > 0;
+    unmappedIds = unmappedIdsList;
+  }
+
+  // ── Name-match path (QB, ADP, Gusto, Sage 100) ───────────────────────────
+  // Resolve workers by name lookup — existing behavior.
+  if (nameEntriesMap !== undefined) {
+    // Build name lookup: lowercase name -> first active classification for that worker
+    const nameLookup = new Map<string, WorkerRow>();
+    for (const row of workerRows) {
+      const key = row.workerName.toLowerCase().trim();
+      if (!nameLookup.has(key)) {
+        const rates = rateMap.get(row.tradeCode) ?? { baseRate: 0, fringeRate: 0 };
+        nameLookup.set(key, {
+          ...row,
+          baseRateSnapshot: rates.baseRate,
+          fringeRateSnapshot: rates.fringeRate,
+        });
+      }
+    }
+
+    for (const [_key, csvEntry] of nameEntriesMap) {
+      const lookupKey = csvEntry.csvName.toLowerCase().trim();
+      const workerMatch = nameLookup.get(lookupKey);
+
+      if (!workerMatch) {
+        pushUnmatched(csvEntry.csvName, csvEntry);
+        continue;
+      }
+
+      const conflictKey = `${workerMatch.workerId}::${workerMatch.classificationId}`;
+      if (conflictSet.has(conflictKey)) {
+        conflicts.push({
+          csvName: csvEntry.csvName,
+          workerId: workerMatch.workerId,
+          workerName: workerMatch.workerName,
+          reason: 'Worker already has a manual entry for this week. Delete it before importing.',
+        });
+        continue;
+      }
+
+      pushMatched(csvEntry.csvName, workerMatch, csvEntry);
+    }
   }
 
   const previewResult: ImportPreviewResult = {
@@ -303,6 +432,11 @@ export async function parseImportFile(
 
   if (gustoWeeklyTotalsOnly) {
     previewResult.gustoWeeklyTotalsOnly = true;
+  }
+
+  if (idMappingRequired !== undefined) {
+    previewResult.idMappingRequired = idMappingRequired;
+    previewResult.unmappedIds = unmappedIds ?? [];
   }
 
   return previewResult;
