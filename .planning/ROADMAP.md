@@ -796,9 +796,9 @@ Plans:
 
 **Plans**: 3 plans
 Plans:
-- [x] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
-- [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
-- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
+- [ ] 44-01-PLAN.md — DB migration + schema + types (payrollProviderMappings table, ImportProvider union)
+- [ ] 44-02-PLAN.md — Gusto CSV parser + importService integration + tests
+- [ ] 44-03-PLAN.md — Provider badge UI + Gusto weekly-totals banner
 **UI hint**: yes
 
 ---
