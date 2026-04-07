@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Workflow } from 'lucide-react';
+import { Workflow, Settings } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -24,6 +24,33 @@ interface Project {
   awardDate: string;
   status: string;
   createdAt: string;
+  projectSettings: string | null;
+}
+
+interface NotifSettings {
+  notifyViolations: boolean;
+  notifyDueSoon: boolean;
+  dueSoonDays: number;
+  notifyActivity: boolean;
+  notifySubmission: boolean;
+}
+
+const DEFAULT_NOTIF_SETTINGS: NotifSettings = {
+  notifyViolations: true,
+  notifyDueSoon: true,
+  dueSoonDays: 3,
+  notifyActivity: true,
+  notifySubmission: true,
+};
+
+function parseNotifSettings(raw: string | null | undefined): NotifSettings {
+  if (!raw) return { ...DEFAULT_NOTIF_SETTINGS };
+  try {
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_NOTIF_SETTINGS, ...parsed };
+  } catch {
+    return { ...DEFAULT_NOTIF_SETTINGS };
+  }
 }
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
@@ -101,6 +128,8 @@ export function ProjectDetailPage() {
 
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [complianceWarning, setComplianceWarning] = useState(false);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<NotifSettings>(DEFAULT_NOTIF_SETTINGS);
 
   const archiveMutation = useMutation({
     mutationFn: () => api.delete(`/projects/${id}`),
@@ -118,6 +147,18 @@ export function ProjectDetailPage() {
     },
   });
 
+  const saveNotifMutation = useMutation({
+    mutationFn: (prefs: NotifSettings) => {
+      // Send the prefs as a JSON string in projectSettings
+      // Server-side PATCH will merge with existing keys (46-04 Task 1)
+      return api.patch(`/projects/${id}`, { projectSettings: JSON.stringify(prefs) });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', id] });
+      setNotifPanelOpen(false);
+    },
+  });
+
   async function handleArchiveClick() {
     const summary = await queryClient.fetchQuery({
       queryKey: ['compliance-summary', id],
@@ -130,6 +171,11 @@ export function ProjectDetailPage() {
     });
     setComplianceWarning(summary?.badge === 'violations');
     setArchiveModalOpen(true);
+  }
+
+  function handleOpenNotifPanel() {
+    setNotifPrefs(parseNotifSettings(project?.projectSettings));
+    setNotifPanelOpen(true);
   }
 
   const project = data?.data?.project;
@@ -214,7 +260,90 @@ export function ProjectDetailPage() {
                 {restoreMutation.isPending ? 'Restoring...' : 'Restore Project'}
               </Button>
             )}
+            <Button
+              variant="secondary"
+              onClick={handleOpenNotifPanel}
+              aria-label="Notification preferences"
+            >
+              <Settings className="w-4 h-4 mr-1.5" />
+              Notifications
+            </Button>
           </div>
+
+          {notifPanelOpen && (
+            <Card className="mt-4 max-w-lg">
+              <h3 className="font-headline text-base text-gray-900 mb-4">Notification Preferences</h3>
+              <div className="space-y-4 text-sm font-body">
+
+                <label className="flex items-center justify-between gap-4">
+                  <span className="text-gray-700">Compliance violation alerts</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand-gold"
+                    checked={notifPrefs.notifyViolations}
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifyViolations: e.target.checked }))}
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-4">
+                  <span className="text-gray-700">Team activity alerts (non-owner edits)</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand-gold"
+                    checked={notifPrefs.notifyActivity}
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifyActivity: e.target.checked }))}
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-4">
+                  <span className="text-gray-700">Submission confirmation emails</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand-gold"
+                    checked={notifPrefs.notifySubmission}
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifySubmission: e.target.checked }))}
+                  />
+                </label>
+
+                <div className="flex items-center justify-between gap-4">
+                  <label className="flex items-center gap-2 text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-brand-gold"
+                      checked={notifPrefs.notifyDueSoon}
+                      onChange={e => setNotifPrefs(p => ({ ...p, notifyDueSoon: e.target.checked }))}
+                    />
+                    Payroll due-soon reminders
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={notifPrefs.dueSoonDays}
+                      disabled={!notifPrefs.notifyDueSoon}
+                      className="w-16 border border-border-default rounded px-2 py-1 text-sm disabled:opacity-50 bg-surface-page"
+                      onChange={e => setNotifPrefs(p => ({ ...p, dueSoonDays: Math.max(1, Math.min(30, Number(e.target.value))) }))}
+                    />
+                    <span className="text-gray-500">days before</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="mt-5 flex justify-end gap-3">
+                <Button variant="secondary" onClick={() => setNotifPanelOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => saveNotifMutation.mutate(notifPrefs)}
+                  disabled={saveNotifMutation.isPending}
+                >
+                  {saveNotifMutation.isPending ? 'Saving...' : 'Save Preferences'}
+                </Button>
+              </div>
+            </Card>
+          )}
 
           {archiveModalOpen && (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
