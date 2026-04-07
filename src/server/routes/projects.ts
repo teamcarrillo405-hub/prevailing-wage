@@ -165,13 +165,31 @@ router.patch('/:id', async (req, res) => {
   const updates = parsed.data;
   const now = new Date().toISOString();
 
+  // NOTIF-05: If projectSettings is being updated, merge with current value to preserve sibling keys
+  // (NY form data, lastDueSoonNotifiedAt, and any future keys all live in this JSON blob)
+  let resolvedProjectSettings = updates.projectSettings;
+  if (updates.projectSettings !== undefined) {
+    const [current] = await db.select({ projectSettings: projects.projectSettings })
+      .from(projects)
+      .where(eq(projects.id, req.params.id))
+      .limit(1);
+    const currentParsed: Record<string, unknown> = (() => {
+      if (!current?.projectSettings) return {};
+      try { return JSON.parse(current.projectSettings); } catch { return {}; }
+    })();
+    const incomingParsed: Record<string, unknown> = (() => {
+      try { return JSON.parse(updates.projectSettings); } catch { return {}; }
+    })();
+    resolvedProjectSettings = JSON.stringify({ ...currentParsed, ...incomingParsed });
+  }
+
   await db
     .update(projects)
     .set({
       ...updates,
       ...(updates.nyprcNumber !== undefined && { nyprcNumber: updates.nyprcNumber }),
       ...(updates.nysContractorRegNumber !== undefined && { nysContractorRegNumber: updates.nysContractorRegNumber }),
-      ...(updates.projectSettings !== undefined && { projectSettings: updates.projectSettings }),
+      ...(resolvedProjectSettings !== undefined && { projectSettings: resolvedProjectSettings }),
       updatedAt: now,
     })
     .where(eq(projects.id, req.params.id));
