@@ -820,9 +820,9 @@ Plans:
 
 **Plans**: 3 plans
 Plans:
-- [ ] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
-- [ ] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
-- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
+- [ ] 45-01-PLAN.md — Paychex + Sage parsers, detectProvider + parseImportFile ID-match path
+- [ ] 45-02-PLAN.md — GET/POST mapping API routes on importRouter
+- [ ] 45-03-PLAN.md — Step 2b Map Employees UI in import modal
 **UI hint**: yes
 
 ---
