@@ -1,375 +1,532 @@
 # Feature Research
 
-**Domain:** Prevailing Wage Compliance SaaS — v3.0 New Features
-**Researched:** 2026-03-27
-**Confidence:** MEDIUM-HIGH (invite flow HIGH, CSV formats MEDIUM, API availability HIGH, SSN encryption HIGH)
+**Domain:** Prevailing Wage Compliance SaaS — v5.0 New Features
+**Researched:** 2026-04-07
+**Confidence:** HIGH (TX, FL, MA, NJ verified via official sources and multiple cross-references; sub tracking patterns confirmed via federal regulation; multi-project reporting based on industry patterns)
 
 ---
 
-## Research Questions Answered
+## Critical Pre-Scoping Finding: Florida Has No State Prevailing Wage Law
 
-### Q1: Email-Based Invite Flows — Table-Stakes Behaviors
+**Confidence: HIGH** — Multiple authoritative sources confirm.
 
-**Confidence: HIGH** — Multiple authoritative sources cross-verified.
+Florida repealed its state prevailing wage law in 1979. HB 705 (signed July 2024) further preempted all local prevailing wage ordinances (including those in Orlando, Miami-Dade, and City of Miami). As of 2026, only the **federal Davis-Bacon Act applies** to Florida construction projects, and only when federal funds are involved.
 
-Standard SaaS invite flows for team onboarding converge on the following behaviors:
+**Implication:** There is **no Florida state certified payroll form**. Florida projects use the **federal WH-347** — the same form already built in the app. No FL-specific PDF generator is needed.
 
-#### Token Design
-- Generate a **cryptographically secure token** (minimum 32 bytes of randomness, URL-safe base64 encoded)
-- Store the token **hashed** in the database, not plaintext — treat like a password hash
-- Token must encode or reference: invitee email, team/account ID, role, inviter identity, expiration timestamp
-- Tokens must be **opaque** (not JWTs) for invite flows — easier to revoke, no key management overhead
-
-#### Expiry Windows
-- Industry consensus for team invites: **7 days** is the most common default
-- Acceptable range: 24 hours (high security) to 14 days (low-friction)
-- For a flat-model compliance tool with a single invite slot, 72 hours is defensible and balances security with construction contractor realities (they may not check email daily)
-
-#### Resend Behavior (Table Stakes)
-- Resending **invalidates all prior tokens** for that invitee email — prevents forwarded-link confusion
-- Rate limiting required: 60-second cooldown per re-send action, daily cap of 5–10 sends per address
-- UI must show: "We just sent to [email]. You can resend in 60 seconds"
-- System should prevent resend if an invite was accepted within the last session
-
-#### Revocation (Table Stakes)
-- Owner must be able to **revoke a pending invite** before it is accepted
-- Revocation immediately invalidates the token in the database
-- If the invitee clicks a revoked link, show "This invite is no longer valid" — not a 500 error
-- Revoked invites should not count toward member slots
-
-#### Edge Cases (Table Stakes)
-- **Already-registered email**: If the invitee already has an account, show "This email is already registered — sign in to accept" rather than requiring a new registration
-- **Already-accepted token**: Show "Invite already used" and route to sign-in
-- **Double-click protection**: Consume token atomically on first success; later clicks are safe, expected states — return 200 or redirect gracefully
-- **Clock skew**: Allow 1–2 minute grace window to reduce false failures
-
-#### 1-Year Retention Behavior (Project-Specific)
-- When owner removes a member, **do not hard-delete** their data immediately
-- Tag records with `removed_at` timestamp; mark as read-only for removed user
-- After 365 days, data eligible for purge or archival per retention policy
-- Owner must be notified in the UI that removed member data is retained for 1 year
-
-#### Owner Transfer (Project-Specific)
-- Must require explicit confirmation step (not a single-click action)
-- Transfer should invalidate the old owner's elevated permissions atomically
-- Consider requiring the new owner to accept the transfer (invitation pattern) vs. forced assignment
+This eliminates one of the four planned state form features. The v5.0 roadmap should be adjusted: TX, MA, NJ are real builds; FL is a project flag + WH-347 routing, not a new form.
 
 ---
 
-### Q2: QuickBooks and ADP Payroll CSV Export Fields
+## Feature 1: Texas Certified Payroll (TX)
 
-**Confidence: MEDIUM** — Official ADP field list confirmed via ADP Marketplace integration docs. QuickBooks field list confirmed via community docs and third-party integration references. Exact column headers vary by product version and report type; mapping screen is mandatory.
+### What Texas Requires
 
-#### QuickBooks Payroll CSV Export
+**Confidence: HIGH** — Confirmed via Texas Government Code Chapter 2258, TXDOT manuals, and multiple compliance guides.
 
-QuickBooks does not offer a single fixed CSV export format for payroll. The data is exported via **Payroll Summary Reports** (Reports > Employees & Payroll > Payroll Summary) or custom reports exported to Excel/CSV. The columns are user-configurable.
+Texas Government Code Chapter 2258 (the state's "Little Davis-Bacon Act") requires contractors on state-funded public works to pay prevailing wages and submit weekly certified payrolls. The required form is **WH-347 or equivalent** — Texas does not mandate a Texas-specific form. The statutory language requires "the same information as required on Form WH-347."
 
-**Typical columns available in a QuickBooks Payroll Summary CSV:**
+However, for **TXDOT projects specifically**, electronic submission through **LCPtracker** is mandatory (required for all TXDOT contracts let since August 2017). This is a special provision added to Item 7 of TXDOT contracts.
 
-| Column | Notes |
-|--------|-------|
-| Employee Name | First Last or Last, First |
-| Employee ID / SSN | Configurable; SSN may appear depending on version |
-| Pay Period Start Date | |
-| Pay Period End Date | Also called "Check Date" |
-| Job / Customer:Job | Used for job costing; key for prevailing wage project mapping |
-| Work Classification | Trade/craft code (Carpenter, Electrician, etc.) |
-| Regular Hours | Numeric, 2 decimal places |
-| Overtime Hours (1.5x) | |
-| Double Overtime Hours (2x) | QuickBooks Desktop supports; QBO may not |
-| Regular Pay Rate | Hourly rate |
-| Regular Earnings | Dollar amount |
-| Overtime Earnings | Dollar amount |
-| Gross Pay | Total before deductions |
-| Federal Income Tax | Deduction |
-| State Income Tax | Deduction |
-| FICA (SS + Medicare) | Deduction |
-| Other Deductions | Union dues, benefits, etc. |
-| Net Pay | |
+### TX-Specific Fields Beyond WH-347
 
-**Key mapping challenges for import:**
-- "Job" column maps to project in the app — will require matching screen if project names differ
-- Worker name format is inconsistent (First Last vs Last, First vs Last,First)
-- QuickBooks Desktop vs QBO exports have different column layouts
-- Craft/trade codes are free-text in QuickBooks — will require normalization mapping
+The Texas/TXDOT requirement adds three fields beyond the standard WH-347:
+- **Project name and location** (the WH-347 has project fields but TX contracts require specific contract number format)
+- **Contract number** (TXDOT contract number, not the same as federal project number)
+- **Contracting agency name** (TXDOT district or the relevant agency)
 
-#### ADP Payroll CSV Export
+For non-TXDOT state-funded projects (cities, counties, school districts), the form is WH-347 with those same three additional data points. No unique per-worker fields differ from WH-347.
 
-ADP has multiple products (RUN Powered by ADP, Workforce Now, ADP PC/Payroll). The export formats differ. For prevailing wage integration, the relevant data points (confirmed via ADP Marketplace listing for Points North Certified Payroll Reporting) are:
+### Electronic Submission
 
-**ADP Workforce Now — employee fields exported:**
+TXDOT projects: LCPtracker portal (web-based upload, not a public API). Contractors submit directly to LCPtracker; the app generates the PDF/data and the user uploads manually.
 
-| Field | Notes |
-|-------|-------|
-| First Name | |
-| Last Name | |
-| Social Security Number | Full SSN — requires handling in import pipeline |
-| Employment Status | Active/Terminated |
-| Legal Address | Street, City, State, ZIP |
-| Hourly Rate / Pay Rate | |
-| EEO Code | Job classification |
-| Union Code | |
-| Gender | |
-| Original Hire Date | |
+Non-TXDOT Chapter 2258 projects: no mandated electronic portal; paper or email submission to the contracting agency.
 
-**ADP Workforce Now — payroll data fields exported:**
+### Table Stakes vs Differentiators
 
-| Field | Notes |
-|-------|-------|
-| Cost Number | Maps to project/job code |
-| Pay Period End Date | |
-| Hours Worked | Total hours |
-| Earnings Data | Broken out by pay code |
-| Deductions Withheld | |
-| Taxes Withheld | |
+| Feature | Category | Complexity | Notes |
+|---------|----------|------------|-------|
+| TX project flag + state gate | Table Stakes | LOW | Same pattern as CA, WA, NY, IL |
+| WH-347 reuse for TX (no new form) | Table Stakes | VERY LOW | TX uses WH-347; existing generator covers it |
+| TX contract number field on projects | Table Stakes | LOW | New project field: `txContractNumber` |
+| TXDOT LCPtracker submission guide | Differentiator | LOW | Modal with LCPtracker portal URL + upload checklist |
 
-**ADP RUN (small business product) — CSV timesheet import/export columns:**
+### What Makes TX Different From WH-347
 
-| Column # | Column Name | Notes |
-|----------|-------------|-------|
-| 1 | Co Code | 3-character company code |
-| 2 | Batch ID | YYMMDD date stamp, auto-increments |
-| 3 | File # | Unique employee ID (ADP Payroll System ID) |
-| 7 | Reg Hours | Regular paid hours, 2 decimal places |
-| 8 | O/T Hours | Overtime hours (includes double OT) |
+TX is structurally identical to the federal WH-347. The only differences are: (1) three additional project-header fields, (2) submission goes to LCPtracker for TXDOT projects vs a federal contracting agency. No per-worker row differences.
 
-**Key mapping challenges for ADP import:**
-- ADP File # (employee ID) will not match worker IDs in the app — name + last-4 SSN matching required
-- ADP exports full SSN — import pipeline must hash/encrypt immediately on ingest, never persist plaintext
-- "Cost Number" (project code) must be mapped to app projects — mapping screen required
-- ADP RUN and ADP Workforce Now produce different file formats; v3.0 should target **both** but treat them as separate parsers
+**Build recommendation:** TX does not need a new PDF generator. Reuse `fillWh347()` and add a TX-specific project-header overlay for the contract number and agency fields. Gate on `state === "TX"`.
 
 ---
 
-### Q3: CA DIR eCPR and WA L&I PWIA Public API Availability
+## Feature 2: Florida Certified Payroll (FL)
 
-**Confidence: HIGH** — Multiple official sources, vendor confirmations, and direct portal inspection all converge on the same finding.
+### What Florida Requires
 
-#### CA DIR eCPR — VERDICT: NO PUBLIC REST API EXISTS
+**Confidence: HIGH** — Confirmed definitively.
 
-**Finding: The CA DIR eCPR system does NOT offer a public REST API or programmatic submission endpoint.**
+Florida has **no state prevailing wage law and no state certified payroll form**. Only the federal Davis-Bacon Act applies in Florida, and only on federally funded projects.
 
-Evidence:
-- Official CA DIR submission page (`dir.ca.gov/public-works/certified-payroll-reporting.html`) documents only two methods: (1) online iForm portal, (2) XML file upload through the web interface
-- All third-party software vendors (Quantum Project Manager, Sunburst Software Solutions) generate XML files that users manually upload through the eCPR web portal — none have programmatic API access
-- The eCPR system has an XML schema (v1.3, published at `dir.ca.gov`) but uploading the XML requires authenticated web browser interaction, not an API call
-- No developer portal, API documentation, OAuth flow, or API key mechanism was found in any official or third-party source
-- The eCPR portal URL is `https://efiling.dir.ca.gov/eCPR/pages/home.jsp` — a JSP web application, not an API endpoint
+### Build Recommendation
 
-**Implication for AS-01 (CA eCPR Auto-Submit):** The conditional requirement "direct API submission — conditional on public API existing" evaluates to **FALSE**. The CA eCPR auto-submit feature (AS-01) **cannot be built** as a direct API integration. The current app's existing XML export feature is already the correct and complete integration pattern for CA DIR.
+Add `"FL"` to the state enum. FL projects use the standard WH-347 (already built). No new PDF generator is needed.
 
-**Possible alternative (LOW confidence, unverified):** Browser automation (Puppeteer/Playwright) could theoretically automate the web upload. This is fragile, may violate CA DIR terms of service, and is not a supported integration pattern. Not recommended.
+A FL project flag is still useful for:
+- Showing "Federal WH-347 required (Florida has no state prevailing wage law)" messaging on the project detail page
+- Ensuring the existing WH-347 generator is available
+- Future-proofing if FL ever enacts a state law
 
-#### WA L&I PWIA — VERDICT: NO PUBLIC REST API EXISTS
+| Feature | Category | Complexity | Notes |
+|---------|----------|------------|-------|
+| FL project flag | Table Stakes | VERY LOW | Add "FL" to state enum; route to WH-347 |
+| FL informational callout | Differentiator | VERY LOW | HelpCallout: "Florida uses federal WH-347 only" |
 
-**Finding: The WA L&I PWIA system does NOT offer a public REST API or programmatic submission endpoint.**
-
-Evidence:
-- Official WA L&I documentation (`lni.wa.gov/licensing-permits/_docs/xml%20payroll%20guide.pdf`) describes only XML file upload through the PWIA web portal
-- The PWIA XML schema is public (`lni.wa.gov/licensing-permits/_docs/xmlschema.xsd`) but submission requires authenticated web session at `secureaccess.wa.gov/lni/pwia/CertifiedPayroll.aspx`
-- Third-party tools (LCPtracker, documented in Tacoma guide v1.3) generate XML and guide users to upload manually — no API integration path exists
-- SecureAccess Washington login page (`secureaccess.wa.gov`) is a standard forms-based authentication portal, not an OAuth/API gateway
-- No WA L&I developer portal, API documentation, or REST endpoint was found in any source
-
-**Implication for AS-02 (WA PWIA Auto-Submit):** The conditional requirement "direct API submission — conditional on public API existing" evaluates to **FALSE**. The WA PWIA auto-submit feature (AS-02) **cannot be built** as a direct API integration. The current app's existing WA PWIA XML export feature is the correct and complete integration.
-
-**Summary for Planner:** Both AS-01 and AS-02 are **blocked on API non-existence**. These features should be re-scoped or removed from v3.0. The existing XML export workflow (download XML, manually upload to portal) is the industry-standard pattern used by all certified payroll software vendors.
+**This is a 1-2 plan feature, not a multi-phase state form build.**
 
 ---
 
-### Q4: SSN Encryption Table-Stakes Behaviors
+## Feature 3: Massachusetts Weekly Payroll Report (MA)
 
-**Confidence: HIGH** — Multiple authoritative sources (Skyflow, Strac, SOC 2 guidance, pgcrypto docs) cross-verified.
+### What Massachusetts Requires
 
-#### Encryption Standard
-- **AES-256-GCM** is the industry standard for SSN encryption at the field/column level (GCM mode preferred over CBC — provides authenticated encryption, detects tampering)
-- AES-SIV is an alternative when deterministic (searchable) encryption is needed — maintains consistent ciphertext for the same input, enabling lookups without decryption
-- For this app, **AES-256-GCM with a random IV per record** is correct — SSNs are not searched by value, only retrieved for display/pre-fill
+**Confidence: HIGH** — Confirmed via Massachusetts General Law c. 149 s. 27B, DLS official form references, and multiple compliance guides.
 
-#### What to Encrypt
-- **Full SSN** (9 digits) for newly captured records
-- **Existing last-4 SSN** values: these are partial data, not full SSNs — they should be encrypted at rest using the same AES-256 key, but they remain last-4 only (do not need to be upgraded to full SSN unless the user provides the full SSN)
-- Plaintext SSN must never be stored; it must never appear in logs, error messages, or API responses
+Massachusetts DLS (Department of Labor Standards) issues a state-specific **"Weekly Certified Payroll Report and Workforce Participation Form"**. This is distinct from the federal WH-347. All contractors and subcontractors on Massachusetts public works projects (any project over $10,000) must submit this form weekly to the awarding authority.
 
-#### Key Management (Table Stakes)
-- Encryption key must NOT be stored in the database alongside encrypted data
-- Correct storage options (in order of preference):
-  1. Cloud KMS (AWS KMS, Google Cloud KMS, Azure Key Vault) — key never leaves the KMS, encryption/decryption calls are audited
-  2. Environment variable at runtime (acceptable for solo/small deployments, not ideal)
-  3. Never: hardcoded in source code, stored in `.env` committed to git, stored in the same database as encrypted data
-- For this app's scale: **environment variable stored in Railway/Vercel secrets** with a documented rotation procedure is the pragmatic minimum
-- Key should be a 32-byte (256-bit) random value, base64-encoded for storage as env var
+The form is available at: `mass.gov/doc/weekly-certified-payroll-report/download`
 
-#### Key Rotation (Table Stakes)
-- Rotation procedure must exist even if not automated: generate new key, re-encrypt all SSN fields, retire old key
-- Each encrypted record should store the **key version** alongside the ciphertext (e.g., `{v:1, iv:"...", ct:"..."}`) so re-encryption can be done record-by-record without downtime
-- Rotation frequency: annually at minimum for compliance software; immediately upon suspected compromise
+### MA Form Fields vs WH-347
 
-#### Audit Logging (Table Stakes)
-- Log every SSN decryption event: timestamp, user ID, worker ID, action context (e.g., "PDF generation," "eCPR pre-fill")
-- Do NOT log the decrypted value itself
-- Audit log must be append-only and protected from modification
-- Compliance software should retain audit logs for at least 3 years (aligns with prevailing wage record retention)
+**Header fields (same as WH-347 equivalent):**
+- Company name, address, phone number
+- Payroll number (sequential)
+- Work week ending date
+- Awarding authority name
+- Public works project name and location
+- Contract number
+- Taxpayer ID (FEIN)
+- Min. Wage Rate Sheet number (references the DLS wage schedule)
+- General/prime contractor name
+- Subcontractor name (separate field)
+- Employer signature and title
 
-#### UI Masking (Table Stakes)
-- SSN must **never appear unmasked in the UI** — display as `XXX-XX-1234` (last 4 only) at all times
-- The existing last-4 display pattern is correct; the upgrade path is: store full SSN encrypted, continue to display last-4 in UI
-- CA eCPR and WA PWIA XML pre-fill: full SSN is written into the XML file at generation time (decrypt → write to file → file is discarded after download/upload). The SSN is never returned to the browser.
+**Per-worker row fields — MA-specific differences from WH-347:**
 
-#### Migration of Existing last-4 Data
-- Existing `ssn_last4` fields cannot be "upgraded" to full SSN without re-collecting from users — partial data cannot be reconstructed
-- Correct migration: add new `ssn_encrypted` column; encrypt it using AES-256-GCM when full SSN is provided; keep `ssn_last4` for workers where only partial data exists
-- Migration script must encrypt existing `ssn_last4` values at rest (they are currently plaintext partials)
-- Use a **data migration transaction**: encrypt all records in a single migration, verify count, then commit — never leave database in mixed encrypted/plaintext state
+| Column | MA Form | WH-347 Equivalent | Notes |
+|--------|---------|-------------------|-------|
+| Employee name | Same | Same | |
+| Address | Same | Same | |
+| Occupational classification | Same | Same | |
+| Hours Mon–Sat | Same | Same (Mon–Sun on WH-347) | MA uses Mon–Sat columns |
+| All other hours | MA-specific | Not on WH-347 | Hours worked outside this project in same week |
+| Total project hours | Same | Same | |
+| Hourly base wage (B) | Same | Rate of pay | |
+| Supplemental unemployment (E) | MA-specific | Not on WH-347 | Fringe sub-column for supplemental unemployment |
+| Total hourly prev. wage (F) | MA-specific | Not on WH-347 | Base + all fringe additions |
+| Project gross wages (G) | MA-specific | Combined with total on WH-347 | Gross for this project only |
+| Total gross wages (H) | MA-specific | Not on WH-347 | Total across all jobs this week |
+| Check number | MA-specific | Not on WH-347 | Paycheck number |
+| Deductions (itemized) | Similar | Similar | |
+| Net wages | Same | Same | |
+
+**Workforce Participation fields — MA-specific, absent from WH-347:**
+- For each worker row: Woman (Y/N), Minority (Y/N), Non-Minority designation
+- Massachusetts statutory goals: 15.3% minority, 6.9% women workforce participation
+- These are tracked aggregate for the project but recorded per-worker on the form
+
+**OSHA 10 field — MA-specific, absent from WH-347:**
+- Checkbox per worker: "Employee is OSHA 10 Certified"
+- Required the first time a worker appears on a certified payroll for a project
+- Documentation of OSHA 10 completion must accompany the first CPR listing the worker
+- MA requires all workers on projects over $10,000 to have OSHA 10 certification
+
+**Apprentice field:**
+- Whether the apprentice is registered with Massachusetts DLS Division of Apprentice Standards
+- Copy of apprentice ID card required with first payroll listing
+
+### Statement of Compliance
+
+Separate from the payroll form — MA requires a **"Weekly Statement of Compliance"** (a companion document, also on `mass.gov`). Must be signed by the employer under pains and penalties of perjury.
+
+### Submission Process
+
+Weekly, to the awarding authority (the public agency running the project), by first-class mail or email. No statewide electronic portal exists. Submitted to the agency, not a central state system.
+
+Retention: 3 years minimum (aligns with federal; MA law c. 149 s. 27B).
+
+### Table Stakes vs Differentiators
+
+| Feature | Category | Complexity | Notes |
+|---------|----------|------------|-------|
+| MA project flag + state gate | Table Stakes | LOW | Same pattern as existing states |
+| MA weekly payroll PDF generator | Table Stakes | HIGH | New form layout, multiple MA-specific columns |
+| Workforce participation fields per worker | Table Stakes | MEDIUM | New `isWoman`, `isMinority` boolean columns on `workers` |
+| OSHA 10 certified field per worker | Table Stakes | LOW | New boolean column on `workers`; shown first week only |
+| "All other hours" input per week | Table Stakes | MEDIUM | New `nonProjectHours` on `payroll_entries` for MA |
+| Supplemental unemployment fringe column | Table Stakes | MEDIUM | MA fringe disaggregation: base + supp-unemploy + total |
+| Project gross vs total gross wages | Table Stakes | MEDIUM | Need to distinguish project-only pay from worker's total week |
+| Check number field | Table Stakes | LOW | Optional text field on payroll entry |
+| MA Statement of Compliance companion PDF | Table Stakes | MEDIUM | Second PDF: certification text with signature block |
+| MA submission guide modal | Differentiator | LOW | Checklist: submit to awarding authority by mail/email, retain 3 years |
+
+### What Makes MA Different From WH-347
+
+MA has the most differences of the four target states:
+1. Workforce participation tracking (minority/women) per worker — regulatory requirement unique to MA
+2. OSHA 10 certification checkbox — MA-specific; must be documented on first payroll listing
+3. Two gross wage columns (project-only vs total week) — requires workers report all-employer hours
+4. "All other hours" column — tracks time outside this project
+5. Supplemental unemployment as an explicit fringe sub-column
+6. Check number on the form
+
+**Build recommendation:** MA requires a new `fillMaWeeklyPayroll()` PDF generator using a coordinate overlay on the official MA form. Complexity is HIGH. New database columns needed on `workers` (OSHA 10, minority, woman flags) and `payroll_entries` (all-other-hours, check-number).
 
 ---
 
-## Feature Landscape
+## Feature 4: New Jersey Certified Payroll (NJ)
 
-### Table Stakes (Users Expect These)
+### What New Jersey Requires
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Invite token expiry (7 days) | Industry standard; security baseline | LOW | Opaque token, hashed in DB, expires at creation + 7 days |
-| Resend invite with token invalidation | Users miss emails; must be recoverable | LOW | Invalidate old tokens on resend; 60s cooldown |
-| Revoke pending invite | Owner mistakes happen before acceptance | LOW | Single DB update + UI button |
-| Graceful expired-link UX | Construction contractors check email infrequently | LOW | Show clear "expired" message + resend CTA |
-| Already-registered email handling | Invitees may already have accounts | LOW | Detect on token claim; route to login |
-| QuickBooks CSV import with mapping screen | QB is dominant in construction SMB; users expect import not manual entry | HIGH | Field names vary by QB version; mapping screen is mandatory |
-| ADP CSV import with mapping screen | ADP is #2 payroll provider in construction | HIGH | Two separate parsers (RUN vs WFN); mapping screen mandatory |
-| Worker name matching on import | Imported names won't exactly match stored workers | MEDIUM | Fuzzy match + manual resolution screen for unmatched |
-| SSN encryption at rest (AES-256) | Regulatory expectation; CA/WA compliance context | MEDIUM | AES-256-GCM; env var key storage at minimum |
-| SSN masked in UI (XXX-XX-XXXX) | Users expect SSNs are never exposed in browser | LOW | Already displaying last-4; extend to mask full SSN |
-| Audit log for SSN access | Compliance software audit expectations | MEDIUM | Append-only log: timestamp + user + worker + action |
-| Key version stored per record | Required for non-breaking key rotation | LOW | Store `{v, iv, ct}` JSON blob per encrypted field |
+**Confidence: HIGH** — Confirmed via NJ DOL official form MW-562 (rev. 6/2023, updated 2/2025), NJ Wage Hub documentation, and multiple compliance sources.
 
-### Differentiators (Competitive Advantage)
+New Jersey Department of Labor and Workforce Development issues **Form MW-562 "Payroll Certification for Public Works Projects"**. Required under the New Jersey Prevailing Wage Act (N.J.S.A. 34:11-56.25 et seq.). Any contractor or subcontractor on an NJ public works project must file MW-562 with the public body (the awarding agency).
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Smart worker matching on CSV import | Reduces manual mapping friction vs competitors that require exact name match | MEDIUM | Levenshtein distance + last-4 SSN as tiebreaker |
-| Import preview before commit | Lets users catch bad data before it enters the system | LOW | Show diff: matched workers, unmatched, skipped rows |
-| Owner transfer with acceptance flow | Most tools do forced transfer; acceptance flow prevents accidents | LOW | Invitation pattern: new owner must click to accept |
-| 1-year retention visibility | Owners can see what removed-member data is retained and when it purges | LOW | Simple UI: "Member removed. Data retained until [date]." |
-| Per-record key versioning | Enables zero-downtime key rotation — a differentiator vs naive encryption | LOW | JSON envelope pattern; enables rotation without re-collecting SSNs |
+As of August 2024, NJ has also established **NJ Wage Hub** (njwages.nj.gov) as the statewide portal for electronic submission.
 
-### Anti-Features (Commonly Requested, Often Problematic)
+### NJ MW-562 Fields vs WH-347
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| CA DIR eCPR direct API auto-submit | Saves manual upload step | No public API exists; browser automation is fragile and may violate ToS | Keep existing XML download + manual portal upload; document the workflow clearly |
-| WA L&I PWIA direct API auto-submit | Saves manual upload step | No public API exists; same issues as above | Keep existing XML download + manual portal upload |
-| Full SSN display in UI | Power users want to verify SSN | PII exposure risk; regulatory liability; browser caching | Show last-4 only; provide masked confirm field on collection |
-| Automatic SSN upgrade migration | Backfill full SSNs from last-4 | Mathematically impossible; last-4 cannot be reconstructed | Prompt users to re-enter full SSN on next worker edit; last-4 stays for unupdated workers |
-| Multi-role team model | Enterprise customers want granular permissions | Flat model is the specified scope; role complexity multiplies QA surface | Deliver flat owner/member model; defer roles to v4+ |
-| Bulk CSV import without review screen | Faster for power users | Silent data corruption risk; unmatched workers create compliance gaps | Always show preview + mapping screen; cannot skip |
+**Header fields — NJ-specific additions:**
+- **Contractor Registration Number** — mandatory; contractors must be registered with NJDOL under the Public Works Contractor Registration Act (34:11-56.48) before working on public works
+- **Date Wages Due & Paid** — explicit field (WH-347 has payroll period but not this exact framing)
+- Public works project name and location
+- Contracting public body name
+- Week ending date
+- Payroll number
+- Contractor/subcontractor name and address
+
+**Per-worker row fields — NJ-specific differences from WH-347:**
+
+| Column | NJ MW-562 | WH-347 Equivalent | Notes |
+|--------|-----------|-------------------|-------|
+| Employee name | Same | Same | |
+| Last 4 SSN | Same | Same | |
+| Job title / craft | Same | Classification | Includes journeyman/foreman distinction |
+| Sex | M/F/N (Non-Binary) | Not on WH-347 | MW-562 includes non-binary option |
+| Race | W/B/A/N/I/M codes | Not on WH-347 | White/Black/Asian/Native/Pacific Islander/Multiracial |
+| Ethnicity | H/N (Hispanic/Non-Hispanic) | Not on WH-347 | EEO-style demographic field |
+| Daily hours Mon–Sat (ST) | Per-day straight-time | Per-day (Mon–Sun on WH-347) | MW-562 uses Mon–Sat |
+| Daily hours Mon–Sat (OT) | Per-day overtime | Per-day | |
+| Total ST hours | Same | Same | |
+| Total OT hours | Same | Same | |
+| Rate of pay (ST) | Same | Same | |
+| Rate of pay (OT) | Same | Same | |
+| Gross amount earned (this project) | Same | Same | |
+| Total deductions | Same | Same | |
+| Net wages paid for week | Same | Same | |
+
+**Certification section (NJ-specific):**
+The MW-562 has a separate certification page with:
+- Contractor's statement under oath that payroll is correct and complete
+- Fringe benefit certification (same intent as WH-347 page 2)
+- Reference to NJ Prevailing Wage Act compliance
+
+### Submission Process
+
+**NJ Wage Hub** (njwages.nj.gov): As of August 2024, this is the established statewide portal for CPR submission. Features direct integration with ADP, Paychex, and QuickBooks. Submission deadline: within 10 days of the payment of wages.
+
+No public machine-to-machine API has been found — Wage Hub appears to be a web portal with direct payroll software integrations (not REST APIs). The app should generate MW-562 PDF + guide users to upload to Wage Hub.
+
+### Table Stakes vs Differentiators
+
+| Feature | Category | Complexity | Notes |
+|---------|----------|------------|-------|
+| NJ project flag + state gate | Table Stakes | LOW | Same pattern as existing states |
+| NJ MW-562 PDF generator | Table Stakes | HIGH | New form layout with demographic columns |
+| Contractor Registration Number field on projects | Table Stakes | LOW | New `njContractorRegNumber` text column on `projects` |
+| Sex field per worker (M/F/N) | Table Stakes | LOW | Extend existing gender field or add `sex` column |
+| Race field per worker (6 codes) | Table Stakes | MEDIUM | New `race` column on `workers` (similar to IL) |
+| Ethnicity field per worker (H/N) | Table Stakes | LOW | New `ethnicity` column on `workers` (similar to IL) |
+| NJ Wage Hub submission guide modal | Differentiator | LOW | Checklist: portal URL, 10-day deadline, "Mark as Submitted" |
+
+### What Makes NJ Different From WH-347
+
+NJ has three meaningful additions:
+1. **Contractor Registration Number** — contractors must be registered with NJDOL; this is a project-level field
+2. **Demographic data per worker** (sex, race, ethnicity) — similar to IL but with NJ's specific code set; required by NJ DOL
+3. **Non-binary sex option** — MW-562 uses M/F/N where WH-347 doesn't capture sex at all
+
+**Build recommendation:** NJ requires a new `fillNjMw562()` PDF generator. The demographic fields overlap with IL's existing `race`/`ethnicity`/`gender` columns (shipped in v4.0). Reuse those columns where possible. The key new project-level field is `njContractorRegNumber`.
+
+**Cross-state field reuse opportunity:** IL already ships `race`, `ethnicity`, `gender`, `skillLevel` on the `workers` table. NJ uses the same fields with slightly different code values. Reuse the columns; add NJ-gated UI display.
+
+---
+
+## Feature 5: Subcontractor CPR Tracking
+
+### Federal Regulatory Requirement for GC Sub Oversight
+
+**Confidence: HIGH** — Confirmed via 29 CFR Part 5 and DOL Fact Sheet #66C.
+
+Under Davis-Bacon regulations (29 CFR 5.5(a)(6) and 2023 final rule update):
+- Prime contractors are **strictly liable** for subcontractor violations — even without knowledge of them
+- Primes must ensure all subcontractors submit weekly CPRs
+- The contracting agency's contracting officer monitors via prime contractor, but prime bears the compliance burden
+- Flow-down clauses in subcontracts must require subs to submit CPRs and maintain records
+- Prime contractors must insert Davis-Bacon clauses (29 CFR 5.5(a)(1)–(11)) into every subcontract
+
+**Regulatory consequence:** Prime failure to collect sub CPRs creates back-wage liability and debarment risk. GCs need a tracking tool, not just their own payroll compliance.
+
+### What GCs Track for Sub CPR Compliance
+
+Based on regulatory requirements and industry patterns (LCPtracker, b2gnow, Caltrans requirements):
+
+**Per-subcontractor, per-project:**
+- Sub company name
+- Sub contractor license number (state license; required in CA, WA, NJ, IL)
+- Sub type (lower-tier sub vs direct sub)
+- Trade/craft (for context)
+- Contract amount (for threshold tracking)
+- Davis-Bacon clauses flowed down (Y/N)
+- Wage determination provided to sub (Y/N)
+
+**Per-subcontractor, per payroll week:**
+- Week ending date
+- CPR received (Y/N)
+- Date CPR received
+- CPR compliant (Y/N / Needs Review)
+- Notes / deficiency description (if non-compliant)
+
+**Critical compliance signals:**
+- Weeks where CPR not received (overdue flag)
+- Weeks where CPR received but not reviewed
+- Compliance rate per sub (weeks compliant / weeks active)
+
+### What the Compliance Industry Considers Table Stakes
+
+| Feature | Category | Complexity | Notes |
+|---------|----------|------------|-------|
+| Add subcontractors to a project | Table Stakes | LOW | New `subcontractors` table: name, license, trade |
+| Per-week CPR receipt tracking | Table Stakes | MEDIUM | New `subcontractor_cpr_weeks` table |
+| Overdue flag (week passed, CPR not received) | Table Stakes | LOW | Computed from week_ending vs received_date |
+| Compliant/Non-Compliant/Pending status per week | Table Stakes | LOW | Enum column on cpr_weeks |
+| Sub CPR summary view on project detail | Table Stakes | MEDIUM | Table: sub name, week, received, compliant |
+| "Mark CPR Received" action with date | Table Stakes | LOW | Modal or inline date picker |
+| Notes/deficiency field per week | Table Stakes | LOW | Text column for audit notes |
+| Sub CPR PDF inclusion (store file) | Differentiator | HIGH | File upload/storage: out of scope for v5.0 |
+| Automated overdue email alerts | Differentiator | MEDIUM | Extend existing notification system |
+| Sub CPR history export (CSV) | Differentiator | LOW | Extend existing CSV export pattern |
+
+### Data Model
+
+Two new tables needed:
+- `subcontractors`: `(id, projectId, companyName, licenseNumber, trade, contractAmount, createdAt)`
+- `subcontractor_cpr_weeks`: `(id, subcontractorId, weekEndingDate, cprReceivedDate, isCompliant, deficiencyNotes, createdAt, updatedAt)`
+
+### Federal vs State Requirements for GC Records
+
+Federal (29 CFR 5): GC must ensure subs submit CPRs to the contracting officer. GC is not explicitly required to maintain a database of sub CPRs — that obligation runs to the sub directly. However, prime strict liability makes record-keeping effectively mandatory.
+
+State variations:
+- CA (Labor Code §1776): Prime must maintain all sub payroll records and make available upon request. CA has the strongest GC retention requirement.
+- NY (Article 8): GC certifies sub compliance in MPWR portal submission.
+- IL (820 ILCS 130): Similar federal-style flow-down; GC responsible for sub violations.
+
+**Build recommendation:** Model this as "GC compliance tracker" not "sub payroll entry." The GC records receipt/compliance status; they do not re-enter sub payroll data. This keeps scope bounded and avoids the complexity of a full sub payroll entry flow.
+
+---
+
+## Feature 6: Multi-Project Compliance PDF Report
+
+### What GCs Need in a Multi-Project Report
+
+**Confidence: MEDIUM** — Based on industry patterns from LCPtracker, b2gnow, DOL guidance, and eMars; no single authoritative standard exists for this report format.
+
+A multi-project compliance summary answers the question: "Which of my active projects are at risk, and am I current on submissions?" For a GC managing multiple federally/state-funded projects simultaneously, this is the single most useful reporting artifact during an audit or internal review.
+
+### Report Data Requirements
+
+**Project-level summary (one row per project):**
+- Project name and contract number
+- State + contracting agency
+- Project status (Active / Archived)
+- Total payroll weeks on record
+- Weeks with CPR submitted (count and %)
+- Weeks with violations (under-wage, CWHSSA OT, apprentice ratio)
+- Most recent payroll week date
+- Current compliance status badge (Compliant / Has Violations / Weeks Overdue)
+- Active subcontractor count
+- Sub CPR weeks overdue (if sub tracking enabled)
+
+**Cross-project summary totals:**
+- Total workers across all projects (deduplicated by name+SSN)
+- Total active projects
+- Total projects with open violations
+- Total payroll weeks submitted this year
+
+### Table Stakes vs Differentiators
+
+| Feature | Category | Complexity | Notes |
+|---------|----------|------------|-------|
+| Multi-project compliance PDF | Table Stakes | MEDIUM | One-click from dashboard; snapshot of all active projects |
+| Project-level compliance status per row | Table Stakes | LOW | Reuse existing compliance query per project |
+| Week count (submitted vs total) | Table Stakes | LOW | Aggregate query; already tracked |
+| Violation count per project | Table Stakes | LOW | Existing compliance engine produces this |
+| Sub CPR overdue count per project | Table Stakes | LOW | Derived from sub tracking if enabled |
+| Date-stamped snapshot (audit artifact) | Table Stakes | LOW | Report header with generation date, generating user |
+| Filter: active-only vs include archived | Differentiator | LOW | Report parameter on generation modal |
+| Export as PDF via pdf-lib | Table Stakes | MEDIUM | New `generateComplianceSummary()` function in pdf-lib |
+| Email delivery of report | Differentiator | LOW | Extend nodemailer; send to project owner |
+| Historical report archive | Anti-Feature | HIGH | Storage complexity not justified; generate on demand |
+
+### Report Format
+
+Single-page landscape PDF where possible; paginate if more than ~15 projects. Use same HCC brand tokens (dark header bar, gold accents, Oswald/Inter typography). Should be "hand to an auditor" quality — not a data dump.
+
+Sections:
+1. Cover / header: contractor name, report generated date, user, date range
+2. Active projects summary table (one row per project)
+3. Violation detail section (projects with violations: list of specific violations)
+4. Subcontractor CPR gap section (weeks overdue per sub per project)
+5. Certification note (this report is for compliance monitoring only; not an official submission)
+
+---
+
+## Feature Summary Table
+
+| Feature | Build? | Complexity | Depends On |
+|---------|--------|------------|-----------|
+| TX state flag + WH-347 reuse | YES | LOW | Existing WH-347 generator |
+| TX project header fields | YES | LOW | `projects` table migration |
+| TX LCPtracker submission guide | YES | LOW | Modal pattern from existing states |
+| FL state flag + WH-347 routing | YES | VERY LOW | Existing WH-347 generator |
+| MA Weekly Payroll PDF generator | YES | HIGH | New `workers` columns (OSHA10, minority, woman), new `payroll_entries` column (allOtherHours) |
+| MA workforce participation fields | YES | MEDIUM | MA-gated worker profile section |
+| MA OSHA 10 field | YES | LOW | Boolean on `workers` table |
+| MA Statement of Compliance PDF | YES | MEDIUM | Companion to MA payroll PDF |
+| NJ MW-562 PDF generator | YES | HIGH | Reuse `race`/`ethnicity` from IL (already shipped v4.0) |
+| NJ Contractor Registration Number | YES | LOW | New project field |
+| NJ Wage Hub submission guide | YES | LOW | Modal pattern |
+| Sub company add/manage | YES | MEDIUM | New `subcontractors` table |
+| Sub CPR per-week tracking | YES | MEDIUM | New `subcontractor_cpr_weeks` table |
+| Sub overdue flag | YES | LOW | Computed field |
+| Sub CPR summary UI | YES | MEDIUM | Project detail page section |
+| Multi-project compliance PDF | YES | MEDIUM | Existing compliance queries |
+| Audit log CSV export | YES | LOW | Existing `audit_logs` table (v4.0) |
+| Enhanced fringe report (fund type/union) | YES | MEDIUM | Existing fringe report + fringe disaggregation |
+
+---
+
+## Anti-Features for v5.0
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| FL state-specific certified payroll form | No state law exists; nothing to build | Add FL flag, route to WH-347, show info callout |
+| Sub payroll data entry (full re-entry of sub CPRs) | Scope explosion; subs file their own CPRs | Track receipt/compliance status only; GC does not re-enter sub payroll |
+| PDF upload/storage for sub CPRs | File storage infrastructure (S3/CDN) adds major complexity | Track metadata only (received Y/N, date, compliant Y/N, notes) |
+| NJ Wage Hub direct API submission | No public API found; Wage Hub is a web portal | Generate PDF + guide user to upload manually |
+| Historical compliance report archive | Storage overhead; rarely needed | Generate on demand; user saves locally |
+| Multi-user role expansion (admin/viewer) | Deferred in v3.0; still out of scope | Flat owner/member model remains |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Multi-user invite flow]
-    └──requires──> [Existing JWT auth system]
-    └──requires──> [Email sending infrastructure (SMTP/transactional email)]
-    └──requires──> [Invite token DB table (pending_invites)]
+[TX form]
+  └──reuses──> [Existing fillWh347() generator]
+  └──requires──> [TX project flag on projects form]
+  └──requires──> [txContractNumber field on projects table]
 
-[Payroll CSV import]
-    └──requires──> [Existing worker records] (for name matching)
-    └──requires──> [Existing project records] (for job code mapping)
-    └──requires──> [Existing payroll week entry model] (to pre-populate)
-    └──requires──> [Worker mapping screen] (for unmatched workers)
+[FL form]
+  └──reuses──> [Existing WH-347] (no new form needed)
+  └──requires──> [FL project flag on projects form]
 
-[SSN encryption]
-    └──requires──> [Key management decision] (env var or KMS — must precede migration)
-    └──requires──> [DB migration: add ssn_encrypted column]
-    └──requires──> [Data migration: encrypt existing ssn_last4 values]
-    └──blocks──>   [CA/WA eCPR/PWIA pre-fill] (XML generation needs decryption access)
+[MA form]
+  └──requires──> [MA project flag]
+  └──requires──> [New workers columns: isOsha10Certified, isMinority, isWoman]
+  └──requires──> [New payroll_entries column: allOtherHours]
+  └──requires──> [New fillMaWeeklyPayroll() pdf-lib function]
+  └──requires──> [Companion fillMaStatementOfCompliance() pdf-lib function]
 
-[SSN encryption] ──enhances──> [CA eCPR XML export] (enables full SSN pre-fill)
-[SSN encryption] ──enhances──> [WA PWIA XML export] (enables full SSN pre-fill)
+[NJ form]
+  └──requires──> [NJ project flag]
+  └──requires──> [New project field: njContractorRegNumber]
+  └──reuses──> [workers.race, workers.ethnicity, workers.gender from IL (v4.0)]
+  └──requires──> [New fillNjMw562() pdf-lib function]
 
-[CSV import] ──enhances──> [Payroll week entry] (pre-populates fields)
-[Multi-user] ──enhances──> [All existing features] (adds access scope per user)
+[Sub CPR tracking]
+  └──requires──> [New subcontractors table]
+  └──requires──> [New subcontractor_cpr_weeks table]
+  └──requires──> [Project detail page: Subcontractors section]
+  └──enhances──> [Multi-project compliance report] (adds sub overdue counts)
 
-[CA DIR eCPR auto-submit] — BLOCKED (no public API)
-[WA L&I PWIA auto-submit] — BLOCKED (no public API)
+[Multi-project compliance PDF]
+  └──reuses──> [Existing compliance query per project]
+  └──reuses──> [Existing pdf-lib infrastructure]
+  └──enhances──> [Sub CPR tracking data] if sub tracking is built first
+  └──requires──> [New generateComplianceSummary() function]
+
+[Audit log CSV export]
+  └──reuses──> [Existing audit_logs table (v4.0)]
+  └──requires──> [GET /api/audit/:projectId/export endpoint]
+  └──requires──> [Download button on ProjectActivityPage]
 ```
 
-### Dependency Notes
+---
 
-- **SSN encryption requires key decision first:** Key management strategy (env var vs KMS) must be locked before writing any migration code. A wrong choice here requires re-migration.
-- **CSV import requires worker matching before import can commit:** The mapping screen is not optional — it is the mechanism that prevents silent data corruption.
-- **Auto-submit features are dependency-free because they are eliminated:** No engineering time should be allocated to AS-01 or AS-02 for v3.0.
+## Phase Ordering Rationale
+
+1. **FL first** (½ phase): Zero-risk state flag; confirms pattern before heavier work
+2. **TX second** (1-2 phases): WH-347 reuse makes this low-risk; validates TX state gate pattern
+3. **NJ third** (2-3 phases): New PDF form but leverages IL demographic columns already built
+4. **MA fourth** (3-4 phases): Most complex state form; most new DB columns; do after simpler states
+5. **Sub tracking** (2-3 phases): Independent of state forms; can be built in parallel with MA
+6. **Multi-project report** (1-2 phases): Best built after sub tracking so it can include sub overdue data
+7. **Audit log CSV export** (½ phase): Lowest-risk; purely additive to existing audit_logs infrastructure
+8. **Enhanced fringe report** (1-2 phases): Independent; can slot before or after sub tracking
 
 ---
 
-## MVP Definition (v3.0 Scope)
+## Confidence Assessment
 
-### Launch With (v3.0)
-
-- [x] Multi-user invite: owner invites 1 member by email, flat model, token expiry, resend, revoke, 1-year retention on removal, owner transfer
-- [x] QuickBooks CSV import: parser + worker name matching + mapping screen + payroll week pre-population
-- [x] ADP CSV import: separate parsers for RUN and Workforce Now + same mapping/matching flow
-- [x] SSN encryption: AES-256-GCM, env var key, key version per record, encrypt existing last-4, audit log, UI masking unchanged
-
-### Deferred (not v3.0)
-
-- [ ] CA DIR eCPR direct API auto-submit — no public API exists; cannot be built
-- [ ] WA L&I PWIA direct API auto-submit — no public API exists; cannot be built
-- [ ] Multi-role team model (owner/admin/viewer) — scope is flat model only
-- [ ] KMS (cloud key management) upgrade — env var is sufficient for v3.0; document upgrade path
-- [ ] Automated key rotation — document manual rotation procedure; automate in v4+
-
----
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| SSN encryption (AES-256) | HIGH | MEDIUM | P1 — security baseline; blocks XML pre-fill |
-| Multi-user invite flow | HIGH | MEDIUM | P1 — core v3.0 value prop |
-| QuickBooks CSV import | HIGH | HIGH | P1 — dominant payroll tool in construction |
-| ADP CSV import | HIGH | HIGH | P1 — #2 payroll tool in construction |
-| Owner transfer flow | MEDIUM | LOW | P2 — needed for completeness; low cost |
-| 1-year retention on member removal | MEDIUM | LOW | P2 — compliance expectation |
-| Audit log for SSN access | MEDIUM | MEDIUM | P2 — compliance expectation |
-| CA eCPR auto-submit | LOW (blocked) | N/A | REMOVED — no public API |
-| WA PWIA auto-submit | LOW (blocked) | N/A | REMOVED — no public API |
-
----
-
-## API Availability Decision Record
-
-This section is provided for the planner as a definitive record for AS-01 and AS-02 conditional requirements.
-
-| Agency | System | Public REST API? | Evidence | Verdict |
-|--------|--------|-----------------|----------|---------|
-| CA DIR | eCPR | NO | Official submission page documents only iForm portal + XML upload; all third-party vendors (Quantum, Sunburst) confirm XML-upload-only integration; no developer portal found | Feature NOT buildable |
-| WA L&I | PWIA | NO | Official XML upload guide describes web portal submission only; SecureAccess WA is a forms portal not an API gateway; LCPtracker integration guide (v1.3) confirms manual upload workflow; no developer portal found | Feature NOT buildable |
-
-Both AS-01 and AS-02 should be removed from v3.0 scope. The existing XML export features for both portals represent the correct and complete integration pattern that the entire industry uses.
+| Area | Confidence | Notes |
+|------|------------|-------|
+| TX form requirements | HIGH | Multiple sources confirm WH-347 equivalent + LCPtracker for TXDOT |
+| FL no state form | HIGH | Confirmed: FL repealed PW law 1979; HB 705 (July 2024) preempted local ordinances |
+| MA form fields | HIGH | Official DLS form downloaded and analyzed; OSHA 10, minority/women fields confirmed by multiple sources |
+| NJ MW-562 fields | HIGH | Official form confirmed; demographic columns (race/sex/ethnicity) confirmed via official NJDOL source |
+| NJ Wage Hub portal | MEDIUM | Portal existence and August 2024 launch confirmed; no API documentation found (assumes manual upload pattern) |
+| Sub tracking regulatory basis | HIGH | 29 CFR 5 and DOL Fact Sheet #66C confirm prime strict liability; data model derived from industry patterns |
+| Multi-project report format | MEDIUM | No official standard; based on eMars/LCPtracker industry patterns and GC audit needs |
+| MA OT threshold | MEDIUM | MA follows federal 40-hour/week threshold (confirmed); daily OT only for specific trades (not universal like NY) |
 
 ---
 
 ## Sources
 
-- [CA DIR Certified Payroll Reporting](https://www.dir.ca.gov/public-works/certified-payroll-reporting.html) — official submission methods, HIGH confidence
-- [CA DIR eCPR XML Upload User Guide (PDF)](https://www.dir.ca.gov/Public-Works/documents/CPR-XML-Upload-User-Guide.pdf) — XML schema documentation
-- [Sunburst Software — 2024 CA DIR eCPR New Website](https://www.sunburstsoftwaresolutions.com/2024-ca-dir.htm) — third-party vendor confirming XML-upload-only pattern
-- [WA L&I XML Payroll Upload Guide](https://lni.wa.gov/licensing-permits/_docs/xml%20payroll%20guide.pdf) — official XML upload documentation
-- [WA L&I PWIA XML Schema](https://lni.wa.gov/licensing-permits/_docs/xmlschema.xsd) — schema definition only, not an API
-- [LCPtracker WA L&I Export Guide v1.3](https://cms.tacoma.gov/cedd/SBE/Equity%20in%20Contracting%20FAQ/LCPtracker_Guide%20to%20WA%20LNI%20Features%20_V1.3.pdf) — confirms manual upload workflow
-- [ADP Marketplace — Points North Certified Payroll for WFN](https://apps.adp.com/en-US/apps/248331/points-north-certified-payroll-reporting-for-adp-workforce-now/features) — ADP WFN payroll field list, HIGH confidence
-- [AppMaster — Transactional Email Flows, Tokens, Expiration](https://appmaster.io/blog/transactional-email-flows-tokens-expiration-deliverability) — invite flow best practices, HIGH confidence
-- [Sequenzy — Team Invitation Emails for SaaS](https://www.sequenzy.com/blog/how-to-create-team-invitation-emails-saas) — SaaS invite UX patterns
-- [Skyflow — How to Securely Store Social Security Numbers](https://www.skyflow.com/post/how-to-securely-store-social-security-numbers) — SSN encryption best practices, HIGH confidence
-- [Strac — Securing SSNs: Best Practices for Enterprise Data Protection](https://www.strac.io/blog/how-to-protect-ssn) — SSN key management guidance
-- [PostgreSQL pgcrypto documentation](https://www.postgresql.org/docs/current/pgcrypto.html) — AES encryption implementation reference
-- [QuickBooks Community — CSV payroll export](https://quickbooks.intuit.com/learn-support/en-us/employees-and-payroll/csv-file-export-for-payroll/00/700576) — QB export field reference
-- [Auth0 Token Best Practices](https://auth0.com/docs/secure/tokens/token-best-practices) — token security reference
+- [Texas Government Code Chapter 2258](https://statutes.capitol.texas.gov/Docs/GV/htm/GV.2258.htm) — state prevailing wage statute, HIGH confidence
+- [TXDOT Statements and Payrolls Manual](https://www.txdot.gov/manuals/tpd/lgp/construction/contract_administration_ch-i1006476/statements_and_payrolls-i1007282.html) — TXDOT LCPtracker requirement
+- [TXDOT LCPtracker FAQ](https://www.txdot.gov/business/resources/highway/construction-reports/eprs/lcptracker-faq.html) — electronic submission system
+- [Texas Prevailing Wage — CCMI](https://www.ccmilcp.com/texas.html) — form requirement confirmation
+- [Florida Prevailing Wage — Workyard 2025](https://www.workyard.com/us-labor-laws/prevailing-wage-florida) — no state law confirmation
+- [Florida Prevailing Wage — Payroll4Construction](https://www.payroll4construction.com/fl-prevailing-wage/) — HB 705 preemption details
+- [Florida Prevailing Wage — Points North](https://www.points-north.com/state-by-state-certified-payroll-reporting/florida) — federal-only requirement confirmation
+- [Massachusetts Weekly Certified Payroll Report (official form)](https://www.mass.gov/doc/weekly-certified-payroll-report/download) — official DLS form
+- [Massachusetts Prevailing Wage Laws Guide (DLS)](https://www.mass.gov/doc/massachusetts-prevailing-wage-laws-an-important-guide-for-public-construction-contractors/download) — official guide, HIGH confidence
+- [Massachusetts Prevailing Wage — Lumberfi Guide](https://www.lumberfi.com/blog/understanding-massachusetts-certified-payroll-requirements-for-public-works-contractors-a-step-by-step-guide) — OSHA 10 and workforce participation details
+- [Massachusetts Prevailing Wage — Workyard 2025](https://www.workyard.com/us-labor-laws/prevailing-wage-massachusetts) — form field details
+- [NJ MW-562 Payroll Certification for Public Works Projects (official, rev 6/2023)](https://www.nj.gov/labor/wageandhour/assets/PDFs/wagehub/MW-562%20(6-23)%20PayrollCert-PublicWorks.pdf) — official NJ form
+- [NJ MW-562 (rev 2/2025)](https://www.nj.gov/labor/wageandhour/assets/PDFs/wagehub/MW-562%20(12_16B)Payroll%20Cert-Public%20Works%20test%2012%2016B%20(2).pdf) — most current version
+- [NJ Wage Hub Contractor User Guide](https://njwages.nj.gov/assets/NJWH_Contractor_User_Guide.pdf) — portal submission documentation
+- [NJ Prevailing Wage — Points North / New Jersey](https://www.points-north.com/state-by-state-certified-payroll-reporting/new-jersey) — Wage Hub portal timeline, 10-day deadline
+- [DOL Fact Sheet #66C: Davis-Bacon and Related Acts](https://www.dol.gov/agencies/whd/fact-sheets/66C-DBRA-labor-standards) — prime contractor subcontractor responsibility, HIGH confidence
+- [29 CFR Part 5 Subpart A](https://www.ecfr.gov/current/title-29/subtitle-A/part-5/subpart-A) — flow-down requirements and prime liability
+- [Davis-Bacon Act Regulation Updates — Schwabe](https://www.schwabe.com/publication/davis-bacon-act-regulation-updates-subcontractor-flow-down-requirements/) — 2023 final rule flow-down updates
+- [Caltrans Labor Compliance Manual Chapter 13](https://dot.ca.gov/programs/construction/labor-compliance/labor-compliance-manual/chapter-13) — GC sub CPR tracking data points (CA model)
+- [Prevailing Wage Laws 2025 — eMars](https://emarsinc.com/blog/prevailing-wage-laws-2025-complete-guide-for-general-contractors) — multi-project GC oversight context
 
 ---
 
-*Feature research for: Prevailing Wage Compliance SaaS — v3.0 Multi-User, CSV Import, SSN Encryption, Portal Auto-Submit*
-*Researched: 2026-03-27*
+*Feature research for: Prevailing Wage Compliance SaaS — v5.0 State Forms (TX/FL/MA/NJ), Subcontractor Tracking, Reporting*
+*Researched: 2026-04-07*

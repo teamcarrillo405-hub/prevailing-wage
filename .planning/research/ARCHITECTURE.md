@@ -1,808 +1,358 @@
-# Architecture Research
+# Architecture Patterns — v5.0 Integration Analysis
 
-**Domain:** Multi-user team + payroll import + SSN encryption + agency auto-submit, integrated into existing SQLite/Express/React prevailing-wage app
-**Researched:** 2026-03-27
-**Confidence:** HIGH (decisions grounded in existing schema + confirmed agency portal constraints)
-
----
-
-## Existing Architecture Baseline
-
-The current system structure (v2.5):
-
-```
-React SPA (Vite + TailwindCSS v4)
-  └── React Query (server state)
-  └── Protected/Public routing
-
-Express REST API (TypeScript)
-  └── JWT httpOnly cookie auth
-  └── Route guards: userId match on every resource
-  └── Service layer (pdf-lib, xmlbuilder2, compliance engine)
-
-SQLite (Drizzle ORM)
-  └── Persistent disk on Render.com (/var/data)
-  └── Add-only migrations (never drop columns)
-  └── Single owner model: projects.userId = the one user
-```
-
-Every project is owned by exactly one `userId`. All routes guard via
-`WHERE projects.user_id = :authUserId`. This is the central invariant
-that v3.0 must extend without breaking.
+**Project:** HCC Prevailing Wage
+**Researched:** 2026-04-07
+**Scope:** How TX/FL/MA/NJ state forms, subcontractor tracking, and enhanced reporting integrate with the existing v4.0 architecture.
+**Phase numbering:** Continues from Phase 46 (next = Phase 47).
 
 ---
 
-## Feature 1: Multi-User Team Accounts
+## 1. State Gate Pattern — How It Works Today
 
-### Decision: `project_members` Join Table (NOT `organizations`)
-
-**Recommendation: `project_members` join table.**
-
-Rationale: The requirement is explicitly "flat model — all members see
-all projects." There is no concept of an organization as a separate
-entity with its own lifecycle, billing, settings, or sub-grouping.
-An `organizations` table would introduce:
-
-- A new top-level entity requiring its own CRUD, invite flows, settings
-  pages, and owner-transfer logic
-- A 3-table join on every project query (users -> organizations -> projects)
-- Future migration complexity if org-level settings are ever added
-
-`project_members` is simpler, fits the flat requirement exactly, and
-maps cleanly onto the existing schema.
-
-### New Table: `project_members`
+Every state-specific PDF route in `src/server/routes/export.ts` follows an identical 8-step pattern:
 
 ```
-project_members
-  id           TEXT PK
-  project_id   TEXT NOT NULL  -> projects.id  (no cascade -- explicit delete only)
-  user_id      TEXT NOT NULL  -> users.id
-  role         TEXT NOT NULL   ('owner' | 'member')
-  invited_by   TEXT            -> users.id (nullable -- null for original owner)
-  invited_at   TEXT NOT NULL
-  accepted_at  TEXT            (null = pending invite)
-  created_at   TEXT NOT NULL
-  UNIQUE (project_id, user_id)
-  INDEX on (project_id, user_id)  -- required for auth guard performance
+1. Load payroll week by weekId
+2. Verify project access via assertProjectAccess(db, week.projectId, userId)
+3. STATE GATE: if (project.state !== 'XX') return 400
+4. Load payroll entries
+5. Map entries to StateWorkRow[]
+6. Build StateData object
+7. Generate PDF (template overlay OR programmatic draw)
+8. Stream response as attachment + best-effort audit log
 ```
 
-**SQLite FK note:** SQLite does not enforce foreign keys by default.
-Add `PRAGMA foreign_keys = ON` to the DB init if not already present.
-Do NOT rely on `onDelete: 'cascade'` here; soft-delete semantics are
-safer for audit trails on prevailing-wage data.
+The state gate is always step 3 — after access check, before any data load. Never check state before assertProjectAccess (that would leak project existence).
 
-### New Columns on `users`
+**Existing state gates:**
+- `/api/export/a1131/:weekId` — `project.state !== 'CA'` → 400
+- `/api/export/f700/:weekId` — `project.state !== 'WA'` → 400
+- `/api/export/pw12/:weekId` — `project.state !== 'NY'` → 400
+- `/api/export/il-transcript/:weekId` — `project.state !== 'IL'` → 400
+
+**New state gates to add (same pattern):**
+- `/api/export/tx-cpr/:weekId` — `project.state !== 'TX'` → 400
+- `/api/export/fl-cpr/:weekId` — `project.state !== 'FL'` → 400
+- `/api/export/ma-cpr/:weekId` — `project.state !== 'MA'` → 400
+- `/api/export/nj-cpr/:weekId` — `project.state !== 'NJ'` → 400
+
+---
+
+## 2. State Forms (TX, FL, MA, NJ)
+
+### 2a. PDF Generator Strategy — IL is the Best Template
+
+Two patterns exist in the codebase:
+
+| Generator | Approach | When to Use |
+|-----------|----------|-------------|
+| `wh347Generator.ts`, `a1131Generator.ts`, `f700Generator.ts` | Template overlay — `pdf-lib` draws text coordinates onto an official PDF template file in `/assets/` | When the state provides an official fillable PDF form |
+| `pw12Generator.ts`, `ilPdfGenerator.ts` | Programmatic draw — `PDFDocument.create()` draws everything from scratch | When the state does NOT provide an official PDF template |
+
+For TX, FL, MA, NJ: these states do not have universally-available official PDF templates the way CA's A-1-131 does. **Use `ilPdfGenerator.ts` as the code template** — it is the most recent programmatic draw generator, has the cleanest structure (header block + worker table + affidavit page 2), and its `IlPdfInput` interface covers all fields any new state form will need.
+
+**Key structural elements from `ilPdfGenerator.ts` to reuse:**
+- `PDFDocument.create()` with letter-portrait dimensions (612 x 792 pt)
+- Page 1: header block + worker table
+- Page 2 (always separate): affidavit / statement of compliance
+- Separate typed input interface per generator (e.g., `TxCprInput`, `FlCprInput`)
+
+Note: if a state does provide a downloadable official PDF template, switch to the template-overlay pattern instead — the state gate route and data-mapping logic remain identical either way.
+
+### 2b. DB Columns Needed Per State
+
+Follow the existing pattern: add nullable state-specific columns to the `projects` table. Pattern confirmed in schema.ts — CA added `cslbLicense`, `wcPolicyNumber`; WA added `ubiNumber`, `lniCertificate`, `wcAccount`; NY added `nyprcNumber`, `nysContractorRegNumber`.
+
+**New projects table columns per state:**
+
+| State | Column | Type | Label in UI |
+|-------|--------|------|-------------|
+| TX | `txdotProjectId` | `text` nullable | TxDOT Project ID |
+| TX | `txContractorLicense` | `text` nullable | TX Contractor License # |
+| FL | `flDbeNumber` | `text` nullable | FL DBE/MBE Number |
+| FL | `flContractId` | `text` nullable | FL Contract ID |
+| MA | `maDlsProjectId` | `text` nullable | MA DLS Project ID |
+| MA | `maSicCode` | `text` nullable | MA SIC/Trade Code |
+| NJ | `njPwcNumber` | `text` nullable | NJ PWC Registration # |
+| NJ | `njContractId` | `text` nullable | NJ Contract ID |
+
+All nullable — a TX project that hasn't filled in TxDOT Project ID still generates a form with a blank field, consistent with how WA's `ubiNumber` works.
+
+**payroll_weeks table columns (submission tracking):**
+
+Each new state gets its own nullable submission timestamp column, matching `caEcprSubmittedAt`, `waLniSubmittedAt`, `nyMpwrSubmittedAt`, `ilIdolSubmittedAt`:
+- `txCprSubmittedAt text` (nullable)
+- `flCprSubmittedAt text` (nullable)
+- `maCprSubmittedAt text` (nullable)
+- `njCprSubmittedAt text` (nullable)
+
+### 2c. Phase Structure — One Phase Per State, Not Shared
+
+**Recommendation: individual phases per state, NOT a shared "multi-state schema" phase.**
+
+Rationale from existing precedent: CA (Phase 24), WA (Phase 25), NY (Phase 40), IL (Phases 42-43) were each individual phases. A shared schema phase followed by 4 form phases creates a sequential dependency that forces the schema migration to land before any of the 4 forms can be built or tested. Individual phases give each state a self-contained deliverable (migration + generator + route + UI trigger + test).
+
+The schema columns for each state are small (2 columns on projects + 1 column on payroll_weeks) and add no risk to other states.
+
+---
+
+## 3. Subcontractor Tracking
+
+### 3a. New Tables Required
+
+Two new tables in `src/server/db/schema.ts`:
+
+**`subcontractors` table** — one row per sub added to a project:
 
 ```
-users
-  invite_token      TEXT  (nullable; SHA-256 hashed; cleared after first use)
-  invite_token_exp  TEXT  (nullable; ISO 8601 expiry -- 72 hours recommended)
+id text PK
+projectId text FK → projects.id CASCADE DELETE
+companyName text NOT NULL
+contactName text
+contactEmail text
+licenseNumber text         -- state contractor license if applicable
+fein text                  -- federal employer ID (for form affidavits)
+createdByUserId text FK → users.id
+createdAt text NOT NULL
+updatedAt text NOT NULL
 ```
 
-Invite flow: owner triggers invite -> server generates token ->
-email contains `/accept-invite?token=<raw>` -> server hashes and
-compares -> creates `project_members` row + clears token.
+This is **per-project, not global**. Rationale: subs have different license numbers and contacts by project; a GC using the same sub on two projects may have different contacts per contract. Also, `assertProjectAccess` scopes all data to project membership — a global subs table would require a separate access layer that doesn't exist.
 
-### Important: Existing `INVITE_CODE` Env Var Is Separate
+**`subcontractor_cprs` table** — weekly CPR receipt tracking per sub per payroll week:
 
-`auth.ts` already contains a global `INVITE_CODE` env-var gate on
-`POST /api/auth/register` (line 37-39). This is a deploy-level
-registration guard ("only people with the secret code can self-register").
-It is NOT the per-user invite token introduced in v3.0.
+```
+id text PK
+subcontractorId text FK → subcontractors.id CASCADE DELETE
+payrollWeekId text FK → payroll_weeks.id CASCADE DELETE
+status text NOT NULL DEFAULT 'pending'  -- 'pending' | 'received' | 'rejected'
+receivedAt text                         -- nullable; set when status = 'received'
+notes text                              -- optional GC notes
+createdByUserId text FK → users.id
+createdAt text NOT NULL
+updatedAt text NOT NULL
+UNIQUE INDEX on (subcontractorId, payrollWeekId)
+```
 
-The two systems must coexist:
-- Global `INVITE_CODE`: controls whether anyone can self-register at all.
-  If set, direct `/register` requires the code. Keep this behavior.
-- Per-user invite token (`users.invite_token`): issued by an existing owner
-  to invite a specific email into their team. The `/accept-invite` flow
-  bypasses the global INVITE_CODE check (the owner has already vouched
-  for the invitee by issuing the token).
+The IL Certified Transcript affidavit already has a `subcontractors: Array<{ name: string; address: string }>` field in `IlPdfInput` that is currently passed as an empty array — once subs are tracked, this can be populated automatically when generating the IL form.
 
-In the `InviteAcceptPage` registration path, do not require `INVITE_CODE`.
-Require only a valid (non-expired, unused) per-user invite token.
+### 3b. API Routes
 
-### Authorization Change: From `userId` to Member Check
+New router file: `src/server/routes/subcontractors.ts`
 
-**Current guard pattern (every route):**
+```
+POST   /api/projects/:projectId/subcontractors                      -- add sub to project
+GET    /api/projects/:projectId/subcontractors                      -- list all subs
+DELETE /api/projects/:projectId/subcontractors/:subId               -- remove sub
+
+POST   /api/projects/:projectId/subcontractors/:subId/cprs/:weekId  -- mark CPR received/rejected
+GET    /api/projects/:projectId/subcontractors/:subId/cprs          -- CPR history for a sub
+```
+
+All routes call `assertProjectAccess(db, projectId, userId)` before any data access. Pattern is identical to workers routes.
+
+### 3c. UI Placement — Tab on ProjectDetailPage
+
+Add a new **"Subcontractors" tab on `ProjectDetailPage.tsx`**, not a new top-level page.
+
+Rationale: subcontractor compliance is project-scoped, just like workers and payroll. The existing 4-step workflow progress indicator (Create → Workers → Payroll → WH-347) can grow to include a "Subs" indicator, or the subs panel lives below the existing tabs without modifying the step count.
+
+A standalone page would require new routing, navigation updates, and breadcrumbs — unnecessary complexity for a per-project feature.
+
+The client component is `SubcontractorPanel.tsx` embedded in `ProjectDetailPage.tsx`.
+
+### 3d. Audit Trail Extension
+
+Subcontractor actions write to `audit_logs` following the existing `insertAuditLog()` pattern from `auditService.ts`:
+
+- `subcontractor.created` — meta: `{ companyName, subId }`
+- `subcontractor.removed` — meta: `{ companyName, subId }`
+- `subcontractor_cpr.received` — meta: `{ companyName, weekEnding, payrollNumber }`
+- `subcontractor_cpr.rejected` — meta: `{ companyName, weekEnding, reason }`
+
+Add corresponding `ACTION_LABELS` entries in `ProjectActivityPage.tsx` alongside the existing worker/payroll labels.
+
+---
+
+## 4. Enhanced Reporting
+
+### 4a. Audit Log CSV Export
+
+**New route on the existing audit router (`src/server/routes/audit.ts`):**
+
+```
+GET /api/audit/:projectId/csv
+```
+
+This is a new route, not a modification to the existing `GET /api/audit/:projectId` paginator. The paginated route is consumed by `ProjectActivityPage.tsx` for display — adding CSV logic there would give it two responsibilities.
+
+Route behavior:
+1. Same `assertProjectAccess` guard
+2. Accepts the same `from`, `to`, `entityType` query params as the paginator (no page/limit — export all matching rows)
+3. Flattens the JSON `meta` column into columns (createdAt, userEmail, entityType, action, meta flattened)
+4. Streams a UTF-8 BOM CSV (matching the existing pattern in `csvExporter.ts` — BOM for Excel compatibility)
+5. Filename: `activity-log-{projectId}-{date}.csv`
+
+**Register route before the `/:projectId` wildcard** in `audit.ts` — per the established "specific before wildcard" routing rule from project decisions. The path `/api/audit/:projectId/csv` does not conflict because the existing wildcard is `/:projectId` at the router level, but the sub-path `csv` must be registered first in the router.
+
+**Download button location:** `ProjectActivityPage.tsx` page header toolbar, next to the existing filters. Natural placement — the user is already scoped to a project's activity log.
+
+### 4b. Multi-Project Compliance PDF
+
+**New route on the export router (`src/server/routes/export.ts`):**
+
+```
+GET /api/export/compliance-summary
+```
+
+Not a `:weekId` route — this is cross-project, user-scoped. Queries all active projects the user has access to via the `project_members` join (same join used by the dashboard compliance batch endpoint), plus their latest payroll week status and compliance result.
+
+Generator: new `src/server/services/complianceSummaryPdfGenerator.ts` using `PDFDocument.create()` — same programmatic-draw approach as `ilPdfGenerator.ts`.
+
+No state gate needed — this is an account-level report not tied to any specific state form.
+
+**Download button location:** `DashboardPage.tsx` page header as a secondary action ("Download Compliance Summary"). Not on `ReportsPage.tsx` because `ReportsPage` is project-scoped (`useParams projectId`) and this report is account-scoped (all projects).
+
+### 4c. Enhanced Fringe Report
+
+**Modify `src/server/services/reportsService.ts`** — add a new exported function `getEnhancedFringeSummary()` alongside the existing `getFringeSummary()`. Do NOT modify `getFringeSummary()` — its shape is frozen by the existing `ReportsPage.tsx` client interface.
+
+The enhanced function leverages data already stored in the schema:
+- Fund type breakdown: `fringeHealthWelfare`, `fringePension`, `fringeVacation`, `fringeTraining` (already on `payrollEntries`, added in Phase 29)
+- Union local grouping: `workers.unionLocal` (added Phase 39)
+- JW vs apprentice split: `workerClassifications.laborType`
+
+New route: `GET /api/projects/:projectId/reports/fringe-enhanced` — parallel to the existing `GET /api/projects/:projectId/reports/fringe-summary`.
+
+**Download button location:** New third tab `'fringeEnhanced'` on `ReportsPage.tsx` alongside the existing `'fringe'` and `'payHistory'` tabs. The print/CSV download lives within that tab, consistent with how the existing fringe summary works.
+
+---
+
+## 5. File Map — New vs Modified
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `src/server/services/txCprGenerator.ts` | TX certified payroll PDF (programmatic draw, based on ilPdfGenerator.ts) |
+| `src/server/services/flCprGenerator.ts` | FL certified payroll PDF |
+| `src/server/services/maCprGenerator.ts` | MA certified payroll PDF |
+| `src/server/services/njCprGenerator.ts` | NJ certified payroll PDF |
+| `src/server/services/complianceSummaryPdfGenerator.ts` | Multi-project compliance summary PDF |
+| `src/server/routes/subcontractors.ts` | CRUD + CPR tracking routes for subcontractors |
+| `src/client/components/SubcontractorPanel.tsx` | Panel component for ProjectDetailPage |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `src/server/db/schema.ts` | Add state-specific columns to `projects`; add submission timestamps to `payroll_weeks`; add `subcontractors` and `subcontractor_cprs` tables |
+| `src/server/routes/export.ts` | Add 4 new state PDF routes + compliance-summary route |
+| `src/server/routes/audit.ts` | Add `GET /api/audit/:projectId/csv` route (before `/:projectId` wildcard) |
+| `src/server/services/reportsService.ts` | Add `getEnhancedFringeSummary()` function |
+| `src/client/pages/ProjectDetailPage.tsx` | Add Subcontractors tab / SubcontractorPanel |
+| `src/client/pages/ReportsPage.tsx` | Add fringe-enhanced tab + download button |
+| `src/client/pages/ProjectActivityPage.tsx` | Add CSV download button + new ACTION_LABELS entries for sub events |
+| `src/client/pages/DashboardPage.tsx` | Add compliance-summary PDF download button |
+| `drizzle/meta/_journal.json` | Register each new migration file (manual step per project constraint) |
+
+---
+
+## 6. Suggested Phase Build Order (Phase 47–58)
+
+State forms (47-51) are independent of each other and of subcontractor tracking (52-54). Reporting (55-57) depends only on having live data from prior phases. All four state form phases can technically be built in parallel — sequential ordering below reflects single-developer delivery focus.
+
+| Phase | Feature | Key Files | Dependency |
+|-------|---------|-----------|------------|
+| 47 | TX Certified Payroll PDF | schema.ts (TX cols), txCprGenerator.ts, export.ts, PayrollWeekDetailPage.tsx | Phase 46 |
+| 48 | FL Certified Payroll PDF | schema.ts (FL cols), flCprGenerator.ts, export.ts | Phase 46 |
+| 49 | MA Certified Payroll PDF | schema.ts (MA cols), maCprGenerator.ts, export.ts | Phase 46 |
+| 50 | NJ Certified Payroll PDF | schema.ts (NJ cols), njCprGenerator.ts, export.ts | Phase 46 |
+| 51 | CA A-1-131 Gap Close | a1131Generator.ts, export.ts (modify existing route) | Phase 24 gap |
+| 52 | Subcontractor Schema + API | schema.ts (new tables), subcontractors.ts route, auditService.ts | Phase 46 |
+| 53 | Subcontractor UI | SubcontractorPanel.tsx, ProjectDetailPage.tsx | Phase 52 |
+| 54 | Subcontractor → State Form Integration | ilPdfGenerator.ts, tx/fl/ma/njCprGenerator.ts | Phase 53 |
+| 55 | Audit Log CSV Export | audit.ts (new route), ProjectActivityPage.tsx | Phase 46 |
+| 56 | Enhanced Fringe Report | reportsService.ts (new fn), reports route, ReportsPage.tsx | Phase 46 |
+| 57 | Multi-Project Compliance PDF | complianceSummaryPdfGenerator.ts, export.ts, DashboardPage.tsx | Phase 52 (needs sub data) |
+| 58 | v5.0 Integration + Polish | PROJECT.md update, cross-cutting cleanup, final test pass | All prior phases |
+
+**Phase ordering rationale:**
+- TX first (Phase 47): largest prevailing wage construction market; validates the new state form pattern before the other three.
+- State forms (47-50) before sub tracking (52-53): forms are purely additive exports; sub tracking requires a new table join into form generation (Phase 54).
+- CA gap (51) after new states: doesn't block anything; placed to avoid interrupting the state form rhythm.
+- Reporting (55-57) at the end: benefits from all prior data being live in the system; reporting phases have no upstream blockers.
+- Phase 58 as buffer: cross-cutting actions (ACTION_LABELS, audit events, filename consistency) are easier to finalize when all features exist.
+
+---
+
+## 7. State Gate Code Template (Phases 47-50)
+
+Copy from the `a1131` route in `export.ts` (lines 253-360). Substitute state code and generator call. The structure is identical for all four new states:
 
 ```typescript
-const project = await db.query.projects.findFirst({
-  where: eq(projects.userId, authUserId)
+// ── GET /api/export/tx-cpr/:weekId ──────────────────────────────────────────
+// Texas TxDOT Form 1184 — state-gated to TX projects only
+
+router.get('/tx-cpr/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const db = getDb();
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // State gate — TX CPR is TX-only
+  if (project.state !== 'TX') {
+    res.status(400).json({ error: 'TX Certified Payroll is only available for Texas projects' });
+    return;
+  }
+
+  const entries = await getPayrollEntries(weekId);
+  // ... map entries, build TxCprInput using project.txdotProjectId etc.
+  // ... call fillTxCpr()
+  // ... set Content-Type: application/pdf, stream response
+  // ... best-effort audit log with action: 'tx_cpr.downloaded'
 });
 ```
 
-**New guard pattern:**
-
-```typescript
-// projects.userId still tracks the original creator (do not remove -- audit trail)
-// Authorization now checks project_members
-const membership = await db.query.projectMembers.findFirst({
-  where: and(
-    eq(projectMembers.projectId, projectId),
-    eq(projectMembers.userId, authUserId),
-    isNotNull(projectMembers.acceptedAt)
-  )
-});
-if (!membership) throw new ForbiddenError();
-```
-
-This is a targeted change to authorization middleware only. The
-`projects.userId` column stays as the original-owner record and is
-never used for auth decisions in v3.0+.
-
-### New vs Modified Components
-
-| Component | Type | Change |
-|-----------|------|--------|
-| `project_members` table | New | Join table for flat team membership |
-| `users.invite_token` + `users.invite_token_exp` | New columns | Support invite-by-email flow |
-| authMiddleware / project route guards | Modified | Replace `userId` check with `projectMembers` lookup |
-| `POST /projects/:id/invite` | New route | Owner sends email invite |
-| `POST /invites/accept` | New route | Token exchange -> member row |
-| `GET /projects/:id/members` | New route | List team for owner management |
-| `DELETE /projects/:id/members/:userId` | New route | Owner removes member |
-| `TeamSettingsPanel` (React) | New component | Invite form + member list on Project Detail |
-| `InviteAcceptPage` (React) | New component | `/accept-invite` route handler |
+For programmatic-draw generators: no `/assets/` template file needed. For any state that does provide an official downloadable PDF template, use the template-overlay pattern from `a1131Generator.ts` instead — the route skeleton stays identical.
 
 ---
 
-## Feature 2: Payroll Provider Import (QuickBooks + ADP)
-
-### Decision: Server-Side CSV Parsing
-
-**Recommendation: Parse CSV on the server.**
-
-Rationale:
-- The mapping logic (CSV columns -> `payrollEntries` schema) is business
-  logic -- it belongs in the service layer, not the browser
-- Server-side parsing means the mapping rules are tested, versioned,
-  and auditable
-- Rate snapshots must be fetched at import time (same rule as
-  `copyPayrollWeek`) -- this requires DB access, which only the server has
-- The preview-then-commit pattern (already used by `copyPayrollWeek`)
-  applies cleanly to imports
-
-**Client responsibility:** File picker UI, preview of parsed rows
-before commit (same UX pattern as copy-week modal).
-
-### CSV Format Reality
-
-Neither QuickBooks nor ADP has a single canonical export format.
-
-**QuickBooks Desktop / QB Online:** Payroll Summary Report export.
-Typical columns: Employee Name, SSN (sometimes masked), Pay Period
-dates, Regular Hours, Overtime Hours, Gross Pay, deductions. Column
-names vary by QB version and report type.
-
-**ADP Workforce Now:** `PRcccEPI.csv` format. Columns include:
-`Co Code`, `Batch ID`, `File #` (employee ID), `Reg Hours`, `O/T Hours`,
-additional `Hours N Code` + `Hours N Amount` pairs for custom earning
-codes. No daily breakdown -- weekly totals only.
-
-**Implication:** The import cannot assume a fixed schema. The
-architecture must be a two-step mapping pipeline:
-
-```
-Step 1: Auto-detect provider (column signature match)
-Step 2: Map detected columns -> payrollEntry fields
-        (unmappable columns flagged for manual review in preview)
-```
-
-### Mapping Gap: No Daily Breakdown
-
-ADP and QuickBooks export weekly totals (Reg Hours, OT Hours) -- not
-Mon/Tue/Wed/Thu/Fri/Sat/Sun breakdowns. The `payrollEntries` schema
-stores daily ST/OT per the existing column layout.
-
-**Resolution:** When importing, distribute weekly totals across
-weekdays proportionally (default: equal split Mon-Fri for regular hours,
-Fri bias for OT if total > 8). Flag in the preview UI that daily
-distribution is estimated. User adjusts before committing. The audit
-trail shows the user confirmed the import.
-
-### New vs Modified Components
-
-| Component | Type | Change |
-|-----------|------|--------|
-| `POST /projects/:id/payroll-weeks/:weekId/import` | New route | Accepts multipart CSV, returns preview |
-| `POST /projects/:id/payroll-weeks/:weekId/import/commit` | New route | Commits previewed import to DB |
-| `importService.ts` | New service | Provider detection, column mapping, preview generation |
-| `qbMapper.ts` | New module | QuickBooks CSV -> `PayrollEntryImport[]` |
-| `adpMapper.ts` | New module | ADP Workforce Now CSV -> `PayrollEntryImport[]` |
-| `PayrollImportModal` (React) | New component | File upload -> preview table -> confirm commit |
-| `payroll_imports` table | New | Audit log of import sessions |
-
-### `payroll_imports` Audit Table
-
-```
-payroll_imports
-  id           TEXT PK
-  project_id   TEXT NOT NULL
-  week_id      TEXT NOT NULL
-  imported_by  TEXT NOT NULL  -> users.id
-  provider     TEXT NOT NULL  ('quickbooks' | 'adp' | 'unknown')
-  row_count    INTEGER NOT NULL
-  skipped      INTEGER NOT NULL DEFAULT 0
-  imported_at  TEXT NOT NULL
-  raw_filename TEXT
-```
-
-Store the filename but not the raw CSV content -- raw files may
-contain full SSNs that must not be persisted.
-
----
-
-## Feature 3: SSN Encryption (AES-256)
-
-### Decision: Service Layer Encryption, Env Var Key
-
-**Recommendation: Encrypt/decrypt in the service layer. Store key in
-environment variable.**
-
-**Service layer vs DB layer:**
-- SQLite has no native column-level encryption. DB-layer encryption
-  requires SQLCipher -- a significant deployment change on Render.com
-  persistent disk that risks breaking the existing Drizzle setup
-- Service layer encryption is transparent to Drizzle ORM and requires
-  no migration tooling changes
-- The encrypt/decrypt functions use Node.js built-in `node:crypto` --
-  zero new dependencies
-
-**Env var vs KMS:**
-- The app runs on Render.com with a small contractor user base. A KMS
-  (AWS KMS, HashiCorp Vault) adds meaningful operational complexity and
-  cost for marginal security gain at this scale
-- Render.com environment variables are injected at runtime and are not
-  stored in the codebase -- standard practice for this deployment tier
-- KMS becomes the right answer at SOC 2 compliance scale; flag as a
-  future milestone item
-
-**Algorithm: AES-256-GCM** (not CBC). GCM provides authenticated
-encryption -- it detects tampered ciphertext. CBC does not. Node.js
-`node:crypto` supports GCM natively with no additional packages.
-
-### Render.com Env Var Viability (Confirmed)
-
-Render.com Web Services support environment variables set in the
-dashboard under Environment > Environment Variables. They are injected
-as process environment at container startup. The `SSN_ENCRYPTION_KEY`
-env var (32-byte hex string = 64 hex characters) is set once in the
-Render dashboard; it is never written to disk, never in the codebase,
-and never visible in logs. This is the same pattern already in use for
-`JWT_SECRET` and `INVITE_CODE` in this app. No new infrastructure is
-needed; the pattern is already proven in the existing deployment.
-
-**Key generation (one-time, developer runs locally):**
-```
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-Paste the 64-character output into Render dashboard as `SSN_ENCRYPTION_KEY`.
-
-### Storage Pattern: Single Column, Concatenated Encoding
-
-Do not store the IV as a separate column. Store `iv:authTag:ciphertext`
-as a single concatenated hex string in one column.
-
-```
-workers
-  ssn_encrypted  TEXT  (nullable; format: "<iv_hex>:<tag_hex>:<ciphertext_hex>")
-  ssn_last4      TEXT  (keep as-is -- used for WH-347 display and
-                        cross-project worker identity; not encrypted)
-```
-
-`ssn_last4` is NOT encrypted -- it is already non-identifying by
-design and is used in the compliance engine's cross-project worker
-identity matching.
-
-### New vs Modified Components
-
-| Component | Type | Change |
-|-----------|------|--------|
-| `workers.ssn_encrypted` column | New column | AES-256-GCM ciphertext of full SSN |
-| `cryptoService.ts` | New service | `encryptSsn()` / `decryptSsn()` using `node:crypto` |
-| `POST /workers` + `PATCH /workers/:id` | Modified routes | Accept `ssn` field, encrypt before DB write |
-| CA eCPR XML export + WA PWIA XML export | Modified services | Decrypt SSN only at XML generation time |
-| `AddWorkerForm` / `EditWorkerForm` (React) | Modified | Accept full SSN input (masked display) |
-| `ENV: SSN_ENCRYPTION_KEY` | New env var | 32-byte hex string (256 bits) |
-
-### Decrypt-on-Demand Policy
-
-SSN is decrypted only at the moment it is written into a CA eCPR XML
-export or WA PWIA XML. It is never included in API responses to the
-client, never logged, and never included in any CSV export. This is
-enforced in the service layer -- the React client never sees plaintext
-SSN.
-
-### Key Rotation (flag for future milestone)
-
-If the encryption key must be rotated: select all rows with non-null
-`ssn_encrypted`, decrypt with old key, re-encrypt with new key, update.
-This is a maintenance script. The current schema supports it without any
-schema change.
-
----
-
-## Feature 4: Agency Portal Auto-Submit
-
-### API Availability Finding
-
-**Confidence: MEDIUM** (confirmed via official DIR and L&I documentation,
-no REST API spec found after search of official portals).
-
-**CA DIR eCPR:** No public REST API. The system supports two submission
-modes: (1) web form at `efiling.dir.ca.gov` and (2) XML file upload via
-the same portal. The XML schema is documented (CPR XML schema V1.3,
-published by DIR at `dir.ca.gov`). There is no programmatic submission
-endpoint that a third-party application can POST to.
-
-**WA L&I PWIA:** No public REST API for direct submission as of
-2026-03. The system supports XML file upload into the PWIA portal via
-My L&I. L&I has improved XML validation and error messaging in 2025
-but has not published a machine-to-machine API.
-
-**Conclusion: Direct API auto-submit is not achievable for either CA
-or WA at this time.** The correct architecture is export-assist:
-generate the agency-required XML and provide a guided checklist for
-manual portal upload. This is already partially implemented in v2.5
-(CA eCPR XML export in Phase 29, WA PWIA assist in Phase 30). v3.0
-extends this with submission status tracking.
-
-### What IS Buildable: Submission Status Tracking
-
-The `payrollWeeks.submittedAt` + `payrollWeeks.submittedTo` columns
-(Phase 17/23) already support WH-347 submission tracking. The same
-pattern should extend to CA eCPR and WA PWIA.
-
-**No async job queue is needed for the non-API path.** XML generation
-is synchronous (xmlbuilder2 is fast). If a future real API submission
-becomes available, a lightweight SQLite-backed job table is the correct
-approach -- not BullMQ/Redis (which would require adding Redis to the
-Render.com deployment).
-
-### New Columns on `payroll_weeks`
-
-```
-payroll_weeks
-  ca_ecpr_submitted_at  TEXT  (nullable; ISO 8601; set when user marks CA submitted)
-  wa_lni_submitted_at   TEXT  (nullable; ISO 8601; set when user marks WA submitted)
-```
-
-### Async Submission Table (future-ready, design now)
-
-If CA or WA publish a public API, this table supports retry logic without
-a Redis dependency:
-
-```
-agency_submissions
-  id            TEXT PK
-  project_id    TEXT NOT NULL
-  week_id       TEXT NOT NULL
-  agency        TEXT NOT NULL  ('ca-dir' | 'wa-li')
-  status        TEXT NOT NULL  ('pending' | 'processing' | 'submitted' | 'failed' | 'rejected')
-  attempt_count INTEGER NOT NULL DEFAULT 0
-  last_attempt  TEXT
-  next_retry    TEXT
-  response_body TEXT           (agency API response; nullable)
-  error_message TEXT
-  submitted_at  TEXT           (set when status = 'submitted')
-  created_at    TEXT NOT NULL
-  updated_at    TEXT NOT NULL
-```
-
-A polling loop queries:
-`SELECT * FROM agency_submissions WHERE status = 'pending' AND next_retry <= datetime('now')`
-
-### New vs Modified Components
-
-| Component | Type | Change |
-|-----------|------|--------|
-| `agency_submissions` table | New (future-ready) | Status tracking for agency submits |
-| `payrollWeeks.caEcprSubmittedAt` + `waLniSubmittedAt` | New columns | Track per-agency submit events |
-| CA eCPR modal (Phase 29) | Modified | Add "Mark as Submitted to DIR" action after export |
-| WA PWIA assist panel (Phase 30) | Modified | Add "Mark as Submitted to L&I" action after export |
-| `SubmissionStatusBadge` (React) | New component | Show CA/WA submission state on Payroll Week Detail |
-
----
-
-## System Overview: v3.0 Layer Map
-
-```
-+-----------------------------------------------------------------------+
-|                          React SPA                                     |
-|  TeamSettingsPanel   PayrollImportModal  AddWorkerForm  SubmissionBadge|
-|  InviteAcceptPage    ImportPreviewTable  (SSN input masked)            |
-+-------------------------------+---------------------------------------+
-                                | React Query (JWT cookie)
-+-------------------------------v---------------------------------------+
-|                       Express REST API                                 |
-|  /projects/:id/invite          /workers (encrypt SSN on write)        |
-|  /invites/accept               /workers/:id (decrypt gated)           |
-|  /projects/:id/members         /payroll-weeks/:id/import              |
-|  /agency-submissions           /payroll-weeks/:id/import/commit       |
-+----------+---------------------+------------------+-------------------+
-           |                     |                  |
-+----------v---------+  +--------v--------+  +------v------------------+
-| authService.ts     |  | importService   |  |   cryptoService.ts      |
-| (member check)     |  | qbMapper.ts     |  | encryptSsn/decryptSsn   |
-| inviteService.ts   |  | adpMapper.ts    |  | AES-256-GCM node:crypto |
-+----------+---------+  +--------+--------+  +------+------------------+
-           |                     |                  |
-+----------v---------------------v------------------v-------------------+
-|                         SQLite (Drizzle ORM)                          |
-|  project_members    payroll_imports     workers.ssn_encrypted         |
-|  users.invite_*     agency_submissions  payrollWeeks.ca/waSubmittedAt |
-+-----------------------------------------------------------------------+
-```
-
----
-
-## Migration Strategy for Existing Data
-
-Three categories of existing data must be addressed when these migrations
-are applied to the live Render.com database.
-
-### 1. Backfill `project_members` for Existing Projects
-
-When migration `0016_project_members.sql` runs, every existing project
-row has a `userId` in `projects.userId` but no corresponding row in
-`project_members`. The auth guard change (Feature 1) will lock out the
-existing user from all their projects unless this is backfilled.
-
-**Migration must include a backfill INSERT:**
-
-```sql
--- After CREATE TABLE project_members ...
-INSERT INTO project_members (id, project_id, user_id, role, invited_by, invited_at, accepted_at, created_at)
-SELECT
-  lower(hex(randomblob(16))),   -- UUID approximation in SQLite
-  id,                            -- project_id
-  user_id,                       -- user_id from existing projects.user_id
-  'owner',
-  NULL,                          -- invited_by null for original owners
-  created_at,                    -- invited_at = project creation date
-  created_at,                    -- accepted_at = same (auto-accepted; they're the owner)
-  created_at
-FROM projects;
-```
-
-This must be part of the same migration file as `CREATE TABLE project_members`,
-not a separate step, so it is atomic and cannot run partially.
-
-**UUID note:** SQLite has no `gen_random_uuid()`. Use
-`lower(hex(randomblob(16)))` for migration-time ID generation
-(produces 32 hex chars without dashes). Alternatively, generate
-UUIDs in the migration script and write them as literal values.
-The Drizzle service layer uses Node's `randomUUID()` for new rows --
-this backfill is migration-only.
-
-### 2. Existing `users` Table: Invite Token Columns
-
-Adding `invite_token` and `invite_token_exp` to `users` is purely
-additive (nullable columns). All existing users rows are unaffected --
-both columns will be NULL for all existing accounts, which is the
-correct default state (no pending invite).
-
-No backfill needed for this migration.
-
-### 3. Existing `workers.ssn_last4`: No Backfill to `ssn_encrypted`
-
-`SEC-01` requires encrypting existing `ssn_last4` values. However:
-- `ssn_last4` contains only 4 digits, not a full SSN.
-- A 4-digit value encrypted as AES-256-GCM is ciphertext of an
-  already non-secret (non-identifying) value.
-- The spec says "existing `ssn_last4` plain-text values are encrypted
-  in the migration" -- this refers to encrypting the last-4 in
-  `ssn_encrypted` as a stopgap only if the worker has no full SSN yet.
-
-**Recommended interpretation:** The migration adds `ssn_encrypted TEXT`
-(nullable). Existing rows get `ssn_encrypted = NULL`. When an owner
-edits a worker record and enters the full SSN, `ssn_encrypted` is
-populated and `ssn_last4` is derived from it server-side. No bulk
-backfill of `ssn_last4` into `ssn_encrypted` is needed or meaningful --
-it would encrypt non-identifying data with no benefit.
-
-Clarify with product owner if a different interpretation was intended
-(e.g., encrypt the last-4 as a compliance gesture even without the
-full SSN).
-
----
-
-## Recommended Build Order (Feature Dependencies)
-
-```
-1. SSN encryption foundation
-   No dependencies. Purely additive column + service.
-   Must land before any CA eCPR / WA PWIA improvements that use full SSN.
-
-2. Multi-user: DB schema + auth middleware
-   project_members table + authMiddleware change.
-   Must land before invite flow (invite routes reference the table).
-   projects.userId stays as-is; only auth guard changes.
-   BACKFILL: Migration must include the project_members backfill INSERT
-   for existing projects (see Migration Strategy above).
-
-3. Multi-user: invite flow + React team UI
-   Depends on step 2 (table must exist).
-   New routes + InviteAcceptPage + TeamSettingsPanel.
-
-4. Agency submission status tracking
-   Depends on nothing new. Additive columns + SubmissionStatusBadge.
-   agency_submissions table is future-ready (no active use yet).
-
-5. Payroll import: server pipeline
-   importService.ts + mappers + preview/commit routes.
-   Depends on nothing except existing payrollEntries schema.
-
-6. Payroll import: React UI
-   PayrollImportModal depends on step 5 routes existing.
-```
-
----
-
-## Architectural Patterns
-
-### Pattern 1: Preview-Then-Commit (existing, extend to import)
-
-**What:** Return a dry-run preview from the server before any DB write.
-User confirms. Second request commits.
-**When to use:** Any bulk operation that could create many rows or
-overwrite existing data.
-**Trade-offs:** Two round-trips. The existing codebase already uses this
-for `copyPayrollWeek` -- applying it to CSV import is consistent and
-requires no new UX paradigm.
-
-### Pattern 2: Service Layer Encryption
-
-**What:** `cryptoService.ts` is the single entry point for all
-encrypt/decrypt operations. Routes never call `node:crypto` directly.
-**When to use:** Any field requiring at-rest encryption.
-**Trade-offs:** Slight latency per call (AES-GCM is microseconds at
-this scale -- negligible). Key isolation benefit is significant: rotating
-the key means changing one service, not hunting call sites.
-
-### Pattern 3: Member-Scoped Auth Guard
-
-**What:** All project-scoped routes check `project_members` for active
-(accepted) membership instead of `projects.userId`.
-**When to use:** Every protected project route in v3.0+.
-**Trade-offs:** One extra lookup per request. At SQLite scale with a
-small team, this is not measurable. Index on `(project_id, user_id)`
-in the migration is required.
-
-### Pattern 4: Export-Assist (not auto-submit)
-
-**What:** Generate the agency-required XML and surface a guided
-checklist + "mark submitted" button. Do not POST to agency portals.
-**When to use:** CA DIR eCPR and WA L&I PWIA -- neither has a public
-API as of 2026-03.
-**Trade-offs:** Less automation than "auto-submit" implies. But
-attempting browser-based portal automation would be brittle, likely
-violate portal ToS, and impossible on Render.com. Export-assist is
-the correct honest scope.
-
----
-
-## Data Flow
-
-### SSN Write Flow
-
-```
-AddWorkerForm (SSN input, masked display)
-  -> POST /workers { ssn: "123-45-6789", ssnLast4: "6789", ... }
-  -> workerService.createWorker()
-       -> cryptoService.encryptSsn("123-45-6789")  -> "<iv>:<tag>:<ciphertext>"
-       -> db.insert(workers, { ssnLast4: "6789", ssnEncrypted: "...", ssn: undefined })
-  -> Response: worker object (no ssn, no ssnEncrypted in response body)
-```
-
-### SSN Read Flow (CA eCPR XML export only)
-
-```
-POST /export/ecpr-xml/:weekId
-  -> ecprXmlGenerator.generate()
-       -> db.select workers (includes ssnEncrypted)
-       -> cryptoService.decryptSsn(worker.ssnEncrypted)  -> "123-45-6789"
-       -> xmlbuilder2 inserts plaintext SSN into XML
-       -> plaintext SSN goes out of scope after XML generation
-  -> Response: XML file download (plaintext SSN never stored or logged)
-```
-
-### Payroll Import Flow
-
-```
-PayrollImportModal (file picker)
-  -> POST /projects/:id/payroll-weeks/:weekId/import  multipart/form-data
-  -> importService.preview(file)
-       -> detectProvider(headers)  -> 'quickbooks' | 'adp'
-       -> mapper.map(rows)  -> PayrollEntryPreview[]
-       -> fetchRateSnapshots(workers, weekId)  -> snapshots
-  -> Response: { preview: PayrollEntryPreview[], unmapped: string[], provider }
-
-User reviews preview, confirms
-  -> POST /projects/:id/payroll-weeks/:weekId/import/commit { importId }
-  -> importService.commit(importId)
-       -> db.insert payrollEntries (with rate snapshots)
-       -> db.insert payroll_imports (audit log)
-  -> Response: { inserted: N, skipped: M }
-```
-
-### Team Invite Flow
-
-```
-TeamSettingsPanel (owner enters email)
-  -> POST /projects/:id/invite { email }
-  -> inviteService.createInvite(projectId, email, invitedBy)
-       -> crypto.randomBytes(32)  -> raw token
-       -> SHA-256 hash  -> stored token
-       -> upsert users row (or find existing by email)
-       -> insert project_members (acceptedAt: null)
-       -> set users.inviteToken = hash, users.inviteTokenExp = now+72h
-       -> send email (link: /accept-invite?token=<raw>)
-  -> Response: { status: 'invited' }
-
-Invitee clicks link -> InviteAcceptPage
-  -> POST /invites/accept { token }
-  -> inviteService.accept(token)
-       -> SHA-256 hash incoming token
-       -> find user WHERE invite_token = hash AND invite_token_exp > now()
-       -> set project_members.acceptedAt = now()
-       -> clear invite token fields on users
-  -> Redirect to /dashboard
-```
-
----
-
-## SQLite-Specific Constraints
-
-| Constraint | Impact on v3.0 | Mitigation |
-|------------|---------------|------------|
-| Foreign keys off by default | `project_members` FK to projects/users not enforced automatically | Add `PRAGMA foreign_keys = ON` to DB init |
-| No RIGHT/FULL OUTER JOIN | Auth queries use LEFT JOIN + null check pattern | Use `LEFT JOIN project_members ON ... WHERE pm.accepted_at IS NOT NULL` |
-| Single writer (WAL mode) | Import commits are synchronous; no concurrent bulk writes | WAL mode (already on Render); single-session writes are fine |
-| Add-only migrations | Cannot drop `projects.userId` | Keep it; use only for original-owner display. Auth moves to `project_members` |
-| No native encryption | Column-level crypto not possible at DB layer | Service-layer AES-256-GCM via `node:crypto` |
-| No cascade enforcement | `onDelete: 'cascade'` in Drizzle schema does not fire unless FK pragma is on | Enable FK pragma OR add explicit delete logic in service layer |
-| No `gen_random_uuid()` | Backfill migrations cannot use standard UUID functions | Use `lower(hex(randomblob(16)))` for migration-generated IDs |
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Organizations Table for a Flat Team
-
-**What people do:** Add an `organizations` table because "that's how
-SaaS works," then force every project into an org and every user into
-an org.
-**Why it's wrong:** The requirement is "flat -- all members see all
-projects." An org table adds a third entity, complicates every query,
-and front-loads scope the product does not need.
-**Do this instead:** `project_members` join table. If org-level features
-are needed in v4.0, migrate then with a real requirements spec.
-
-### Anti-Pattern 2: Storing Plaintext SSN at Rest
-
-**What people do:** Store full SSN in a column "just temporarily" for
-the import or pre-fill use case, intending to encrypt later.
-**Why it's wrong:** SQLite on a shared disk is a flat file. Any breach
-exposes all records. "Temporary" plaintext columns become permanent.
-**Do this instead:** Encrypt at the service layer before the INSERT.
-Never pass plaintext SSN through an API response.
-
-### Anti-Pattern 3: Returning Plaintext SSN in API Responses
-
-**What people do:** Return `{ ssn: decryptedSsn }` from `GET /workers/:id`
-to let the frontend pre-fill an edit form.
-**Why it's wrong:** The plaintext SSN travels over the wire and into
-React state. Browser devtools, logging middleware, and React Query's
-cache all become SSN stores.
-**Do this instead:** For the edit form, require re-entry on edit, or
-use a dedicated "reveal SSN" endpoint that returns a single-use,
-short-lived response and is not cached by React Query.
-
-### Anti-Pattern 4: Parsing CSV in the Browser
-
-**What people do:** Use PapaParse in React to parse the CSV and send
-JSON to the server.
-**Why it's wrong:** The mapping logic is business logic that needs
-tests and versioning. The rate snapshot fetch requires DB access.
-Browser-parsed data arrives at the server unvalidated.
-**Do this instead:** Send the raw file as multipart. Parse and map
-server-side in `importService.ts`.
-
-### Anti-Pattern 5: Browser Automation for Agency Submit
-
-**What people do:** Attempt Puppeteer/Playwright to "auto-submit" by
-filling the DIR or L&I portal form programmatically.
-**Why it's wrong:** Render.com does not support headless browsers.
-Portal ToS prohibit automation. Portal UI changes break the automation
-silently. CA DIR already accepts XML uploads -- the correct integration
-is XML generation plus a checklist.
-**Do this instead:** Export-assist pattern: generate the XML, surface
-a checklist, let the user upload manually, mark submitted in the app.
-
-### Anti-Pattern 6: Forgetting the `project_members` Backfill
-
-**What people do:** Add the `project_members` table in a migration,
-switch the auth guard to check it, and deploy -- locking out all
-existing users from their own projects.
-**Why it's wrong:** The auth guard now requires a `project_members` row,
-but existing projects have none. Every existing user gets 403 on all
-their data.
-**Do this instead:** Include the backfill INSERT in the same migration
-as the CREATE TABLE. The migration is atomic -- both run together or
-neither runs.
-
----
-
-## Integration Points Summary
-
-| Feature | Touches Existing Code | New Tables/Columns | New Routes | New React Components |
-|---------|-----------------------|--------------------|------------|----------------------|
-| Multi-user | authMiddleware (every project route), auth.ts `/register` flow | `project_members`, `users.invite_token`, `users.invite_token_exp` | 4 invite/member routes | TeamSettingsPanel, InviteAcceptPage |
-| Payroll import | None (new parallel flow) | `payroll_imports` | 2 import routes | PayrollImportModal |
-| SSN encryption | `POST /workers`, `PATCH /workers/:id`, CA/WA XML exports | `workers.ssn_encrypted` | None new | AddWorkerForm/EditWorkerForm (SSN field) |
-| Agency status | CA eCPR modal (Phase 29), WA assist panel (Phase 30) | `payrollWeeks.caEcprSubmittedAt`, `payrollWeeks.waLniSubmittedAt`, `agency_submissions` | None new | SubmissionStatusBadge |
-
-### New Files by Feature
-
-| File | Feature | Type |
-|------|---------|------|
-| `src/server/services/cryptoService.ts` | SSN encryption | New service |
-| `src/server/services/importService.ts` | Payroll import | New service |
-| `src/server/services/qbMapper.ts` | Payroll import | New module |
-| `src/server/services/adpMapper.ts` | Payroll import | New module |
-| `src/server/services/inviteService.ts` | Multi-user | New service |
-| `src/server/routes/teams.ts` | Multi-user | New route file |
-| `src/server/routes/invites.ts` | Multi-user | New route file |
-| `src/client/pages/InviteAcceptPage.tsx` | Multi-user | New page |
-| `src/client/components/TeamSettingsPanel.tsx` | Multi-user | New component |
-| `src/client/components/PayrollImportModal.tsx` | Payroll import | New component |
-| `src/client/components/SubmissionStatusBadge.tsx` | Agency status | New component |
-| `src/server/db/migrations/0016_project_members.sql` | Multi-user | New migration |
-| `src/server/db/migrations/0017_users_invite_token.sql` | Multi-user | New migration |
-| `src/server/db/migrations/0018_workers_ssn_encrypted.sql` | SSN encryption | New migration |
-| `src/server/db/migrations/0019_payrollweeks_submission_cols.sql` | Agency status | New migration |
-| `src/server/db/migrations/0020_payroll_imports_table.sql` | Payroll import | New migration |
-| `src/server/db/migrations/0021_agency_submissions_table.sql` | Agency status | New migration |
-
-### Modified Files by Feature
-
-| File | Feature | Change |
-|------|---------|--------|
-| `src/server/middleware/auth.ts` | Multi-user | Add `requireMember()` guard checking `project_members` |
-| `src/server/routes/auth.ts` | Multi-user | Invite-token path bypasses global INVITE_CODE check |
-| `src/server/routes/workers.ts` | SSN encryption | Encrypt SSN on POST/PATCH; strip from GET responses |
-| `src/server/services/ecprXmlGenerator.ts` | SSN encryption | Decrypt SSN at XML generation time |
-| `src/server/services/waCprXmlGenerator.ts` | SSN encryption | Decrypt SSN at XML generation time |
-| `src/client/components/AddWorkerForm.tsx` (or workers page) | SSN encryption | Full SSN input with masked display |
-| `src/client/pages/PayrollWeekDetailPage.tsx` | Agency status | Add SubmissionStatusBadge + "Mark Submitted" actions |
-| All project-scoped route files (projects, workers, payroll, etc.) | Multi-user | Replace `eq(projects.userId, authUserId)` with `requireMember()` |
+## 8. Key Architectural Constraints for v5.0
+
+| Constraint | v5.0 Implication |
+|-----------|-----------------|
+| `assertProjectAccess` before all data access | All new routes (sub CRUD, CSV export, new PDF routes) call this before any DB query — never skip |
+| Add-only schema migrations, never drop columns | All new project/payroll_weeks columns are nullable; subcontractors/subcontractor_cprs are new tables |
+| State gate always after access check, never before | `project.state !== 'XX'` is step 3; `assertProjectAccess` is step 2 — order cannot be swapped |
+| Rate snapshots frozen | No new report reads live wage determinations — always `fringeRateSnapshot`/`baseRateSnapshot` from `payrollEntries` |
+| Design tokens, no hardcoded hex | All new client components use `@theme` token classes |
+| Manual migration journal registration | Each new migration SQL file must be manually added to `drizzle/meta/_journal.json` |
+| `Button` has no `asChild` prop | PDF download links in new pages use secondary button classes on `<a>` elements directly |
+| Route ordering: specific before wildcard | New audit CSV route `/api/audit/:projectId/csv` must register before `/:projectId` in audit router |
 
 ---
 
 ## Sources
 
-- California DIR eCPR XML Upload User Guide:
-  https://www.dir.ca.gov/Public-Works/documents/CPR-XML-Upload-User-Guide.pdf
-- California DIR Certified Payroll Reporting page:
-  https://www.dir.ca.gov/Public-Works/Certified-Payroll-Reporting.html
-- Washington L&I PWIA step-by-step instructions (XML submission confirmed):
-  https://lni.wa.gov/licensing-permits/_docs/pwia-step-by-step-instructions.pdf
-- ADP Workforce Now CSV export format:
-  https://kb.7shifts.com/hc/en-us/articles/4417520074387-ADP-Workforce-Now-US-Payroll-Export
-- Node.js AES-256-GCM implementation reference:
-  https://gist.github.com/rjz/15baffeab434b8125ca4d783f4116d81
-- SQLite-native background job system (no Redis pattern):
-  https://jasongorman.uk/writing/sqlite-background-job-system/
-- Render.com environment variables documentation:
-  https://render.com/docs/environment-variables
-- Existing schema: src/server/db/schema.ts (read directly)
-- Existing auth routes: src/server/routes/auth.ts (read directly)
-- Existing auth middleware: src/server/middleware/auth.ts (read directly)
-- Project context: .planning/PROJECT.md (read directly)
-
----
-
-*Architecture research for: HCC Prevailing Wage v3.0 -- Team & Integration milestone*
-*Researched: 2026-03-27*
+- Direct code analysis: `src/server/routes/export.ts` — full state gate pattern, all existing state routes
+- Direct code analysis: `src/server/db/schema.ts` — existing state-specific columns, table structure, audit_logs shape
+- Direct code analysis: `src/server/services/ilPdfGenerator.ts`, `pw12Generator.ts` — programmatic draw pattern
+- Direct code analysis: `src/server/routes/audit.ts` — paginated audit log structure, query param handling
+- Direct code analysis: `src/server/services/reportsService.ts` — getFringeSummary function shape and joins
+- Direct code analysis: `src/client/pages/ReportsPage.tsx` — tab pattern, query hooks
+- Direct code analysis: `src/client/pages/ProjectActivityPage.tsx` — ACTION_LABELS pattern, audit log display
+- `C:/Users/glcar/prevailing-wage/.planning/PROJECT.md` — v5.0 feature targets, phase history, architectural decisions table
