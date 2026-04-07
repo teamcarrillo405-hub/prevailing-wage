@@ -770,11 +770,12 @@ Plans:
   3. The IL IDOL submission modal is a 2-step flow: Step 1 downloads the IL Certified Transcript PDF, Step 2 shows the IDOL portal checklist (due by 15th of following month, portal URL, Excel template note)
   4. "Mark as Submitted to IL IDOL" writes an `agency_submissions` row and the button is only visible on IL projects
 
-**Plans**: 3 plans
+**Plans**: 4 plans
 Plans:
-- [x] 42-01-PLAN.md — DB migration + Drizzle schema (6 IL columns)
-- [x] 42-02-PLAN.md — Server routes + services (workers demographics + nonPwHours)
-- [ ] 42-03-PLAN.md — React UI (ProjectForm, WorkersPage, PayrollWeekForm, PayrollWeekDetailPage)
+- [ ] 43-01-PLAN.md — Migration + schema (ilIdolSubmittedAt) + setIlIdolSubmitted service
+- [ ] 43-02-PLAN.md — IL Certified Transcript PDF generator (TDD)
+- [ ] 43-03-PLAN.md — Export route + submit route + integration tests
+- [ ] 43-04-PLAN.md — Frontend 2-step IL IDOL modal + human verification
 **UI hint**: yes
 
 ---
