@@ -40,7 +40,7 @@ The `provider` field in `payroll_provider_mappings` should use string literals m
 | IMPORT-04 | Create `payroll_provider_mappings` table: `(id, projectId, provider, providerWorkerId, workerId, createdAt)`. Stores user-confirmed link between a provider's worker ID and our internal worker. Mappings persist across imports. | Migration 0027, schema.ts addition, Drizzle table definition with uniqueIndex on (projectId, provider, providerWorkerId). |
 | IMPORT-01 | Gusto CSV parser: detect by `Employee first name` + `Employee last name`. Concatenate to "First Last". Parse `Regular hours` and `Overtime hours` as decimals. Parse `Payroll end date` (MM/DD/YYYY). `Double overtime hours` → OT bucket if present. Error if required columns missing. | New `gustoMapper.ts` following adpMapper.ts pattern; extended `detectProvider()` in importService.ts. |
 | IMPORT-06 | Auto-detect provider type from CSV column signatures during preview parse. Show provider badge (Gusto/Paychex/Sage/QB/ADP) in Step 2 header. For Paychex/Sage 300, insert ID mapping step. For Gusto, proceed directly to matched/unmatched table. | Extend `detectProvider()` return type. Update `ImportPreviewResult.provider`. Update Step 2 badge rendering in PayrollWeekDetailPage.tsx. |
-| NFR-01 | Migrations use `--> statement-breakpoint` separator. | Migration 0027 has one CREATE TABLE + one CREATE UNIQUE INDEX → needs one breakpoint between them. |
+| NFR-01 | Migrations use `--> statement-breakpoint` separator. | Migration 0027 uses a single CREATE TABLE with inline UNIQUE constraint — single statement, **no breakpoint required**. |
 | NFR-05 | New migration files have corresponding schema.ts update. | Add `payrollProviderMappings` table export to schema.ts. Update `payrollImports.provider` type union. |
 </phase_requirements>
 
@@ -650,7 +650,7 @@ Step 2.6: SKIPPED — this phase is code/config/migration changes only. No new e
 ### Phase Requirements → Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| IMPORT-01 | Gusto CSV parser: required columns detected, names concatenated, hours parsed, double OT → OT bucket | unit | `npx vitest run --reporter=verbose src/server/services/gustoMapper.test.ts` | Wave 0 |
+| IMPORT-01 | Gusto CSV parser: required columns detected, names concatenated, hours parsed, double OT → OT bucket | unit | `npx vitest run tests/services/importService.test.ts` | Wave 0 |
 | IMPORT-01 | Error thrown if required columns missing | unit | same file | Wave 0 |
 | IMPORT-04 | payroll_provider_mappings table created with correct schema | integration/smoke | manual SQL verify: `SELECT sql FROM sqlite_master WHERE name='payroll_provider_mappings'` | manual |
 | IMPORT-06 | detectProvider returns 'gusto' for Gusto headers | unit | `npx vitest run src/server/services/importService.test.ts` | Wave 0 (may exist from Phase 35) |
@@ -663,7 +663,7 @@ Step 2.6: SKIPPED — this phase is code/config/migration changes only. No new e
 - **Phase gate:** Full suite green before `/gsd:verify-work`
 
 ### Wave 0 Gaps
-- [ ] `src/server/services/gustoMapper.test.ts` — covers IMPORT-01 (required columns, name assembly, hour parsing, double OT, missing column error)
+- [ ] `tests/services/importService.test.ts` — extend with Gusto cases: required columns detected, names concatenated, hours parsed, double OT → OT bucket, missing required column error, absent 'Overtime hours' column defaults to 0 (no error)
 - [ ] Verify `src/server/services/importService.test.ts` exists and covers detectProvider — if not, create it for IMPORT-06
 
 ---
