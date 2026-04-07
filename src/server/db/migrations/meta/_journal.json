@@ -155,6 +155,13 @@
       "when": 1743897600000,
       "tag": "0025_il_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1743984000000,
+      "tag": "0026_il_idol_submission",
+      "breakpoints": true
     }
   ]
 }

@@ -203,6 +203,8 @@ export const payrollWeeks = sqliteTable('payroll_weeks', {
   waLniSubmittedAt: text('wa_lni_submitted_at'),
   // Phase 41 — NY MPWR submission tracking
   nyMpwrSubmittedAt: text('ny_mpwr_submitted_at'),
+  // Phase 43 -- IL IDOL submission tracking
+  ilIdolSubmittedAt: text('il_idol_submitted_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
