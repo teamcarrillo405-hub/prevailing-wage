@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.5
-milestone_name: State Portal Integration
-status: Phase complete — ready for verification
-stopped_at: Completed 46-04-PLAN.md (notification preferences panel + PATCH merge)
-last_updated: "2026-04-07T19:41:30.600Z"
+milestone: v5.0
+milestone_name: State Coverage + Subcontractors + Reporting
+status: Defining requirements
+stopped_at: Milestone v5.0 started — requirements in progress
+last_updated: "2026-04-07T20:00:00.000Z"
 progress:
-  total_phases: 24
-  completed_phases: 24
-  total_plans: 62
-  completed_plans: 62
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # State
@@ -23,8 +23,10 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 41 (ny-state-forms) — EXECUTING
-Plan: 5 of 5
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-07 — Milestone v5.0 started
 
 ## Performance Metrics
 

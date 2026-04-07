@@ -8,26 +8,31 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v4.0 — Compliance Depth + Operations
+## Current Milestone: v5.0 — State Coverage + Subcontractors + Reporting
 
-**Goal:** Deepen compliance coverage with NY and IL state-specific certified payroll forms, richer worker profiles (structured address, union card, apprenticeship, multi-classification), three additional payroll import providers (Gusto, Paychex, Sage), a DOL-audit-ready activity log, and contractor notifications for violations, due dates, team activity, and submissions.
+**Goal:** Expand certified payroll coverage to TX, FL, MA, and NJ (PDF-only, state-gated), close the CA A-1-131 gap, add GC subcontractor compliance tracking, and deepen reporting with exportable audit logs and multi-project views.
 
 **Target features:**
-- Notifications: compliance violation alerts, payroll due-soon reminders, team member activity alerts, submission confirmations (email via nodemailer)
-- Additional state forms: New York DOL and Illinois DOL certified payroll PDFs
-- More payroll providers: Gusto, Paychex, Sage/Timberline CSV import
-- Audit trail: who + what + when activity log, viewable per project
-- Worker profile depth: structured address, union local + book number, apprenticeship committee + registration number, multiple trade classifications per payroll week
+- CA A-1-131 PDF — close the pre-planned Phase 24 Plan 03 gap
+- TX, FL, MA, NJ certified payroll PDFs (PDF-only, state-gated, no portal XML)
+- Subcontractor tracking — GC adds subs per project, tracks CPR receipt/compliance per payroll week
+- Audit log CSV export — downloadable from ProjectActivityPage
+- Multi-project compliance PDF — snapshot of all active projects
+- Enhanced fringe report — by fund type, union local, journeyman vs apprentice
+
+## Previous Milestone: v4.0 — Compliance Depth + Operations ✅ SHIPPED 2026-04-07
+
+**Delivered:** Deepened compliance coverage with NY and IL state-specific certified payroll forms (PW-12, MPWR XML, IL Certified Transcript), richer worker profiles (structured address, union card, apprenticeship, multi-classification), three additional payroll import providers (Gusto, Paychex, Sage 300/100 with ID-mapped worker flow), a DOL-audit-ready activity log with per-project UI, and email notifications for violations, due dates, team activity, and submission confirmations.
 
 ## Previous Milestone: v3.0 — Team & Integration ✅ SHIPPED 2026-03-31
 
 **Delivered:** Transformed HCC Prevailing Wage from a single-contractor tool into a team-ready platform with encrypted SSN storage, multi-user team accounts, payroll provider imports (QuickBooks + ADP), and agency submission status tracking. Research confirmed no public CA DIR or WA L&I APIs exist — auto-submit deferred to v4+.
 
-## Current State (v4.0 in progress — Phase 40 complete)
+## Current State (v5.0 starting — v4.0 complete 2026-04-07)
 
-Phase 40 complete: NY foundation shipped — `0023_ny_schema.sql` migration adds `nyprcNumber`, `nysContractorRegNumber`, `projectSettings` to projects and `nysRegisteredApprentice` to workers. ProjectForm renders green `isNY` conditional panel (PRC Number + Contractor Reg). `computeCompliance()` fetches `project.state` and enforces NY 8-hours/day OT rule (each day checked independently, `cwhssa-ot` violation). 420 tests passing.
+v4.0 shipped all 10 phases (37–46), 62 plans, 560+ tests passing. App live at https://hcc-prevailing-wage.onrender.com. Supported states: CA, WA, NY, IL. Payroll imports: QuickBooks, ADP, Gusto, Paychex, Sage 300/100. Team accounts, SSN encryption, audit trail, email notifications all live.
 
-**Shipped:** 2026-03-31 (v3.0); v4.0 in progress
+**Shipped:** 2026-04-07 (v4.0 complete)
 **Tests:** 387+ passing (main suite, excluding worktrees)
 **Stack:** Node.js + Express + TypeScript (server), React + Vite + TailwindCSS v4 (client), SQLite + Drizzle ORM, pdf-lib for PDF generation, xmlbuilder2 for XML export, nodemailer (team invites)
 **LOC:** ~15,000+ net new lines (v3.0 added ~2,818 across 32 files)
