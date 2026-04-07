@@ -23,6 +23,7 @@ import { importRouter } from './routes/import.js';
 import { auditRouter } from './routes/audit.js';
 import { payrollWeekClassificationsRouter } from './routes/payrollWeekClassifications.js';
 import { runWageSync } from './services/wdolSync.js';
+import { runDueSoonScan } from './services/dueSoonService.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
 import { fileURLToPath } from 'url';
@@ -76,6 +77,18 @@ app.listen(PORT, () => {
       await runWageSync();
     } catch (err) {
       console.error('[wage-sync] Failed:', err);
+      // Never rethrow — cron failures must not crash Express
+    }
+  }, { timezone: 'America/New_York' });
+
+  // Register daily payroll due-soon scan — NOTIF-02
+  // Runs at 7:00 AM Eastern every day
+  cron.schedule('0 7 * * *', async () => {
+    console.log('[due-soon] Running daily payroll due-soon scan');
+    try {
+      await runDueSoonScan();
+    } catch (err) {
+      console.error('[due-soon] Scan failed:', err);
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'America/New_York' });
