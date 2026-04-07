@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 44-import-provider-foundation 44-02-PLAN.md
-last_updated: "2026-04-07T06:36:11.251Z"
+stopped_at: Completed 44-03-PLAN.md
+last_updated: "2026-04-07T06:42:38.521Z"
 progress:
   total_phases: 24
-  completed_phases: 21
+  completed_phases: 22
   total_plans: 55
-  completed_plans: 54
+  completed_plans: 55
 ---
 
 # State
@@ -103,6 +103,7 @@ Key decisions locked for v4.0 scope:
 - [Phase 44-import-provider-foundation]: Used inline UNIQUE constraint in migration SQL (no statement-breakpoint) and named ImportProvider type for reuse across server files
 - [Phase 44-import-provider-foundation]: Gusto signature (4 columns) checked after QB and before ADP — more specific than ADP 2-column signature
 - [Phase 44-import-provider-foundation]: Overtime hours column is optional in Gusto (zero-OT exports omit it) — defaults to 0, not a required column
+- [Phase 44-03]: PROVIDER_LABELS at module level — single source of truth for provider display names; fallback ?? provider for forward-compat
 
 ### Phase Order Rationale
 
@@ -125,7 +126,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T06:36:11.247Z
-Stopped at: Completed 44-import-provider-foundation 44-02-PLAN.md
+Last session: 2026-04-07T06:42:38.518Z
+Stopped at: Completed 44-03-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
