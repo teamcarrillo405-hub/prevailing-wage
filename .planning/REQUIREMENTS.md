@@ -10,10 +10,10 @@
 
 Email notifications via nodemailer (already installed). Non-fatal — email failure falls back to console log per existing pattern.
 
-- [ ] **NOTIF-01** — Compliance violation notification: when `computeCompliance()` detects a new violation on a payroll week, send an email to all project members (owner + member) listing the affected worker(s), violation type (under-wage / CWHSSA OT), and a link to the PayrollWeekDetailPage.
-- [ ] **NOTIF-02** — Payroll due-soon reminder: a configurable threshold (default: 3 days before week-ending date) triggers an email to the project owner reminding them to submit the payroll week. Threshold stored per-project in a new `settings` JSON column on `projects` table.
-- [ ] **NOTIF-03** — Team member activity notification: when a team member (non-owner) creates or modifies a payroll entry or worker record, send a summary email to the project owner (digest: one email per save action, not per row).
-- [ ] **NOTIF-04** — Submission confirmation: when "Mark as Submitted" is toggled for CA DIR, WA L&I, NY MPWR, or IL IDOL, send a confirmation email to the acting user with the submission date, agency name, and project name.
+- [x] **NOTIF-01** — Compliance violation notification: when `computeCompliance()` detects a new violation on a payroll week, send an email to all project members (owner + member) listing the affected worker(s), violation type (under-wage / CWHSSA OT), and a link to the PayrollWeekDetailPage.
+- [x] **NOTIF-02** — Payroll due-soon reminder: a configurable threshold (default: 3 days before week-ending date) triggers an email to the project owner reminding them to submit the payroll week. Threshold stored per-project in a new `settings` JSON column on `projects` table.
+- [x] **NOTIF-03** — Team member activity notification: when a team member (non-owner) creates or modifies a payroll entry or worker record, send a summary email to the project owner (digest: one email per save action, not per row).
+- [x] **NOTIF-04** — Submission confirmation: when "Mark as Submitted" is toggled for CA DIR, WA L&I, NY MPWR, or IL IDOL, send a confirmation email to the acting user with the submission date, agency name, and project name.
 - [ ] **NOTIF-05** — Notification preferences UI: per-project settings panel (gear icon on ProjectDetailPage) where the owner can enable/disable each notification type and set the due-soon threshold (1–7 days). Settings persisted in `projects.settings` JSON column.
 
 ---
@@ -80,7 +80,7 @@ DOL-audit-ready append-only activity log. Retention: 3 years federal minimum (6 
 ## Non-Functional Requirements
 
 - [x] **NFR-01** — All new Drizzle migrations use `-->  statement-breakpoint` (one space) separator between SQL statements.
-- [ ] **NFR-02** — All new email triggers are non-fatal: log to console on failure, do not 500 the request.
+- [x] **NFR-02** — All new email triggers are non-fatal: log to console on failure, do not 500 the request.
 - [x] **NFR-03** — All new routes apply `assertProjectAccess` before any data access.
 - [x] **NFR-04** — Audit log `ssnEncrypted` field is always redacted before write; `hasFullSsn` boolean carries SSN-present signal in place of encrypted value.
 - [x] **NFR-05** — All new migration files have a corresponding Drizzle schema update in `src/server/db/schema.ts`.
