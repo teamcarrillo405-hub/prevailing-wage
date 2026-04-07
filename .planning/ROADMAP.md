@@ -851,6 +851,254 @@ Plans:
 
 ---
 
+### Phase 47: State Foundations + TX Certified Payroll
+
+**Goal**: The codebase is safe for 8-state expansion (STATE_FORMS registry replacing per-state boolean blocks + normalized .toUpperCase() comparisons throughout) and Texas contractors can download a WH-347 with TX-specific header fields overlaid and an LCPtracker submission callout
+
+**Depends on**: Phase 46 (v4.0 complete; NFR-06 mandates this phase is committed before any other new-state phase is planned or executed)
+
+**Requirements**: STATE-12, STATE-13, TX-01, TX-02, NFR-06
+
+**Success Criteria** (what must be TRUE):
+  1. PayrollWeekDetailPage replaces the four individual isCA/isWA/isNY/isIL boolean download-button blocks with a STATE_FORMS registry object keyed by state code — adding a new state requires one registry entry, not a new JSX conditional block
+  2. All state comparisons across client and server use .toUpperCase() consistently — a project stored as lowercase in the DB still passes the correct state gate
+  3. TX appears as a selectable project state; the TX project form surfaces TxDOT contract number, awarding agency name, and project location fields when state is TX
+  4. Clicking the WH-347 download on a TX project downloads a correctly populated WH-347 with TX header fields overlaid
+  5. PayrollWeekDetailPage on a TX project shows an informational callout noting that Texas requires electronic submission via LCPtracker at lcp123.com, with a link to the TxDOT contractor compliance page
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 48: FL Certified Payroll
+
+**Goal**: Florida contractors can download a WH-347 for FL projects and understand why there is no state-specific form — FL is a clean smoke test confirming the Phase 47 state gate pattern is correct before the more complex MA and NJ builds begin
+
+**Depends on**: Phase 47 (STATE_FORMS registry and .toUpperCase() normalization must be committed first per NFR-06)
+
+**Requirements**: FL-01
+
+**Success Criteria** (what must be TRUE):
+  1. FL appears as a selectable project state
+  2. Clicking the WH-347 download on an FL project downloads a correctly populated WH-347
+  3. PayrollWeekDetailPage on an FL project shows an informational callout explaining that Florida has no state-specific certified payroll form and federal Davis-Bacon WH-347 applies
+  4. The FL callout is absent on non-FL projects — it is state-gated
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 49: MA Schema + UI
+
+**Goal**: Massachusetts is a selectable project state, the database has all MA-specific columns for workers and payroll entries, and the UI surfaces these fields correctly on MA projects — the complete data foundation before the PDF generator is written in Phase 50
+
+**Depends on**: Phase 47 (STATE_FORMS registry must exist; NFR-06 requires Phase 47 committed before any new state phase)
+
+**Requirements**: MA-01, MA-02, MA-03, NFR-01
+
+**Success Criteria** (what must be TRUE):
+  1. MA appears as a selectable project state; the MA project form shows MA DLS Project ID and MA SIC/Trade Code fields when state is MA
+  2. WorkersPage for MA (and NJ) projects shows isWoman, isMinority, and oshaTraining nullable boolean fields per worker; these fields are absent on non-MA/NJ projects
+  3. PayrollWeekDetailPage for MA projects shows checkNumber (text), allOtherHours (decimal), and totalWeekGrossWages (decimal) per worker row; these fields are absent on non-MA projects
+  4. MA projects show a state-gated "Download MA DLS Weekly Payroll" button on PayrollWeekDetailPage (wired to the generator in Phase 50)
+  5. The Drizzle schema and migrations reflect all new columns with correct statement-breakpoint separators
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 50: MA PDF Generator
+
+**Goal**: Contractors on MA projects can generate a complete MA DLS Weekly Certified Payroll Report PDF that satisfies Massachusetts prevailing wage submission requirements to the awarding authority
+
+**Depends on**: Phase 49 (MA schema and UI must exist so the generator can read isWoman, isMinority, oshaTraining, checkNumber, allOtherHours, totalWeekGrossWages from the database)
+
+**Requirements**: MA-04, NFR-03
+
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Download MA DLS Weekly Payroll" on an MA project generates a PDF with contractor header (name, FEIN, address, license) and project header (name, location, contract number, week ending)
+  2. Per-worker rows include the OSHA 10 checkbox, isWoman and isMinority columns, supplemental unemployment fringe sub-column, project gross pay, total-week gross pay, and check number
+  3. The PDF includes a Statement of Compliance page with MA-specific certification language
+  4. The route returns 400 for a non-MA weekId — the download button is state-gated and the server enforces the same gate
+  5. maPdfGenerator.ts uses PDFDocument.create() (programmatic draw, not template overlay) following the ilPdfGenerator.ts pattern
+
+**Plans**: TBD
+
+---
+
+### Phase 51: NJ Schema + Routes
+
+**Goal**: New Jersey is a selectable project state, the database has the NJ contractor registration number field and the workerSex nullable column, and NJ-specific UI fields are surfaced on NJ projects — foundation complete before the PDF generator is written in Phase 52
+
+**Depends on**: Phase 47 (STATE_FORMS registry; NFR-06); Phase 49 (MA worker columns establish the pattern for nullable worker demographic columns)
+
+**Requirements**: NJ-01, NJ-02, NFR-01
+
+**Success Criteria** (what must be TRUE):
+  1. NJ appears as a selectable project state; the NJ project form shows NJ Public Works Contractor Registration Number (njPwcNumber) and NJ Contract ID fields when state is NJ
+  2. WorkersPage for NJ projects shows a workerSex field (M / F / N / null options) per worker; the field is absent on non-NJ projects
+  3. NJ projects show a state-gated "Download NJ MW-562" button on PayrollWeekDetailPage (wired to the generator in Phase 52)
+  4. workerSex is a separate nullable text column in the workers table — it does not reuse the existing gender column from v4.0 IL demographics
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 52: NJ PDF Generator
+
+**Goal**: Contractors on NJ projects can generate a complete NJ MW-562 Payroll Certification for Public Works Projects PDF that satisfies New Jersey prevailing wage submission requirements
+
+**Depends on**: Phase 51 (NJ schema must exist so the generator can read njPwcNumber, workerSex, race, and ethnicity from the database)
+
+**Requirements**: NJ-03, NFR-03
+
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Download NJ MW-562" on an NJ project generates a PDF with contractor header including NJ Public Works Contractor Registration Number
+  2. Per-worker rows include EEO columns: workerSex (M/F/N), race using NJ 6-code system (W/B/A/N/I/M), and ethnicity (H/N) — drawing from the existing race/ethnicity columns (v4.0 IL) and the new workerSex column
+  3. The PDF includes FICA, federal income tax, and state income tax deduction columns per worker
+  4. The PDF includes the NJ-specific Statement of Compliance certification language
+  5. The route returns 400 for a non-NJ weekId — the download button is state-gated and the server enforces the same gate
+
+**Plans**: TBD
+
+---
+
+### Phase 53: CA A-1-131 Gap Close
+
+**Goal**: The existing CA A-1-131 PDF generator is verified correct by a human reviewing the output in a browser — the Phase 24 Plan 03 Task 3 gap that has been open since v2.4 is formally closed before v5.0 ships
+
+**Depends on**: Phase 52 (placed here to close the long-open gap before final integration; does not block any other v5.0 phase)
+
+**Requirements**: CA-02
+
+**Success Criteria** (what must be TRUE):
+  1. A CA project with at least one payroll week with entries is used to download an A-1-131 PDF from the running dev server
+  2. All field coordinates are visually confirmed correct: contractor header fields, per-worker rows, fringe section, SDI deduction field, and certification text
+  3. Any coordinate corrections discovered are applied to a1131Generator.ts and the corrected PDF is re-verified before closing the phase
+  4. The CA UI flow is confirmed working: CSLB/WC advisory modal appears on CA projects, DT hour columns are visible on CA projects only, and the WH-347 download still works alongside the CA button
+
+**Plans**: TBD
+
+---
+
+### Phase 54: Subcontractor Schema + Migrations
+
+**Goal**: The subcontractors and subcontractor_cpr_weeks tables exist in the database with correct foreign keys, cascade delete rules, and unique constraints — the data model foundation that all subcontractor routes and UI depend on
+
+**Depends on**: Phase 46 (v4.0 complete; insertAuditLog() available for sub audit events from Phase 37)
+
+**Requirements**: SUB-01, SUB-02, NFR-01
+
+**Success Criteria** (what must be TRUE):
+  1. The subcontractors table exists with columns: id (UUID PK), projectId (FK to projects with CASCADE DELETE), name (NOT NULL), licenseNumber, contactName, contactEmail, address, createdAt
+  2. The subcontractor_cpr_weeks table exists with columns: id (UUID PK), subcontractorId (FK to subcontractors with CASCADE DELETE), weekEndingDate (NOT NULL), receivedDate, isCompliant, notes, createdAt; a UNIQUE constraint exists on (subcontractorId, weekEndingDate)
+  3. The Drizzle schema file reflects both new tables
+  4. Migration files are registered in drizzle/meta/_journal.json and use correct statement-breakpoint separators
+
+**Plans**: TBD
+
+---
+
+### Phase 55: Subcontractor API Routes
+
+**Goal**: The server exposes a complete CRUD and CPR tracking API for subcontractors, with assertProjectAccess guarding every route and audit log entries written for sub lifecycle events
+
+**Depends on**: Phase 54 (tables must exist before routes can query them)
+
+**Requirements**: SUB-03, SUB-04, NFR-03
+
+**Success Criteria** (what must be TRUE):
+  1. GET /api/projects/:id/subcontractors returns all subs for the project; POST creates a sub; PATCH updates a sub; DELETE removes a sub — all four routes call assertProjectAccess before any DB access
+  2. GET /api/projects/:id/subcontractors/:subId/cpr-weeks returns CPR week records; POST creates a CPR week record; PATCH updates receivedDate, isCompliant, and notes on an existing record
+  3. A request from a user without project membership receives a 403 on every sub and CPR route
+  4. Creating and removing a sub writes audit log rows with action subcontractor.created and subcontractor.removed with correct meta payload
+
+**Plans**: TBD
+
+---
+
+### Phase 56: Subcontractor UI Panel
+
+**Goal**: General contractors can manage subcontractors per project and track CPR receipt and compliance status per payroll week from a dedicated panel on ProjectDetailPage — making the prime contractor liability visible and actionable without leaving the project view
+
+**Depends on**: Phase 55 (API routes must exist before the panel can fetch or mutate data)
+
+**Requirements**: SUB-05
+
+**Success Criteria** (what must be TRUE):
+  1. ProjectDetailPage has a Subcontractors panel listing all subs for the project with add, edit, and remove controls
+  2. Each sub is expandable to a CPR week table; each row shows a status badge: Received + Compliant, Received + Non-Compliant, Not Received, or Overdue
+  3. A payroll week row is marked Overdue when weekEndingDate is more than 7 days ago and CPR has not yet been received
+  4. The user can mark a week as Received or Non-Compliant and optionally save a notes field — the status badge updates immediately
+  5. Subcontractor entries are never mixed into GC worker counts, totals, or compliance roll-ups shown elsewhere on the page
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 57: Audit Log CSV Export
+
+**Goal**: Contractors can download the complete project activity log as a CSV file safe for hand-off to auditors or agencies, with formula injection protection ensuring the file opens cleanly in Excel
+
+**Depends on**: Phase 38 (audit_logs table and paginated GET /api/audit/:projectId route must exist); Phase 55 (sub audit events are live so the exported log is complete for all v5.0 actions)
+
+**Requirements**: RPT-01, NFR-07
+
+**Success Criteria** (what must be TRUE):
+  1. GET /api/audit/:projectId/csv returns a UTF-8 BOM CSV file with columns: timestamp, actor email, action, entity type, entity ID, description
+  2. The /csv route is registered before the /:projectId wildcard in audit.ts and does not conflict with the existing paginated endpoint
+  3. A cell value beginning with =, +, -, or @ has a space character prepended — the file opens in Excel without formula execution prompts
+  4. ProjectActivityPage shows a "Download CSV" button in the page header toolbar alongside the existing date filter; the button is absent for non-members
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 58: Enhanced Fringe Report
+
+**Goal**: Contractors can view fringe benefit totals broken down by fund type (health/welfare, pension, vacation, training), union local, and journeyman vs apprentice split — providing the detail needed for union benefit fund reconciliation reports
+
+**Depends on**: Phase 46 (fringe disaggregation columns on payrollEntries and unionLocal on workers exist from prior milestones; all source data is already in the database)
+
+**Requirements**: RPT-02
+
+**Success Criteria** (what must be TRUE):
+  1. ReportsPage has a new "Fringe Breakdown" tab alongside the existing fringe summary and pay history tabs
+  2. The Fringe Breakdown tab shows fringe totals grouped by fund type, with each group further split by union local and by journeyman vs apprentice
+  3. GET /api/projects/:id/reports/fringe-enhanced returns the breakdown data; the existing GET /api/projects/:id/reports/fringe-summary route and its response shape are not modified
+  4. getFringeBreakdown() in reportsService.ts is a new exported function added alongside the existing getFringeSummary() — it does not alter or wrap getFringeSummary()
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 59: Multi-Project Compliance PDF
+
+**Goal**: Contractors can download a single PDF snapshot covering all their active projects — a portfolio-level compliance view suitable for owner reporting, bonding requirements, or agency audit response
+
+**Depends on**: Phase 54 (subcontractor_cpr_weeks table must exist so the report can include CPR overdue counts per project)
+
+**Requirements**: RPT-03
+
+**Success Criteria** (what must be TRUE):
+  1. DashboardPage shows a "Download Compliance Summary" secondary action button that triggers GET /api/export/compliance-summary
+  2. The downloaded PDF contains one row per active project the user has access to, with columns: project name, state, most recent week-ending date, compliance status (compliant/violations/pending), violation count, submission status (submitted/unsubmitted), and subcontractor CPR overdue count
+  3. The PDF includes a generated-at timestamp on every page
+  4. The route is cross-project and user-scoped — no weekId parameter, no state gate; it never returns data for projects the requesting user is not a member of
+  5. complianceSummaryPdfGenerator.ts uses PDFDocument.create() (programmatic draw) and never loads multiple per-week PDF objects into memory simultaneously — safe within Render.com 512 MB memory ceiling
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
 ## Progress
 
 
@@ -955,3 +1203,24 @@ Plans:
 | 44. Import Provider Foundation | v4.0 | 3/3 | Complete   | 2026-04-07 |
 | 45. Import ID-Mapped Providers | v4.0 | 3/3 | Complete   | 2026-04-07 |
 | 46. Notifications | v4.0 | 4/4 | Complete   | 2026-04-07 |
+
+---
+
+### v5.0 State Coverage + Subcontractors + Reporting (Phases 47-59)
+
+- [ ] **Phase 47: State Foundations + TX Certified Payroll** — STATE_FORMS registry, .toUpperCase() normalization, TX state gate + WH-347 routing + TX project fields + LCPtracker callout (not started)
+- [ ] **Phase 48: FL Certified Payroll** — FL state gate + WH-347 routing + informational HelpCallout explaining FL has no state prevailing wage form (not started)
+- [ ] **Phase 49: MA Schema + UI** — MA state flag, isWoman/isMinority/oshaTraining worker columns, checkNumber/allOtherHours/totalWeekGrossWages payroll fields, MA project fields, state-gated download button (not started)
+- [ ] **Phase 50: MA PDF Generator** — maPdfGenerator.ts programmatic-draw: contractor/project header, per-worker rows with OSHA 10 / woman / minority columns, supplemental unemployment fringe sub-column, project gross vs total gross, check number, Statement of Compliance (not started)
+- [ ] **Phase 51: NJ Schema + Routes** — NJ state flag, njPwcNumber project field, workerSex nullable column, NJ project fields migration, state-gated download button (not started)
+- [ ] **Phase 52: NJ PDF Generator** — njPdfGenerator.ts programmatic-draw: contractor header with NJ reg number, per-worker EEO columns (sex/race/ethnicity), FICA/federal/state tax deduction columns, NJ Statement of Compliance (not started)
+- [ ] **Phase 53: CA A-1-131 Gap Close** — Browser verification of existing A-1-131 PDF field coordinates; document and apply any coordinate corrections; confirm UI flow end-to-end (not started)
+- [ ] **Phase 54: Subcontractor Schema + Migrations** — subcontractors and subcontractor_cpr_weeks tables, Drizzle schema, migrations with journal registration (not started)
+- [ ] **Phase 55: Subcontractor API Routes** — CRUD routes for subs + CPR tracking routes on new subcontractors.ts router, assertProjectAccess on all routes, audit log entries for sub events (not started)
+- [ ] **Phase 56: Subcontractor UI Panel** — SubcontractorPanel.tsx on ProjectDetailPage: add/edit/remove subs, per-sub CPR week table with Received/Non-Compliant/Not Received/Overdue badges (not started)
+- [ ] **Phase 57: Audit Log CSV Export** — GET /api/audit/:projectId/csv route, UTF-8 BOM output, formula injection sanitization, download button on ProjectActivityPage (not started)
+- [ ] **Phase 58: Enhanced Fringe Report** — getFringeBreakdown() in reportsService.ts grouped by fund type/union local/J-RA, GET /api/projects/:id/reports/fringe-enhanced, new Fringe Breakdown tab on ReportsPage (not started)
+- [ ] **Phase 59: Multi-Project Compliance PDF** — complianceSummaryPdfGenerator.ts programmatic table, GET /api/export/compliance-summary, download button on DashboardPage (not started)
+
+---
+
