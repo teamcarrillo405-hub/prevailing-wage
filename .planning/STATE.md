@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 43-01-PLAN.md
-last_updated: "2026-04-07T00:47:27.237Z"
+stopped_at: Completed 43-02-PLAN.md
+last_updated: "2026-04-07T00:54:00.806Z"
 progress:
   total_phases: 24
   completed_phases: 20
   total_plans: 52
-  completed_plans: 49
+  completed_plans: 50
 ---
 
 # State
@@ -96,6 +96,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 42-il-schema-project-flag]: nonPwHours copied verbatim in amendment clone because it is user-entered data like ST/OT hours, not a computed field
 - [Phase 42-il-schema-project-flag]: IL demographics section uses details/summary (open by default) to ensure IL users see the fields immediately
 - [Phase 43-il-state-forms]: Used single-statement ALTER TABLE migration (no breakpoint) matching 0024 pattern
+- [Phase 43-il-state-forms]: Affidavit always on dedicated page 2 — unconditional addPage() after worker rows regardless of remaining space
+- [Phase 43-il-state-forms]: Non-PW hours shown as weekly total only in totalNonPw column — daily non-PW cells intentionally blank
 
 ### Phase Order Rationale
 
@@ -118,7 +120,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T00:47:27.234Z
-Stopped at: Completed 43-01-PLAN.md
+Last session: 2026-04-07T00:54:00.803Z
+Stopped at: Completed 43-02-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
