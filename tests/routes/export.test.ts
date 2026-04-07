@@ -390,3 +390,35 @@ describe('GET /api/export/ny-mpwr-xml/:weekId - STATE-03', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// ── IL PDF export tests ────────────────────────────────────────────────────
+
+describe('GET /api/export/il-pdf/:weekId - STATE-08', () => {
+  it('should return 400 for non-IL project', async () => {
+    const cookie = await registerUser('il-pdf-non-il');
+    const projectId = await createProject(cookie, 'CA');
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+
+    const res = await supertest(app)
+      .get(`/api/export/il-pdf/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('Illinois');
+  });
+
+  it('should return 403 without project access', async () => {
+    const cookieA = await registerUser('il-pdf-owner');
+    const projectId = await createProject(cookieA, 'IL');
+    const weekId = await createPayrollWeek(cookieA, projectId);
+
+    const cookieB = await registerUser('il-pdf-intruder');
+    const res = await supertest(app)
+      .get(`/api/export/il-pdf/${weekId}`)
+      .set('Cookie', cookieB);
+
+    expect(res.status).toBe(403);
+  });
+});

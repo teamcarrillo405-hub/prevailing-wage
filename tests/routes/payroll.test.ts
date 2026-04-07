@@ -1060,3 +1060,64 @@ describe('PATCH /api/payroll/weeks/:id/ny-submit - STATE-05', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ── IL IDOL submit route tests ─────────────────────────────────────────────
+
+describe('PATCH /api/payroll/weeks/:id/il-submit', () => {
+  async function createIlProject(cookie: string) {
+    const res = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'IL Test Project',
+        state: 'IL',
+        county: 'Cook',
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-01-01',
+        fundingType: 'federal',
+      });
+    return res.body.data?.project?.id as string;
+  }
+
+  async function createIlWeek(cookie: string, projectId: string) {
+    const res = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2025-01-05', payrollNumber: 1 });
+    return res.body.id as string;
+  }
+
+  it('should set ilIdolSubmittedAt for IL project', async () => {
+    const cookie = await registerAndLogin('il-submit-set');
+    const projectId = await createIlProject(cookie);
+    const weekId = await createIlWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/il-submit`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.ilIdolSubmittedAt).toBeDefined();
+    expect(typeof res.body.ilIdolSubmittedAt).toBe('string');
+
+    // Verify the timestamp is persisted on the week
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.week.ilIdolSubmittedAt).toBeDefined();
+    expect(typeof getRes.body.week.ilIdolSubmittedAt).toBe('string');
+  });
+
+  it('should return 403 without project access', async () => {
+    const cookieA = await registerAndLogin('il-submit-owner');
+    const projectId = await createIlProject(cookieA);
+    const weekId = await createIlWeek(cookieA, projectId);
+
+    const cookieB = await registerAndLogin('il-submit-intruder');
+    const res = await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/il-submit`)
+      .set('Cookie', cookieB);
+
+    expect(res.status).toBe(403);
+  });
+});
