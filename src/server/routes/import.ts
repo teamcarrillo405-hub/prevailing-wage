@@ -12,7 +12,7 @@ import { getPayrollWeek } from '../services/payrollService.js';
 import { parseImportFile } from '../services/importService.js';
 import { getDb } from '../db/index.js';
 import { payrollEntries, payrollImports } from '../db/schema.js';
-import type { ImportedRow } from '../services/importTypes.js';
+import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
 
 export const importRouter = Router();
 importRouter.use(requireAuth);
@@ -94,7 +94,7 @@ importRouter.post('/preview', (req, res) => {
 
 interface CommitBody {
   weekId: string;
-  provider: 'quickbooks' | 'adp';
+  provider: ImportProvider;
   matched: ImportedRow[];
   unmatchedCount?: number;
   sourceFilename?: string;

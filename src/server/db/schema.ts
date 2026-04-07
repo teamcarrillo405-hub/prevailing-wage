@@ -270,12 +270,30 @@ export const payrollImports = sqliteTable('payroll_imports', {
   id: text('id').primaryKey(),
   payrollWeekId: text('payroll_week_id').notNull().references(() => payrollWeeks.id),
   importedByUserId: text('imported_by_user_id').notNull().references(() => users.id),
-  provider: text('provider').notNull().$type<'quickbooks' | 'adp'>(),
+  provider: text('provider').notNull().$type<'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300'>(),
   sourceFilename: text('source_filename'),
   committedCount: integer('committed_count').notNull(),
   unmatchedCount: integer('unmatched_count').notNull(),
   createdAt: text('created_at').notNull(),
 });
+
+// ── Phase 44: Provider Mappings (IMPORT-04) ────────────────────────────────
+// Stores user-confirmed links between a provider's worker ID and our internal
+// worker. Mappings persist across imports. Unique per (project, provider, providerWorkerId).
+export const payrollProviderMappings = sqliteTable('payroll_provider_mappings', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull(),
+  providerWorkerId: text('provider_worker_id').notNull(),
+  workerId: text('worker_id').notNull().references(() => workers.id, { onDelete: 'cascade' }),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  providerMappingUnique: uniqueIndex('provider_mapping_unique').on(
+    table.projectId,
+    table.provider,
+    table.providerWorkerId,
+  ),
+}));
 
 // ── Phase 5: Union Trade Configurations ─────────────────────────────────
 // Stores named trade/union configs per project. Wage rate fields are

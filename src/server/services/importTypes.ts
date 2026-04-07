@@ -1,5 +1,8 @@
 // src/server/services/importTypes.ts
 // Shared types for the payroll import pipeline (Phase 35).
+// Phase 44: Added ImportProvider union type (IMPORT-06).
+
+export type ImportProvider = 'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300';
 
 export interface ImportedRow {
   csvName: string;
@@ -53,10 +56,11 @@ export interface ConflictRow {
 }
 
 export interface ImportPreviewResult {
-  provider: 'quickbooks' | 'adp';
+  provider: ImportProvider;
   weekId: string;
   matched: ImportedRow[];
   unmatched: UnmatchedRow[];
   conflicts: ConflictRow[];
   adpWeeklyTotalsOnly?: boolean;
+  gustoWeeklyTotalsOnly?: boolean;
 }
