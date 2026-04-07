@@ -3,10 +3,11 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { payrollEntries, workers } from '../db/schema.js';
+import { payrollEntries, workers, projects } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { sendSubmissionConfirmationEmail } from '../services/emailService.js';
 import {
   createPayrollWeek,
   getPayrollWeek,
@@ -478,6 +479,23 @@ router.patch('/weeks/:id/ca-submit', validate(AgencySubmitSchema), async (req, r
     } catch (auditErr) { console.error('[audit]', auditErr); }
   }
 
+  // NOTIF-04: submission confirmation email — best-effort, non-fatal (NFR-02)
+  if (submitted) {
+    try {
+      const [proj] = await db.select({ name: projects.name })
+        .from(projects).where(eq(projects.id, week.projectId)).limit(1);
+      await sendSubmissionConfirmationEmail(
+        req.user!.email,
+        proj?.name ?? week.projectId,
+        'CA DIR eCPR',
+        week.weekEndingDate,
+        week.projectId,
+      );
+    } catch (err) {
+      console.error('[email] NOTIF-04 submission confirmation failed:', err);
+    }
+  }
+
   res.status(200).json(result);
 });
 
@@ -523,6 +541,23 @@ router.patch('/weeks/:id/wa-submit', validate(AgencySubmitSchema), async (req, r
     } catch (auditErr) { console.error('[audit]', auditErr); }
   }
 
+  // NOTIF-04: submission confirmation email — best-effort, non-fatal (NFR-02)
+  if (submitted) {
+    try {
+      const [proj] = await db.select({ name: projects.name })
+        .from(projects).where(eq(projects.id, week.projectId)).limit(1);
+      await sendSubmissionConfirmationEmail(
+        req.user!.email,
+        proj?.name ?? week.projectId,
+        'WA L&I',
+        week.weekEndingDate,
+        week.projectId,
+      );
+    } catch (err) {
+      console.error('[email] NOTIF-04 submission confirmation failed:', err);
+    }
+  }
+
   res.status(200).json(result);
 });
 
@@ -563,6 +598,22 @@ router.patch('/weeks/:id/ny-submit', async (req, res) => {
     });
   } catch (auditErr) { console.error('[audit]', auditErr); }
 
+  // NOTIF-04: submission confirmation email — best-effort, non-fatal (NFR-02)
+  // ny-submit always submits (no toggle), so fire unconditionally
+  try {
+    const [proj] = await db.select({ name: projects.name })
+      .from(projects).where(eq(projects.id, week.projectId)).limit(1);
+    await sendSubmissionConfirmationEmail(
+      req.user!.email,
+      proj?.name ?? week.projectId,
+      'NY MPWR',
+      week.weekEndingDate,
+      week.projectId,
+    );
+  } catch (err) {
+    console.error('[email] NOTIF-04 submission confirmation failed:', err);
+  }
+
   res.status(200).json(result);
 });
 
@@ -602,6 +653,22 @@ router.patch('/weeks/:id/il-submit', async (req, res) => {
       meta: { agency: 'IL_IDOL', payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
     });
   } catch (auditErr) { console.error('[audit]', auditErr); }
+
+  // NOTIF-04: submission confirmation email — best-effort, non-fatal (NFR-02)
+  // il-submit always submits (no toggle), so fire unconditionally
+  try {
+    const [proj] = await db.select({ name: projects.name })
+      .from(projects).where(eq(projects.id, week.projectId)).limit(1);
+    await sendSubmissionConfirmationEmail(
+      req.user!.email,
+      proj?.name ?? week.projectId,
+      'IL IDOL',
+      week.weekEndingDate,
+      week.projectId,
+    );
+  } catch (err) {
+    console.error('[email] NOTIF-04 submission confirmation failed:', err);
+  }
 
   res.status(200).json(result);
 });
