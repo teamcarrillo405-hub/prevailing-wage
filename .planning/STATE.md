@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 46-02-PLAN.md
-last_updated: "2026-04-07T18:01:32.715Z"
+stopped_at: Completed 46-03-PLAN.md (dueSoonService + cron registration)
+last_updated: "2026-04-07T18:14:07.312Z"
 progress:
   total_phases: 24
   completed_phases: 23
   total_plans: 62
-  completed_plans: 60
+  completed_plans: 61
 ---
 
 # State
@@ -112,6 +112,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 46-notifications]: All email send functions are non-fatal: try/catch + console.error, never rethrow (NFR-02)
 - [Phase 46-notifications]: NOTIF-01 fires only from upsertPayrollEntry write path; computeCompliance is never patched internally so GET reads never trigger violation emails
 - [Phase 46-notifications]: ny-submit and il-submit NOTIF-04 fire unconditionally because these routes have no submitted boolean toggle
+- [Phase 46-notifications]: dateDiffDays threshold uses [0, dueSoonDays] inclusive window; past-due weeks (negative days) are not reminded
+- [Phase 46-notifications]: vi.mock factories use inline vi.fn() to avoid Vitest hoisting ReferenceErrors; tests use vi.mocked() pattern
 
 ### Phase Order Rationale
 
@@ -134,7 +136,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T18:01:32.712Z
-Stopped at: Completed 46-02-PLAN.md
+Last session: 2026-04-07T18:14:07.309Z
+Stopped at: Completed 46-03-PLAN.md (dueSoonService + cron registration)
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
