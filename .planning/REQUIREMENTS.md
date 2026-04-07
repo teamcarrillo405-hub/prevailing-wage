@@ -14,7 +14,7 @@ Email notifications via nodemailer (already installed). Non-fatal — email fail
 - [x] **NOTIF-02** — Payroll due-soon reminder: a configurable threshold (default: 3 days before week-ending date) triggers an email to the project owner reminding them to submit the payroll week. Threshold stored per-project in a new `settings` JSON column on `projects` table.
 - [x] **NOTIF-03** — Team member activity notification: when a team member (non-owner) creates or modifies a payroll entry or worker record, send a summary email to the project owner (digest: one email per save action, not per row).
 - [x] **NOTIF-04** — Submission confirmation: when "Mark as Submitted" is toggled for CA DIR, WA L&I, NY MPWR, or IL IDOL, send a confirmation email to the acting user with the submission date, agency name, and project name.
-- [ ] **NOTIF-05** — Notification preferences UI: per-project settings panel (gear icon on ProjectDetailPage) where the owner can enable/disable each notification type and set the due-soon threshold (1–7 days). Settings persisted in `projects.settings` JSON column.
+- [x] **NOTIF-05** — Notification preferences UI: per-project settings panel (gear icon on ProjectDetailPage) where the owner can enable/disable each notification type and set the due-soon threshold (1–7 days). Settings persisted in `projects.settings` JSON column.
 
 ---
 

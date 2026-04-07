@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 46-03-PLAN.md (dueSoonService + cron registration)
-last_updated: "2026-04-07T18:14:07.312Z"
+stopped_at: Completed 46-04-PLAN.md (notification preferences panel + PATCH merge)
+last_updated: "2026-04-07T19:41:30.600Z"
 progress:
   total_phases: 24
-  completed_phases: 23
+  completed_phases: 24
   total_plans: 62
-  completed_plans: 61
+  completed_plans: 62
 ---
 
 # State
@@ -114,6 +114,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 46-notifications]: ny-submit and il-submit NOTIF-04 fire unconditionally because these routes have no submitted boolean toggle
 - [Phase 46-notifications]: dateDiffDays threshold uses [0, dueSoonDays] inclusive window; past-due weeks (negative days) are not reminded
 - [Phase 46-notifications]: vi.mock factories use inline vi.fn() to avoid Vitest hoisting ReferenceErrors; tests use vi.mocked() pattern
+- [Phase 46-notifications]: Shallow spread merge for projectSettings preserves sibling keys (NY form data) when notif prefs are updated via PATCH
+- [Phase 46-notifications]: parseNotifSettings defined locally in ProjectDetailPage to avoid server code in client bundle
 
 ### Phase Order Rationale
 
@@ -136,7 +138,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T18:14:07.309Z
-Stopped at: Completed 46-03-PLAN.md (dueSoonService + cron registration)
+Last session: 2026-04-07T19:41:30.596Z
+Stopped at: Completed 46-04-PLAN.md (notification preferences panel + PATCH merge)
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)

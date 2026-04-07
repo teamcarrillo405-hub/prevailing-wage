@@ -937,7 +937,7 @@ Plans:
 - [x] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal (completed 2026-04-07)
 - [x] **Phase 44: Import Provider Foundation** - payroll_provider_mappings table, Gusto parser, provider auto-detection (completed 2026-04-07)
 - [x] **Phase 45: Import ID-Mapped Providers** - Paychex Flex + Sage 300 CRE parsers, Step 2b mapping UI (completed 2026-04-07)
-- [ ] **Phase 46: Notifications** - violation/reminder/activity/submission emails, per-project preferences UI
+- [x] **Phase 46: Notifications** - violation/reminder/activity/submission emails, per-project preferences UI (completed 2026-04-07)
 
 ---
 
@@ -954,4 +954,4 @@ Plans:
 | 43. IL State Forms | v4.0 | 4/4 | Complete   | 2026-04-07 |
 | 44. Import Provider Foundation | v4.0 | 3/3 | Complete   | 2026-04-07 |
 | 45. Import ID-Mapped Providers | v4.0 | 3/3 | Complete   | 2026-04-07 |
-| 46. Notifications | v4.0 | 3/4 | In Progress|  |
+| 46. Notifications | v4.0 | 4/4 | Complete   | 2026-04-07 |
