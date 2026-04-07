@@ -30,6 +30,7 @@ import {
   type MpwrXmlInput,
 } from '../services/mpwrXmlGenerator.js';
 import { fillPw12, type Pw12Input } from '../services/pw12Generator.js';
+import { fillIlCertifiedTranscript } from '../services/ilPdfGenerator.js';
 import {
   generateWaCprXml,
   type WaCprData,
@@ -1090,6 +1091,110 @@ router.get('/ny-mpwr-xml/:weekId', async (req, res) => {
       entityId: weekId,
       action: 'ny_mpwr_xml.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'xml' },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
+});
+
+// ── GET /api/export/il-pdf/:weekId ────────────────────────────────────────
+// IL Certified Transcript of Payroll PDF — state-gated to IL projects only
+
+router.get('/il-pdf/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project access (NFR-03) — BEFORE state gate
+  const db = getDb();
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // 3. State gate — IL Certified Transcript is IL-only
+  if (project.state?.toUpperCase() !== 'IL') {
+    res.status(400).json({ error: 'IL Certified Transcript is only available for Illinois projects' });
+    return;
+  }
+
+  // 4. Load payroll entries with worker details
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+
+  // 5. Map entries to IlPdfInput
+  const ilData = {
+    contractor: {
+      name: project.name,
+      address: (project.county || '') + ', ' + (project.state || ''),
+      fein: project.contractorFein ?? '',
+    },
+    project: {
+      name: project.name,
+      number: project.wdIdentifier ?? '',
+      location: (project.county || '') + ', ' + (project.state || ''),
+      contractingAgency: (project as any).contractingAgency ?? '',
+    },
+    week: {
+      weekEndingDate: week.weekEndingDate,
+      payrollNumber: week.amendmentNumber != null && week.originalWeekId != null
+        ? `${week.payrollNumber} (AMENDED ${week.amendmentNumber})`
+        : String(week.payrollNumber),
+    },
+    entries: entries.map((e: any) => ({
+      workerName: e.workerName,
+      workerSsnLast4: e.workerSsnLast4 ?? null,
+      workerAddress: e.workerAddress ?? '',
+      classification: e.tradeDescription ?? '',
+      monPw: e.entry?.monSt ?? 0, tuePw: e.entry?.tueSt ?? 0, wedPw: e.entry?.wedSt ?? 0,
+      thuPw: e.entry?.thuSt ?? 0, friPw: e.entry?.friSt ?? 0, satPw: e.entry?.satSt ?? 0, sunPw: e.entry?.sunSt ?? 0,
+      monNonPw: 0, tueNonPw: 0, wedNonPw: 0,
+      thuNonPw: 0, friNonPw: 0, satNonPw: 0, sunNonPw: 0,
+      totalPwHours: (e.entry?.monSt ?? 0) + (e.entry?.tueSt ?? 0) + (e.entry?.wedSt ?? 0) +
+        (e.entry?.thuSt ?? 0) + (e.entry?.friSt ?? 0) + (e.entry?.satSt ?? 0) + (e.entry?.sunSt ?? 0),
+      totalNonPwHours: e.nonPwHours ?? 0,
+      baseRate: e.entry?.baseRateSnapshot ?? 0,
+      fringePension: e.entry?.fringePension ?? null,
+      fringePensionIsF: false,
+      fringeHealthWelfare: e.entry?.fringeHealthWelfare ?? null,
+      fringeHealthWelfareIsF: false,
+      fringeVacation: e.entry?.fringeVacation ?? null,
+      fringeVacationIsF: false,
+      fringeTraining: e.entry?.fringeTraining ?? null,
+      fringeTrainingIsF: false,
+      grossPay: e.entry?.grossWages ?? null,
+      deductions: e.entry?.deductions ?? null,
+      netPay: e.entry?.netPay ?? null,
+    })),
+    affidavit: { subcontractors: [], fundDetails: [] },
+  };
+
+  // 6. Generate PDF
+  const filledPdf = await fillIlCertifiedTranscript(ilData);
+
+  // 7. Send as PDF download
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="il-transcript-${weekId}.pdf"`);
+  res.end(Buffer.from(filledPdf));
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'il_pdf.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
   } catch (auditErr) { console.error('[audit]', auditErr); }
 });
