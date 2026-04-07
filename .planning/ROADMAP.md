@@ -775,7 +775,7 @@ Plans:
 - [x] 43-01-PLAN.md — Migration + schema (ilIdolSubmittedAt) + setIlIdolSubmitted service
 - [x] 43-02-PLAN.md — IL Certified Transcript PDF generator (TDD)
 - [x] 43-03-PLAN.md — Export route + submit route + integration tests
-- [ ] 43-04-PLAN.md — Frontend 2-step IL IDOL modal + human verification
+- [x] 43-04-PLAN.md — Frontend 2-step IL IDOL modal + human verification
 **UI hint**: yes
 
 ---
@@ -934,7 +934,7 @@ Plans:
 - [x] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance() (completed 2026-04-06)
 - [x] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal (completed 2026-04-06)
 - [x] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers (completed 2026-04-06)
-- [ ] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal
+- [x] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal (completed 2026-04-07)
 - [ ] **Phase 44: Import Provider Foundation** - payroll_provider_mappings table, Gusto parser, provider auto-detection
 - [ ] **Phase 45: Import ID-Mapped Providers** - Paychex Flex + Sage 300 CRE parsers, Step 2b mapping UI
 - [ ] **Phase 46: Notifications** - violation/reminder/activity/submission emails, per-project preferences UI
@@ -951,7 +951,7 @@ Plans:
 | 40. NY Schema + Compliance Rule | v4.0 | 3/3 | Complete    | 2026-04-06 |
 | 41. NY State Forms | v4.0 | 5/5 | Complete   | 2026-04-06 |
 | 42. IL Schema + Project Flag | v4.0 | 3/3 | Complete   | 2026-04-06 |
-| 43. IL State Forms | v4.0 | 3/4 | In Progress|  |
+| 43. IL State Forms | v4.0 | 4/4 | Complete   | 2026-04-07 |
 | 44. Import Provider Foundation | v4.0 | 0/TBD | Not started | - |
 | 45. Import ID-Mapped Providers | v4.0 | 0/TBD | Not started | - |
 | 46. Notifications | v4.0 | 0/TBD | Not started | - |

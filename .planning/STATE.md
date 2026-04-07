@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 43-03-PLAN.md
-last_updated: "2026-04-07T01:02:09.554Z"
+stopped_at: Completed 43-04-PLAN.md
+last_updated: "2026-04-07T05:26:08.258Z"
 progress:
   total_phases: 24
-  completed_phases: 20
+  completed_phases: 21
   total_plans: 52
-  completed_plans: 51
+  completed_plans: 52
 ---
 
 # State
@@ -99,6 +99,7 @@ Key decisions locked for v4.0 scope:
 - [Phase 43-il-state-forms]: Affidavit always on dedicated page 2 — unconditional addPage() after worker rows regardless of remaining space
 - [Phase 43-il-state-forms]: Non-PW hours shown as weekly total only in totalNonPw column — daily non-PW cells intentionally blank
 - [Phase 43-il-state-forms]: assertProjectAccess called before IL state gate in both routes — NFR-03 compliance
+- [Phase 43-il-state-forms]: ilIdolStep typed as <1 | 2> — IL is 2-step, no registration collection unlike NY MPWR 3-step
 
 ### Phase Order Rationale
 
@@ -121,7 +122,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T01:01:49.934Z
-Stopped at: Completed 43-03-PLAN.md
+Last session: 2026-04-07T05:26:08.255Z
+Stopped at: Completed 43-04-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
