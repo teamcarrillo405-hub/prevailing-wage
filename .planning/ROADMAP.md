@@ -797,7 +797,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 44-01-PLAN.md — DB migration + schema + types (payrollProviderMappings table, ImportProvider union)
-- [ ] 44-02-PLAN.md — Gusto CSV parser + importService integration + tests
+- [x] 44-02-PLAN.md — Gusto CSV parser + importService integration + tests
 - [ ] 44-03-PLAN.md — Provider badge UI + Gusto weekly-totals banner
 **UI hint**: yes
 
@@ -952,6 +952,6 @@ Plans:
 | 41. NY State Forms | v4.0 | 5/5 | Complete   | 2026-04-06 |
 | 42. IL Schema + Project Flag | v4.0 | 3/3 | Complete   | 2026-04-06 |
 | 43. IL State Forms | v4.0 | 4/4 | Complete   | 2026-04-07 |
-| 44. Import Provider Foundation | v4.0 | 1/3 | In Progress|  |
+| 44. Import Provider Foundation | v4.0 | 2/3 | In Progress|  |
 | 45. Import ID-Mapped Providers | v4.0 | 0/TBD | Not started | - |
 | 46. Notifications | v4.0 | 0/TBD | Not started | - |

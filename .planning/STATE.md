@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 44-import-provider-foundation 44-01-PLAN.md
-last_updated: "2026-04-07T06:27:24.353Z"
+stopped_at: Completed 44-import-provider-foundation 44-02-PLAN.md
+last_updated: "2026-04-07T06:36:11.251Z"
 progress:
   total_phases: 24
   completed_phases: 21
   total_plans: 55
-  completed_plans: 53
+  completed_plans: 54
 ---
 
 # State
@@ -101,6 +101,8 @@ Key decisions locked for v4.0 scope:
 - [Phase 43-il-state-forms]: assertProjectAccess called before IL state gate in both routes — NFR-03 compliance
 - [Phase 43-il-state-forms]: ilIdolStep typed as <1 | 2> — IL is 2-step, no registration collection unlike NY MPWR 3-step
 - [Phase 44-import-provider-foundation]: Used inline UNIQUE constraint in migration SQL (no statement-breakpoint) and named ImportProvider type for reuse across server files
+- [Phase 44-import-provider-foundation]: Gusto signature (4 columns) checked after QB and before ADP — more specific than ADP 2-column signature
+- [Phase 44-import-provider-foundation]: Overtime hours column is optional in Gusto (zero-OT exports omit it) — defaults to 0, not a required column
 
 ### Phase Order Rationale
 
@@ -123,7 +125,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T06:27:24.349Z
-Stopped at: Completed 44-import-provider-foundation 44-01-PLAN.md
+Last session: 2026-04-07T06:36:11.247Z
+Stopped at: Completed 44-import-provider-foundation 44-02-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
