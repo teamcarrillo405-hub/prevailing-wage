@@ -12,6 +12,15 @@ import { TermTooltip } from '../components/ui/TermTooltip';
 import { PageHeader } from '../components/ui/PageHeader';
 
 const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
+
+const PROVIDER_LABELS: Record<string, string> = {
+  quickbooks: 'QuickBooks',
+  adp: 'ADP',
+  gusto: 'Gusto',
+  paychex: 'Paychex Flex',
+  sage_300: 'Sage 300 CRE',
+  sage_100: 'Sage 100',
+};
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -137,12 +146,13 @@ interface ConflictRow {
 }
 
 interface ImportPreviewResult {
-  provider: 'quickbooks' | 'adp';
+  provider: 'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300';
   weekId: string;
   matched: ImportedRow[];
   unmatched: UnmatchedRow[];
   conflicts: ConflictRow[];
   adpWeeklyTotalsOnly?: boolean;
+  gustoWeeklyTotalsOnly?: boolean;
 }
 
 interface ImportWorkerClassification {
@@ -401,7 +411,7 @@ export function PayrollWeekDetailPage() {
       });
     },
     onSuccess: (data) => {
-      const provider = importPreview?.provider === 'quickbooks' ? 'QuickBooks' : 'ADP';
+      const provider = PROVIDER_LABELS[importPreview?.provider ?? ''] ?? importPreview?.provider ?? 'Unknown';
       const count = (data as { committed: number }).committed;
       queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
       queryClient.invalidateQueries({ queryKey: ['payroll-weeks', projectId] });
@@ -2440,7 +2450,7 @@ export function PayrollWeekDetailPage() {
                   {/* Provider badge (D-04) */}
                   <div className="mt-3">
                     <Badge variant="neutral">
-                      {importPreview.provider === 'quickbooks' ? 'QuickBooks' : 'ADP'}
+                      {PROVIDER_LABELS[importPreview.provider] ?? importPreview.provider}
                     </Badge>
                   </div>
 
@@ -2449,6 +2459,15 @@ export function PayrollWeekDetailPage() {
                     <Card padding="sm" className="mt-3 border border-status-warning/30 bg-status-warning/10">
                       <p className="text-sm text-status-warning">
                         ADP export does not include daily breakdown. Hours are shown as weekly totals placed on Monday.
+                      </p>
+                    </Card>
+                  )}
+
+                  {/* Gusto amber banner — only when gustoWeeklyTotalsOnly */}
+                  {importPreview.gustoWeeklyTotalsOnly && (
+                    <Card padding="sm" className="mt-3 border border-status-warning/30 bg-status-warning/10">
+                      <p className="text-sm text-status-warning">
+                        Gusto export does not include daily breakdown. Hours are shown as weekly totals placed on Monday.
                       </p>
                     </Card>
                   )}
@@ -2630,7 +2649,7 @@ export function PayrollWeekDetailPage() {
                 const deselectedMatched = importPreview.matched.length - checkedMatched.length;
                 const skippedUnmatched = importPreview.unmatched.length - remappedUnmatched.length;
                 const totalSkipped = deselectedMatched + skippedUnmatched;
-                const providerLabel = importPreview.provider === 'quickbooks' ? 'QuickBooks' : 'ADP';
+                const providerLabel = PROVIDER_LABELS[importPreview.provider] ?? importPreview.provider;
 
                 return (
                   <>
