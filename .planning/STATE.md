@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for verification
-stopped_at: Completed 45-01-PLAN.md
-last_updated: "2026-04-07T15:57:23.703Z"
+stopped_at: Completed 45-02-PLAN.md
+last_updated: "2026-04-07T16:04:56.874Z"
 progress:
   total_phases: 24
   completed_phases: 22
   total_plans: 58
-  completed_plans: 56
+  completed_plans: 57
 ---
 
 # State
@@ -106,6 +106,7 @@ Key decisions locked for v4.0 scope:
 - [Phase 44-03]: PROVIDER_LABELS at module level — single source of truth for provider display names; fallback ?? provider for forward-compat
 - [Phase 45]: Sage 100 detected by Employee Name + Pay Type signature (before QB Online check) to prevent QB misfires
 - [Phase 45]: Sage 300 positional check runs before Paychex presence check — more specific detection wins
+- [Phase 45-02]: onConflictDoUpdate targets all 3 columns of providerMappingUnique index for correct upsert semantics
 
 ### Phase Order Rationale
 
@@ -128,7 +129,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T15:57:23.699Z
-Stopped at: Completed 45-01-PLAN.md
+Last session: 2026-04-07T16:04:56.870Z
+Stopped at: Completed 45-02-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)

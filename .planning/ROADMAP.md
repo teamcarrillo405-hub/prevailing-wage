@@ -821,7 +821,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 45-01-PLAN.md — Paychex + Sage parsers, detectProvider + parseImportFile ID-match path
-- [ ] 45-02-PLAN.md — GET/POST mapping API routes on importRouter
+- [x] 45-02-PLAN.md — GET/POST mapping API routes on importRouter
 - [ ] 45-03-PLAN.md — Step 2b Map Employees UI in import modal
 **UI hint**: yes
 
@@ -953,5 +953,5 @@ Plans:
 | 42. IL Schema + Project Flag | v4.0 | 3/3 | Complete   | 2026-04-06 |
 | 43. IL State Forms | v4.0 | 4/4 | Complete   | 2026-04-07 |
 | 44. Import Provider Foundation | v4.0 | 3/3 | Complete   | 2026-04-07 |
-| 45. Import ID-Mapped Providers | v4.0 | 1/3 | In Progress|  |
+| 45. Import ID-Mapped Providers | v4.0 | 2/3 | In Progress|  |
 | 46. Notifications | v4.0 | 0/TBD | Not started | - |
