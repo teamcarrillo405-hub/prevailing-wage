@@ -146,13 +146,15 @@ interface ConflictRow {
 }
 
 interface ImportPreviewResult {
-  provider: 'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300';
+  provider: 'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300' | 'sage_100';
   weekId: string;
   matched: ImportedRow[];
   unmatched: UnmatchedRow[];
   conflicts: ConflictRow[];
   adpWeeklyTotalsOnly?: boolean;
   gustoWeeklyTotalsOnly?: boolean;
+  idMappingRequired?: boolean;
+  unmappedIds?: string[];
 }
 
 interface ImportWorkerClassification {
@@ -259,7 +261,7 @@ export function PayrollWeekDetailPage() {
 
   // ── Payroll Import modal state (Phase 36 — mirrors ecprStep/showEcprModal pattern per D-02) ──
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
+  const [importStep, setImportStep] = useState<1 | '2b' | 2 | 3>(1);
   const [importPreview, setImportPreview] = useState<ImportPreviewResult | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importParsing, setImportParsing] = useState(false);
@@ -470,6 +472,11 @@ export function PayrollWeekDetailPage() {
   });
   const projectWorkers = workersData?.data?.workers ?? [];
 
+  // Step 2b state: ID mapping for providers that use numeric worker IDs (Phase 45)
+  const [idMappings, setIdMappings] = useState<Record<string, string>>({});
+  const [idMappingsSaving, setIdMappingsSaving] = useState(false);
+  const [idMappingsError, setIdMappingsError] = useState<string | null>(null);
+
   // Step 2 state: row selection + unmatched worker remapping
   const [importCheckedRows, setImportCheckedRows] = useState<Record<number, boolean>>({});
   const [importRemaps, setImportRemaps] = useState<Record<number, string>>({});
@@ -485,6 +492,9 @@ export function PayrollWeekDetailPage() {
     setImportCheckedRows({});
     setImportRemaps({});
     setImportCommitError(null);
+    setIdMappings({});
+    setIdMappingsSaving(false);
+    setIdMappingsError(null);
   }
 
   async function handleImportPreview(file: File) {
@@ -515,7 +525,11 @@ export function PayrollWeekDetailPage() {
       }
       const result = (await res.json()) as ImportPreviewResult;
       setImportPreview(result);
-      setImportStep(2);
+      if (result.idMappingRequired) {
+        setImportStep('2b');
+      } else {
+        setImportStep(2);
+      }
     } catch {
       setImportError('Upload failed. Check your connection and try again.');
     } finally {
@@ -2436,6 +2450,116 @@ export function PayrollWeekDetailPage() {
                       Close Import
                     </Button>
                     <div />
+                  </div>
+                </>
+              )}
+
+              {importStep === '2b' && importPreview && (
+                <>
+                  <p className="text-xs text-text-secondary">Step 2a of 3</p>
+                  <h3 className="text-xl font-headline font-semibold text-gray-900">
+                    Import Payroll — Map Employees
+                  </h3>
+                  <p className="mt-2 text-sm text-text-secondary">
+                    {PROVIDER_LABELS[importPreview.provider] ?? importPreview.provider} uses numeric employee IDs.
+                    Match each ID to a project worker. This mapping is saved for future imports.
+                  </p>
+
+                  {idMappingsError && (
+                    <p className="mt-2 text-sm text-status-violation">{idMappingsError}</p>
+                  )}
+
+                  <div className="mt-4 max-h-[60vh] overflow-y-auto">
+                    <Card padding="none">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border-default">
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-text-secondary">Provider ID</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-text-secondary">Project Worker</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(importPreview.unmappedIds ?? []).map((provId) => (
+                            <tr key={provId} className="border-b border-border-default last:border-0">
+                              <td className="px-3 py-2 font-mono text-sm">{provId}</td>
+                              <td className="px-3 py-2">
+                                <select
+                                  className="w-full rounded border border-border-default px-2 py-1.5 text-sm"
+                                  value={idMappings[provId] ?? ''}
+                                  onChange={(e) => setIdMappings((prev) => ({ ...prev, [provId]: e.target.value }))}
+                                >
+                                  <option value="">-- Skip this employee --</option>
+                                  {projectWorkers.map((w) => (
+                                    <option key={w.id} value={w.id}>{w.name}</option>
+                                  ))}
+                                </select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </Card>
+                  </div>
+
+                  {importPreview.matched.length > 0 && (
+                    <p className="mt-3 text-xs text-text-secondary">
+                      {importPreview.matched.length} employee(s) already mapped from previous imports.
+                    </p>
+                  )}
+
+                  <div className="mt-6 flex justify-between items-center pt-4 border-t border-border-default">
+                    <Button variant="ghost" size="md" onClick={closeImportModal}>
+                      Cancel
+                    </Button>
+                    <Button
+                      size="md"
+                      disabled={idMappingsSaving}
+                      onClick={async () => {
+                        const toSave = Object.entries(idMappings)
+                          .filter(([, workerId]) => workerId !== '')
+                          .map(([providerWorkerId, workerId]) => ({ providerWorkerId, workerId }));
+
+                        if (toSave.length === 0 && (importPreview.unmappedIds ?? []).length > 0) {
+                          // User skipped ALL — proceed to Step 2 (IDs appear as unmatched)
+                          setImportStep(2);
+                          return;
+                        }
+
+                        setIdMappingsSaving(true);
+                        setIdMappingsError(null);
+                        try {
+                          const saveRes = await fetch('/api/payroll/import/mappings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                              projectId,
+                              provider: importPreview.provider,
+                              mappings: toSave,
+                            }),
+                          });
+                          if (!saveRes.ok) {
+                            const body = await saveRes.json().catch(() => ({}));
+                            throw new Error((body as { error?: string }).error || 'Failed to save mappings');
+                          }
+
+                          // Re-call preview with the saved file for server-authoritative re-resolution
+                          if (importFile) {
+                            await handleImportPreview(importFile);
+                            // handleImportPreview sets importStep to 2 if all resolved, or '2b' if some remain
+                          } else {
+                            setImportStep(2);
+                          }
+                        } catch (err: unknown) {
+                          const message = err instanceof Error ? err.message : 'Failed to save mappings';
+                          setIdMappingsError(message);
+                        } finally {
+                          setIdMappingsSaving(false);
+                        }
+                      }}
+                    >
+                      {idMappingsSaving ? 'Saving...' : 'Save Mappings & Continue'}
+                    </Button>
                   </div>
                 </>
               )}
