@@ -772,7 +772,7 @@ Plans:
 
 **Plans**: 4 plans
 Plans:
-- [ ] 43-01-PLAN.md — Migration + schema (ilIdolSubmittedAt) + setIlIdolSubmitted service
+- [x] 43-01-PLAN.md — Migration + schema (ilIdolSubmittedAt) + setIlIdolSubmitted service
 - [ ] 43-02-PLAN.md — IL Certified Transcript PDF generator (TDD)
 - [ ] 43-03-PLAN.md — Export route + submit route + integration tests
 - [ ] 43-04-PLAN.md — Frontend 2-step IL IDOL modal + human verification
@@ -951,7 +951,7 @@ Plans:
 | 40. NY Schema + Compliance Rule | v4.0 | 3/3 | Complete    | 2026-04-06 |
 | 41. NY State Forms | v4.0 | 5/5 | Complete   | 2026-04-06 |
 | 42. IL Schema + Project Flag | v4.0 | 3/3 | Complete   | 2026-04-06 |
-| 43. IL State Forms | v4.0 | 0/TBD | Not started | - |
+| 43. IL State Forms | v4.0 | 1/4 | In Progress|  |
 | 44. Import Provider Foundation | v4.0 | 0/TBD | Not started | - |
 | 45. Import ID-Mapped Providers | v4.0 | 0/TBD | Not started | - |
 | 46. Notifications | v4.0 | 0/TBD | Not started | - |
