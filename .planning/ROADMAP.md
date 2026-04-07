@@ -822,7 +822,7 @@ Plans:
 Plans:
 - [x] 45-01-PLAN.md — Paychex + Sage parsers, detectProvider + parseImportFile ID-match path
 - [x] 45-02-PLAN.md — GET/POST mapping API routes on importRouter
-- [ ] 45-03-PLAN.md — Step 2b Map Employees UI in import modal
+- [x] 45-03-PLAN.md — Step 2b Map Employees UI in import modal
 **UI hint**: yes
 
 ---
@@ -936,7 +936,7 @@ Plans:
 - [x] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers (completed 2026-04-06)
 - [x] **Phase 43: IL State Forms** - IL Certified Transcript PDF, 2-step IDOL submission modal (completed 2026-04-07)
 - [x] **Phase 44: Import Provider Foundation** - payroll_provider_mappings table, Gusto parser, provider auto-detection (completed 2026-04-07)
-- [ ] **Phase 45: Import ID-Mapped Providers** - Paychex Flex + Sage 300 CRE parsers, Step 2b mapping UI
+- [x] **Phase 45: Import ID-Mapped Providers** - Paychex Flex + Sage 300 CRE parsers, Step 2b mapping UI (completed 2026-04-07)
 - [ ] **Phase 46: Notifications** - violation/reminder/activity/submission emails, per-project preferences UI
 
 ---
@@ -953,5 +953,5 @@ Plans:
 | 42. IL Schema + Project Flag | v4.0 | 3/3 | Complete   | 2026-04-06 |
 | 43. IL State Forms | v4.0 | 4/4 | Complete   | 2026-04-07 |
 | 44. Import Provider Foundation | v4.0 | 3/3 | Complete   | 2026-04-07 |
-| 45. Import ID-Mapped Providers | v4.0 | 2/3 | In Progress|  |
+| 45. Import ID-Mapped Providers | v4.0 | 3/3 | Complete   | 2026-04-07 |
 | 46. Notifications | v4.0 | 0/TBD | Not started | - |
