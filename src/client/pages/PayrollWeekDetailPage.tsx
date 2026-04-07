@@ -30,6 +30,7 @@ interface PayrollWeek {
   caEcprSubmittedAt: string | null;
   waLniSubmittedAt: string | null;
   nyMpwrSubmittedAt: string | null;
+  ilIdolSubmittedAt: string | null;
 }
 
 interface PayrollEntryRow {
@@ -240,6 +241,11 @@ export function PayrollWeekDetailPage() {
   const [nyPrcNumber, setNyPrcNumber] = useState('');
   const [nysContractorRegNumber, setNysContractorRegNumber] = useState('');
   const [nyMpwrSubmitting, setNyMpwrSubmitting] = useState(false);
+
+  // IL IDOL submission modal state (Phase 43)
+  const [showIlIdolModal, setShowIlIdolModal] = useState(false);
+  const [ilIdolStep, setIlIdolStep] = useState<1 | 2>(1);
+  const [ilIdolSubmitting, setIlIdolSubmitting] = useState(false);
 
   // ── Payroll Import modal state (Phase 36 — mirrors ecprStep/showEcprModal pattern per D-02) ──
   const [showImportModal, setShowImportModal] = useState(false);
@@ -725,6 +731,60 @@ export function PayrollWeekDetailPage() {
     setNyMpwrStep(1);
   }
 
+  // IL IDOL modal close handler — resets step to 1 on close
+  function closeIlModal() {
+    setShowIlIdolModal(false);
+    setIlIdolStep(1);
+  }
+
+  // IL IDOL PDF download handler — fetch + blob + anchor click pattern (mirrors handleNyDownload)
+  async function handleIlDownloadPdf() {
+    try {
+      const res = await fetch(`/api/export/il-pdf/${weekId}`, { credentials: 'include' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error || `Download failed: ${res.status}`);
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `il-certified-transcript-${weekId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
+    } catch (err) {
+      console.error('IL PDF download error:', err);
+      alert('Download failed. Please try again.');
+    }
+  }
+
+  // IL IDOL mark as submitted handler — PATCH /api/payroll/weeks/:id/il-submit
+  async function handleIlMarkSubmitted() {
+    if (ilIdolSubmitting) return;
+    setIlIdolSubmitting(true);
+    try {
+      const res = await fetch(`/api/payroll/weeks/${weekId}/il-submit`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error || 'Failed to mark as submitted');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+      closeIlModal();
+    } catch (err) {
+      console.error('IL IDOL submit error:', err);
+      alert('Failed to mark as submitted. Please try again.');
+    } finally {
+      setIlIdolSubmitting(false);
+    }
+  }
+
   // NY MPWR Step 1: persist PRC + Reg numbers to project, then advance
   async function handleNyStep1Save() {
     try {
@@ -953,10 +1013,9 @@ export function PayrollWeekDetailPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                disabled
-                title="IL Certified Transcript — coming in Phase 43"
+                onClick={() => { setIlIdolStep(1); setShowIlIdolModal(true); }}
               >
-                Download IL Certified Transcript (coming soon)
+                IL IDOL Submission
               </Button>
             )}
             {weekId && (
@@ -1317,9 +1376,24 @@ export function PayrollWeekDetailPage() {
                 <div className="border-t border-gray-100" />
                 <div className="px-5 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge variant="neutral">IL IDOL Submission</Badge>
-                    <span className="text-sm text-gray-500">Coming in Phase 43</span>
+                    <Badge variant={week?.ilIdolSubmittedAt ? 'compliant' : 'neutral'}>
+                      IL IDOL Submission
+                    </Badge>
+                    {week?.ilIdolSubmittedAt && (
+                      <span className="text-sm text-gray-500">
+                        Submitted {week.ilIdolSubmittedAt.slice(0, 10)}
+                      </span>
+                    )}
                   </div>
+                  {!week?.ilIdolSubmittedAt && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { setIlIdolStep(1); setShowIlIdolModal(true); }}
+                    >
+                      Submit to IL IDOL
+                    </Button>
+                  )}
                 </div>
               </>
             )}
@@ -2138,6 +2212,109 @@ export function PayrollWeekDetailPage() {
                       </button>
                     </div>
                   )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* IL IDOL Submission Modal — 2-step (Phase 43) */}
+        {showIlIdolModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={closeIlModal}
+          >
+            <div
+              className="mx-4 max-w-lg w-full rounded-lg bg-surface-card p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-headline font-bold text-gray-900">
+                  {ilIdolStep === 1
+                    ? 'Step 1: Download IL Certified Transcript'
+                    : 'Step 2: Submit to IL IDOL Portal'}
+                </h3>
+                <button
+                  onClick={closeIlModal}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                  aria-label="Close"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {ilIdolStep === 1 && (
+                <>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Download the IL Certified Transcript of Payroll PDF for this payroll week before submitting to the IDOL portal.
+                  </p>
+                  <Button variant="secondary" size="sm" onClick={handleIlDownloadPdf}>
+                    Download IL Certified Transcript PDF
+                  </Button>
+                  <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100">
+                    <Button variant="secondary" size="sm" onClick={closeIlModal}>
+                      Cancel
+                    </Button>
+                    <Button variant="primary" size="sm" onClick={() => setIlIdolStep(2)}>
+                      Continue to Checklist
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {ilIdolStep === 2 && (
+                <>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Upload your certified payroll to the IL IDOL portal and mark as submitted below.
+                  </p>
+                  <ul className="text-sm text-gray-600 space-y-2 list-disc pl-5 mb-4">
+                    <li>
+                      Upload the Certified Transcript to the{' '}
+                      <a
+                        href="https://idol.illinois.gov"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-gold underline"
+                      >
+                        IL IDOL portal at idol.illinois.gov
+                      </a>
+                    </li>
+                    <li>
+                      Submissions are due by the <strong>15th of the month</strong> following the payroll week ending date
+                    </li>
+                    <li>
+                      The IDOL portal also accepts Excel format — see portal for template
+                    </li>
+                    <li>
+                      Retain a copy of the PDF for your records
+                    </li>
+                  </ul>
+
+                  {week?.ilIdolSubmittedAt ? (
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge variant="compliant">Submitted</Badge>
+                      <span className="text-sm text-gray-500">
+                        {week.ilIdolSubmittedAt.slice(0, 10)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mb-4">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleIlMarkSubmitted}
+                        disabled={ilIdolSubmitting}
+                      >
+                        {ilIdolSubmitting ? 'Submitting...' : 'Mark as Submitted to IL IDOL'}
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-4 border-t border-gray-100">
+                    <Button variant="secondary" size="sm" onClick={closeIlModal}>
+                      {week?.ilIdolSubmittedAt ? 'Close' : 'Cancel'}
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
