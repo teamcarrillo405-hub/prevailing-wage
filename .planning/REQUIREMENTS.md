@@ -1,97 +1,118 @@
-# Requirements: v4.0 — Compliance Depth + Operations
+# Requirements: v5.0 — State Coverage + Subcontractors + Reporting
 
-**Milestone goal:** Deepen compliance coverage with NY and IL state-specific certified payroll submissions, richer worker profiles, three additional payroll import providers with ID-based worker mapping, a DOL-audit-ready activity log, and contractor email notifications for violations, due dates, team activity, and submissions.
+**Milestone goal:** Expand certified payroll coverage to TX, FL, MA, and NJ (state-gated, PDF-only), close the CA A-1-131 gap, add GC subcontractor compliance tracking, and deepen reporting with exportable audit logs, enhanced fringe breakdowns, and a multi-project compliance summary PDF.
 
-**Research artifacts:** `.planning/research/state-forms-research.md`, `.planning/research/payroll-providers-research.md`, `.planning/research/audit-trail-research.md`
-
----
-
-## Feature Area 1: Notifications (NOTIF)
-
-Email notifications via nodemailer (already installed). Non-fatal — email failure falls back to console log per existing pattern.
-
-- [x] **NOTIF-01** — Compliance violation notification: when `computeCompliance()` detects a new violation on a payroll week, send an email to all project members (owner + member) listing the affected worker(s), violation type (under-wage / CWHSSA OT), and a link to the PayrollWeekDetailPage.
-- [x] **NOTIF-02** — Payroll due-soon reminder: a configurable threshold (default: 3 days before week-ending date) triggers an email to the project owner reminding them to submit the payroll week. Threshold stored per-project in a new `settings` JSON column on `projects` table.
-- [x] **NOTIF-03** — Team member activity notification: when a team member (non-owner) creates or modifies a payroll entry or worker record, send a summary email to the project owner (digest: one email per save action, not per row).
-- [x] **NOTIF-04** — Submission confirmation: when "Mark as Submitted" is toggled for CA DIR, WA L&I, NY MPWR, or IL IDOL, send a confirmation email to the acting user with the submission date, agency name, and project name.
-- [x] **NOTIF-05** — Notification preferences UI: per-project settings panel (gear icon on ProjectDetailPage) where the owner can enable/disable each notification type and set the due-soon threshold (1–7 days). Settings persisted in `projects.settings` JSON column.
+**Research artifacts:** `.planning/research/STACK.md`, `.planning/research/FEATURES.md`, `.planning/research/ARCHITECTURE.md`, `.planning/research/PITFALLS.md`, `.planning/research/SUMMARY.md`
 
 ---
 
-## Feature Area 2: Additional State Forms (STATE)
+## Feature Area 1: State Foundations (pre-flight)
 
-### New York DOL (MPWR portal, Article 8)
+Required before any new state is added. Prevents fragile state-detection at 8+ states.
 
-**Research key finding:** As of January 1, 2026, NY mandates electronic XML submission via MPWR portal. PDF (PW-12) is for offline records only. OT threshold: 8 hours/day (not 40/week).
-
-- [x] **STATE-01** — NY project flag: add `state` enum value `"NY"` alongside existing `"CA"` and `"WA"` options in the projects form. NY projects show the NY-specific export and submission UI.
-- [x] **STATE-02** — NY PW-12 PDF generator: generate a NY-formatted PW-12 weekly payroll PDF using pdf-lib. Fields: contractor name/FEIN/address, week-ending date, project/contract number, per-employee rows (name + last4 SSN, withholdings, classification ST/OT, daily hours Mon–Sun, total hours, rate of pay, gross earned, FICA/withholding/other deductions, net wages). Statement of Compliance certification text with fringe benefit sub-clauses (b) and (c).
-- [x] **STATE-03** — NY MPWR XML generator: generate an XML file conforming to the NYSDOL MPWR Bulk Upload XSD schema. Required fields beyond WH-347: PRC Number (project identifier stored in `projects` table), NYS Contractor Registration Number, `nysRegisteredApprentice` boolean per worker, supplement type rates (Health/Welfare, Vacation/Holiday, Apprenticeship/Training, Pension, Other) with separate ST/OT hourly rates, `dateOfBirth` as alternative to SSN. Fall back to `000000+last4` placeholder for workers without full SSN on file (same pattern as CA eCPR).
-- [x] **STATE-04** — NY daily OT compliance: NY projects enforce an 8-hours/day overtime threshold in `computeCompliance()` instead of the federal 40-hours/week rule. Compliance engine detects daily OT violations and surfaces them in the PayrollWeekDetailPage violation badges.
-- [x] **STATE-05** — NY MPWR submission modal: 3-step modal on PayrollWeekDetailPage (NY-gated). Step 1: collect/persist PRC Number + NYS Contractor Registration Number with field hints. Step 2: generate and download XML + PW-12 PDF. Step 3: show MPWR portal upload checklist (portal URL, file format reminder, 30-day submission deadline). "Mark as Submitted to NY MPWR" button writes `agency_submissions` row.
-- [x] **STATE-06** — NY schema additions: add `nyprcNumber` (text), `nysContractorRegNumber` (text), and `projectSettings` JSON column to `projects` table. Add `nysRegisteredApprentice` boolean to `workers` table.
-
-### Illinois DOL (IDOL portal, monthly filing)
-
-**Research key finding:** IL requires non-prevailing wage hours per day alongside PW hours. OT threshold: 40 hours/week. Demographic fields required by 820 ILCS 130 (but nullable). Submission due monthly via IDOL portal (Excel import accepted).
-
-- [x] **STATE-07** — IL project flag: add `"IL"` to the `state` enum. IL projects show IL-specific export and submission UI.
-- [x] **STATE-08** — IL Certified Transcript of Payroll PDF generator: generate the two-page IL DOL Certified Transcript of Payroll using pdf-lib. Fields: contractor name/address/FEIN, project name/number/location/contracting agency, week-ending date, per-employee rows (name + last4 SSN, address, classification, daily hours Mon–Sun distinguishing PW vs non-PW, total PW + non-PW hours, base rate, fringe hourly rates for Pension/Health+Welfare/Vacation/Training each with "F" flag if jointly-managed LMRA fund, gross pay, deductions, net pay). Page 2 affidavit with subcontractor list and fund details fields.
-- [x] **STATE-09** — IL non-prevailing wage hours: add `nonPwHours` decimal column to `payroll_entries` table. PayrollWeekDetailPage entry form shows "Non-PW Hours" input for IL projects. IL PDF includes both PW and non-PW hour columns.
-- [x] **STATE-10** — IL demographic fields: add nullable columns to `workers` table: `race` (text), `ethnicity` (text), `gender` (text), `veteranStatus` (text), `skillLevel` (text: `"journeyman"` | `"apprentice"` | `null`). WorkersPage shows these fields in a collapsible "IL Compliance Demographics" section for IL projects only. All fields nullable (workers may decline).
-- [x] **STATE-11** — IL IDOL submission modal: 2-step modal on PayrollWeekDetailPage (IL-gated). Step 1: generate and download IL Certified Transcript of Payroll PDF. Step 2: show IDOL portal checklist (submission due by 15th of following month, portal URL, Excel template note). "Mark as Submitted to IL IDOL" button writes `agency_submissions` row.
+- [ ] **STATE-12** — Replace per-state `isCA`/`isWA`/`isNY`/`isIL` boolean variables across `PayrollWeekDetailPage.tsx` with a `STATE_FORMS` registry object (`const STATE_FORMS = { CA: {...}, WA: {...}, NY: {...}, IL: {...} }`) — enables adding new states without combinatorial JSX growth.
+- [ ] **STATE-13** — Standardize all state comparisons to `.toUpperCase()` throughout client and server (currently CA/WA use exact match strings, NY/IL use `.toUpperCase()` — must be consistent before adding TX/FL/MA/NJ).
 
 ---
 
-## Feature Area 3: Additional Payroll Import Providers (IMPORT)
+## Feature Area 2: TX Certified Payroll
 
-Extend the existing preview-then-commit pipeline (built in Phases 35–36) to support 3 new providers. Gusto uses name matching (like QB/ADP). Paychex and Sage use numeric worker IDs requiring a `payroll_provider_mappings` table and a one-time mapping UI step.
+Texas Chapter 2258 requires WH-347 or equivalent. No Texas-specific form exists; TXDOT mandates LCPtracker for electronic submission.
 
-- [x] **IMPORT-01** — Gusto CSV parser: detect Gusto Payroll Journal Report by presence of `Employee first name` + `Employee last name` columns. Concatenate to `"First Last"`. Parse `Regular hours` and `Overtime hours` as decimals. Parse `Payroll end date` as week-ending date (MM/DD/YYYY, manual parse to avoid timezone bugs). Error if required columns are missing. Map `Double overtime hours` to OT bucket if present.
-- [x] **IMPORT-02** — Paychex Flex CSV parser: detect Paychex format by presence of `Pay Component` and `Worker ID` columns. Aggregate rows per `Worker ID`: sum `Hours` where `Pay Component = "Regular"` → regular hours; sum where `Pay Component = "Overtime"` → OT hours. `Line Date` → week-ending date. No name in export — requires ID mapping.
-- [x] **IMPORT-03** — Sage 300 CRE parser: detect Sage format by column order `Employee, Date, Job, Extra, Cost Code, Category, Certified, PayID, Units`. Employee field is a numeric code. `PayID` (e.g., `REG`, `OT`, `DT`) maps to regular/OT/double-time buckets — classification step required. Also support Sage 100 Contractor Check Register format (named columns including employee name). No ID mapping needed for Sage 100 Check Register.
-- [x] **IMPORT-04** — Provider mappings table: create `payroll_provider_mappings` table: `(id, projectId, provider, providerWorkerId, workerId, createdAt)`. Stores the user-confirmed link between a provider's worker ID and our internal worker. Mappings persist across imports — once mapped, auto-match on subsequent imports.
-- [x] **IMPORT-05** — ID mapping step in import modal: for Paychex and Sage 300 CRE imports, add a "Map Employees" step (Step 2b) between preview parse and the existing preview table. Shows a table of `providerWorkerId` → dropdown of existing workers (or "Skip"). Confirmed mappings are written to `payroll_provider_mappings`. Rows with no mapping are treated as unmatched (same skip behavior as unmatched names in QB/ADP flow).
-- [x] **IMPORT-06** — Provider detection in import modal: auto-detect provider type from CSV column signatures during preview parse. Show a provider badge (Gusto/Paychex/Sage/QB/ADP) in Step 2 header. For Paychex/Sage 300, insert the ID mapping step. For Gusto, proceed directly to the existing matched/unmatched table.
+- [ ] **TX-01** — TX is a selectable project state. TX project form shows three TX-specific header fields: TxDOT contract number, awarding agency name, and project location. TX projects route to WH-347 download with these fields overlaid in the WH-347 header.
+- [ ] **TX-02** — TX projects show an informational callout on PayrollWeekDetailPage noting that Texas requires electronic submission via LCPtracker (lcp123.com); the callout links to the TXDOT contractor compliance page.
 
 ---
 
-## Feature Area 4: Audit Trail (AUDIT)
+## Feature Area 3: FL Certified Payroll
 
-DOL-audit-ready append-only activity log. Retention: 3 years federal minimum (6 years for NY projects, 5 years for IL — enforced by display, not auto-delete).
+Florida repealed its state prevailing wage law in 1979; HB 705 (July 2024) preempted all local ordinances. FL projects use federal WH-347.
 
-- [x] **AUDIT-01** — `audit_logs` table: columns: `id` (UUIDv4), `createdAt` (ISO 8601 UTC), `userId` (FK → users, nullable), `userEmail` (denormalized snapshot), `ipAddress`, `projectId` (FK → projects, onDelete: 'set null'), `entityType`, `entityId`, `action`, `diff` (JSON text: before/after for updates), `snapshot` (JSON text: full state for creates/deletes), `meta` (JSON text: free-form context). Three indexes: `(project_id, created_at DESC)`, `(entity_type, entity_id, created_at DESC)`, `(user_id, created_at DESC)`.
-- [x] **AUDIT-02** — `auditService.ts`: exports only `insertAuditLog()` — no update or delete functions. Hybrid payload strategy: full snapshot on create/delete, field-level diff on update, meta-only on export/submission events. Always redact `ssnEncrypted` → `"[REDACTED]"` before writing diff. Called from service layer (workerService, payrollEntryService), not route handlers.
-- [x] **AUDIT-03** — Tier-1 logged actions: `worker.created`, `worker.updated`, `worker.deleted`, `payroll_entry.created`, `payroll_entry.updated`, `payroll_entry.deleted`, `payroll_week.submitted`, `payroll_week.unsubmitted`, `wh347.downloaded`, `ecpr_xml.downloaded`, `wa_pwia_xml.downloaded`, `ny_mpwr_xml.downloaded`, `il_pdf.downloaded`, `payroll_import.committed`, `agency_submission.created`.
-- [x] **AUDIT-04** — Project activity feed: GET `/api/audit/:projectId` returns paginated audit log (25 rows/page, offset pagination, optional `entityType` filter). Response includes actor name, action label (human-readable), entity description, timestamp.
-- [x] **AUDIT-05** — Activity log UI: `ProjectActivityPage` (route: `/projects/:id/activity`) showing a reverse-chronological timeline of project events. Each row: timestamp, actor email, human-readable action description (e.g., "Updated worker Maria Garcia — classification changed from Laborer to Carpenter"), affected entity link. Date-range filter. Link from ProjectDetailPage nav.
+- [ ] **FL-01** — FL is a selectable project state. FL projects route to WH-347 download with an informational callout explaining that Florida has no state-specific certified payroll form and federal Davis-Bacon WH-347 applies. No new PDF generator required.
 
 ---
 
-## Feature Area 5: Worker Profile Depth (WORKER)
+## Feature Area 4: MA Certified Payroll
 
-- [x] **WORKER-01** — Structured address: replace the `address` text field on `workers` with separate columns: `addressStreet`, `addressCity`, `addressState`, `addressZip`. WorkersPage form shows 4 address inputs. WH-347 PDF concatenates them for the address column. Migration backfills existing `address` value into `addressStreet`.
-- [x] **WORKER-02** — Union local + book number: add `unionLocal` (text) and `unionBookNumber` (text) columns to `workers`. WorkersPage shows these fields in a "Union Information" section (optional for non-union workers). Shown on worker detail view.
-- [x] **WORKER-03** — Apprenticeship details: add `apprenticeshipCommittee` (text) and `apprenticeshipRegNumber` (text) columns to `workers`. WorkersPage shows in "Apprenticeship" section (shown only when `laborType = "apprentice"`). Populated values display in WH-347 apprentice rows.
-- [x] **WORKER-04** — Multiple trade classifications per payroll week: allow a worker to have different classifications in different payroll weeks. Currently, `workers.classifications` is a static array. Add a `payroll_week_classifications` table: `(id, payrollWeekId, workerId, classificationId, hours)` for weeks where the worker's active classification differs from their default. PayrollWeekDetailPage entry form shows a "Change Classification for This Week" override dropdown per worker row. WH-347 uses the week-specific classification if set, otherwise falls back to the worker's default.
+Massachusetts DLS Weekly Certified Payroll Report — most complex new state form. Adds workforce participation tracking and OSHA 10 certification per worker.
+
+- [ ] **MA-01** — MA is a selectable project state. MA projects show a state-gated "Download MA DLS Weekly Payroll" button on PayrollWeekDetailPage.
+- [ ] **MA-02** — New nullable worker columns (shown in WorkersPage for MA and NJ projects): `isWoman` (boolean), `isMinority` (boolean), `oshaTraining` (boolean). All nullable; workers may decline to self-identify.
+- [ ] **MA-03** — New nullable payroll entry fields (shown in PayrollWeekDetailPage for MA projects): `checkNumber` (text), `allOtherHours` (decimal — hours worked for other employers that week), `totalWeekGrossWages` (decimal — gross wages from all employers). All optional.
+- [ ] **MA-04** — MA DLS Weekly Certified Payroll PDF generator (`maPdfGenerator.ts`): contractor header (name, FEIN, address, license), project header (name, location, contract number, week ending), per-worker rows with OSHA 10 checkbox, woman/minority columns, supplemental unemployment fringe sub-column, project gross pay column, total-week gross pay column, check number, statement of compliance with MA-specific certification language.
+
+---
+
+## Feature Area 5: NJ Certified Payroll
+
+New Jersey MW-562 (February 2025 revision) — requires EEO demographic columns per worker and NJ Public Works Contractor Registration Number.
+
+- [ ] **NJ-01** — NJ is a selectable project state. NJ project form shows NJ Public Works Contractor Registration Number field when state=NJ. NJ projects show a state-gated "Download NJ MW-562" button on PayrollWeekDetailPage.
+- [ ] **NJ-02** — New nullable worker EEO field: `workerSex` (text: `'M'` | `'F'` | `'N'` | null). Extends existing `race` and `ethnicity` columns from v4.0 (IL) — no new race/ethnicity columns needed. `workerSex` shown on WorkersPage for NJ projects (and alongside existing demographics for IL projects).
+- [ ] **NJ-03** — NJ MW-562 PDF generator (`njPdfGenerator.ts`): contractor header with NJ contractor reg number, per-worker rows with EEO columns (sex/race/ethnicity using standard NJ 6-code race system), FICA/federal income tax/state income tax deduction columns, statement of compliance with NJ-specific certification language.
+
+---
+
+## Feature Area 6: CA A-1-131 Gap Closure
+
+Phase 24 Plan 03 was deferred since v2.4. The generator (`a1131Generator.ts`) and all tests pass. The gap is browser verification of PDF field coordinate accuracy.
+
+- [ ] **CA-02** — Browser verification of the existing CA A-1-131 PDF: run the dev server, download an A-1-131 for a CA project, visually confirm all field coordinates are correct (header fields, per-worker rows, fringe section, SDI deduction, certification text). Document any coordinate corrections needed and apply them.
+
+---
+
+## Feature Area 7: Subcontractor Tracking
+
+Prime contractors bear strict liability under 29 CFR 5 for subcontractor prevailing wage violations. GCs need to track CPR receipt and compliance status per sub per payroll week.
+
+- [ ] **SUB-01** — `subcontractors` table: `(id UUID, projectId FK→projects, name text NOT NULL, licenseNumber text, contactName text, contactEmail text, address text, createdAt text)`. Project-scoped. Migration + Drizzle schema.
+- [ ] **SUB-02** — `subcontractor_cpr_weeks` table: `(id UUID, subcontractorId FK→subcontractors, weekEndingDate text NOT NULL, receivedDate text, isCompliant integer, notes text, createdAt text)`. Tracks weekly CPR receipt status per sub. UNIQUE on `(subcontractorId, weekEndingDate)`. Migration + Drizzle schema.
+- [ ] **SUB-03** — Sub management routes: `GET /api/projects/:id/subcontractors`, `POST /api/projects/:id/subcontractors`, `PATCH /api/projects/:id/subcontractors/:subId`, `DELETE /api/projects/:id/subcontractors/:subId` — all with `assertProjectAccess`.
+- [ ] **SUB-04** — CPR tracking routes: `GET /api/projects/:id/subcontractors/:subId/cpr-weeks`, `POST /api/projects/:id/subcontractors/:subId/cpr-weeks`, `PATCH /api/projects/:id/subcontractors/:subId/cpr-weeks/:weekId` — mark week as received/compliant with optional notes.
+- [ ] **SUB-05** — Subcontractors panel on ProjectDetailPage: list all subs for the project; add/edit/remove subs; expandable per-sub CPR week table showing each payroll week with status badge (Received + Compliant / Received + Non-Compliant / Not Received / Overdue). "Overdue" fires when `weekEndingDate` is more than 7 days ago and CPR not yet received.
+
+---
+
+## Feature Area 8: Reporting
+
+- [ ] **RPT-01** — Audit log CSV export: `GET /api/audit/:projectId/csv` — downloads the complete project audit log as a UTF-8 BOM CSV file (matching existing CSV export pattern). Columns: timestamp, actor email, action, entity type, entity ID, description. Formula injection sanitization required (prefix `=`/`+`/`-`/`@` cells with a space). Download button on ProjectActivityPage alongside the existing date filter.
+- [ ] **RPT-02** — Enhanced fringe report: extends `reportsService.ts` with a new `getFringeBreakdown()` function that returns fringe totals grouped by fund type (health/pension/vacation/training), union local, and journeyman vs apprentice. New "Fringe Breakdown" tab on ReportsPage alongside the existing fringe summary.
+- [ ] **RPT-03** — Multi-project compliance PDF: `GET /api/export/compliance-summary` — generates a single summary PDF covering all active projects the user has access to. Columns: project name, state, week-ending date, compliance status (compliant/violations/pending), violation count, submission status (submitted/unsubmitted), subcontractor CPR overdue count. Download button on DashboardPage. Uses pdf-lib, programmatic table layout (IL generator pattern).
 
 ---
 
 ## Non-Functional Requirements
 
-- [x] **NFR-01** — All new Drizzle migrations use `-->  statement-breakpoint` (one space) separator between SQL statements.
-- [x] **NFR-02** — All new email triggers are non-fatal: log to console on failure, do not 500 the request.
-- [x] **NFR-03** — All new routes apply `assertProjectAccess` before any data access.
-- [x] **NFR-04** — Audit log `ssnEncrypted` field is always redacted before write; `hasFullSsn` boolean carries SSN-present signal in place of encrypted value.
-- [x] **NFR-05** — All new migration files have a corresponding Drizzle schema update in `src/server/db/schema.ts`.
+- [ ] **NFR-06** — `STATE_FORMS` registry (STATE-12) must be committed before any new state phase (TX/FL/MA/NJ) is planned or executed — enforced by phase dependency ordering in the roadmap.
+- [ ] **NFR-07** — All CSV exports sanitize cell values to prevent formula injection: values starting with `=`, `+`, `-`, or `@` are prefixed with a space before writing.
+- [ ] **NFR-03** (continued) — All new routes apply `assertProjectAccess` before any data access.
+- [ ] **NFR-01** (continued) — All new Drizzle migrations use `--> statement-breakpoint` (one space) separator between SQL statements; single-statement migrations need no separator.
 
 ---
 
-## Out of Scope (v4.0)
+## Out of Scope (v5.0)
 
-- TX prevailing wage forms (TX is narrowly scoped to state-funded projects only; deferred pending further research)
-- NY MPWR `workCategory` dropdown value resolution (MPWR portal requires exact classification name match; deferred until official value list is obtained)
-- Audit log export (CSV/PDF export of logs for DOL investigators; deferred to v4.1+)
-- CA/WA state-specific audit retention enforcement (federal 3-year minimum applied; CA Labor Code §1776 / WAC 296-127 review deferred)
-- SSN audit log exposure (ssnEncrypted is always redacted in audit trail payloads)
-- Inline worker creation in payroll import (workers must be created on WorkersPage first; import maps to existing workers only — D-10)
+- NJ Wage Hub portal integration — no public REST API found; manual upload assumed (same pattern as CA DIR / WA L&I)
+- TX LCPtracker integration — proprietary API; callout-only approach is correct
+- MA OT compliance rule — federal 40-hour/week rule applies; daily OT only for specific CBA trades (not universal like NY 8-hour rule); deferred
+- Sub payroll data entry — subs do not get accounts; GC tracks receipt only, does not re-enter sub payroll
+- Billing / subscription — deferred to v6.0
+- More than 4 new states — TX/FL/MA/NJ covers v5.0; additional states deferred
+
+---
+
+## Traceability
+
+*(Filled by roadmapper)*
+
+| Req ID | Phase |
+|--------|-------|
+| STATE-12, STATE-13 | Phase 47 |
+| TX-01, TX-02 | Phase 47 |
+| FL-01 | Phase 48 |
+| MA-01–MA-04 | Phases 49–50 |
+| NJ-01–NJ-03 | Phases 51–52 |
+| CA-02 | Phase 53 |
+| SUB-01–SUB-05 | Phases 54–56 |
+| RPT-01–RPT-03 | Phases 57–59 |
+| NFR-06, NFR-07, NFR-03, NFR-01 | Distributed |
