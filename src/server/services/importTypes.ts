@@ -1,8 +1,9 @@
 // src/server/services/importTypes.ts
 // Shared types for the payroll import pipeline (Phase 35).
 // Phase 44: Added ImportProvider union type (IMPORT-06).
+// Phase 45: Added sage_100 to ImportProvider; added idMappingRequired/unmappedIds (IMPORT-02, IMPORT-03).
 
-export type ImportProvider = 'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300';
+export type ImportProvider = 'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300' | 'sage_100';
 
 export interface ImportedRow {
   csvName: string;
@@ -63,4 +64,6 @@ export interface ImportPreviewResult {
   conflicts: ConflictRow[];
   adpWeeklyTotalsOnly?: boolean;
   gustoWeeklyTotalsOnly?: boolean;
+  idMappingRequired?: boolean;
+  unmappedIds?: string[];
 }
