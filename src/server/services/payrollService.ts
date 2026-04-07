@@ -542,6 +542,19 @@ export async function setNyMpwrSubmitted(weekId: string): Promise<{ nyMpwrSubmit
   return { nyMpwrSubmittedAt: now };
 }
 
+/**
+ * Records the current ISO timestamp as the IL IDOL submission time.
+ * Independent of WH-347 edit lock.
+ */
+export async function setIlIdolSubmitted(weekId: string): Promise<{ ilIdolSubmittedAt: string }> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  await db.update(payrollWeeks)
+    .set({ ilIdolSubmittedAt: now, updatedAt: now })
+    .where(eq(payrollWeeks.id, weekId));
+  return { ilIdolSubmittedAt: now };
+}
+
 // ── Copy Payroll Week ──────────────────────────────────────────────────────
 
 /**
