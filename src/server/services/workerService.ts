@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
-import { workers } from '../db/schema.js';
+import { workers, projects } from '../db/schema.js';
 import { insertAuditLog, diffObjects } from './auditService.js';
+import { sendActivityEmail } from './emailService.js';
 import { encryptSsn } from './cryptoService.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
@@ -132,6 +133,22 @@ export async function createWorker(
     console.error('[audit] worker.created audit failed:', auditErr);
   }
 
+  // NOTIF-03: team activity notification — best-effort, non-fatal (NFR-02)
+  // sendActivityEmail internally skips if actingUserId === ownerUserId
+  try {
+    const [proj] = await db.select({ name: projects.name })
+      .from(projects).where(eq(projects.id, input.projectId)).limit(1);
+    await sendActivityEmail(
+      input.projectId,
+      proj?.name ?? input.projectId,
+      input.userId,
+      input.userEmail,
+      `Worker created: ${input.name}`,
+    );
+  } catch (err) {
+    console.error('[email] NOTIF-03 worker.created activity notification failed:', err);
+  }
+
   return safeWorker(worker!);
 }
 
@@ -197,6 +214,22 @@ export async function updateWorker(
     }
   } catch (auditErr) {
     console.error('[audit] worker.updated audit failed:', auditErr);
+  }
+
+  // NOTIF-03: team activity notification — best-effort, non-fatal (NFR-02)
+  // sendActivityEmail internally skips if actingUserId === ownerUserId
+  try {
+    const [proj] = await db.select({ name: projects.name })
+      .from(projects).where(eq(projects.id, input.projectId)).limit(1);
+    await sendActivityEmail(
+      input.projectId,
+      proj?.name ?? input.projectId,
+      input.userId,
+      input.userEmail,
+      `Worker updated: ${updated?.name ?? input.name ?? ''}`,
+    );
+  } catch (err) {
+    console.error('[email] NOTIF-03 worker.updated activity notification failed:', err);
   }
 
   return safeWorker(updated!);

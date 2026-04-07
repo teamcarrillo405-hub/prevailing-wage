@@ -14,6 +14,8 @@ import {
 import { getCachedWd, getCachedClassifications } from './wageCache.js';
 import { lookupWageDetermination } from './wageLookup.js';
 import { insertAuditLog, diffObjects } from './auditService.js';
+import { sendViolationEmail, sendActivityEmail } from './emailService.js';
+import { computeCompliance } from './complianceService.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -309,6 +311,53 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
       }
     } catch (auditErr) {
       console.error('[audit] payroll entry audit failed:', auditErr);
+    }
+  }
+
+  // NOTIF-01: compliance violation notification — best-effort, non-fatal (NFR-02)
+  // Only fires from write paths; computeCompliance called on save, NOT hooked inside
+  // computeCompliance() itself (which is also called on reads).
+  let notifWeek: Awaited<ReturnType<typeof getPayrollWeek>> = null;
+  try {
+    notifWeek = await getPayrollWeek(input.payrollWeekId);
+    if (notifWeek) {
+      const [proj] = await db.select({ name: projects.name })
+        .from(projects).where(eq(projects.id, notifWeek.projectId)).limit(1);
+      const complianceResult = await computeCompliance(db as any, input.payrollWeekId);
+      if (complianceResult?.hasViolations) {
+        await sendViolationEmail(
+          notifWeek.projectId,
+          input.payrollWeekId,
+          proj?.name ?? notifWeek.projectId,
+          notifWeek.weekEndingDate,
+          complianceResult.violations,
+          complianceResult.weekViolations,
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[email] NOTIF-01 compliance check/email failed:', err);
+    // Non-fatal per NFR-02
+  }
+
+  // NOTIF-03: team activity notification for payroll entry save — best-effort (NFR-02)
+  // sendActivityEmail internally skips if actingUserId === ownerUserId
+  if (input.userId && input.userEmail) {
+    try {
+      const weekForActivity = notifWeek ?? await getPayrollWeek(input.payrollWeekId);
+      if (weekForActivity) {
+        const [projActivity] = await db.select({ name: projects.name })
+          .from(projects).where(eq(projects.id, weekForActivity.projectId)).limit(1);
+        await sendActivityEmail(
+          weekForActivity.projectId,
+          projActivity?.name ?? weekForActivity.projectId,
+          input.userId,
+          input.userEmail,
+          `Payroll entry saved for week ending ${weekForActivity.weekEndingDate}`,
+        );
+      }
+    } catch (err) {
+      console.error('[email] NOTIF-03 payroll entry activity notification failed:', err);
     }
   }
 
