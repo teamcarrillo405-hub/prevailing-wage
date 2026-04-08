@@ -890,7 +890,9 @@ Plans:
   3. PayrollWeekDetailPage on an FL project shows an informational callout explaining that Florida has no state-specific certified payroll form and federal Davis-Bacon WH-347 applies
   4. The FL callout is absent on non-FL projects — it is state-gated
 
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 48-01-PLAN.md — FL STATE_FORMS entry + isFL booleans + informational HelpCallout
 **UI hint**: yes
 
 ---
