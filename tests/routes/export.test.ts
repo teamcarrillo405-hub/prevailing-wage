@@ -422,3 +422,36 @@ describe('GET /api/export/il-pdf/:weekId - STATE-08', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// STATE-13: case normalization on export routes
+describe('STATE-13: case normalization on export routes', () => {
+  it('should return 400 for non-CA project on a1131 route', async () => {
+    // Create a TX project with lowercase state — should be blocked by a1131 CA gate
+    const cookie = await registerUser('state13-a1131');
+    const projectId = await createProject(cookie, 'tx');
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const res = await supertest(app).get(`/api/export/a1131/${weekId}`).set('Cookie', cookie);
+    expect(res.status).toBe(400);
+  });
+
+  it('should return 400 for non-WA project on f700 route', async () => {
+    // Create a CA project with lowercase state — should be blocked by f700 WA gate
+    const cookie = await registerUser('state13-f700');
+    const projectId = await createProject(cookie, 'ca');
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const res = await supertest(app).get(`/api/export/f700/${weekId}`).set('Cookie', cookie);
+    expect(res.status).toBe(400);
+  });
+
+  it('should not return state-gate 400 for lowercase ca project on a1131', async () => {
+    // lowercase 'ca' must pass the CA gate after .toUpperCase() normalization
+    const cookie = await registerUser('state13-ca-lower');
+    const projectId = await createProject(cookie, 'ca');  // lowercase
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+    const res = await supertest(app).get(`/api/export/a1131/${weekId}`).set('Cookie', cookie);
+    // Should NOT be 400 (state gate) — lowercase 'ca' must pass after normalization
+    expect(res.status).not.toBe(400);
+  });
+});
