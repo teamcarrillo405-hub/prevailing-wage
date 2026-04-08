@@ -912,7 +912,12 @@ Plans:
   4. MA projects show a state-gated "Download MA DLS Weekly Payroll" button on PayrollWeekDetailPage (wired to the generator in Phase 50)
   5. The Drizzle schema and migrations reflect all new columns with correct statement-breakpoint separators
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 49-01-PLAN.md -- DB migration + Drizzle schema + WorkersPage MA/NJ demographics
+- [ ] 49-02-PLAN.md -- Payroll service + route MA fields + select expansion
+- [ ] 49-03-PLAN.md -- ProjectForm MA fields + STATE_FORMS registry + export route stub
 **UI hint**: yes
 
 ---
