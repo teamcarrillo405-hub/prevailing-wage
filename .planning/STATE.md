@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: State Coverage + Subcontractors + Reporting
-status: Defining requirements
-stopped_at: Milestone v5.0 started — requirements in progress
-last_updated: "2026-04-07T20:00:00.000Z"
+milestone: v2.5
+milestone_name: State Portal Integration
+status: Ready to execute
+stopped_at: Completed 47-01-PLAN.md — STATE-13 state normalization done
+last_updated: "2026-04-08T05:04:56.921Z"
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 37
+  completed_phases: 24
+  total_plans: 66
+  completed_plans: 63
 ---
 
 # State
@@ -19,26 +19,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 41 — ny-state-forms
+**Current focus:** Phase 47 — State Foundations + TX Certified Payroll
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-07 — Milestone v5.0 started
+Phase: 47 (State Foundations + TX Certified Payroll) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
-**Velocity (v3.0 — completed):**
+**Velocity (v4.0 — completed 2026-04-07):**
 
-- Total phases: 6 (phases 31–36)
-- Total plans: 17
-- Shipped: 2026-04-01
+- Total phases: 10 (phases 37–46)
+- Total plans: 34
+- Shipped: 2026-04-07
 
-**v4.0 target:**
+**v5.0 target:**
 
-- Total phases: TBD (set during roadmap)
+- Total phases: 13 (phases 47–59)
 - Total plans: TBD (set during plan-phase)
 
 ## Accumulated Context
@@ -119,9 +117,28 @@ Key decisions locked for v4.0 scope:
 - [Phase 46-notifications]: Shallow spread merge for projectSettings preserves sibling keys (NY form data) when notif prefs are updated via PATCH
 - [Phase 46-notifications]: parseNotifSettings defined locally in ProjectDetailPage to avoid server code in client bundle
 
+Key decisions locked for v5.0 scope:
+
+- STATE_FORMS registry replaces per-state boolean blocks in PayrollWeekDetailPage (STATE-12) — must be committed before any new state phase (NFR-06)
+- All state comparisons normalized to .toUpperCase() on both client and server (STATE-13) — committed in Phase 47
+- TX and FL use existing WH-347 generator (no new PDF generator) — TX adds header field overlay, FL is WH-347 only with informational callout
+- MA and NJ use PDFDocument.create() programmatic draw (ilPdfGenerator.ts pattern) — no official fillable PDF template available for pdf-lib template overlay
+- workerSex is a separate column from gender — legally-required sex on a compliance form is semantically distinct from gender identity; different code sets
+- Subcontractor model is per-project (not global) — subs have different contacts/licenses per project; assertProjectAccess scopes via projectId without a separate access layer
+- subcontractor_cpr_weeks uses weekEndingDate text (not payrollWeekId FK) per REQUIREMENTS.md SUB-02 spec — tracking is by calendar week, not by internal payroll week record
+- CSV formula injection sanitization: cell values starting with =, +, -, or @ are prefixed with a space before passing to csv-stringify (NFR-07)
+- Multi-project compliance PDF generates counts + status badges only (no per-violation detail rows) — violation detail listing deferred to v6.0
+- complianceSummaryPdfGenerator.ts enforces 50-project hard cap to stay within Render.com 512 MB memory ceiling
+- [Phase 47]: state?.toUpperCase() === 'XX' is the canonical pattern for all state comparisons — optional chain handles null/undefined project state safely
+
 ### Phase Order Rationale
 
-TBD — set during roadmap creation.
+- Phase 47 first: carries the mandatory pre-flight refactors (STATE_FORMS registry, .toUpperCase() normalization) that NFR-06 requires before any new state phase; TX is the lowest-risk first state (WH-347 reuse, no new PDF generator)
+- Phase 48 second: FL is so minimal (WH-347 reuse, informational callout only) it doubles as a smoke test confirming Phase 47 refactors are clean
+- Phases 49-50 (MA) before Phases 51-52 (NJ): MA has more new DB columns; building MA first establishes the pattern for NJ's smaller column set; NJ reuses existing race/ethnicity columns from v4.0 reducing new-column count
+- Phase 53 (CA gap) after NJ: closes the long-open Phase 24 Task 3 gap without interrupting the state form rhythm; does not block any v5.0 feature
+- Phase 54 (sub schema) before Phases 55-56 (sub routes + UI): API must exist before panel can be built or tested; schema must exist before routes can query it
+- Phases 57-59 (reporting) at end: benefits from all prior data being live; audit CSV (57) is lowest-risk; fringe report (58) is independent; compliance PDF (59) depends on sub schema (Phase 54) for CPR overdue counts
 
 ### Critical Pitfalls (from research)
 
@@ -129,10 +146,15 @@ TBD — set during roadmap creation.
 - Rate snapshot corruption on CSV import — rate snapshots must come from getCachedClassifications, never from CSV values
 - SSN encryption key loss — versioned JSON envelope + startup assertion + re-encryption runbook before first migration
 - submittedAt set optimistically — use agency_submissions status table; never set submittedAt until portal confirms
+- [v5.0] Inconsistent state case normalization — fix with STATE-13 in Phase 47 before any new state is added
+- [v5.0] isXX boolean sprawl — replace with STATE_FORMS registry (STATE-12) in Phase 47 before 8-state expansion
+- [v5.0] PDF coordinate trap (MA/NJ) — measure actual page dimensions from official form download before writing coordinates; do not guess from screenshots
+- [v5.0] Sub model must be per-sub-per-week from day one — two-table model with UNIQUE on (subcontractorId, weekEndingDate) is non-negotiable
+- [v5.0] CSV formula injection — sanitizeCsvCell() prefixer required on all user-controlled string fields; acceptance criterion for Phase 57
 
 ### Pending Todos
 
-- Phase 24: 24-03-PLAN.md not yet executed (A-1-131 PDF generator + export route). Pre-existing v2.4 work. Deferred — user chose to proceed with v3.0 → v4.0 milestones.
+- Phase 24: 24-03-PLAN.md not yet executed (A-1-131 PDF generator + export route). Pre-existing v2.4 work. Closed by Phase 53 (CA-02 browser verification).
 
 ### Blockers/Concerns
 
@@ -140,7 +162,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T19:41:30.596Z
-Stopped at: Completed 46-04-PLAN.md (notification preferences panel + PATCH merge)
+Last session: 2026-04-08T05:04:56.917Z
+Stopped at: Completed 47-01-PLAN.md — STATE-13 state normalization done
 Resume file: None
-Next action: Execute `/gsd:execute-phase 37` for Plan 02 (auditService.ts + tests)
+Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)

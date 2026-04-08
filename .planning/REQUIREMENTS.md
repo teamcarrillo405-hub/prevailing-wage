@@ -11,7 +11,7 @@
 Required before any new state is added. Prevents fragile state-detection at 8+ states.
 
 - [ ] **STATE-12** — Replace per-state `isCA`/`isWA`/`isNY`/`isIL` boolean variables across `PayrollWeekDetailPage.tsx` with a `STATE_FORMS` registry object (`const STATE_FORMS = { CA: {...}, WA: {...}, NY: {...}, IL: {...} }`) — enables adding new states without combinatorial JSX growth.
-- [ ] **STATE-13** — Standardize all state comparisons to `.toUpperCase()` throughout client and server (currently CA/WA use exact match strings, NY/IL use `.toUpperCase()` — must be consistent before adding TX/FL/MA/NJ).
+- [x] **STATE-13** — Standardize all state comparisons to `.toUpperCase()` throughout client and server (currently CA/WA use exact match strings, NY/IL use `.toUpperCase()` — must be consistent before adding TX/FL/MA/NJ).
 
 ---
 
