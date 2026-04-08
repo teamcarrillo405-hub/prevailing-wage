@@ -60,6 +60,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const isNY = stateValue?.toUpperCase() === 'NY';
   const isIL = stateValue?.toUpperCase() === 'IL';
   const isTX = stateValue?.toUpperCase() === 'TX';
+  const isFL = stateValue?.toUpperCase() === 'FL';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);

@@ -463,6 +463,7 @@ export function PayrollWeekDetailPage() {
   const isNY = projectData?.data?.project?.state?.toUpperCase() === 'NY';
   const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
   const isTX = projectData?.data?.project?.state?.toUpperCase() === 'TX';
+  const isFL = projectData?.data?.project?.state?.toUpperCase() === 'FL';
 
   // STATE_FORMS registry — governs download buttons only (STATE-12, NFR-06)
   // Submission tracking rows remain as individual {isCA && ...} blocks
@@ -476,6 +477,7 @@ export function PayrollWeekDetailPage() {
     NY: { downloadLabel: 'Download NY PW-12', route: 'pw12' },
     IL: { downloadLabel: 'Download IL Certified Transcript', route: 'il-transcript' },
     TX: { downloadLabel: 'Download WH-347 (TX)', route: 'wh347' },
+    FL: { downloadLabel: 'Download WH-347 (FL)', route: 'wh347' },
   };
   const stateFormConfig = STATE_FORMS[projectData?.data?.project?.state?.toUpperCase() ?? ''] ?? null;
 
