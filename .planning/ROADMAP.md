@@ -892,7 +892,7 @@ Plans:
 
 **Plans**: 1 plan
 Plans:
-- [ ] 48-01-PLAN.md — FL STATE_FORMS entry + isFL booleans + informational HelpCallout
+- [x] 48-01-PLAN.md — FL STATE_FORMS entry + isFL booleans + informational HelpCallout
 **UI hint**: yes
 
 ---
@@ -1216,7 +1216,7 @@ Plans:
 ### v5.0 State Coverage + Subcontractors + Reporting (Phases 47-59)
 
 - [x] **Phase 47: State Foundations + TX Certified Payroll** — STATE_FORMS registry, .toUpperCase() normalization, TX state gate + WH-347 routing + TX project fields + LCPtracker callout (not started) (completed 2026-04-08)
-- [ ] **Phase 48: FL Certified Payroll** — FL state gate + WH-347 routing + informational HelpCallout explaining FL has no state prevailing wage form (not started)
+- [x] **Phase 48: FL Certified Payroll** — FL state gate + WH-347 routing + informational HelpCallout explaining FL has no state prevailing wage form (not started) (completed 2026-04-08)
 - [ ] **Phase 49: MA Schema + UI** — MA state flag, isWoman/isMinority/oshaTraining worker columns, checkNumber/allOtherHours/totalWeekGrossWages payroll fields, MA project fields, state-gated download button (not started)
 - [ ] **Phase 50: MA PDF Generator** — maPdfGenerator.ts programmatic-draw: contractor/project header, per-worker rows with OSHA 10 / woman / minority columns, supplemental unemployment fringe sub-column, project gross vs total gross, check number, Statement of Compliance (not started)
 - [ ] **Phase 51: NJ Schema + Routes** — NJ state flag, njPwcNumber project field, workerSex nullable column, NJ project fields migration, state-gated download button (not started)

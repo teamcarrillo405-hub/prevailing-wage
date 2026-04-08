@@ -28,7 +28,7 @@ Texas Chapter 2258 requires WH-347 or equivalent. No Texas-specific form exists;
 
 Florida repealed its state prevailing wage law in 1979; HB 705 (July 2024) preempted all local ordinances. FL projects use federal WH-347.
 
-- [ ] **FL-01** — FL is a selectable project state. FL projects route to WH-347 download with an informational callout explaining that Florida has no state-specific certified payroll form and federal Davis-Bacon WH-347 applies. No new PDF generator required.
+- [x] **FL-01** — FL is a selectable project state. FL projects route to WH-347 download with an informational callout explaining that Florida has no state-specific certified payroll form and federal Davis-Bacon WH-347 applies. No new PDF generator required.
 
 ---
 
