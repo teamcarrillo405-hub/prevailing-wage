@@ -200,8 +200,11 @@ router.get('/wh347/:weekId', async (req, res) => {
       : String(week.payrollNumber),
     weekEndingDate: formatDate(week.weekEndingDate),
     projectName: project.name,
-    projectLocation: `${project.county}, ${project.state}`,
-    projectContractNo: project.wdIdentifier ?? '',
+    // TX-specific: use txdotProjectId as contract number if set
+    projectContractNo: project.txdotProjectId || project.wdIdentifier || '',
+    projectLocation: project.txAwardingAgency
+      ? `${project.county}, ${project.state} — ${project.txAwardingAgency}`
+      : `${project.county}, ${project.state}`,
     wageDeterminationNo,
     isFinal: week.isFinal,
     isPrime: true,

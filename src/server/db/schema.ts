@@ -45,6 +45,10 @@ export const projects = sqliteTable('projects', {
   // Phase 40 — New York-specific fields
   nyprcNumber: text('nyp_rc_number'),
   nysContractorRegNumber: text('nys_contractor_reg_number'),
+  // Phase 47 — Texas-specific fields
+  txdotProjectId: text('txdot_project_id'),
+  txContractorLicense: text('tx_contractor_license'),
+  txAwardingAgency: text('tx_awarding_agency'),
   projectSettings: text('project_settings'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -205,6 +209,8 @@ export const payrollWeeks = sqliteTable('payroll_weeks', {
   nyMpwrSubmittedAt: text('ny_mpwr_submitted_at'),
   // Phase 43 -- IL IDOL submission tracking
   ilIdolSubmittedAt: text('il_idol_submitted_at'),
+  // Phase 47 — TX CPR submission tracking
+  txCprSubmittedAt: text('tx_cpr_submitted_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

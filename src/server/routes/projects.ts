@@ -31,6 +31,10 @@ const CreateProjectSchema = z.object({
   // Phase 40 — New York-specific fields
   nyprcNumber: z.string().max(100).optional(),
   nysContractorRegNumber: z.string().max(100).optional(),
+  // Phase 47 — Texas-specific fields
+  txdotProjectId: z.string().max(100).optional(),
+  txContractorLicense: z.string().max(100).optional(),
+  txAwardingAgency: z.string().max(200).optional(),
   projectSettings: z.string().optional(),
 });
 
@@ -48,6 +52,10 @@ const UpdateProjectSchema = z.object({
   // Phase 40 — New York-specific fields
   nyprcNumber: z.string().max(100).optional(),
   nysContractorRegNumber: z.string().max(100).optional(),
+  // Phase 47 — Texas-specific fields
+  txdotProjectId: z.string().max(100).optional(),
+  txContractorLicense: z.string().max(100).optional(),
+  txAwardingAgency: z.string().max(200).optional(),
   projectSettings: z.string().optional(),
 });
 
@@ -76,6 +84,9 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
     wcAccount: body.wcAccount ?? null,
     nyprcNumber: body.nyprcNumber ?? null,
     nysContractorRegNumber: body.nysContractorRegNumber ?? null,
+    txdotProjectId: body.txdotProjectId ?? null,
+    txContractorLicense: body.txContractorLicense ?? null,
+    txAwardingAgency: body.txAwardingAgency ?? null,
     projectSettings: body.projectSettings ?? null,
     createdAt: now,
     updatedAt: now,
@@ -189,6 +200,9 @@ router.patch('/:id', async (req, res) => {
       ...updates,
       ...(updates.nyprcNumber !== undefined && { nyprcNumber: updates.nyprcNumber }),
       ...(updates.nysContractorRegNumber !== undefined && { nysContractorRegNumber: updates.nysContractorRegNumber }),
+      ...(updates.txdotProjectId !== undefined && { txdotProjectId: updates.txdotProjectId }),
+      ...(updates.txContractorLicense !== undefined && { txContractorLicense: updates.txContractorLicense }),
+      ...(updates.txAwardingAgency !== undefined && { txAwardingAgency: updates.txAwardingAgency }),
       ...(resolvedProjectSettings !== undefined && { projectSettings: resolvedProjectSettings }),
       updatedAt: now,
     })
