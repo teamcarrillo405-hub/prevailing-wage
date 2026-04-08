@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 47-03-PLAN.md — TX schema, routes, form fields, WH-347 overlay
-last_updated: "2026-04-08T05:23:11.253Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 47-04-PLAN.md — TX LCPtracker HelpCallout on PayrollWeekDetailPage
+last_updated: "2026-04-08T05:38:37.306Z"
 progress:
   total_phases: 37
-  completed_phases: 24
+  completed_phases: 25
   total_plans: 66
-  completed_plans: 65
+  completed_plans: 66
 ---
 
 # State
@@ -133,6 +133,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 47]: STATE_FORMS registry replaces per-state boolean download-button blocks in PayrollWeekDetailPage (STATE-12); NY/IL remain standalone modal-flow blocks; TX route is 'wh347' matching existing WH-347 generator; handleStateFormDownload uses shared generatingRef
 - [Phase 47-state-foundations-tx-certified-payroll]: TX fields use existing projects schema pattern (no new table) — 3 columns on projects, 1 on payroll_weeks
 - [Phase 47-state-foundations-tx-certified-payroll]: WH-347 builder uses txdotProjectId || wdIdentifier fallback — TX projects get TxDOT number; non-TX projects keep WD identifier
+- [Phase 47]: ExternalLink added to lucide-react import in PayrollWeekDetailPage for TX LCPtracker callout — preferred icon for external portal references
+- [Phase 47]: TX HelpCallout placed after WA PWIA panel, before CA eCPR modal — consistent with state-panel ordering
 
 ### Phase Order Rationale
 
@@ -165,7 +167,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-08T05:23:11.249Z
-Stopped at: Completed 47-03-PLAN.md — TX schema, routes, form fields, WH-347 overlay
+Last session: 2026-04-08T05:38:37.302Z
+Stopped at: Completed 47-04-PLAN.md — TX LCPtracker HelpCallout on PayrollWeekDetailPage
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)

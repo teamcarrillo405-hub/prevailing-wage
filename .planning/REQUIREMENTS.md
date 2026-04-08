@@ -20,7 +20,7 @@ Required before any new state is added. Prevents fragile state-detection at 8+ s
 Texas Chapter 2258 requires WH-347 or equivalent. No Texas-specific form exists; TXDOT mandates LCPtracker for electronic submission.
 
 - [x] **TX-01** — TX is a selectable project state. TX project form shows three TX-specific header fields: TxDOT contract number, awarding agency name, and project location. TX projects route to WH-347 download with these fields overlaid in the WH-347 header.
-- [ ] **TX-02** — TX projects show an informational callout on PayrollWeekDetailPage noting that Texas requires electronic submission via LCPtracker (lcp123.com); the callout links to the TXDOT contractor compliance page.
+- [x] **TX-02** — TX projects show an informational callout on PayrollWeekDetailPage noting that Texas requires electronic submission via LCPtracker (lcp123.com); the callout links to the TXDOT contractor compliance page.
 
 ---
 

@@ -871,7 +871,7 @@ Plans:
 - [x] 47-01-PLAN.md — STATE-13 case normalization (7 one-line changes + integration tests)
 - [x] 47-02-PLAN.md — STATE_FORMS registry refactor + TX entry (STATE-12, NFR-06)
 - [x] 47-03-PLAN.md — TX database migration + schema + project form + WH-347 overlay (TX-01)
-- [ ] 47-04-PLAN.md — TX LCPtracker callout (TX-02)
+- [x] 47-04-PLAN.md — TX LCPtracker callout (TX-02)
 **UI hint**: yes
 
 ---
@@ -1213,7 +1213,7 @@ Plans:
 
 ### v5.0 State Coverage + Subcontractors + Reporting (Phases 47-59)
 
-- [ ] **Phase 47: State Foundations + TX Certified Payroll** — STATE_FORMS registry, .toUpperCase() normalization, TX state gate + WH-347 routing + TX project fields + LCPtracker callout (not started)
+- [x] **Phase 47: State Foundations + TX Certified Payroll** — STATE_FORMS registry, .toUpperCase() normalization, TX state gate + WH-347 routing + TX project fields + LCPtracker callout (not started) (completed 2026-04-08)
 - [ ] **Phase 48: FL Certified Payroll** — FL state gate + WH-347 routing + informational HelpCallout explaining FL has no state prevailing wage form (not started)
 - [ ] **Phase 49: MA Schema + UI** — MA state flag, isWoman/isMinority/oshaTraining worker columns, checkNumber/allOtherHours/totalWeekGrossWages payroll fields, MA project fields, state-gated download button (not started)
 - [ ] **Phase 50: MA PDF Generator** — maPdfGenerator.ts programmatic-draw: contractor/project header, per-worker rows with OSHA 10 / woman / minority columns, supplemental unemployment fringe sub-column, project gross vs total gross, check number, Statement of Compliance (not started)
