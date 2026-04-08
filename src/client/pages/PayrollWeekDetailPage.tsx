@@ -462,6 +462,22 @@ export function PayrollWeekDetailPage() {
   const isWA = projectData?.data?.project?.state?.toUpperCase() === 'WA';
   const isNY = projectData?.data?.project?.state?.toUpperCase() === 'NY';
   const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
+  const isTX = projectData?.data?.project?.state?.toUpperCase() === 'TX';
+
+  // STATE_FORMS registry — governs download buttons only (STATE-12, NFR-06)
+  // Submission tracking rows remain as individual {isCA && ...} blocks
+  const STATE_FORMS: Record<string, {
+    downloadLabel: string;
+    route: string;
+    buttonVariant?: string;
+  }> = {
+    CA: { downloadLabel: 'Download CA A-1-131', route: 'a1131' },
+    WA: { downloadLabel: 'Download WA F700-065-000', route: 'f700' },
+    NY: { downloadLabel: 'Download NY PW-12', route: 'pw12' },
+    IL: { downloadLabel: 'Download IL Certified Transcript', route: 'il-transcript' },
+    TX: { downloadLabel: 'Download WH-347 (TX)', route: 'wh347' },
+  };
+  const stateFormConfig = STATE_FORMS[projectData?.data?.project?.state?.toUpperCase() ?? ''] ?? null;
 
   // Workers query — needed for import unmatched worker remap dropdown (Phase 36)
   const { data: workersData } = useQuery({
@@ -761,6 +777,28 @@ export function PayrollWeekDetailPage() {
     setIlIdolStep(1);
   }
 
+  // STATE_FORMS registry-driven download handler (STATE-12, NFR-06)
+  async function handleStateFormDownload(route: string, wkId: string) {
+    if (generatingRef.current) return;
+    generatingRef.current = true;
+    setGenerating(true);
+    try {
+      const res = await fetch(`/api/export/${route}/${wkId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      hiddenAnchorRef.current!.href = url;
+      hiddenAnchorRef.current!.download = `${route}-${wkId}.pdf`;
+      hiddenAnchorRef.current!.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err) {
+      console.error('State form download failed:', err);
+    } finally {
+      generatingRef.current = false;
+      setGenerating(false);
+    }
+  }
+
   // IL IDOL PDF download handler — fetch + blob + anchor click pattern (mirrors handleNyDownload)
   async function handleIlDownloadPdf() {
     try {
@@ -988,13 +1026,15 @@ export function PayrollWeekDetailPage() {
                 {generating ? 'Generating...' : 'Download WH-347'}
               </Button>
             )}
-            {isCA && weekId && (
+            {/* STATE_FORMS registry-driven primary download button (STATE-12, NFR-06) */}
+            {stateFormConfig && weekId && (
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={handleCaDownloadClick}
+                disabled={generating}
+                onClick={() => handleStateFormDownload(stateFormConfig.route, weekId)}
               >
-                Download CA A-1-131
+                {stateFormConfig.downloadLabel}
               </Button>
             )}
             {isCA && weekId && (
@@ -1004,15 +1044,6 @@ export function PayrollWeekDetailPage() {
                 onClick={() => { setEcprStep(1); setShowEcprModal(true); }}
               >
                 Download CA eCPR XML
-              </Button>
-            )}
-            {isWA && weekId && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleWaDownloadClick}
-              >
-                Download WA F700-065-000
               </Button>
             )}
             {isWA && weekId && (
