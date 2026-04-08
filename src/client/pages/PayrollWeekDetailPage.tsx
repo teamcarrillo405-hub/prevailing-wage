@@ -458,8 +458,8 @@ export function PayrollWeekDetailPage() {
       api.get<{ data: { project: ProjectData } }>(`/projects/${weekData!.week.projectId}`),
     enabled: !!weekData?.week.projectId,
   });
-  const isCA = projectData?.data?.project?.state === 'CA';
-  const isWA = projectData?.data?.project?.state === 'WA';
+  const isCA = projectData?.data?.project?.state?.toUpperCase() === 'CA';
+  const isWA = projectData?.data?.project?.state?.toUpperCase() === 'WA';
   const isNY = projectData?.data?.project?.state?.toUpperCase() === 'NY';
   const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
 

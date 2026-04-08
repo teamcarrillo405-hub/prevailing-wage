@@ -177,7 +177,7 @@ export function WorkersPage() {
   const workers = data?.data?.workers ?? [];
   const selectedTrade = wageClassifications.find(wc => wc.tradeCode === form.tradeCode);
   const selectedExtraTrade = wageClassifications.find(wc => wc.tradeCode === extraClass.tradeCode);
-  const isWA = projectData?.data?.project?.state === 'WA';
+  const isWA = projectData?.data?.project?.state?.toUpperCase() === 'WA';
   const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
 
   // ── Mutations ─────────────────────────────────────────────────────────────

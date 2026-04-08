@@ -275,7 +275,7 @@ router.get('/a1131/:weekId', async (req, res) => {
   }
 
   // 3. State gate — A-1-131 is CA-only
-  if (project.state !== 'CA') {
+  if (project.state?.toUpperCase() !== 'CA') {
     res.status(400).json({ error: 'A-1-131 is only available for California projects' });
     return;
   }
@@ -385,7 +385,7 @@ router.get('/f700/:weekId', async (req, res) => {
   }
 
   // 3. State gate — F700-065-000 is WA-only
-  if (project.state !== 'WA') {
+  if (project.state?.toUpperCase() !== 'WA') {
     res.status(400).json({ error: 'F700-065-000 is only available for Washington projects' });
     return;
   }
@@ -553,7 +553,7 @@ router.get('/ecpr-xml/:weekId', async (req, res) => {
   }
 
   // 3. State gate — eCPR XML is CA-only
-  if (project.state !== 'CA') {
+  if (project.state?.toUpperCase() !== 'CA') {
     res.status(400).json({ error: 'CA eCPR XML export is only available for California projects' });
     return;
   }
@@ -734,7 +734,7 @@ router.get('/wa-cpr-xml/:weekId', async (req, res) => {
   }
 
   // 3. State gate — WA CPR XML is WA-only (D-07)
-  if (project.state !== 'WA') {
+  if (project.state?.toUpperCase() !== 'WA') {
     res.status(400).json({ error: 'WA CPR XML is only available for Washington projects' });
     return;
   }

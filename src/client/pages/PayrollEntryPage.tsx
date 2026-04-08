@@ -69,7 +69,7 @@ export function PayrollEntryPage() {
     enabled: !!projectId,
   });
 
-  const isCA = projectData?.data?.project?.state === 'CA';
+  const isCA = projectData?.data?.project?.state?.toUpperCase() === 'CA';
   const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
 
   // Flatten workers × classifications into rows for the form
