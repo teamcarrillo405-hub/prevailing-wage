@@ -866,7 +866,12 @@ Plans:
   4. Clicking the WH-347 download on a TX project downloads a correctly populated WH-347 with TX header fields overlaid
   5. PayrollWeekDetailPage on a TX project shows an informational callout noting that Texas requires electronic submission via LCPtracker at lcp123.com, with a link to the TxDOT contractor compliance page
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 47-01-PLAN.md — STATE-13 case normalization (7 one-line changes + integration tests)
+- [ ] 47-02-PLAN.md — STATE_FORMS registry refactor + TX entry (STATE-12, NFR-06)
+- [ ] 47-03-PLAN.md — TX database migration + schema + project form + WH-347 overlay (TX-01)
+- [ ] 47-04-PLAN.md — TX LCPtracker callout (TX-02)
 **UI hint**: yes
 
 ---
