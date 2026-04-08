@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 47-01-PLAN.md — STATE-13 state normalization done
-last_updated: "2026-04-08T05:04:56.921Z"
+stopped_at: Completed 47-03-PLAN.md — TX schema, routes, form fields, WH-347 overlay
+last_updated: "2026-04-08T05:23:11.253Z"
 progress:
   total_phases: 37
   completed_phases: 24
   total_plans: 66
-  completed_plans: 63
+  completed_plans: 65
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 47 (State Foundations + TX Certified Payroll) — EXECUTING
-Plan: 2 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -130,6 +130,9 @@ Key decisions locked for v5.0 scope:
 - Multi-project compliance PDF generates counts + status badges only (no per-violation detail rows) — violation detail listing deferred to v6.0
 - complianceSummaryPdfGenerator.ts enforces 50-project hard cap to stay within Render.com 512 MB memory ceiling
 - [Phase 47]: state?.toUpperCase() === 'XX' is the canonical pattern for all state comparisons — optional chain handles null/undefined project state safely
+- [Phase 47]: STATE_FORMS registry replaces per-state boolean download-button blocks in PayrollWeekDetailPage (STATE-12); NY/IL remain standalone modal-flow blocks; TX route is 'wh347' matching existing WH-347 generator; handleStateFormDownload uses shared generatingRef
+- [Phase 47-state-foundations-tx-certified-payroll]: TX fields use existing projects schema pattern (no new table) — 3 columns on projects, 1 on payroll_weeks
+- [Phase 47-state-foundations-tx-certified-payroll]: WH-347 builder uses txdotProjectId || wdIdentifier fallback — TX projects get TxDOT number; non-TX projects keep WD identifier
 
 ### Phase Order Rationale
 
@@ -162,7 +165,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-08T05:04:56.917Z
-Stopped at: Completed 47-01-PLAN.md — STATE-13 state normalization done
+Last session: 2026-04-08T05:23:11.249Z
+Stopped at: Completed 47-03-PLAN.md — TX schema, routes, form fields, WH-347 overlay
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)

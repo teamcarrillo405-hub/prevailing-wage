@@ -10,7 +10,7 @@
 
 Required before any new state is added. Prevents fragile state-detection at 8+ states.
 
-- [ ] **STATE-12** — Replace per-state `isCA`/`isWA`/`isNY`/`isIL` boolean variables across `PayrollWeekDetailPage.tsx` with a `STATE_FORMS` registry object (`const STATE_FORMS = { CA: {...}, WA: {...}, NY: {...}, IL: {...} }`) — enables adding new states without combinatorial JSX growth.
+- [x] **STATE-12** — Replace per-state `isCA`/`isWA`/`isNY`/`isIL` boolean variables across `PayrollWeekDetailPage.tsx` with a `STATE_FORMS` registry object (`const STATE_FORMS = { CA: {...}, WA: {...}, NY: {...}, IL: {...} }`) — enables adding new states without combinatorial JSX growth.
 - [x] **STATE-13** — Standardize all state comparisons to `.toUpperCase()` throughout client and server (currently CA/WA use exact match strings, NY/IL use `.toUpperCase()` — must be consistent before adding TX/FL/MA/NJ).
 
 ---
@@ -19,7 +19,7 @@ Required before any new state is added. Prevents fragile state-detection at 8+ s
 
 Texas Chapter 2258 requires WH-347 or equivalent. No Texas-specific form exists; TXDOT mandates LCPtracker for electronic submission.
 
-- [ ] **TX-01** — TX is a selectable project state. TX project form shows three TX-specific header fields: TxDOT contract number, awarding agency name, and project location. TX projects route to WH-347 download with these fields overlaid in the WH-347 header.
+- [x] **TX-01** — TX is a selectable project state. TX project form shows three TX-specific header fields: TxDOT contract number, awarding agency name, and project location. TX projects route to WH-347 download with these fields overlaid in the WH-347 header.
 - [ ] **TX-02** — TX projects show an informational callout on PayrollWeekDetailPage noting that Texas requires electronic submission via LCPtracker (lcp123.com); the callout links to the TXDOT contractor compliance page.
 
 ---
@@ -83,7 +83,7 @@ Prime contractors bear strict liability under 29 CFR 5 for subcontractor prevail
 
 ## Non-Functional Requirements
 
-- [ ] **NFR-06** — `STATE_FORMS` registry (STATE-12) must be committed before any new state phase (TX/FL/MA/NJ) is planned or executed — enforced by phase dependency ordering in the roadmap.
+- [x] **NFR-06** — `STATE_FORMS` registry (STATE-12) must be committed before any new state phase (TX/FL/MA/NJ) is planned or executed — enforced by phase dependency ordering in the roadmap.
 - [ ] **NFR-07** — All CSV exports sanitize cell values to prevent formula injection: values starting with `=`, `+`, `-`, or `@` are prefixed with a space before writing.
 - [ ] **NFR-03** (continued) — All new routes apply `assertProjectAccess` before any data access.
 - [ ] **NFR-01** (continued) — All new Drizzle migrations use `--> statement-breakpoint` (one space) separator between SQL statements; single-statement migrations need no separator.
