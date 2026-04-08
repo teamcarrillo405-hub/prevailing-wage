@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileCheck } from 'lucide-react';
+import { FileCheck, ExternalLink } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -1648,6 +1648,30 @@ export function PayrollWeekDetailPage() {
               </div>
             </div>
           </Card>
+        )}
+
+        {/* TX LCPtracker informational callout — TX-02 */}
+        {!isLoading && !isError && isTX && (
+          <HelpCallout
+            icon={ExternalLink}
+            title="Texas LCPtracker Electronic Submission Required"
+            body={<>
+              Texas Chapter 2258 requires electronic submission of certified payroll
+              records via LCPtracker for TxDOT and other public works contracts.
+              Submit your WH-347 through the{' '}
+              <a href="https://lcp123.com" target="_blank" rel="noopener noreferrer"
+                className="text-brand-gold underline">
+                LCPtracker portal (lcp123.com)
+              </a>
+              . Refer to the{' '}
+              <a href="https://www.txdot.gov/business/contractors/labor-compliance.html"
+                target="_blank" rel="noopener noreferrer"
+                className="text-brand-gold underline">
+                TxDOT contractor compliance page
+              </a>
+              {' '}for submission requirements.
+            </>}
+          />
         )}
 
         {/* CA eCPR disclosure modal — persistent, shown on every CA download click */}
