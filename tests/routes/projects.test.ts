@@ -501,3 +501,45 @@ describe('POST /api/projects/:id/workers/:wid/classifications', () => {
     expect(res.body.data?.classification?.tradeCode).toBe('CARP');
   });
 });
+
+describe('TX-specific project fields (Phase 47)', () => {
+  it('should save and return TX-specific fields', async () => {
+    const cookie = await registerUser(`tx-fields-${Date.now()}@test.com`);
+    const res = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'TX Highway Project',
+        state: 'TX',
+        county: 'Harris',
+        contractType: 'state-prevailing',
+        awardDate: '2025-06-01',
+        fundingType: 'state',
+        txdotProjectId: 'STP 2025(001)',
+        txContractorLicense: 'TDLR-12345',
+        txAwardingAgency: 'Texas DOT',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.project?.txdotProjectId).toBe('STP 2025(001)');
+    expect(res.body.data?.project?.txContractorLicense).toBe('TDLR-12345');
+    expect(res.body.data?.project?.txAwardingAgency).toBe('Texas DOT');
+  });
+
+  it('should create TX project without TX-specific fields (all optional)', async () => {
+    const cookie = await registerUser(`tx-optional-${Date.now()}@test.com`);
+    const res = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'TX Basic Project',
+        state: 'TX',
+        county: 'Travis',
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-07-01',
+        fundingType: 'federal',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.project?.state).toBe('TX');
+    expect(res.body.data?.project?.txdotProjectId).toBeNull();
+  });
+});

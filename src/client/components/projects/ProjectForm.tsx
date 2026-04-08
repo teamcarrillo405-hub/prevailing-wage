@@ -30,6 +30,10 @@ const CreateProjectSchema = z.object({
   // Phase 40 — New York-specific fields
   nyprcNumber: z.string().max(100).optional(),
   nysContractorRegNumber: z.string().max(100).optional(),
+  // Phase 47 — Texas-specific fields
+  txdotProjectId: z.string().max(100).optional(),
+  txContractorLicense: z.string().max(100).optional(),
+  txAwardingAgency: z.string().max(200).optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
@@ -55,6 +59,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const isWA = stateValue?.toUpperCase() === 'WA';
   const isNY = stateValue?.toUpperCase() === 'NY';
   const isIL = stateValue?.toUpperCase() === 'IL';
+  const isTX = stateValue?.toUpperCase() === 'TX';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
@@ -272,6 +277,48 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
         <div className="space-y-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
           <p className="text-sm font-medium text-purple-800">Illinois Project</p>
           <p className="text-xs text-purple-600">IL-specific certified payroll export and IDOL submission will be available on payroll weeks.</p>
+        </div>
+      )}
+
+      {isTX && (
+        <div className="space-y-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
+          <p className="text-sm font-medium text-orange-800">Texas Project Fields</p>
+          <div>
+            <label htmlFor="txdotProjectId" className="block text-sm font-medium text-gray-700">
+              TxDOT Project ID
+            </label>
+            <input
+              id="txdotProjectId"
+              type="text"
+              {...register('txdotProjectId')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="e.g. STP 2025(123)"
+            />
+          </div>
+          <div>
+            <label htmlFor="txContractorLicense" className="block text-sm font-medium text-gray-700">
+              TX Contractor License #
+            </label>
+            <input
+              id="txContractorLicense"
+              type="text"
+              {...register('txContractorLicense')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="TDLR license number"
+            />
+          </div>
+          <div>
+            <label htmlFor="txAwardingAgency" className="block text-sm font-medium text-gray-700">
+              Awarding Agency Name
+            </label>
+            <input
+              id="txAwardingAgency"
+              type="text"
+              {...register('txAwardingAgency')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="e.g. Texas Department of Transportation"
+            />
+          </div>
         </div>
       )}
 
