@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileCheck, ExternalLink } from 'lucide-react';
+import { FileCheck, ExternalLink, Info } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -1673,6 +1673,15 @@ export function PayrollWeekDetailPage() {
               </a>
               {' '}for submission requirements.
             </>}
+          />
+        )}
+
+        {/* FL informational callout — FL-01 */}
+        {!isLoading && !isError && isFL && (
+          <HelpCallout
+            icon={Info}
+            title="Florida — Federal WH-347 Applies"
+            body="Florida has no state-specific certified payroll form. Federal Davis-Bacon WH-347 applies to all Florida public works projects. Florida repealed its state prevailing wage law in 1979; HB 705 (July 2024) preempted all local wage ordinances."
           />
         )}
 
