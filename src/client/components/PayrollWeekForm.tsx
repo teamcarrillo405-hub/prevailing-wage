@@ -45,6 +45,9 @@ interface PayrollWeekFormValues {
   satDt: number;
   sunDt: number;
   nonPwHours: number;
+  checkNumber: string;
+  allOtherHours: number;
+  totalWeekGrossWages: number;
 }
 
 interface PayrollWeekFormProps {
@@ -53,6 +56,7 @@ interface PayrollWeekFormProps {
   onSave: (weekId: string) => void;
   isCA?: boolean;
   isIL?: boolean;
+  isMA?: boolean;
 }
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -66,7 +70,7 @@ const DAY_LABELS: Record<string, string> = {
   sun: 'Sun',
 };
 
-export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL = false }: PayrollWeekFormProps) {
+export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL = false, isMA = false }: PayrollWeekFormProps) {
   // Single-worker form — uses first worker for live display
   // Full multi-worker grid would iterate workers; this delivers the CPAY-01 behavior
   const firstWorker = workers[0];
@@ -85,6 +89,9 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
       monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
       monDt: 0, tueDt: 0, wedDt: 0, thuDt: 0, friDt: 0, satDt: 0, sunDt: 0,
       nonPwHours: 0,
+      checkNumber: '',
+      allOtherHours: 0,
+      totalWeekGrossWages: 0,
     },
   });
 
@@ -159,6 +166,11 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
             fringeTraining: data.fringeTraining || 0,
           } : {}),
           ...(isIL ? { nonPwHours: data.nonPwHours || 0 } : {}),
+          ...(isMA ? {
+            checkNumber: data.checkNumber || null,
+            allOtherHours: data.allOtherHours || null,
+            totalWeekGrossWages: data.totalWeekGrossWages || null,
+          } : {}),
         }),
       });
     }
@@ -246,6 +258,27 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
                 {...register('nonPwHours', { valueAsNumber: true })}
                 placeholder="0.00"
               />
+            </div>
+          </div>
+        )}
+
+        {isMA && (
+          <div className="space-y-3 rounded-lg border border-teal-200 bg-teal-50 p-3">
+            <p className="text-sm font-medium text-teal-800">MA Payroll Fields</p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Check Number</label>
+              <input type="text" className="w-full rounded border px-2 py-1 text-sm"
+                {...register('checkNumber')} placeholder="Optional" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">All Other Hours (other employers)</label>
+              <input type="number" step="0.01" min="0" className="w-full rounded border px-2 py-1 text-sm"
+                {...register('allOtherHours', { valueAsNumber: true })} placeholder="0.00" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Total Week Gross Wages (all employers)</label>
+              <input type="number" step="0.01" min="0" className="w-full rounded border px-2 py-1 text-sm"
+                {...register('totalWeekGrossWages', { valueAsNumber: true })} placeholder="0.00" />
             </div>
           </div>
         )}

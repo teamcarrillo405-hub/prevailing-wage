@@ -34,6 +34,9 @@ const CreateProjectSchema = z.object({
   txdotProjectId: z.string().max(100).optional(),
   txContractorLicense: z.string().max(100).optional(),
   txAwardingAgency: z.string().max(200).optional(),
+  // Phase 49 — Massachusetts-specific fields
+  maDlsProjectId: z.string().max(100).optional(),
+  maSicCode: z.string().max(50).optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
@@ -61,6 +64,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const isIL = stateValue?.toUpperCase() === 'IL';
   const isTX = stateValue?.toUpperCase() === 'TX';
   const isFL = stateValue?.toUpperCase() === 'FL';
+  const isMA = stateValue?.toUpperCase() === 'MA';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
@@ -320,6 +324,31 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               placeholder="e.g. Texas Department of Transportation"
             />
           </div>
+        </div>
+      )}
+
+      {isMA && (
+        <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50 p-4">
+          <p className="text-sm font-medium text-teal-800">Massachusetts Project Fields</p>
+          <div>
+            <label htmlFor="maDlsProjectId" className="block text-sm font-medium text-gray-700">
+              MA DLS Project ID
+            </label>
+            <input id="maDlsProjectId" type="text" {...register('maDlsProjectId')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="DCAMM-assigned project ID" />
+          </div>
+          <div>
+            <label htmlFor="maSicCode" className="block text-sm font-medium text-gray-700">
+              SIC / Trade Code
+            </label>
+            <input id="maSicCode" type="text" {...register('maSicCode')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="e.g. 1731" />
+          </div>
+          <p className="text-xs text-teal-600">
+            MA DLS certified payroll download will be available on payroll weeks.
+          </p>
         </div>
       )}
 

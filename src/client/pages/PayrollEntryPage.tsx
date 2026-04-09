@@ -71,6 +71,7 @@ export function PayrollEntryPage() {
 
   const isCA = projectData?.data?.project?.state?.toUpperCase() === 'CA';
   const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
+  const isMA = projectData?.data?.project?.state?.toUpperCase() === 'MA';
 
   // Flatten workers × classifications into rows for the form
   const workerRows = (data?.data?.workers ?? []).flatMap((w) =>
@@ -143,6 +144,7 @@ export function PayrollEntryPage() {
             onSave={handleSave}
             isCA={isCA}
             isIL={isIL}
+            isMA={isMA}
           />
         )}
       </div>
