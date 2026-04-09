@@ -28,9 +28,9 @@ A contractor can run a full project end-to-end — create project → add worker
 
 **Delivered:** Transformed HCC Prevailing Wage from a single-contractor tool into a team-ready platform with encrypted SSN storage, multi-user team accounts, payroll provider imports (QuickBooks + ADP), and agency submission status tracking. Research confirmed no public CA DIR or WA L&I APIs exist — auto-submit deferred to v4+.
 
-## Current State (v5.0 starting — v4.0 complete 2026-04-07)
+## Current State (v5.0 in progress — Phase 49 complete 2026-04-09)
 
-v4.0 shipped all 10 phases (37–46), 62 plans, 560+ tests passing. App live at https://hcc-prevailing-wage.onrender.com. Supported states: CA, WA, NY, IL. Payroll imports: QuickBooks, ADP, Gusto, Paychex, Sage 300/100. Team accounts, SSN encryption, audit trail, email notifications all live.
+v4.0 shipped all 10 phases (37–46), 62 plans, 560+ tests passing. v5.0 Phase 49 complete — MA schema (8 DB columns via migration 0029), MA worker demographics (WorkersPage isMA/isNJ gate), MA payroll server stack (checkNumber, allOtherHours, totalWeekGrossWages), and MA UI wiring (ProjectForm, PayrollWeekDetailPage STATE_FORMS, PayrollWeekForm, export stub). App live at https://hcc-prevailing-wage.onrender.com. Supported states: CA, WA, NY, IL (MA schema ready, PDF in Phase 50). Payroll imports: QuickBooks, ADP, Gusto, Paychex, Sage 300/100. Team accounts, SSN encryption, audit trail, email notifications all live.
 
 **Shipped:** 2026-04-07 (v4.0 complete)
 **Tests:** 387+ passing (main suite, excluding worktrees)
