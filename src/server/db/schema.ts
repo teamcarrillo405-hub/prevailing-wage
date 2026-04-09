@@ -49,6 +49,9 @@ export const projects = sqliteTable('projects', {
   txdotProjectId: text('txdot_project_id'),
   txContractorLicense: text('tx_contractor_license'),
   txAwardingAgency: text('tx_awarding_agency'),
+  // Phase 49 — Massachusetts-specific project fields
+  maDlsProjectId: text('ma_dls_project_id'),
+  maSicCode: text('ma_sic_code'),
   projectSettings: text('project_settings'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -103,6 +106,10 @@ export const workers = sqliteTable('workers', {
   gender: text('gender'),
   veteranStatus: text('veteran_status'),
   skillLevel: text('skill_level'),
+  // Phase 49 — MA nullable boolean columns (workers may decline to self-identify)
+  isWoman: integer('is_woman', { mode: 'boolean' }),
+  isMinority: integer('is_minority', { mode: 'boolean' }),
+  oshaTraining: integer('osha_training', { mode: 'boolean' }),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -258,6 +265,10 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   fringeTraining: real('fringe_training'),
   // Phase 42 — IL non-prevailing-wage hours (nullable; IL projects only)
   nonPwHours: real('non_pw_hours'),
+  // Phase 49 — MA nullable payroll entry fields
+  checkNumber: text('check_number'),
+  allOtherHours: real('all_other_hours'),
+  totalWeekGrossWages: real('total_week_gross_wages'),
   // Phase 32 — user attribution (nullable for all existing rows per D-09)
   createdByUserId: text('created_by_user_id').references(() => users.id),
   updatedByUserId: text('updated_by_user_id').references(() => users.id),
