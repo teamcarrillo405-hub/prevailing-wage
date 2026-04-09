@@ -37,7 +37,7 @@ Florida repealed its state prevailing wage law in 1979; HB 705 (July 2024) preem
 Massachusetts DLS Weekly Certified Payroll Report — most complex new state form. Adds workforce participation tracking and OSHA 10 certification per worker.
 
 - [ ] **MA-01** — MA is a selectable project state. MA projects show a state-gated "Download MA DLS Weekly Payroll" button on PayrollWeekDetailPage.
-- [ ] **MA-02** — New nullable worker columns (shown in WorkersPage for MA and NJ projects): `isWoman` (boolean), `isMinority` (boolean), `oshaTraining` (boolean). All nullable; workers may decline to self-identify.
+- [x] **MA-02** — New nullable worker columns (shown in WorkersPage for MA and NJ projects): `isWoman` (boolean), `isMinority` (boolean), `oshaTraining` (boolean). All nullable; workers may decline to self-identify.
 - [x] **MA-03** — New nullable payroll entry fields (shown in PayrollWeekDetailPage for MA projects): `checkNumber` (text), `allOtherHours` (decimal — hours worked for other employers that week), `totalWeekGrossWages` (decimal — gross wages from all employers). All optional.
 - [ ] **MA-04** — MA DLS Weekly Certified Payroll PDF generator (`maPdfGenerator.ts`): contractor header (name, FEIN, address, license), project header (name, location, contract number, week ending), per-worker rows with OSHA 10 checkbox, woman/minority columns, supplemental unemployment fringe sub-column, project gross pay column, total-week gross pay column, check number, statement of compliance with MA-specific certification language.
 
@@ -86,7 +86,7 @@ Prime contractors bear strict liability under 29 CFR 5 for subcontractor prevail
 - [x] **NFR-06** — `STATE_FORMS` registry (STATE-12) must be committed before any new state phase (TX/FL/MA/NJ) is planned or executed — enforced by phase dependency ordering in the roadmap.
 - [ ] **NFR-07** — All CSV exports sanitize cell values to prevent formula injection: values starting with `=`, `+`, `-`, or `@` are prefixed with a space before writing.
 - [ ] **NFR-03** (continued) — All new routes apply `assertProjectAccess` before any data access.
-- [ ] **NFR-01** (continued) — All new Drizzle migrations use `--> statement-breakpoint` (one space) separator between SQL statements; single-statement migrations need no separator.
+- [x] **NFR-01** (continued) — All new Drizzle migrations use `--> statement-breakpoint` (one space) separator between SQL statements; single-statement migrations need no separator.
 
 ---
 

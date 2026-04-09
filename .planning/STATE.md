@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 49-02-PLAN.md — MA payroll entry fields wired through server stack
-last_updated: "2026-04-09T20:18:09.098Z"
+stopped_at: Completed 49-01-PLAN.md — MA schema migration, Drizzle schema, WorkersPage MA/NJ demographics
+last_updated: "2026-04-09T20:20:01.988Z"
 progress:
   total_phases: 37
   completed_phases: 26
   total_plans: 70
-  completed_plans: 68
+  completed_plans: 69
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 49 (ma-schema-ui) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -137,6 +137,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 47]: TX HelpCallout placed after WA PWIA panel, before CA eCPR modal — consistent with state-panel ordering
 - [Phase 48-fl-certified-payroll]: FL uses WH-347 generator via STATE_FORMS registry (no new PDF generator, no DB migration); Info icon for purely informational callouts; plain string body for callouts without anchor tags
 - [Phase 49-ma-schema-ui]: checkNumber/allOtherHours/totalWeekGrossWages stored as nullable fields; amendment clone copies verbatim (user-entered data); isWoman/isMinority/oshaTraining added to select for Phase 50 generator
+- [Phase 49-ma-schema-ui]: MA nullable booleans use integer({ mode: 'boolean' }) with no .notNull()/.default() — workers may decline to self-identify
+- [Phase 49-ma-schema-ui]: MA/NJ dual gate (isMA || isNJ) for UI sections — NJ reuses same worker demographics columns
 
 ### Phase Order Rationale
 
@@ -169,7 +171,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-09T20:18:09.093Z
-Stopped at: Completed 49-02-PLAN.md — MA payroll entry fields wired through server stack
+Last session: 2026-04-09T20:20:01.983Z
+Stopped at: Completed 49-01-PLAN.md — MA schema migration, Drizzle schema, WorkersPage MA/NJ demographics
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
