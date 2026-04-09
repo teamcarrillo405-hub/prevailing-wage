@@ -917,7 +917,7 @@ Plans:
 Plans:
 - [x] 49-01-PLAN.md -- DB migration + Drizzle schema + WorkersPage MA/NJ demographics
 - [x] 49-02-PLAN.md -- Payroll service + route MA fields + select expansion
-- [ ] 49-03-PLAN.md -- ProjectForm MA fields + STATE_FORMS registry + export route stub
+- [x] 49-03-PLAN.md -- ProjectForm MA fields + STATE_FORMS registry + export route stub
 **UI hint**: yes
 
 ---
@@ -1222,7 +1222,7 @@ Plans:
 
 - [x] **Phase 47: State Foundations + TX Certified Payroll** — STATE_FORMS registry, .toUpperCase() normalization, TX state gate + WH-347 routing + TX project fields + LCPtracker callout (not started) (completed 2026-04-08)
 - [x] **Phase 48: FL Certified Payroll** — FL state gate + WH-347 routing + informational HelpCallout explaining FL has no state prevailing wage form (not started) (completed 2026-04-08)
-- [ ] **Phase 49: MA Schema + UI** — MA state flag, isWoman/isMinority/oshaTraining worker columns, checkNumber/allOtherHours/totalWeekGrossWages payroll fields, MA project fields, state-gated download button (not started)
+- [x] **Phase 49: MA Schema + UI** — MA state flag, isWoman/isMinority/oshaTraining worker columns, checkNumber/allOtherHours/totalWeekGrossWages payroll fields, MA project fields, state-gated download button (not started) (completed 2026-04-09)
 - [ ] **Phase 50: MA PDF Generator** — maPdfGenerator.ts programmatic-draw: contractor/project header, per-worker rows with OSHA 10 / woman / minority columns, supplemental unemployment fringe sub-column, project gross vs total gross, check number, Statement of Compliance (not started)
 - [ ] **Phase 51: NJ Schema + Routes** — NJ state flag, njPwcNumber project field, workerSex nullable column, NJ project fields migration, state-gated download button (not started)
 - [ ] **Phase 52: NJ PDF Generator** — njPdfGenerator.ts programmatic-draw: contractor header with NJ reg number, per-worker EEO columns (sex/race/ethnicity), FICA/federal/state tax deduction columns, NJ Statement of Compliance (not started)

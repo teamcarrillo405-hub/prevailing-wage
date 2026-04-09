@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 49-01-PLAN.md — MA schema migration, Drizzle schema, WorkersPage MA/NJ demographics
-last_updated: "2026-04-09T20:20:01.988Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 49-03-PLAN.md — MA UI wiring, STATE_FORMS MA entry, export route stub
+last_updated: "2026-04-09T20:27:54.643Z"
 progress:
   total_phases: 37
-  completed_phases: 26
+  completed_phases: 27
   total_plans: 70
-  completed_plans: 69
+  completed_plans: 70
 ---
 
 # State
@@ -139,6 +139,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 49-ma-schema-ui]: checkNumber/allOtherHours/totalWeekGrossWages stored as nullable fields; amendment clone copies verbatim (user-entered data); isWoman/isMinority/oshaTraining added to select for Phase 50 generator
 - [Phase 49-ma-schema-ui]: MA nullable booleans use integer({ mode: 'boolean' }) with no .notNull()/.default() — workers may decline to self-identify
 - [Phase 49-ma-schema-ui]: MA/NJ dual gate (isMA || isNJ) for UI sections — NJ reuses same worker demographics columns
+- [Phase 49-03]: assertProjectAccess called before MA state gate in export route (NFR-03)
+- [Phase 49-03]: MA export stub returns 501 — Phase 50 fills in the PDF generator
+- [Phase 49-03]: PayrollEntryPage is actual render site for PayrollWeekForm (not PayrollWeekDetailPage)
 
 ### Phase Order Rationale
 
@@ -171,7 +174,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-09T20:20:01.983Z
-Stopped at: Completed 49-01-PLAN.md — MA schema migration, Drizzle schema, WorkersPage MA/NJ demographics
+Last session: 2026-04-09T20:27:54.638Z
+Stopped at: Completed 49-03-PLAN.md — MA UI wiring, STATE_FORMS MA entry, export route stub
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
