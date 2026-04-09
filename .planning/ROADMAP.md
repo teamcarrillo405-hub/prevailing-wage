@@ -916,7 +916,7 @@ Plans:
 
 Plans:
 - [ ] 49-01-PLAN.md -- DB migration + Drizzle schema + WorkersPage MA/NJ demographics
-- [ ] 49-02-PLAN.md -- Payroll service + route MA fields + select expansion
+- [x] 49-02-PLAN.md -- Payroll service + route MA fields + select expansion
 - [ ] 49-03-PLAN.md -- ProjectForm MA fields + STATE_FORMS registry + export route stub
 **UI hint**: yes
 

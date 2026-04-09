@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 48-01-PLAN.md — FL Certified Payroll with STATE_FORMS registry entry and informational HelpCallout
-last_updated: "2026-04-08T17:38:11.932Z"
+status: Ready to execute
+stopped_at: Completed 49-02-PLAN.md — MA payroll entry fields wired through server stack
+last_updated: "2026-04-09T20:18:09.098Z"
 progress:
   total_phases: 37
   completed_phases: 26
-  total_plans: 67
-  completed_plans: 67
+  total_plans: 70
+  completed_plans: 68
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 48 — FL Certified Payroll
+**Current focus:** Phase 49 — ma-schema-ui
 
 ## Current Position
 
-Phase: 49
-Plan: Not started
+Phase: 49 (ma-schema-ui) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -136,6 +136,7 @@ Key decisions locked for v5.0 scope:
 - [Phase 47]: ExternalLink added to lucide-react import in PayrollWeekDetailPage for TX LCPtracker callout — preferred icon for external portal references
 - [Phase 47]: TX HelpCallout placed after WA PWIA panel, before CA eCPR modal — consistent with state-panel ordering
 - [Phase 48-fl-certified-payroll]: FL uses WH-347 generator via STATE_FORMS registry (no new PDF generator, no DB migration); Info icon for purely informational callouts; plain string body for callouts without anchor tags
+- [Phase 49-ma-schema-ui]: checkNumber/allOtherHours/totalWeekGrossWages stored as nullable fields; amendment clone copies verbatim (user-entered data); isWoman/isMinority/oshaTraining added to select for Phase 50 generator
 
 ### Phase Order Rationale
 
@@ -168,7 +169,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-08T17:32:09.916Z
-Stopped at: Completed 48-01-PLAN.md — FL Certified Payroll with STATE_FORMS registry entry and informational HelpCallout
+Last session: 2026-04-09T20:18:09.093Z
+Stopped at: Completed 49-02-PLAN.md — MA payroll entry fields wired through server stack
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)

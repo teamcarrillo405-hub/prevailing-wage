@@ -38,7 +38,7 @@ Massachusetts DLS Weekly Certified Payroll Report — most complex new state for
 
 - [ ] **MA-01** — MA is a selectable project state. MA projects show a state-gated "Download MA DLS Weekly Payroll" button on PayrollWeekDetailPage.
 - [ ] **MA-02** — New nullable worker columns (shown in WorkersPage for MA and NJ projects): `isWoman` (boolean), `isMinority` (boolean), `oshaTraining` (boolean). All nullable; workers may decline to self-identify.
-- [ ] **MA-03** — New nullable payroll entry fields (shown in PayrollWeekDetailPage for MA projects): `checkNumber` (text), `allOtherHours` (decimal — hours worked for other employers that week), `totalWeekGrossWages` (decimal — gross wages from all employers). All optional.
+- [x] **MA-03** — New nullable payroll entry fields (shown in PayrollWeekDetailPage for MA projects): `checkNumber` (text), `allOtherHours` (decimal — hours worked for other employers that week), `totalWeekGrossWages` (decimal — gross wages from all employers). All optional.
 - [ ] **MA-04** — MA DLS Weekly Certified Payroll PDF generator (`maPdfGenerator.ts`): contractor header (name, FEIN, address, license), project header (name, location, contract number, week ending), per-worker rows with OSHA 10 checkbox, woman/minority columns, supplemental unemployment fringe sub-column, project gross pay column, total-week gross pay column, check number, statement of compliance with MA-specific certification language.
 
 ---
