@@ -1063,6 +1063,150 @@ describe('PATCH /api/payroll/weeks/:id/ny-submit - STATE-05', () => {
 
 // ── IL IDOL submit route tests ─────────────────────────────────────────────
 
+describe('MA payroll entry fields (MA-03)', () => {
+  async function createMaProject(cookie: string) {
+    const res = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'MA Test Project',
+        state: 'MA',
+        county: 'Suffolk',
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-01-01',
+        fundingType: 'federal',
+      });
+    return res.body.data?.project?.id as string;
+  }
+
+  it('should accept checkNumber, allOtherHours, totalWeekGrossWages on payroll entry create', async () => {
+    const cookie = await registerAndLogin('ma-fields-create');
+    const projectId = await createMaProject(cookie);
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2025-03-02', payrollNumber: 500 });
+    const weekId = weekRes.body.id as string;
+
+    const res = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        baseRateSnapshot: 50.00,
+        fringeRateSnapshot: 22.00,
+        checkNumber: '12345',
+        allOtherHours: 8.5,
+        totalWeekGrossWages: 1500.00,
+      });
+
+    expect(res.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.entries.length).toBeGreaterThanOrEqual(1);
+    const entry = getRes.body.entries[0].entry;
+    expect(entry.checkNumber).toBe('12345');
+    expect(entry.allOtherHours).toBe(8.5);
+    expect(entry.totalWeekGrossWages).toBe(1500.00);
+  });
+
+  it('should accept null values for MA payroll entry fields', async () => {
+    const cookie = await registerAndLogin('ma-fields-null');
+    const projectId = await createMaProject(cookie);
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2025-03-09', payrollNumber: 501 });
+    const weekId = weekRes.body.id as string;
+
+    const res = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        baseRateSnapshot: 50.00,
+        fringeRateSnapshot: 22.00,
+        checkNumber: null,
+        allOtherHours: null,
+        totalWeekGrossWages: null,
+      });
+
+    expect(res.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    expect(getRes.body.entries.length).toBeGreaterThanOrEqual(1);
+    const entry = getRes.body.entries[0].entry;
+    expect(entry.checkNumber).toBeNull();
+    expect(entry.allOtherHours).toBeNull();
+    expect(entry.totalWeekGrossWages).toBeNull();
+  });
+
+  it('should update MA payroll entry fields', async () => {
+    const cookie = await registerAndLogin('ma-fields-update');
+    const projectId = await createMaProject(cookie);
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2025-03-16', payrollNumber: 502 });
+    const weekId = weekRes.body.id as string;
+
+    // Create entry without MA fields
+    await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        baseRateSnapshot: 50.00,
+        fringeRateSnapshot: 22.00,
+      });
+
+    // Update with checkNumber
+    const updateRes = await supertest(app)
+      .put(`/api/payroll/entries/${weekId}`)
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        baseRateSnapshot: 50.00,
+        fringeRateSnapshot: 22.00,
+        checkNumber: '99999',
+        allOtherHours: 4.0,
+        totalWeekGrossWages: 800.00,
+      });
+
+    expect(updateRes.status).toBe(200);
+
+    const getRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    const entry = getRes.body.entries[0].entry;
+    expect(entry.checkNumber).toBe('99999');
+    expect(entry.allOtherHours).toBe(4.0);
+    expect(entry.totalWeekGrossWages).toBe(800.00);
+  });
+});
+
 describe('PATCH /api/payroll/weeks/:id/il-submit', () => {
   async function createIlProject(cookie: string) {
     const res = await supertest(app)

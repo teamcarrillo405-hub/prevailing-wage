@@ -79,6 +79,10 @@ const UpsertEntrySchema = z.object({
   fringeTraining: z.number().min(0).nullable().optional(),
   // Phase 42 — IL non-prevailing-wage hours
   nonPwHours: z.number().min(0).nullable().optional(),
+  // Phase 49 — MA payroll entry fields
+  checkNumber: z.string().max(50).nullable().optional(),
+  allOtherHours: z.number().min(0).nullable().optional(),
+  totalWeekGrossWages: z.number().min(0).nullable().optional(),
 });
 
 const SubmitWeekSchema = z.object({

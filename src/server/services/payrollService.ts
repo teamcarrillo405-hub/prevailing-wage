@@ -91,6 +91,10 @@ export interface UpsertPayrollEntryInput {
   fringeVacation?: number | null;
   fringeTraining?: number | null;
   nonPwHours?: number | null;
+  // Phase 49 — MA payroll entry fields
+  checkNumber?: string | null;
+  allOtherHours?: number | null;
+  totalWeekGrossWages?: number | null;
   userId?: string; // populated from req.user.id on POST/PUT; undefined for amendment copies
   // Audit-only fields — threaded from route handler (AUDIT-03)
   userEmail?: string;
@@ -193,6 +197,9 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     fringeVacation: input.fringeVacation ?? null,
     fringeTraining: input.fringeTraining ?? null,
     nonPwHours: input.nonPwHours ?? null,
+    checkNumber: input.checkNumber ?? null,
+    allOtherHours: input.allOtherHours ?? null,
+    totalWeekGrossWages: input.totalWeekGrossWages ?? null,
     createdByUserId: input.userId ?? null,
     updatedByUserId: input.userId ?? null,
     createdAt: now,
@@ -240,6 +247,9 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         fringeVacation: values.fringeVacation,
         fringeTraining: values.fringeTraining,
         nonPwHours: values.nonPwHours,
+        checkNumber: values.checkNumber,
+        allOtherHours: values.allOtherHours,
+        totalWeekGrossWages: values.totalWeekGrossWages,
         updatedByUserId: values.updatedByUserId,
         updatedAt: now,
       },
@@ -455,6 +465,14 @@ export async function getPayrollEntriesWithWorkerDetails(weekId: string) {
       nysRegisteredApprentice: workers.nysRegisteredApprentice,
       // Phase 42 — IL non-PW hours
       nonPwHours: payrollEntries.nonPwHours,
+      // Phase 49 — MA worker fields (for Phase 50 generator)
+      isWoman: workers.isWoman,
+      isMinority: workers.isMinority,
+      oshaTraining: workers.oshaTraining,
+      // Phase 49 — MA payroll entry fields
+      checkNumber: payrollEntries.checkNumber,
+      allOtherHours: payrollEntries.allOtherHours,
+      totalWeekGrossWages: payrollEntries.totalWeekGrossWages,
     })
     .from(payrollEntries)
     .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
@@ -840,6 +858,9 @@ export async function amendPayrollWeek(input: AmendWeekInput): Promise<AmendWeek
       deductions: 0,
       netPay: null,
       nonPwHours: entry.nonPwHours ?? null,
+      checkNumber: entry.checkNumber ?? null,
+      allOtherHours: entry.allOtherHours ?? null,
+      totalWeekGrossWages: entry.totalWeekGrossWages ?? null,
       createdByUserId: null, // amendment copies are system-generated clones, not direct user edits
       updatedByUserId: null,
       createdAt: now,
