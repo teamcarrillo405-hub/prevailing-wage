@@ -209,6 +209,126 @@ describe('GET /workers programName field', () => {
   });
 });
 
+async function createMaProject(cookie: string) {
+  const res = await supertest(app)
+    .post('/api/projects')
+    .set('Cookie', cookie)
+    .send({
+      name: 'MA Workers Test Project',
+      state: 'MA',
+      county: 'Suffolk',
+      contractType: 'state-prevailing',
+      awardDate: '2025-01-01',
+      fundingType: 'state',
+    });
+  return res.body.data?.project?.id as string;
+}
+
+describe('MA worker demographics (MA-02)', () => {
+  it('should accept isWoman, isMinority, oshaTraining on worker create', async () => {
+    const cookie = await registerAndLogin('ma-create-all');
+    const projectId = await createMaProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'MA Worker', isWoman: true, isMinority: true, oshaTraining: true });
+
+    expect(wRes.status).toBe(201);
+
+    const getRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+
+    expect(getRes.status).toBe(200);
+    const workers = getRes.body.data?.workers ?? [];
+    const worker = workers.find((w: any) => w.name === 'MA Worker');
+    expect(worker).toBeDefined();
+    expect(worker.isWoman).toBe(true);
+    expect(worker.isMinority).toBe(true);
+    expect(worker.oshaTraining).toBe(true);
+  });
+
+  it('should accept null values for MA boolean fields', async () => {
+    const cookie = await registerAndLogin('ma-create-null');
+    const projectId = await createMaProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'MA Worker Null' });
+
+    expect(wRes.status).toBe(201);
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    const getRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+
+    expect(getRes.status).toBe(200);
+    const workers = getRes.body.data?.workers ?? [];
+    const worker = workers.find((w: any) => w.id === workerId);
+    expect(worker).toBeDefined();
+    expect(worker.isWoman).toBeNull();
+    expect(worker.isMinority).toBeNull();
+    expect(worker.oshaTraining).toBeNull();
+  });
+
+  it('should update MA boolean fields via PUT', async () => {
+    const cookie = await registerAndLogin('ma-update');
+    const projectId = await createMaProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'MA Worker Update' });
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    const putRes = await supertest(app)
+      .put(`/api/projects/${projectId}/workers/${workerId}`)
+      .set('Cookie', cookie)
+      .send({ name: 'MA Worker Update', isWoman: true });
+
+    expect(putRes.status).toBe(200);
+
+    const getRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+
+    const workers = getRes.body.data?.workers ?? [];
+    const worker = workers.find((w: any) => w.id === workerId);
+    expect(worker.isWoman).toBe(true);
+    expect(worker.isMinority).toBeNull();
+    expect(worker.oshaTraining).toBeNull();
+  });
+
+  it('should allow setting MA boolean fields back to null', async () => {
+    const cookie = await registerAndLogin('ma-null-roundtrip');
+    const projectId = await createMaProject(cookie);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'MA Worker Null RT', isWoman: true });
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    const putRes = await supertest(app)
+      .put(`/api/projects/${projectId}/workers/${workerId}`)
+      .set('Cookie', cookie)
+      .send({ name: 'MA Worker Null RT', isWoman: null });
+
+    expect(putRes.status).toBe(200);
+
+    const getRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+
+    const workers = getRes.body.data?.workers ?? [];
+    const worker = workers.find((w: any) => w.id === workerId);
+    expect(worker.isWoman).toBeNull();
+  });
+});
+
 describe('nysRegisteredApprentice field', () => {
   it('worker with nysRegisteredApprentice=true is accepted and returned', async () => {
     const cookie = await registerAndLogin('nys-app-true');

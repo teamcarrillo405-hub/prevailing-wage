@@ -34,6 +34,10 @@ export interface CreateWorkerInput extends AuditContext {
   gender?: string | null;
   veteranStatus?: string | null;
   skillLevel?: string | null;
+  // Phase 49 — MA nullable boolean columns
+  isWoman?: boolean | null;
+  isMinority?: boolean | null;
+  oshaTraining?: boolean | null;
 }
 
 export interface UpdateWorkerInput extends AuditContext {
@@ -56,6 +60,10 @@ export interface UpdateWorkerInput extends AuditContext {
   gender?: string | null;
   veteranStatus?: string | null;
   skillLevel?: string | null;
+  // Phase 49 — MA nullable boolean columns
+  isWoman?: boolean | null;
+  isMinority?: boolean | null;
+  oshaTraining?: boolean | null;
 }
 
 export interface DeleteWorkerInput extends AuditContext {
@@ -109,6 +117,9 @@ export async function createWorker(
     gender: input.gender ?? null,
     veteranStatus: input.veteranStatus ?? null,
     skillLevel: input.skillLevel ?? null,
+    isWoman: input.isWoman ?? null,
+    isMinority: input.isMinority ?? null,
+    oshaTraining: input.oshaTraining ?? null,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -189,6 +200,9 @@ export async function updateWorker(
   if ('gender' in input) updates.gender = input.gender ?? null;
   if ('veteranStatus' in input) updates.veteranStatus = input.veteranStatus ?? null;
   if ('skillLevel' in input) updates.skillLevel = input.skillLevel ?? null;
+  if ('isWoman' in input) updates.isWoman = input.isWoman ?? null;
+  if ('isMinority' in input) updates.isMinority = input.isMinority ?? null;
+  if ('oshaTraining' in input) updates.oshaTraining = input.oshaTraining ?? null;
 
   await db.update(workers).set(updates).where(eq(workers.id, input.workerId));
   const [updated] = await db.select().from(workers).where(eq(workers.id, input.workerId)).limit(1);

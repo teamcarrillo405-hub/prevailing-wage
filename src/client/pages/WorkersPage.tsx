@@ -59,6 +59,9 @@ interface Worker {
   gender: string | null;
   veteranStatus: string | null;
   skillLevel: string | null;
+  isWoman: boolean | null;
+  isMinority: boolean | null;
+  oshaTraining: boolean | null;
   classifications: Classification[];
 }
 
@@ -126,6 +129,9 @@ function workerToEditForm(w: Worker) {
     gender: w.gender ?? '',
     veteranStatus: w.veteranStatus ?? '',
     skillLevel: w.skillLevel ?? '',
+    isWoman: w.isWoman ?? null,
+    isMinority: w.isMinority ?? null,
+    oshaTraining: w.oshaTraining ?? null,
   };
 }
 
@@ -139,7 +145,7 @@ export function WorkersPage() {
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false, race: '', ethnicity: '', gender: '', veteranStatus: '', skillLevel: '' });
+  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false, race: '', ethnicity: '', gender: '', veteranStatus: '', skillLevel: '', isWoman: null as boolean | null, isMinority: null as boolean | null, oshaTraining: null as boolean | null });
   const [editError, setEditError] = useState('');
 
   // Add-extra-classification state
@@ -179,6 +185,8 @@ export function WorkersPage() {
   const selectedExtraTrade = wageClassifications.find(wc => wc.tradeCode === extraClass.tradeCode);
   const isWA = projectData?.data?.project?.state?.toUpperCase() === 'WA';
   const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
+  const isMA = projectData?.data?.project?.state?.toUpperCase() === 'MA';
+  const isNJ = projectData?.data?.project?.state?.toUpperCase() === 'NJ';
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const addWorker = useMutation({
@@ -250,6 +258,11 @@ export function WorkersPage() {
           gender: data.gender || null,
           veteranStatus: data.veteranStatus || null,
           skillLevel: data.skillLevel || null,
+        } : {}),
+        ...(isMA || isNJ ? {
+          isWoman: data.isWoman ?? null,
+          isMinority: data.isMinority ?? null,
+          oshaTraining: data.oshaTraining ?? null,
         } : {}),
       }),
     onSuccess: () => {
@@ -549,6 +562,44 @@ export function WorkersPage() {
                         </div>
                       </details>
                     )}
+                    {(isMA || isNJ) && (
+                      <details className="rounded-lg border border-teal-200 bg-teal-50 p-3" open>
+                        <summary className="cursor-pointer text-sm font-medium text-teal-800">
+                          MA/NJ Workforce Participation
+                        </summary>
+                        <div className="mt-3 space-y-3">
+                          <div className="grid grid-cols-1 gap-3">
+                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={editForm.isWoman ?? false}
+                                onChange={e => setEditForm(f => ({ ...f, isWoman: e.target.checked }))}
+                              />
+                              Woman (self-identified)
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={editForm.isMinority ?? false}
+                                onChange={e => setEditForm(f => ({ ...f, isMinority: e.target.checked }))}
+                              />
+                              Minority (self-identified)
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={editForm.oshaTraining ?? false}
+                                onChange={e => setEditForm(f => ({ ...f, oshaTraining: e.target.checked }))}
+                              />
+                              OSHA 10 Certified
+                            </label>
+                          </div>
+                          <p className="text-xs text-teal-600">
+                            All fields are optional. Workers may decline to self-identify.
+                          </p>
+                        </div>
+                      </details>
+                    )}
                     {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
                     <div className="flex gap-2">
                       <Button onClick={() => handleEditSave(w.id)} disabled={updateWorker.isPending}>
@@ -589,6 +640,13 @@ export function WorkersPage() {
                         </p>
                         {(![w.addressStreet, w.addressCity, w.addressState, w.addressZip].some(Boolean) || !w.ssnLast4) && (
                           <Badge variant="warning" className="mt-1">Missing data — WH-347 blocked</Badge>
+                        )}
+                        {(isMA || isNJ) && (
+                          <p className="text-xs text-teal-700 mt-1">
+                            <span className="mr-3">Woman: {w.isWoman === null ? '--' : w.isWoman ? 'Yes' : 'No'}</span>
+                            <span className="mr-3">Minority: {w.isMinority === null ? '--' : w.isMinority ? 'Yes' : 'No'}</span>
+                            <span className="mr-3">OSHA 10: {w.oshaTraining === null ? '--' : w.oshaTraining ? 'Yes' : 'No'}</span>
+                          </p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">

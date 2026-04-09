@@ -38,6 +38,10 @@ const CreateWorkerSchema = z.object({
   gender: z.string().max(100).optional(),
   veteranStatus: z.string().max(100).optional(),
   skillLevel: z.enum(['journeyman', 'apprentice']).optional(),
+  // Phase 49 — MA nullable boolean columns
+  isWoman: z.boolean().optional(),
+  isMinority: z.boolean().optional(),
+  oshaTraining: z.boolean().optional(),
 });
 
 const UpdateWorkerSchema = z.object({
@@ -61,6 +65,10 @@ const UpdateWorkerSchema = z.object({
   gender: z.string().max(100).optional().nullable(),
   veteranStatus: z.string().max(100).optional().nullable(),
   skillLevel: z.enum(['journeyman', 'apprentice']).optional().nullable(),
+  // Phase 49 — MA nullable boolean columns
+  isWoman: z.boolean().optional().nullable(),
+  isMinority: z.boolean().optional().nullable(),
+  oshaTraining: z.boolean().optional().nullable(),
 });
 
 const CreateClassificationSchema = z.object({
@@ -206,6 +214,9 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
     gender: body.gender,
     veteranStatus: body.veteranStatus,
     skillLevel: body.skillLevel,
+    isWoman: body.isWoman,
+    isMinority: body.isMinority,
+    oshaTraining: body.oshaTraining,
   });
   res.status(201).json({ data: { worker: result } });
 });
@@ -249,6 +260,9 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
       gender: body.gender,
       veteranStatus: body.veteranStatus,
       skillLevel: body.skillLevel,
+      isWoman: body.isWoman,
+      isMinority: body.isMinority,
+      oshaTraining: body.oshaTraining,
     });
     res.json({ data: { worker: result } });
   } catch (err: any) {
