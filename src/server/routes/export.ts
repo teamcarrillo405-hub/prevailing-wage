@@ -1202,4 +1202,39 @@ router.get('/il-pdf/:weekId', async (req, res) => {
   } catch (auditErr) { console.error('[audit]', auditErr); }
 });
 
+// ── GET /api/export/ma-cpr/:weekId ─────────────────────────────────────────
+// Massachusetts DLS Weekly Certified Payroll Report — state-gated to MA projects only
+// Phase 49: stub returning 501; Phase 50 fills in the PDF generator
+
+router.get('/ma-cpr/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project access (NFR-03) — BEFORE state gate
+  const db = getDb();
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // 3. State gate — MA DLS Payroll is MA-only
+  if (project.state?.toUpperCase() !== 'MA') {
+    res.status(400).json({ error: 'MA DLS Payroll is only available for Massachusetts projects' });
+    return;
+  }
+
+  // 4. Phase 50 will implement the PDF generator here
+  res.status(501).json({ error: 'MA DLS Payroll generator not yet implemented' });
+});
+
 export { router as exportRouter };

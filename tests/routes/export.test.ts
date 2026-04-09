@@ -455,3 +455,27 @@ describe('STATE-13: case normalization on export routes', () => {
     expect(res.status).not.toBe(400);
   });
 });
+
+describe('MA DLS Payroll export (MA-01)', () => {
+  it('should return 400 for non-MA project on ma-cpr route', async () => {
+    const cookie = await registerUser('ma-gate-non-ma');
+    const projectId = await createProject(cookie, 'TX');
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const res = await supertest(app).get(`/api/export/ma-cpr/${weekId}`).set('Cookie', cookie);
+    expect(res.status).toBe(400);
+  });
+
+  it('should return 501 for MA project on ma-cpr route (stub)', async () => {
+    const cookie = await registerUser('ma-gate-ma-proj');
+    const projectId = await createProject(cookie, 'MA');
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const res = await supertest(app).get(`/api/export/ma-cpr/${weekId}`).set('Cookie', cookie);
+    expect(res.status).toBe(501);
+  });
+
+  it('should return 404 for non-existent week on ma-cpr route', async () => {
+    const cookie = await registerUser('ma-gate-404');
+    const res = await supertest(app).get('/api/export/ma-cpr/nonexistent-week-id').set('Cookie', cookie);
+    expect(res.status).toBe(404);
+  });
+});
