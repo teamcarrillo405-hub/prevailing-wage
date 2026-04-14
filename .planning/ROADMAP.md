@@ -1009,7 +1009,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 53-01-PLAN.md — Fix CA button routing bug (modal bypass) + add ca_pdf.downloaded audit log
+- [x] 53-01-PLAN.md — Fix CA button routing bug (modal bypass) + add ca_pdf.downloaded audit log
 - [ ] 53-02-PLAN.md — Browser verification of A-1-131 PDF field coordinates; apply any corrections
 
 ---

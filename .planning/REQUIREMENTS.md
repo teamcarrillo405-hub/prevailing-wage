@@ -57,7 +57,7 @@ New Jersey MW-562 (February 2025 revision) — requires EEO demographic columns 
 
 Phase 24 Plan 03 was deferred since v2.4. The generator (`a1131Generator.ts`) and all tests pass. The gap is browser verification of PDF field coordinate accuracy.
 
-- [ ] **CA-02** — Browser verification of the existing CA A-1-131 PDF: run the dev server, download an A-1-131 for a CA project, visually confirm all field coordinates are correct (header fields, per-worker rows, fringe section, SDI deduction, certification text). Document any coordinate corrections needed and apply them.
+- [x] **CA-02** — Browser verification of the existing CA A-1-131 PDF: run the dev server, download an A-1-131 for a CA project, visually confirm all field coordinates are correct (header fields, per-worker rows, fringe section, SDI deduction, certification text). Document any coordinate corrections needed and apply them.
 
 ---
 

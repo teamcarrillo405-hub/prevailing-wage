@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 52-02-PLAN.md — NJ MW-562 PDF generator, export route wired
-last_updated: "2026-04-14T08:18:53.187Z"
+status: Ready to execute
+stopped_at: Completed 53-01-PLAN.md — CA A-1-131 button routing fix + audit log
+last_updated: "2026-04-14T08:36:49.215Z"
 progress:
   total_phases: 37
   completed_phases: 30
-  total_plans: 76
-  completed_plans: 76
+  total_plans: 78
+  completed_plans: 77
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 52 — nj-pdf-generator
+**Current focus:** Phase 53 — ca-a-1-131-gap-close
 
 ## Current Position
 
-Phase: 53
-Plan: Not started
+Phase: 53 (ca-a-1-131-gap-close) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -153,6 +153,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 52]: Amendment clone carries NJ deduction fields verbatim per 29 CFR Part 3 (user-entered data, not computed)
 - [Phase 52]: fmtEeo returns code letter (M/F/N, W/B/A/N/I/M, H/N) or em-dash, distinct from fmtBoolean; NJ day order Monday-first vs MA Sunday-first
 - [Phase 52]: Dedicated compliance page 2 via unconditional addPage(); audit action nj_pdf.downloaded; assertProjectAccess before NJ state gate (NFR-03)
+- [Phase 53-ca-a-1-131-gap-close]: Conditional onClick on STATE_FORMS button routes CA through handleCaDownloadClick() modal; all other states use handleStateFormDownload()
+- [Phase 53-ca-a-1-131-gap-close]: ca_pdf.downloaded audit log placed after res.end() in a1131 route — matches NJ/MA/IL pattern (AUDIT-03)
 
 ### Phase Order Rationale
 
@@ -185,7 +187,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T08:14:44.064Z
-Stopped at: Completed 52-02-PLAN.md — NJ MW-562 PDF generator, export route wired
+Last session: 2026-04-14T08:36:49.211Z
+Stopped at: Completed 53-01-PLAN.md — CA A-1-131 button routing fix + audit log
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
