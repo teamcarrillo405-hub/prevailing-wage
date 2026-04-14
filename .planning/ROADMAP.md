@@ -984,7 +984,11 @@ Plans:
   4. The PDF includes the NJ-specific Statement of Compliance certification language
   5. The route returns 400 for a non-NJ weekId — the download button is state-gated and the server enforces the same gate
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 52-01-PLAN.md — DB migration (NJ deduction columns), payrollService extension (EEO fields), PayrollEntryPage NJ deduction UI
+- [ ] 52-02-PLAN.md — njPdfGenerator.ts (programmatic draw, EEO + deduction columns, NJ compliance text), export route completion
 
 ---
 
@@ -1234,7 +1238,8 @@ Plans:
 - [x] **Phase 48: FL Certified Payroll** — FL state gate + WH-347 routing + informational HelpCallout explaining FL has no state prevailing wage form (not started) (completed 2026-04-08)
 - [x] **Phase 49: MA Schema + UI** — MA state flag, isWoman/isMinority/oshaTraining worker columns, checkNumber/allOtherHours/totalWeekGrossWages payroll fields, MA project fields, state-gated download button (not started) (completed 2026-04-09)
 - [x] **Phase 50: MA PDF Generator** — maPdfGenerator.ts programmatic-draw: contractor/project header, per-worker rows with OSHA 10 / woman / minority columns, supplemental unemployment fringe sub-column, project gross vs total gross, check number, Statement of Compliance (not started) (completed 2026-04-14)
-- [x] **Phase 51: NJ Schema + Routes** — NJ state flag, njPwcNumber project field, workerSex nullable column, NJ project fields migration, state-gated download button (not started) (completed 2026-04-14)
+- [x] **Phase 51: NJ Schema + Routes** — NJ state flag, njPwcNumber project field, workerSex nullable column, NJ project fields migration, state-gated download button (not started)
+ (completed 2026-04-14)
 - [ ] **Phase 52: NJ PDF Generator** — njPdfGenerator.ts programmatic-draw: contractor header with NJ reg number, per-worker EEO columns (sex/race/ethnicity), FICA/federal/state tax deduction columns, NJ Statement of Compliance (not started)
 - [ ] **Phase 53: CA A-1-131 Gap Close** — Browser verification of existing A-1-131 PDF field coordinates; document and apply any coordinate corrections; confirm UI flow end-to-end (not started)
 - [ ] **Phase 54: Subcontractor Schema + Migrations** — subcontractors and subcontractor_cpr_weeks tables, Drizzle schema, migrations with journal registration (not started)
