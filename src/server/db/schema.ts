@@ -52,6 +52,9 @@ export const projects = sqliteTable('projects', {
   // Phase 49 — Massachusetts-specific project fields
   maDlsProjectId: text('ma_dls_project_id'),
   maSicCode: text('ma_sic_code'),
+  // Phase 51 — New Jersey-specific fields
+  njPwcNumber: text('nj_pwc_number'),
+  njContractId: text('nj_contract_id'),
   projectSettings: text('project_settings'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -110,6 +113,8 @@ export const workers = sqliteTable('workers', {
   isWoman: integer('is_woman', { mode: 'boolean' }),
   isMinority: integer('is_minority', { mode: 'boolean' }),
   oshaTraining: integer('osha_training', { mode: 'boolean' }),
+  // Phase 51 — NJ EEO field (legally-required sex, distinct from gender identity)
+  workerSex: text('worker_sex'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),

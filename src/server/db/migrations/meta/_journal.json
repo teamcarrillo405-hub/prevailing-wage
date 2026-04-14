@@ -183,6 +183,13 @@
       "when": 1744156800000,
       "tag": "0029_ma_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1744243200000,
+      "tag": "0030_nj_schema",
+      "breakpoints": true
     }
   ]
 }
