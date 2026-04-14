@@ -62,6 +62,7 @@ interface Worker {
   isWoman: boolean | null;
   isMinority: boolean | null;
   oshaTraining: boolean | null;
+  workerSex: string | null;
   classifications: Classification[];
 }
 
@@ -132,6 +133,7 @@ function workerToEditForm(w: Worker) {
     isWoman: w.isWoman ?? null,
     isMinority: w.isMinority ?? null,
     oshaTraining: w.oshaTraining ?? null,
+    workerSex: w.workerSex ?? null,
   };
 }
 
@@ -145,7 +147,7 @@ export function WorkersPage() {
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false, race: '', ethnicity: '', gender: '', veteranStatus: '', skillLevel: '', isWoman: null as boolean | null, isMinority: null as boolean | null, oshaTraining: null as boolean | null });
+  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false, race: '', ethnicity: '', gender: '', veteranStatus: '', skillLevel: '', isWoman: null as boolean | null, isMinority: null as boolean | null, oshaTraining: null as boolean | null, workerSex: null as string | null });
   const [editError, setEditError] = useState('');
 
   // Add-extra-classification state
@@ -264,6 +266,7 @@ export function WorkersPage() {
           isMinority: data.isMinority ?? null,
           oshaTraining: data.oshaTraining ?? null,
         } : {}),
+        ...(isNJ ? { workerSex: data.workerSex } : {}),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workers', projectId] });
@@ -600,6 +603,21 @@ export function WorkersPage() {
                         </div>
                       </details>
                     )}
+                    {isNJ && (
+                      <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                        <p className="text-sm font-medium text-indigo-800 mb-2">NJ EEO — Sex</p>
+                        <select
+                          className="w-full rounded border px-2 py-1 text-sm"
+                          value={editForm.workerSex ?? ''}
+                          onChange={e => setEditForm(f => ({ ...f, workerSex: e.target.value || null }))}
+                        >
+                          <option value="">Not reported</option>
+                          <option value="M">M — Male</option>
+                          <option value="F">F — Female</option>
+                          <option value="N">N — Non-binary / Decline to state</option>
+                        </select>
+                      </div>
+                    )}
                     {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
                     <div className="flex gap-2">
                       <Button onClick={() => handleEditSave(w.id)} disabled={updateWorker.isPending}>
@@ -647,6 +665,9 @@ export function WorkersPage() {
                             <span className="mr-3">Minority: {w.isMinority === null ? '--' : w.isMinority ? 'Yes' : 'No'}</span>
                             <span className="mr-3">OSHA 10: {w.oshaTraining === null ? '--' : w.oshaTraining ? 'Yes' : 'No'}</span>
                           </p>
+                        )}
+                        {isNJ && w.workerSex && (
+                          <p className="text-xs text-indigo-700 mt-1">Sex: {w.workerSex}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
