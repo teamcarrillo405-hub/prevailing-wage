@@ -543,3 +543,50 @@ describe('TX-specific project fields (Phase 47)', () => {
     expect(res.body.data?.project?.txdotProjectId).toBeNull();
   });
 });
+
+describe('NJ-specific project fields (Phase 51)', () => {
+  it('creates NJ project with njPwcNumber and njContractId', async () => {
+    const cookie = await registerUser(`nj-fields-${Date.now()}@test.com`);
+    const res = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'NJ Test Project',
+        state: 'NJ',
+        county: 'Essex',
+        contractType: 'state-prevailing',
+        awardDate: '2025-06-01',
+        fundingType: 'state',
+        njPwcNumber: 'PWC-123',
+        njContractId: 'NJ-CONTRACT-456',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.project?.njPwcNumber).toBe('PWC-123');
+    expect(res.body.data?.project?.njContractId).toBe('NJ-CONTRACT-456');
+  });
+
+  it('updates NJ project njPwcNumber and njContractId via PATCH', async () => {
+    const cookie = await registerUser(`nj-patch-${Date.now()}@test.com`);
+    const createRes = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'NJ PATCH Test',
+        state: 'NJ',
+        county: 'Hudson',
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-07-01',
+        fundingType: 'federal',
+      });
+    expect(createRes.status).toBe(201);
+    const projectId = createRes.body.data?.project?.id as string;
+
+    const patchRes = await supertest(app)
+      .patch(`/api/projects/${projectId}`)
+      .set('Cookie', cookie)
+      .send({ njPwcNumber: 'PWC-999', njContractId: 'CONTRACT-999' });
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.data?.project?.njPwcNumber).toBe('PWC-999');
+    expect(patchRes.body.data?.project?.njContractId).toBe('CONTRACT-999');
+  });
+});

@@ -209,6 +209,21 @@ describe('GET /workers programName field', () => {
   });
 });
 
+async function createNjProject(cookie: string) {
+  const res = await supertest(app)
+    .post('/api/projects')
+    .set('Cookie', cookie)
+    .send({
+      name: 'NJ Workers Test Project',
+      state: 'NJ',
+      county: 'Essex',
+      contractType: 'state-prevailing',
+      awardDate: '2025-01-01',
+      fundingType: 'state',
+    });
+  return res.body.data?.project?.id as string;
+}
+
 async function createMaProject(cookie: string) {
   const res = await supertest(app)
     .post('/api/projects')
@@ -362,5 +377,76 @@ describe('nysRegisteredApprentice field', () => {
     const worker = workers.find((w: any) => w.id === workerId);
     expect(worker).toBeDefined();
     expect(worker.nysRegisteredApprentice).toBeFalsy();
+  });
+});
+
+describe('workerSex field (NJ-01)', () => {
+  it('creates a worker with workerSex M for NJ project', async () => {
+    const cookie = await registerAndLogin('nj-workersex-create');
+    const projectId = await createNjProject(cookie);
+
+    const res = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'Jane Doe', workerSex: 'M' });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.worker?.workerSex).toBe('M');
+  });
+
+  it('updates workerSex to F then null (round-trip)', async () => {
+    const cookie = await registerAndLogin('nj-workersex-roundtrip');
+    const projectId = await createNjProject(cookie);
+
+    const createRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'Test Worker' });
+    expect(createRes.status).toBe(201);
+    const workerId = createRes.body.data?.worker?.id as string;
+
+    const updateF = await supertest(app)
+      .put(`/api/projects/${projectId}/workers/${workerId}`)
+      .set('Cookie', cookie)
+      .send({ workerSex: 'F' });
+    expect(updateF.status).toBe(200);
+    expect(updateF.body.data?.worker?.workerSex).toBe('F');
+
+    const updateNull = await supertest(app)
+      .put(`/api/projects/${projectId}/workers/${workerId}`)
+      .set('Cookie', cookie)
+      .send({ workerSex: null });
+    expect(updateNull.status).toBe(200);
+    expect(updateNull.body.data?.worker?.workerSex).toBeNull();
+  });
+
+  it('rejects invalid workerSex values', async () => {
+    const cookie = await registerAndLogin('nj-workersex-invalid');
+    const projectId = await createNjProject(cookie);
+
+    const res = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'Invalid Sex Worker', workerSex: 'INVALID' });
+    expect(res.status).toBe(400);
+  });
+
+  it('workerSex is null by default when not provided', async () => {
+    const cookie = await registerAndLogin('nj-workersex-default');
+    const projectId = await createNjProject(cookie);
+
+    const createRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'No Sex Field Worker' });
+    expect(createRes.status).toBe(201);
+    const workerId = createRes.body.data?.worker?.id as string;
+
+    const getRes = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+    const workers = getRes.body.data?.workers ?? [];
+    const worker = workers.find((w: any) => w.id === workerId);
+    expect(worker).toBeDefined();
+    expect(worker.workerSex).toBeNull();
   });
 });

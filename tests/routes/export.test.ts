@@ -524,3 +524,46 @@ describe('GET /api/export/ma-cpr/:weekId - MA-04', () => {
     expect((res.body as Buffer).length).toBeGreaterThan(0);
   });
 });
+
+describe('GET /api/export/nj-mw562/:weekId - NJ-02', () => {
+  it('returns 404 for unknown weekId', async () => {
+    const cookie = await registerUser('nj-mw562-404');
+    const res = await supertest(app)
+      .get('/api/export/nj-mw562/nonexistent-id')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when project state is not NJ (state gate)', async () => {
+    const cookie = await registerUser('nj-mw562-non-nj');
+    const projectId = await createProject(cookie, 'CA');
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const res = await supertest(app)
+      .get(`/api/export/nj-mw562/${weekId}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/NJ|New Jersey/i);
+  });
+
+  it('returns 501 for a valid NJ project payroll week (stub)', async () => {
+    const cookie = await registerUser('nj-mw562-valid');
+    const projectId = await createProject(cookie, 'NJ');
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const res = await supertest(app)
+      .get(`/api/export/nj-mw562/${weekId}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(501);
+  });
+
+  it('returns 403 for cross-tenant access (IDOR guard)', async () => {
+    const cookieA = await registerUser('nj-mw562-owner');
+    const projectId = await createProject(cookieA, 'NJ');
+    const weekId = await createPayrollWeek(cookieA, projectId);
+
+    const cookieB = await registerUser('nj-mw562-intruder');
+    const res = await supertest(app)
+      .get(`/api/export/nj-mw562/${weekId}`)
+      .set('Cookie', cookieB);
+    expect(res.status).toBe(403);
+  });
+});
