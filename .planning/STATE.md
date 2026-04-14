@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 53-02-PLAN.md — CA A-1-131 verification and CA-02 gap formally closed
-last_updated: "2026-04-14T08:46:35.427Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 54-01-PLAN.md — subcontractor schema migrations (two tables, migration idx 28, Drizzle exports)
+last_updated: "2026-04-14T09:03:29.252Z"
 progress:
   total_phases: 37
-  completed_phases: 31
-  total_plans: 78
-  completed_plans: 78
+  completed_phases: 32
+  total_plans: 79
+  completed_plans: 79
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 53 — ca-a-1-131-gap-close
+**Current focus:** Phase 54 — subcontractor-schema-migrations
 
 ## Current Position
 
-Phase: 54
-Plan: Not started
+Phase: 54 (subcontractor-schema-migrations) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -156,6 +156,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 53-ca-a-1-131-gap-close]: Conditional onClick on STATE_FORMS button routes CA through handleCaDownloadClick() modal; all other states use handleStateFormDownload()
 - [Phase 53-ca-a-1-131-gap-close]: ca_pdf.downloaded audit log placed after res.end() in a1131 route — matches NJ/MA/IL pattern (AUDIT-03)
 - [Phase 53]: Checkpoint auto-approved per user authorization; visual PDF inspection deferred to post-deployment QA
+- [Phase 54]: isCompliant stored as bare INTEGER (no mode:boolean, no notNull) — null=unassessed, 0=non-compliant, 1=compliant; coercion would destroy three-state semantics
+- [Phase 54]: subcontractors is per-project (not global) — subs have different contacts/licenses per project; assertProjectAccess scopes via projectId without a separate access layer
+- [Phase 54]: subcontractor_cpr_weeks uses weekEndingDate text ISO 8601 (not payrollWeekId FK) — tracking is by calendar week, not internal payroll week record (SUB-02 spec locked)
 
 ### Phase Order Rationale
 
@@ -188,7 +191,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T08:41:58.981Z
-Stopped at: Completed 53-02-PLAN.md — CA A-1-131 verification and CA-02 gap formally closed
+Last session: 2026-04-14T09:03:29.248Z
+Stopped at: Completed 54-01-PLAN.md — subcontractor schema migrations (two tables, migration idx 28, Drizzle exports)
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
