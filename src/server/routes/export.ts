@@ -1307,4 +1307,39 @@ router.get('/ma-cpr/:weekId', async (req, res) => {
   } catch (auditErr) { console.error('[audit]', auditErr); }
 });
 
+// ── GET /api/export/nj-mw562/:weekId ────────────────────────────────────────
+// New Jersey DOL MW-562 Weekly Certified Payroll — state-gated to NJ projects only
+// Phase 51: stub returning 501; Phase 52 fills in the PDF generator
+
+router.get('/nj-mw562/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project access (NFR-03) — BEFORE state gate
+  const db = getDb();
+  let project: Project;
+  try {
+    project = await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // 3. State gate — NJ MW-562 is NJ-only
+  if (project.state?.toUpperCase() !== 'NJ') {
+    res.status(400).json({ error: 'NJ MW-562 is only available for New Jersey projects' });
+    return;
+  }
+
+  // Phase 52 fills in the PDF generator
+  res.status(501).json({ error: 'NJ MW-562 PDF generator not yet implemented' });
+});
+
 export { router as exportRouter };

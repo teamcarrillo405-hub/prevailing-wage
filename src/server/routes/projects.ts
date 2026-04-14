@@ -38,6 +38,9 @@ const CreateProjectSchema = z.object({
   // Phase 49 — Massachusetts-specific fields
   maDlsProjectId: z.string().max(100).optional(),
   maSicCode: z.string().max(50).optional(),
+  // Phase 51 — NJ project fields
+  njPwcNumber: z.string().max(50).optional(),
+  njContractId: z.string().max(100).optional(),
   projectSettings: z.string().optional(),
 });
 
@@ -62,6 +65,9 @@ const UpdateProjectSchema = z.object({
   // Phase 49 — Massachusetts-specific fields
   maDlsProjectId: z.string().max(100).optional(),
   maSicCode: z.string().max(50).optional(),
+  // Phase 51 — NJ project fields
+  njPwcNumber: z.string().max(50).optional().nullable(),
+  njContractId: z.string().max(100).optional().nullable(),
   projectSettings: z.string().optional(),
 });
 
@@ -95,6 +101,8 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
     txAwardingAgency: body.txAwardingAgency ?? null,
     maDlsProjectId: body.maDlsProjectId ?? null,
     maSicCode: body.maSicCode ?? null,
+    njPwcNumber: body.njPwcNumber ?? null,
+    njContractId: body.njContractId ?? null,
     projectSettings: body.projectSettings ?? null,
     createdAt: now,
     updatedAt: now,
@@ -213,6 +221,8 @@ router.patch('/:id', async (req, res) => {
       ...(updates.txAwardingAgency !== undefined && { txAwardingAgency: updates.txAwardingAgency }),
       ...(updates.maDlsProjectId !== undefined && { maDlsProjectId: updates.maDlsProjectId }),
       ...(updates.maSicCode !== undefined && { maSicCode: updates.maSicCode }),
+      ...(updates.njPwcNumber !== undefined && { njPwcNumber: updates.njPwcNumber }),
+      ...(updates.njContractId !== undefined && { njContractId: updates.njContractId }),
       ...(resolvedProjectSettings !== undefined && { projectSettings: resolvedProjectSettings }),
       updatedAt: now,
     })
