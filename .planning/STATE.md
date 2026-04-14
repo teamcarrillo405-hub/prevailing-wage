@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 54-01-PLAN.md — subcontractor schema migrations (two tables, migration idx 28, Drizzle exports)
-last_updated: "2026-04-14T09:06:59.329Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 55-01-PLAN.md — subcontractor API routes (7 handlers, 16 tests green, index.ts mounted)
+last_updated: "2026-04-14T09:24:01.667Z"
 progress:
   total_phases: 37
-  completed_phases: 32
-  total_plans: 79
-  completed_plans: 79
+  completed_phases: 33
+  total_plans: 80
+  completed_plans: 80
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 54 — subcontractor-schema-migrations
+**Current focus:** Phase 55 — subcontractor-api-routes
 
 ## Current Position
 
-Phase: 55
-Plan: Not started
+Phase: 55 (subcontractor-api-routes) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -159,6 +159,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 54]: isCompliant stored as bare INTEGER (no mode:boolean, no notNull) — null=unassessed, 0=non-compliant, 1=compliant; coercion would destroy three-state semantics
 - [Phase 54]: subcontractors is per-project (not global) — subs have different contacts/licenses per project; assertProjectAccess scopes via projectId without a separate access layer
 - [Phase 54]: subcontractor_cpr_weeks uses weekEndingDate text ISO 8601 (not payrollWeekId FK) — tracking is by calendar week, not internal payroll week record (SUB-02 spec locked)
+- [Phase 55]: isCompliant uses z.union([z.literal(0), z.literal(1)]) not z.boolean() — three-state null/0/1 semantics preserved
+- [Phase 55]: Audit logs only on subcontractor.created and subcontractor.removed — no audit on PATCH or CPR-week operations
+- [Phase 55]: 409 from application-level duplicate check before insert, not from DB UNIQUE constraint propagation
 
 ### Phase Order Rationale
 
@@ -191,7 +194,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T09:03:29.248Z
-Stopped at: Completed 54-01-PLAN.md — subcontractor schema migrations (two tables, migration idx 28, Drizzle exports)
+Last session: 2026-04-14T09:24:01.663Z
+Stopped at: Completed 55-01-PLAN.md — subcontractor API routes (7 handlers, 16 tests green, index.ts mounted)
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
