@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 49-03-PLAN.md — MA UI wiring, STATE_FORMS MA entry, export route stub
-last_updated: "2026-04-09T20:33:43.073Z"
+status: Ready to execute
+stopped_at: Completed 50-01-PLAN.md — MA DLS PDF generator and unit tests
+last_updated: "2026-04-14T06:47:13.353Z"
 progress:
   total_phases: 37
   completed_phases: 27
-  total_plans: 70
-  completed_plans: 70
+  total_plans: 72
+  completed_plans: 71
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 49 — ma-schema-ui
+**Current focus:** Phase 50 — ma-pdf-generator
 
 ## Current Position
 
-Phase: 50
-Plan: Not started
+Phase: 50 (ma-pdf-generator) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -142,6 +142,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 49-03]: assertProjectAccess called before MA state gate in export route (NFR-03)
 - [Phase 49-03]: MA export stub returns 501 — Phase 50 fills in the PDF generator
 - [Phase 49-03]: PayrollEntryPage is actual render site for PayrollWeekForm (not PayrollWeekDetailPage)
+- [Phase 50]: fmtBoolean returns Y/N/em-dash for boolean|null — distinct from fmtDollar/fmtOptional
+- [Phase 50]: Statement of Compliance always on dedicated page 2 via unconditional addPage() (Phase 43 pattern)
 
 ### Phase Order Rationale
 
@@ -174,7 +176,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-09T20:27:54.638Z
-Stopped at: Completed 49-03-PLAN.md — MA UI wiring, STATE_FORMS MA entry, export route stub
+Last session: 2026-04-14T06:47:13.350Z
+Stopped at: Completed 50-01-PLAN.md — MA DLS PDF generator and unit tests
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)

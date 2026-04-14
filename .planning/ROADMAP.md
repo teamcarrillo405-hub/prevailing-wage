@@ -940,7 +940,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 50-01-PLAN.md — maPdfGenerator.ts: test stubs + programmatic PDF generator (PDFDocument.create)
+- [x] 50-01-PLAN.md — maPdfGenerator.ts: test stubs + programmatic PDF generator (PDFDocument.create)
 - [ ] 50-02-PLAN.md — Export route wiring (replace 501 stub) + integration tests
 
 ---
