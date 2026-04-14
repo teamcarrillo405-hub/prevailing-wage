@@ -937,7 +937,11 @@ Plans:
   4. The route returns 400 for a non-MA weekId — the download button is state-gated and the server enforces the same gate
   5. maPdfGenerator.ts uses PDFDocument.create() (programmatic draw, not template overlay) following the ilPdfGenerator.ts pattern
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 50-01-PLAN.md — maPdfGenerator.ts: test stubs + programmatic PDF generator (PDFDocument.create)
+- [ ] 50-02-PLAN.md — Export route wiring (replace 501 stub) + integration tests
 
 ---
 
