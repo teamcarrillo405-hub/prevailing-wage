@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 50-01-PLAN.md — MA DLS PDF generator and unit tests
-last_updated: "2026-04-14T06:47:13.353Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 50-02-PLAN.md — MA CPR export route wiring and integration tests
+last_updated: "2026-04-14T06:51:54.210Z"
 progress:
   total_phases: 37
-  completed_phases: 27
+  completed_phases: 28
   total_plans: 72
-  completed_plans: 71
+  completed_plans: 72
 ---
 
 # State
@@ -144,6 +144,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 49-03]: PayrollEntryPage is actual render site for PayrollWeekForm (not PayrollWeekDetailPage)
 - [Phase 50]: fmtBoolean returns Y/N/em-dash for boolean|null — distinct from fmtDollar/fmtOptional
 - [Phase 50]: Statement of Compliance always on dedicated page 2 via unconditional addPage() (Phase 43 pattern)
+- [Phase 50-ma-pdf-generator]: Sunday-first day order in MA entry mapping matches MaPdfInput interface; checkNumber/totalWeekGrossWages/allOtherHours use null (not 0) for blank-on-PDF semantics
+- [Phase 50-ma-pdf-generator]: Audit log action 'ma_pdf.downloaded' matches IL pattern 'il_pdf.downloaded'; assertProjectAccess before state gate preserved (NFR-03)
 
 ### Phase Order Rationale
 
@@ -176,7 +178,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T06:47:13.350Z
-Stopped at: Completed 50-01-PLAN.md — MA DLS PDF generator and unit tests
+Last session: 2026-04-14T06:51:54.207Z
+Stopped at: Completed 50-02-PLAN.md — MA CPR export route wiring and integration tests
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
