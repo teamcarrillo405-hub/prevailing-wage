@@ -95,6 +95,10 @@ export interface UpsertPayrollEntryInput {
   checkNumber?: string | null;
   allOtherHours?: number | null;
   totalWeekGrossWages?: number | null;
+  // Phase 52 — NJ deduction breakdown fields
+  ficaTax?: number | null;
+  federalIncomeTax?: number | null;
+  stateIncomeTax?: number | null;
   userId?: string; // populated from req.user.id on POST/PUT; undefined for amendment copies
   // Audit-only fields — threaded from route handler (AUDIT-03)
   userEmail?: string;
@@ -200,6 +204,9 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     checkNumber: input.checkNumber ?? null,
     allOtherHours: input.allOtherHours ?? null,
     totalWeekGrossWages: input.totalWeekGrossWages ?? null,
+    ficaTax: input.ficaTax ?? null,
+    federalIncomeTax: input.federalIncomeTax ?? null,
+    stateIncomeTax: input.stateIncomeTax ?? null,
     createdByUserId: input.userId ?? null,
     updatedByUserId: input.userId ?? null,
     createdAt: now,
@@ -250,6 +257,9 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         checkNumber: values.checkNumber,
         allOtherHours: values.allOtherHours,
         totalWeekGrossWages: values.totalWeekGrossWages,
+        ficaTax: values.ficaTax,
+        federalIncomeTax: values.federalIncomeTax,
+        stateIncomeTax: values.stateIncomeTax,
         updatedByUserId: values.updatedByUserId,
         updatedAt: now,
       },
@@ -473,6 +483,14 @@ export async function getPayrollEntriesWithWorkerDetails(weekId: string) {
       checkNumber: payrollEntries.checkNumber,
       allOtherHours: payrollEntries.allOtherHours,
       totalWeekGrossWages: payrollEntries.totalWeekGrossWages,
+      // Phase 52 — NJ EEO worker fields (for njPdfGenerator)
+      workerSex: workers.workerSex,
+      race: workers.race,
+      ethnicity: workers.ethnicity,
+      // Phase 52 — NJ deduction breakdown fields
+      ficaTax: payrollEntries.ficaTax,
+      federalIncomeTax: payrollEntries.federalIncomeTax,
+      stateIncomeTax: payrollEntries.stateIncomeTax,
     })
     .from(payrollEntries)
     .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
@@ -861,6 +879,9 @@ export async function amendPayrollWeek(input: AmendWeekInput): Promise<AmendWeek
       checkNumber: entry.checkNumber ?? null,
       allOtherHours: entry.allOtherHours ?? null,
       totalWeekGrossWages: entry.totalWeekGrossWages ?? null,
+      ficaTax: entry.ficaTax ?? null,
+      federalIncomeTax: entry.federalIncomeTax ?? null,
+      stateIncomeTax: entry.stateIncomeTax ?? null,
       createdByUserId: null, // amendment copies are system-generated clones, not direct user edits
       updatedByUserId: null,
       createdAt: now,

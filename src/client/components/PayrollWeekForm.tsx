@@ -48,6 +48,9 @@ interface PayrollWeekFormValues {
   checkNumber: string;
   allOtherHours: number;
   totalWeekGrossWages: number;
+  ficaTax: number;
+  federalIncomeTax: number;
+  stateIncomeTax: number;
 }
 
 interface PayrollWeekFormProps {
@@ -57,6 +60,7 @@ interface PayrollWeekFormProps {
   isCA?: boolean;
   isIL?: boolean;
   isMA?: boolean;
+  isNJ?: boolean;
 }
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -70,7 +74,7 @@ const DAY_LABELS: Record<string, string> = {
   sun: 'Sun',
 };
 
-export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL = false, isMA = false }: PayrollWeekFormProps) {
+export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL = false, isMA = false, isNJ = false }: PayrollWeekFormProps) {
   // Single-worker form — uses first worker for live display
   // Full multi-worker grid would iterate workers; this delivers the CPAY-01 behavior
   const firstWorker = workers[0];
@@ -92,6 +96,9 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
       checkNumber: '',
       allOtherHours: 0,
       totalWeekGrossWages: 0,
+      ficaTax: 0,
+      federalIncomeTax: 0,
+      stateIncomeTax: 0,
     },
   });
 
@@ -170,6 +177,11 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
             checkNumber: data.checkNumber || null,
             allOtherHours: data.allOtherHours || null,
             totalWeekGrossWages: data.totalWeekGrossWages || null,
+          } : {}),
+          ...(isNJ ? {
+            ficaTax: data.ficaTax || null,
+            federalIncomeTax: data.federalIncomeTax || null,
+            stateIncomeTax: data.stateIncomeTax || null,
           } : {}),
         }),
       });
@@ -279,6 +291,27 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
               <label className="block text-xs font-medium text-gray-700 mb-1">Total Week Gross Wages (all employers)</label>
               <input type="number" step="0.01" min="0" className="w-full rounded border px-2 py-1 text-sm"
                 {...register('totalWeekGrossWages', { valueAsNumber: true })} placeholder="0.00" />
+            </div>
+          </div>
+        )}
+
+        {isNJ && (
+          <div className="space-y-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+            <p className="text-sm font-medium text-indigo-800">NJ Deductions</p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">FICA Tax</label>
+              <input type="number" step="0.01" min="0" className="w-full rounded border px-2 py-1 text-sm"
+                {...register('ficaTax', { valueAsNumber: true })} placeholder="0.00" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Federal Income Tax</label>
+              <input type="number" step="0.01" min="0" className="w-full rounded border px-2 py-1 text-sm"
+                {...register('federalIncomeTax', { valueAsNumber: true })} placeholder="0.00" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">State Income Tax</label>
+              <input type="number" step="0.01" min="0" className="w-full rounded border px-2 py-1 text-sm"
+                {...register('stateIncomeTax', { valueAsNumber: true })} placeholder="0.00" />
             </div>
           </div>
         )}
