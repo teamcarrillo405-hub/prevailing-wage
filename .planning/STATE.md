@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 52-01-PLAN.md — NJ deduction columns, payrollService extension, PayrollWeekForm NJ UI
-last_updated: "2026-04-14T08:07:32.927Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 52-02-PLAN.md — NJ MW-562 PDF generator, export route wired
+last_updated: "2026-04-14T08:14:44.068Z"
 progress:
   total_phases: 37
-  completed_phases: 29
+  completed_phases: 30
   total_plans: 76
-  completed_plans: 75
+  completed_plans: 76
 ---
 
 # State
@@ -151,6 +151,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 51-nj-schema-routes]: Indigo color scheme for NJ blocks distinct from MA teal; workerSex sent only in isNJ mutation branch; STATE_FORMS NJ entry uses route key nj-mw562 matching server path
 - [Phase 52]: ficaTax/federalIncomeTax/stateIncomeTax use nullable real() with no .notNull()/.default() — matches fringeHealthWelfare pattern
 - [Phase 52]: Amendment clone carries NJ deduction fields verbatim per 29 CFR Part 3 (user-entered data, not computed)
+- [Phase 52]: fmtEeo returns code letter (M/F/N, W/B/A/N/I/M, H/N) or em-dash, distinct from fmtBoolean; NJ day order Monday-first vs MA Sunday-first
+- [Phase 52]: Dedicated compliance page 2 via unconditional addPage(); audit action nj_pdf.downloaded; assertProjectAccess before NJ state gate (NFR-03)
 
 ### Phase Order Rationale
 
@@ -183,7 +185,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T08:07:32.923Z
-Stopped at: Completed 52-01-PLAN.md — NJ deduction columns, payrollService extension, PayrollWeekForm NJ UI
+Last session: 2026-04-14T08:14:44.064Z
+Stopped at: Completed 52-02-PLAN.md — NJ MW-562 PDF generator, export route wired
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)

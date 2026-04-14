@@ -988,7 +988,7 @@ Plans:
 
 Plans:
 - [x] 52-01-PLAN.md — DB migration (NJ deduction columns), payrollService extension (EEO fields), PayrollEntryPage NJ deduction UI
-- [ ] 52-02-PLAN.md — njPdfGenerator.ts (programmatic draw, EEO + deduction columns, NJ compliance text), export route completion
+- [x] 52-02-PLAN.md — njPdfGenerator.ts (programmatic draw, EEO + deduction columns, NJ compliance text), export route completion
 
 ---
 
@@ -1240,7 +1240,7 @@ Plans:
 - [x] **Phase 50: MA PDF Generator** — maPdfGenerator.ts programmatic-draw: contractor/project header, per-worker rows with OSHA 10 / woman / minority columns, supplemental unemployment fringe sub-column, project gross vs total gross, check number, Statement of Compliance (not started) (completed 2026-04-14)
 - [x] **Phase 51: NJ Schema + Routes** — NJ state flag, njPwcNumber project field, workerSex nullable column, NJ project fields migration, state-gated download button (not started)
  (completed 2026-04-14)
-- [ ] **Phase 52: NJ PDF Generator** — njPdfGenerator.ts programmatic-draw: contractor header with NJ reg number, per-worker EEO columns (sex/race/ethnicity), FICA/federal/state tax deduction columns, NJ Statement of Compliance (not started)
+- [x] **Phase 52: NJ PDF Generator** — njPdfGenerator.ts programmatic-draw: contractor header with NJ reg number, per-worker EEO columns (sex/race/ethnicity), FICA/federal/state tax deduction columns, NJ Statement of Compliance (not started) (completed 2026-04-14)
 - [ ] **Phase 53: CA A-1-131 Gap Close** — Browser verification of existing A-1-131 PDF field coordinates; document and apply any coordinate corrections; confirm UI flow end-to-end (not started)
 - [ ] **Phase 54: Subcontractor Schema + Migrations** — subcontractors and subcontractor_cpr_weeks tables, Drizzle schema, migrations with journal registration (not started)
 - [ ] **Phase 55: Subcontractor API Routes** — CRUD routes for subs + CPR tracking routes on new subcontractors.ts router, assertProjectAccess on all routes, audit log entries for sub events (not started)
