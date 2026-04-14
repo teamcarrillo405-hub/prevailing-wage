@@ -37,6 +37,9 @@ const CreateProjectSchema = z.object({
   // Phase 49 — Massachusetts-specific fields
   maDlsProjectId: z.string().max(100).optional(),
   maSicCode: z.string().max(50).optional(),
+  // Phase 51 — New Jersey-specific fields
+  njPwcNumber: z.string().max(50).optional(),
+  njContractId: z.string().max(100).optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
@@ -65,6 +68,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const isTX = stateValue?.toUpperCase() === 'TX';
   const isFL = stateValue?.toUpperCase() === 'FL';
   const isMA = stateValue?.toUpperCase() === 'MA';
+  const isNJ = stateValue?.toUpperCase() === 'NJ';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
@@ -348,6 +352,39 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           </div>
           <p className="text-xs text-teal-600">
             MA DLS certified payroll download will be available on payroll weeks.
+          </p>
+        </div>
+      )}
+
+      {isNJ && (
+        <div className="space-y-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+          <p className="text-sm font-medium text-indigo-800">New Jersey Project Fields</p>
+          <div>
+            <label htmlFor="njPwcNumber" className="block text-sm font-medium text-gray-700">
+              NJ Public Works Contractor Registration Number
+            </label>
+            <input
+              id="njPwcNumber"
+              type="text"
+              {...register('njPwcNumber')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="e.g. 123456"
+            />
+          </div>
+          <div>
+            <label htmlFor="njContractId" className="block text-sm font-medium text-gray-700">
+              NJ Contract ID
+            </label>
+            <input
+              id="njContractId"
+              type="text"
+              {...register('njContractId')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="State contract identifier"
+            />
+          </div>
+          <p className="text-xs text-indigo-600">
+            NJ MW-562 certified payroll download will be available on payroll weeks.
           </p>
         </div>
       )}
