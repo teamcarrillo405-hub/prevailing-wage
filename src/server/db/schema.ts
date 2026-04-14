@@ -408,3 +408,32 @@ export const auditLogs = sqliteTable('audit_logs', {
   idxAuditEntity:  index('idx_audit_entity').on(table.entityType, table.entityId, table.createdAt),
   idxAuditUser:    index('idx_audit_user').on(table.userId, table.createdAt),
 }));
+
+// ── Phase 54: Subcontractor Tracking ──────────────────────────────────────
+// subcontractors is project-scoped; subs may have different contacts/licenses
+// per project. assertProjectAccess scopes access via projectId.
+export const subcontractors = sqliteTable('subcontractors', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  licenseNumber: text('license_number'),
+  contactName: text('contact_name'),
+  contactEmail: text('contact_email'),
+  address: text('address'),
+  createdAt: text('created_at').notNull(),
+});
+
+// Tracks weekly CPR receipt and compliance status per sub per calendar week.
+// weekEndingDate is a text ISO 8601 date — NOT a FK to payrollWeeks.
+// UNIQUE(subcontractorId, weekEndingDate) enforced at DB level.
+export const subcontractorCprWeeks = sqliteTable('subcontractor_cpr_weeks', {
+  id: text('id').primaryKey(),
+  subcontractorId: text('subcontractor_id').notNull().references(() => subcontractors.id, { onDelete: 'cascade' }),
+  weekEndingDate: text('week_ending_date').notNull(),
+  receivedDate: text('received_date'),
+  isCompliant: integer('is_compliant'),   // null=unknown, 0=non-compliant, 1=compliant
+  notes: text('notes'),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  subCprWeekUnique: uniqueIndex('sub_cpr_week_unique').on(table.subcontractorId, table.weekEndingDate),
+}));
