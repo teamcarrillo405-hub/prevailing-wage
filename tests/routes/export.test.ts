@@ -456,26 +456,71 @@ describe('STATE-13: case normalization on export routes', () => {
   });
 });
 
-describe('MA DLS Payroll export (MA-01)', () => {
-  it('should return 400 for non-MA project on ma-cpr route', async () => {
-    const cookie = await registerUser('ma-gate-non-ma');
-    const projectId = await createProject(cookie, 'TX');
-    const weekId = await createPayrollWeek(cookie, projectId);
-    const res = await supertest(app).get(`/api/export/ma-cpr/${weekId}`).set('Cookie', cookie);
-    expect(res.status).toBe(400);
-  });
-
-  it('should return 501 for MA project on ma-cpr route (stub)', async () => {
-    const cookie = await registerUser('ma-gate-ma-proj');
-    const projectId = await createProject(cookie, 'MA');
-    const weekId = await createPayrollWeek(cookie, projectId);
-    const res = await supertest(app).get(`/api/export/ma-cpr/${weekId}`).set('Cookie', cookie);
-    expect(res.status).toBe(501);
-  });
-
-  it('should return 404 for non-existent week on ma-cpr route', async () => {
-    const cookie = await registerUser('ma-gate-404');
-    const res = await supertest(app).get('/api/export/ma-cpr/nonexistent-week-id').set('Cookie', cookie);
+describe('GET /api/export/ma-cpr/:weekId - MA-04', () => {
+  it('returns 404 for nonexistent weekId', async () => {
+    const cookie = await registerUser('ma-cpr-404');
+    const res = await supertest(app)
+      .get('/api/export/ma-cpr/nonexistent-week-id')
+      .set('Cookie', cookie);
     expect(res.status).toBe(404);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('returns 400 for non-MA project (state gate)', async () => {
+    const cookie = await registerUser('ma-cpr-non-ma');
+    const projectId = await createProject(cookie, 'CA');
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const res = await supertest(app)
+      .get(`/api/export/ma-cpr/${weekId}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Massachusetts|MA/);
+  });
+
+  it('returns 200 with PDF for valid MA week', async () => {
+    const cookie = await registerUser('ma-cpr-valid');
+    const projectId = await createProject(cookie, 'MA', {
+      county: 'Suffolk',
+      contractorFein: '12-3456789',
+      maDlsProjectId: 'MA-001',
+      contractingAgency: 'City of Boston',
+    });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    // Create a payroll entry with MA-specific fields
+    await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
+        monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+        baseRateSnapshot: 55.00,
+        fringeRateSnapshot: 15.00,
+        grossWages: 2200.00,
+        deductions: 100.00,
+        netPay: 2100.00,
+        checkNumber: '10234',
+        allOtherHours: 4.0,
+        totalWeekGrossWages: 2100.00,
+      });
+
+    const res = await supertest(app)
+      .get(`/api/export/ma-cpr/${weekId}`)
+      .set('Cookie', cookie)
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toContain('ma-cpr-');
+    expect((res.body as Buffer).length).toBeGreaterThan(0);
   });
 });
