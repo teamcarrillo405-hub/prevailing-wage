@@ -22,6 +22,7 @@ import { teamRouter } from './routes/team.js';
 import { importRouter } from './routes/import.js';
 import { auditRouter } from './routes/audit.js';
 import { payrollWeekClassificationsRouter } from './routes/payrollWeekClassifications.js';
+import subcontractorsRouter from './routes/subcontractors.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
@@ -55,6 +56,7 @@ app.use('/api/team', teamRouter);
 app.use('/api/payroll/import', importRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/projects', payrollWeekClassificationsRouter);
+app.use('/api/projects', subcontractorsRouter);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {
