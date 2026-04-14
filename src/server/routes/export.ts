@@ -32,6 +32,7 @@ import {
 import { fillPw12, type Pw12Input } from '../services/pw12Generator.js';
 import { fillIlCertifiedTranscript } from '../services/ilPdfGenerator.js';
 import { fillMaCertifiedPayroll } from '../services/maPdfGenerator.js';
+import { fillNjCertifiedPayroll, type NjPdfInput } from '../services/njPdfGenerator.js';
 import {
   generateWaCprXml,
   type WaCprData,
@@ -1338,8 +1339,79 @@ router.get('/nj-mw562/:weekId', async (req, res) => {
     return;
   }
 
-  // Phase 52 fills in the PDF generator
-  res.status(501).json({ error: 'NJ MW-562 PDF generator not yet implemented' });
+  // 4. Load payroll entries with worker details
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+
+  // 5. Map to NjPdfInput
+  const njData: NjPdfInput = {
+    contractor: {
+      name: project.name,
+      fein: (project as any).contractorFein ?? '',
+      address: (project.county || '') + ', ' + (project.state || ''),
+      njPwcNumber: (project as any).njPwcNumber ?? null,
+    },
+    project: {
+      name: project.name,
+      njContractId: (project as any).njContractId ?? null,
+      location: (project.county || '') + ', ' + (project.state || ''),
+      awardingAuthority: (project as any).contractingAgency ?? '',
+    },
+    week: {
+      weekEndingDate: week.weekEndingDate,
+      payrollNumber: week.amendmentNumber != null && week.originalWeekId != null
+        ? `${week.payrollNumber} (AMENDED ${week.amendmentNumber})`
+        : String(week.payrollNumber),
+    },
+    entries: entries.map((e: any) => ({
+      workerName: e.workerName,
+      workerSsnLast4: e.workerSsnLast4 ?? null,
+      workerAddress: e.workerAddress ?? '',
+      classification: e.tradeDescription ?? '',
+      workerSex: e.workerSex ?? null,
+      race: e.race ?? null,
+      ethnicity: e.ethnicity ?? null,
+      monSt: e.entry?.monSt ?? 0,
+      tueSt: e.entry?.tueSt ?? 0,
+      wedSt: e.entry?.wedSt ?? 0,
+      thuSt: e.entry?.thuSt ?? 0,
+      friSt: e.entry?.friSt ?? 0,
+      satSt: e.entry?.satSt ?? 0,
+      sunSt: e.entry?.sunSt ?? 0,
+      baseRate: e.entry?.baseRateSnapshot ?? 0,
+      fringeHealthWelfare: e.entry?.fringeHealthWelfare ?? null,
+      fringePension: e.entry?.fringePension ?? null,
+      fringeVacation: e.entry?.fringeVacation ?? null,
+      fringeTraining: e.entry?.fringeTraining ?? null,
+      grossWages: e.entry?.grossWages ?? null,
+      ficaTax: e.entry?.ficaTax ?? null,
+      federalIncomeTax: e.entry?.federalIncomeTax ?? null,
+      stateIncomeTax: e.entry?.stateIncomeTax ?? null,
+      netPay: e.entry?.netPay ?? null,
+    })),
+  };
+
+  // 6. Generate PDF
+  const filledPdf = await fillNjCertifiedPayroll(njData);
+
+  // 7. Send as PDF download
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="nj-mw562-${weekId}.pdf"`);
+  res.end(Buffer.from(filledPdf));
+
+  // 8. Best-effort audit log
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'nj_pdf.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
 });
 
 export { router as exportRouter };

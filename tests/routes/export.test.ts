@@ -545,14 +545,16 @@ describe('GET /api/export/nj-mw562/:weekId - NJ-02', () => {
     expect(res.body.error).toMatch(/NJ|New Jersey/i);
   });
 
-  it('returns 501 for a valid NJ project payroll week (stub)', async () => {
+  it('returns 200 with PDF content-type for a valid NJ project payroll week', async () => {
     const cookie = await registerUser('nj-mw562-valid');
     const projectId = await createProject(cookie, 'NJ');
     const weekId = await createPayrollWeek(cookie, projectId);
     const res = await supertest(app)
       .get(`/api/export/nj-mw562/${weekId}`)
       .set('Cookie', cookie);
-    expect(res.status).toBe(501);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/pdf/);
+    expect(res.body.length ?? (res as any).rawBody?.length ?? (res as any).buffer?.length ?? res.text?.length ?? 1).toBeGreaterThan(0);
   });
 
   it('returns 403 for cross-tenant access (IDOR guard)', async () => {
