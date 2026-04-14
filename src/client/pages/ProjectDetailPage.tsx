@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Workflow, Settings } from 'lucide-react';
+import { Workflow, Settings, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
+import { EmptyState } from '../components/ui/EmptyState';
+import { getCprStatus, STATUS_BADGE } from '../lib/cprStatus';
+import type { Subcontractor, CprWeek } from '../lib/cprStatus';
 
 const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
@@ -95,6 +98,517 @@ function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean
             } />
           )}
         </div>
+      ))}
+    </div>
+  );
+}
+
+const EMPTY_SUB_FORM = {
+  name: '',
+  licenseNumber: '',
+  contactName: '',
+  contactEmail: '',
+  address: '',
+};
+
+const EMPTY_CPR_FORM = {
+  weekEndingDate: '',
+  receivedDate: '',
+  isCompliant: '' as '' | '0' | '1',
+  notes: '',
+};
+
+function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }) {
+  const queryClient = useQueryClient();
+  const [cprForm, setCprForm] = useState({ ...EMPTY_CPR_FORM });
+  const [cprError, setCprError] = useState<string | null>(null);
+
+  const { data: cprData, isLoading: cprLoading } = useQuery({
+    queryKey: ['cpr-weeks', projectId, subId],
+    queryFn: () => api.get<{ data: { cprWeeks: CprWeek[] } }>(`/projects/${projectId}/subcontractors/${subId}/cpr-weeks`),
+    enabled: !!subId,
+  });
+
+  const addCprWeekMutation = useMutation({
+    mutationFn: (body: { weekEndingDate: string; receivedDate?: string; isCompliant?: 0 | 1; notes?: string }) =>
+      api.post<{ data: { cprWeek: CprWeek } }>(`/projects/${projectId}/subcontractors/${subId}/cpr-weeks`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cpr-weeks', projectId, subId] });
+      setCprForm({ ...EMPTY_CPR_FORM });
+      setCprError(null);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { status?: number })?.status === 409
+        ? 'A record for this week ending date already exists.'
+        : 'Failed to save CPR week record.';
+      setCprError(msg);
+    },
+  });
+
+  const updateCprWeekMutation = useMutation({
+    mutationFn: ({ weekId, body }: { weekId: string; body: Partial<{ receivedDate: string; isCompliant: 0 | 1 | null; notes: string }> }) =>
+      api.patch(`/projects/${projectId}/subcontractors/${subId}/cpr-weeks/${weekId}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cpr-weeks', projectId, subId] });
+    },
+  });
+
+  const weeks = cprData?.data?.cprWeeks ?? [];
+  const todayYMD = new Date().toISOString().slice(0, 10);
+
+  function handleAddCprWeek() {
+    if (!cprForm.weekEndingDate) return;
+    const body: { weekEndingDate: string; receivedDate?: string; isCompliant?: 0 | 1; notes?: string } = {
+      weekEndingDate: cprForm.weekEndingDate,
+    };
+    if (cprForm.receivedDate) body.receivedDate = cprForm.receivedDate;
+    if (cprForm.isCompliant === '0') body.isCompliant = 0;
+    if (cprForm.isCompliant === '1') body.isCompliant = 1;
+    if (cprForm.notes.trim()) body.notes = cprForm.notes.trim();
+    addCprWeekMutation.mutate(body);
+  }
+
+  return (
+    <div className="mt-3 border-t border-border-default pt-3">
+      <h4 className="font-headline text-sm text-gray-700 mb-2">CPR Weeks</h4>
+
+      {cprLoading && <p className="text-xs text-gray-500">Loading...</p>}
+
+      {!cprLoading && weeks.length === 0 && (
+        <p className="text-xs text-gray-400 mb-3">No CPR weeks recorded yet.</p>
+      )}
+
+      {weeks.length > 0 && (
+        <div className="overflow-x-auto mb-3">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-gray-500 border-b border-border-default">
+                <th className="pb-1 pr-3 font-medium">Week Ending</th>
+                <th className="pb-1 pr-3 font-medium">Status</th>
+                <th className="pb-1 pr-3 font-medium">Received</th>
+                <th className="pb-1 pr-3 font-medium">Notes</th>
+                <th className="pb-1 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {weeks.map(week => {
+                const status = getCprStatus(week);
+                const badge = STATUS_BADGE[status];
+                return (
+                  <tr key={week.id} className="border-b border-border-default/50 last:border-0">
+                    <td className="py-1.5 pr-3 text-gray-700">{week.weekEndingDate}</td>
+                    <td className="py-1.5 pr-3">
+                      <Badge variant={badge.variant}>{badge.label}</Badge>
+                    </td>
+                    <td className="py-1.5 pr-3 text-gray-600">{week.receivedDate ?? '—'}</td>
+                    <td className="py-1.5 pr-3 text-gray-500 max-w-xs truncate">{week.notes ?? '—'}</td>
+                    <td className="py-1.5">
+                      <div className="flex gap-2">
+                        {!week.receivedDate && (
+                          <button
+                            className="text-xs font-medium text-brand-gold hover:underline"
+                            onClick={() => updateCprWeekMutation.mutate({ weekId: week.id, body: { receivedDate: todayYMD, isCompliant: null } })}
+                            disabled={updateCprWeekMutation.isPending}
+                          >
+                            Mark Received
+                          </button>
+                        )}
+                        {week.receivedDate && week.isCompliant !== 1 && (
+                          <button
+                            className="text-xs font-medium text-brand-gold hover:underline"
+                            onClick={() => updateCprWeekMutation.mutate({ weekId: week.id, body: { isCompliant: 1 } })}
+                            disabled={updateCprWeekMutation.isPending}
+                          >
+                            Mark Compliant
+                          </button>
+                        )}
+                        {week.receivedDate && week.isCompliant === 1 && (
+                          <button
+                            className="text-xs font-medium text-status-violation hover:underline"
+                            onClick={() => updateCprWeekMutation.mutate({ weekId: week.id, body: { isCompliant: 0 } })}
+                            disabled={updateCprWeekMutation.isPending}
+                          >
+                            Mark Non-Compliant
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Add CPR Week inline form */}
+      <div className="bg-surface-page border border-border-default rounded p-3 space-y-2">
+        <p className="text-xs font-medium text-gray-700 mb-1">Add CPR Week</p>
+        <div className="flex flex-wrap gap-2 items-end">
+          <div>
+            <label className="block text-xs text-gray-500 mb-0.5">Week Ending Date *</label>
+            <input
+              type="date"
+              className="border border-border-default rounded px-2 py-1 text-sm bg-surface-page"
+              value={cprForm.weekEndingDate}
+              onChange={e => setCprForm(f => ({ ...f, weekEndingDate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-0.5">Received Date</label>
+            <input
+              type="date"
+              className="border border-border-default rounded px-2 py-1 text-sm bg-surface-page"
+              value={cprForm.receivedDate}
+              onChange={e => setCprForm(f => ({ ...f, receivedDate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-0.5">Compliance</label>
+            <select
+              className="border border-border-default rounded px-2 py-1 text-sm bg-surface-page"
+              value={cprForm.isCompliant}
+              onChange={e => setCprForm(f => ({ ...f, isCompliant: e.target.value as '' | '0' | '1' }))}
+            >
+              <option value="">— (unassessed)</option>
+              <option value="1">Compliant</option>
+              <option value="0">Non-Compliant</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-xs text-gray-500 mb-0.5">Notes</label>
+            <input
+              type="text"
+              className="w-full border border-border-default rounded px-2 py-1 text-sm bg-surface-page"
+              placeholder="Optional"
+              value={cprForm.notes}
+              onChange={e => setCprForm(f => ({ ...f, notes: e.target.value }))}
+            />
+          </div>
+          <Button
+            onClick={handleAddCprWeek}
+            disabled={!cprForm.weekEndingDate || addCprWeekMutation.isPending}
+          >
+            {addCprWeekMutation.isPending ? 'Saving...' : 'Add Week'}
+          </Button>
+        </div>
+        {cprError && <p className="text-xs text-status-violation mt-1">{cprError}</p>}
+      </div>
+    </div>
+  );
+}
+
+function SubcontractorsPanel({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+
+  const [expandedSubId, setExpandedSubId] = useState<string | null>(null);
+  const [addingNew, setAddingNew] = useState(false);
+  const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [deletingSubId, setDeletingSubId] = useState<string | null>(null);
+  const [addForm, setAddForm] = useState({ ...EMPTY_SUB_FORM });
+  const [editForm, setEditForm] = useState({ ...EMPTY_SUB_FORM });
+
+  const { data: subsData, isLoading: subsLoading } = useQuery({
+    queryKey: ['subcontractors', projectId],
+    queryFn: () => api.get<{ data: { subcontractors: Subcontractor[] } }>(`/projects/${projectId}/subcontractors`),
+    enabled: !!projectId,
+  });
+
+  const addSubMutation = useMutation({
+    mutationFn: (body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string }) =>
+      api.post<{ data: { subcontractor: Subcontractor } }>(`/projects/${projectId}/subcontractors`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      setAddingNew(false);
+      setAddForm({ ...EMPTY_SUB_FORM });
+    },
+  });
+
+  const editSubMutation = useMutation({
+    mutationFn: ({ subId, body }: { subId: string; body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string } }) =>
+      api.patch(`/projects/${projectId}/subcontractors/${subId}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      setEditingSubId(null);
+    },
+  });
+
+  const deleteSubMutation = useMutation({
+    mutationFn: (subId: string) => api.delete(`/projects/${projectId}/subcontractors/${subId}`),
+    onSuccess: (_data, subId) => {
+      queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      setDeletingSubId(null);
+      setExpandedSubId(prev => prev === subId ? null : prev);
+    },
+  });
+
+  function handleAddSub() {
+    if (!addForm.name.trim()) return;
+    const body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string } = {
+      name: addForm.name.trim(),
+    };
+    if (addForm.licenseNumber.trim()) body.licenseNumber = addForm.licenseNumber.trim();
+    if (addForm.contactName.trim()) body.contactName = addForm.contactName.trim();
+    if (addForm.contactEmail.trim()) body.contactEmail = addForm.contactEmail.trim();
+    if (addForm.address.trim()) body.address = addForm.address.trim();
+    addSubMutation.mutate(body);
+  }
+
+  function handleEditSub(subId: string) {
+    if (!editForm.name.trim()) return;
+    const body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string } = {
+      name: editForm.name.trim(),
+    };
+    if (editForm.licenseNumber.trim()) body.licenseNumber = editForm.licenseNumber.trim();
+    if (editForm.contactName.trim()) body.contactName = editForm.contactName.trim();
+    if (editForm.contactEmail.trim()) body.contactEmail = editForm.contactEmail.trim();
+    if (editForm.address.trim()) body.address = editForm.address.trim();
+    editSubMutation.mutate({ subId, body });
+  }
+
+  function startEdit(sub: Subcontractor) {
+    setEditingSubId(sub.id);
+    setEditForm({
+      name: sub.name,
+      licenseNumber: sub.licenseNumber ?? '',
+      contactName: sub.contactName ?? '',
+      contactEmail: sub.contactEmail ?? '',
+      address: sub.address ?? '',
+    });
+  }
+
+  const subs = subsData?.data?.subcontractors ?? [];
+
+  const INPUT_CLASSES = 'border border-border-default rounded px-2 py-1 text-sm bg-surface-page';
+
+  return (
+    <div className="mt-8">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-headline text-lg text-gray-900">Subcontractors</h2>
+        {!addingNew && (
+          <Button variant="secondary" onClick={() => setAddingNew(true)}>
+            Add Subcontractor
+          </Button>
+        )}
+      </div>
+
+      {/* Add form */}
+      {addingNew && (
+        <Card className="mb-4">
+          <h3 className="font-headline text-sm text-gray-900 mb-3">Add Subcontractor</h3>
+          <div className="space-y-2">
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">Name *</label>
+              <input
+                type="text"
+                className={INPUT_CLASSES + ' w-full'}
+                placeholder="Company name"
+                value={addForm.name}
+                onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-gray-500 mb-0.5">License Number</label>
+                <input
+                  type="text"
+                  className={INPUT_CLASSES + ' w-full'}
+                  placeholder="Optional"
+                  value={addForm.licenseNumber}
+                  onChange={e => setAddForm(f => ({ ...f, licenseNumber: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-0.5">Contact Name</label>
+                <input
+                  type="text"
+                  className={INPUT_CLASSES + ' w-full'}
+                  placeholder="Optional"
+                  value={addForm.contactName}
+                  onChange={e => setAddForm(f => ({ ...f, contactName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-0.5">Contact Email</label>
+                <input
+                  type="email"
+                  className={INPUT_CLASSES + ' w-full'}
+                  placeholder="Optional"
+                  value={addForm.contactEmail}
+                  onChange={e => setAddForm(f => ({ ...f, contactEmail: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-0.5">Address</label>
+                <input
+                  type="text"
+                  className={INPUT_CLASSES + ' w-full'}
+                  placeholder="Optional"
+                  value={addForm.address}
+                  onChange={e => setAddForm(f => ({ ...f, address: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => { setAddingNew(false); setAddForm({ ...EMPTY_SUB_FORM }); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddSub}
+              disabled={!addForm.name.trim() || addSubMutation.isPending}
+            >
+              {addSubMutation.isPending ? 'Saving...' : 'Add Subcontractor'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Empty state */}
+      {!subsLoading && subs.length === 0 && !addingNew && (
+        <EmptyState
+          heading="No subcontractors"
+          message="Track CPR receipt and compliance status for each subcontractor on this project."
+        />
+      )}
+
+      {/* Sub list */}
+      {subs.map(sub => (
+        <Card key={sub.id} className="mb-3">
+          {editingSubId === sub.id ? (
+            /* Edit form inline */
+            <div>
+              <h3 className="font-headline text-sm text-gray-900 mb-3">Edit Subcontractor</h3>
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Name *</label>
+                  <input
+                    type="text"
+                    className={INPUT_CLASSES + ' w-full'}
+                    value={editForm.name}
+                    onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-0.5">License Number</label>
+                    <input
+                      type="text"
+                      className={INPUT_CLASSES + ' w-full'}
+                      value={editForm.licenseNumber}
+                      onChange={e => setEditForm(f => ({ ...f, licenseNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-0.5">Contact Name</label>
+                    <input
+                      type="text"
+                      className={INPUT_CLASSES + ' w-full'}
+                      value={editForm.contactName}
+                      onChange={e => setEditForm(f => ({ ...f, contactName: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-0.5">Contact Email</label>
+                    <input
+                      type="email"
+                      className={INPUT_CLASSES + ' w-full'}
+                      value={editForm.contactEmail}
+                      onChange={e => setEditForm(f => ({ ...f, contactEmail: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-0.5">Address</label>
+                    <input
+                      type="text"
+                      className={INPUT_CLASSES + ' w-full'}
+                      value={editForm.address}
+                      onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button variant="secondary" onClick={() => setEditingSubId(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleEditSub(sub.id)}
+                  disabled={!editForm.name.trim() || editSubMutation.isPending}
+                >
+                  {editSubMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Normal row */
+            <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900 font-body">{sub.name}</span>
+                    {sub.licenseNumber && (
+                      <span className="text-xs text-gray-500">Lic: {sub.licenseNumber}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 text-xs text-gray-500">
+                    {sub.contactName && <span>{sub.contactName}</span>}
+                    {sub.contactEmail && <span>{sub.contactEmail}</span>}
+                    {sub.address && <span>{sub.address}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {deletingSubId === sub.id ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600">Confirm remove?</span>
+                      <button
+                        className="text-xs font-medium text-status-violation hover:underline"
+                        onClick={() => deleteSubMutation.mutate(sub.id)}
+                        disabled={deleteSubMutation.isPending}
+                      >
+                        {deleteSubMutation.isPending ? 'Removing...' : 'Confirm'}
+                      </button>
+                      <button
+                        className="text-xs font-medium text-gray-500 hover:underline"
+                        onClick={() => setDeletingSubId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        className="text-xs font-medium text-gray-700 hover:text-brand-gold transition-colors"
+                        onClick={() => startEdit(sub)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="text-xs font-medium text-gray-700 hover:text-status-violation transition-colors"
+                        onClick={() => setDeletingSubId(sub.id)}
+                      >
+                        Remove
+                      </button>
+                      <button
+                        className="text-sm font-medium text-gray-700 hover:text-brand-gold transition-colors flex items-center"
+                        onClick={() => setExpandedSubId(prev => prev === sub.id ? null : sub.id)}
+                        aria-expanded={expandedSubId === sub.id}
+                      >
+                        <ChevronRight
+                          className={`w-4 h-4 transition-transform ${expandedSubId === sub.id ? 'rotate-90' : ''}`}
+                        />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {expandedSubId === sub.id && (
+                <CprWeekTable projectId={projectId} subId={sub.id} />
+              )}
+            </div>
+          )}
+        </Card>
       ))}
     </div>
   );
@@ -375,6 +889,9 @@ export function ProjectDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Subcontractors panel */}
+          <SubcontractorsPanel projectId={project.id} />
 
           {/* Project sub-page navigation */}
           <div className="mt-8 flex flex-wrap gap-3">
