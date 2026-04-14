@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { getDb } from '../db/index.js';
-import { getFringeSummary, getWorkerPayHistory } from '../services/reportsService.js';
+import { getFringeSummary, getWorkerPayHistory, getFringeBreakdown } from '../services/reportsService.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 
 export const reportsRouter = Router();
@@ -51,6 +51,29 @@ reportsRouter.get('/:projectId/worker/:workerId/pay-history', requireAuth, async
 
   try {
     const rows = await getWorkerPayHistory(projectId, workerId);
+    res.json({ rows });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── RPT-03: Fringe benefit breakdown by fund type, union local, classification ─
+
+reportsRouter.get('/:projectId/fringe-breakdown', requireAuth, async (req, res) => {
+  const projectId = req.params.projectId as string;
+  const userId = req.user!.userId;
+  const weekId = req.query.weekId as string | undefined;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  try {
+    const rows = await getFringeBreakdown(projectId, weekId);
     res.json({ rows });
   } catch {
     res.status(500).json({ error: 'Internal server error' });

@@ -7,7 +7,7 @@
 
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { payrollEntries, payrollWeeks, workers } from '../db/schema.js';
+import { payrollEntries, payrollWeeks, workers, workerClassifications } from '../db/schema.js';
 
 // ── Exported interfaces ────────────────────────────────────────────────────
 
@@ -225,4 +225,100 @@ export async function getWorkerPayHistory(
   return Array.from(map.values())
     .reverse()
     .map(({ row }) => row);
+}
+
+// ── getFringeBreakdown ────────────────────────────────────────────────────
+
+export interface FringeBreakdownRow {
+  fundType: 'healthWelfare' | 'pension' | 'vacation' | 'training';
+  unionLocal: string;
+  classificationLevel: 'journeyworker' | 'apprentice' | 'foreman';
+  totalAmount: number;
+  workerCount: number;
+}
+
+/**
+ * Aggregates fringe benefit totals by fund type, union local, and classification level.
+ * Uses in-memory Map aggregation (not Drizzle groupBy).
+ * Null unionLocal is mapped to 'Unaffiliated'.
+ * Rows where a fringe column is null or 0 are excluded.
+ * Sorted by unionLocal ASC, classificationLevel ASC, fundType ASC.
+ */
+export async function getFringeBreakdown(
+  projectId: string,
+  weekId?: string,
+): Promise<FringeBreakdownRow[]> {
+  const db = getDb();
+
+  const whereClause = weekId
+    ? and(eq(payrollWeeks.projectId, projectId), eq(payrollEntries.payrollWeekId, weekId))
+    : eq(payrollWeeks.projectId, projectId);
+
+  const rows = await db
+    .select({
+      workerId: payrollEntries.workerId,
+      unionLocal: workers.unionLocal,
+      classificationLevel: workerClassifications.laborType,
+      fringeHealthWelfare: payrollEntries.fringeHealthWelfare,
+      fringePension: payrollEntries.fringePension,
+      fringeVacation: payrollEntries.fringeVacation,
+      fringeTraining: payrollEntries.fringeTraining,
+    })
+    .from(payrollEntries)
+    .innerJoin(payrollWeeks, eq(payrollEntries.payrollWeekId, payrollWeeks.id))
+    .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
+    .innerJoin(workerClassifications, eq(payrollEntries.classificationId, workerClassifications.id))
+    .where(whereClause);
+
+  // Aggregate in-memory: key = `${fundType}|${unionLocal}|${classificationLevel}`
+  type Key = string;
+  const map = new Map<Key, { totalAmount: number; workerIds: Set<string> }>();
+
+  const FUND_TYPES: Array<{
+    key: FringeBreakdownRow['fundType'];
+    col: 'fringeHealthWelfare' | 'fringePension' | 'fringeVacation' | 'fringeTraining';
+  }> = [
+    { key: 'healthWelfare', col: 'fringeHealthWelfare' },
+    { key: 'pension',       col: 'fringePension' },
+    { key: 'vacation',      col: 'fringeVacation' },
+    { key: 'training',      col: 'fringeTraining' },
+  ];
+
+  for (const row of rows) {
+    const unionLocal = row.unionLocal ?? 'Unaffiliated';
+    const classificationLevel = row.classificationLevel;
+
+    for (const { key: fundType, col } of FUND_TYPES) {
+      const amount = row[col] ?? 0;
+      if (amount === 0) continue;
+
+      const mapKey = `${fundType}|${unionLocal}|${classificationLevel}`;
+      const existing = map.get(mapKey);
+      if (existing) {
+        existing.totalAmount += amount;
+        existing.workerIds.add(row.workerId);
+      } else {
+        map.set(mapKey, {
+          totalAmount: amount,
+          workerIds: new Set([row.workerId]),
+        });
+      }
+    }
+  }
+
+  const result: FringeBreakdownRow[] = [];
+  for (const [mapKey, { totalAmount, workerIds }] of map.entries()) {
+    const [fundType, unionLocal, classificationLevel] = mapKey.split('|') as [
+      FringeBreakdownRow['fundType'],
+      string,
+      FringeBreakdownRow['classificationLevel'],
+    ];
+    result.push({ fundType, unionLocal, classificationLevel, totalAmount, workerCount: workerIds.size });
+  }
+
+  return result.sort((a, b) => {
+    if (a.unionLocal !== b.unionLocal) return a.unionLocal.localeCompare(b.unionLocal);
+    if (a.classificationLevel !== b.classificationLevel) return a.classificationLevel.localeCompare(b.classificationLevel);
+    return a.fundType.localeCompare(b.fundType);
+  });
 }

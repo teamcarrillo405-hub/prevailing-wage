@@ -30,6 +30,14 @@ interface WorkerPayHistoryRow {
   fringeRateSnapshot: number | null;
 }
 
+interface FringeBreakdownRow {
+  fundType: 'healthWelfare' | 'pension' | 'vacation' | 'training';
+  unionLocal: string;
+  classificationLevel: 'journeyworker' | 'apprentice' | 'foreman';
+  totalAmount: number;
+  workerCount: number;
+}
+
 interface Worker {
   id: string;
   name: string;
@@ -50,7 +58,7 @@ function formatDate(isoDate: string): string {
 
 export function ReportsPage() {
   const { projectId } = useParams<{ projectId: string }>();
-  const [activeTab, setActiveTab] = useState<'fringe' | 'payHistory'>('fringe');
+  const [activeTab, setActiveTab] = useState<'fringe' | 'payHistory' | 'fringeBreakdown'>('fringe');
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>('');
 
   // Workers list for the pay history selector
@@ -117,8 +125,28 @@ export function ReportsPage() {
 
   const payHistoryRows = payHistoryData?.rows ?? [];
 
+  // Fringe breakdown query — RPT-03
+  const {
+    data: fringeBreakdownData,
+    isLoading: fringeBreakdownLoading,
+    error: fringeBreakdownError,
+  } = useQuery({
+    queryKey: ['fringe-breakdown', projectId],
+    queryFn: async () => {
+      const res = await fetch(`/api/reports/${projectId}/fringe-breakdown`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to fetch fringe breakdown');
+      return res.json() as Promise<{ rows: FringeBreakdownRow[] }>;
+    },
+    staleTime: 60_000,
+    enabled: !!projectId,
+  });
+
+  const fringeBreakdownRows = fringeBreakdownData?.rows ?? [];
+
   // ---- Tab button styles ----
-  function tabClass(tab: 'fringe' | 'payHistory') {
+  function tabClass(tab: 'fringe' | 'payHistory' | 'fringeBreakdown') {
     return activeTab === tab
       ? 'px-5 py-2 text-sm font-semibold rounded-t border-b-2 border-brand-gold bg-brand-gold text-nav-dark'
       : 'px-5 py-2 text-sm font-medium rounded-t border-b-2 border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200';
@@ -179,6 +207,12 @@ export function ReportsPage() {
               className={tabClass('payHistory')}
             >
               Pay History
+            </button>
+            <button
+              onClick={() => setActiveTab('fringeBreakdown')}
+              className={tabClass('fringeBreakdown')}
+            >
+              Fringe Breakdown
             </button>
           </div>
         </div>
@@ -379,6 +413,105 @@ export function ReportsPage() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ---- Fringe Breakdown tab (RPT-03) ---- */}
+        {activeTab === 'fringeBreakdown' && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 font-headline">
+              Fringe Breakdown by Fund Type
+            </h2>
+
+            {fringeBreakdownLoading && (
+              <p className="text-sm text-gray-500">Loading fringe breakdown...</p>
+            )}
+
+            {fringeBreakdownError && (
+              <p className="text-sm text-red-600">Failed to load fringe breakdown. Please try again.</p>
+            )}
+
+            {!fringeBreakdownLoading && !fringeBreakdownError && fringeBreakdownRows.length === 0 && (
+              <p className="text-sm text-gray-500">
+                No fringe benefit data found. Fringe breakdown requires CA-style itemized fringe entries (H&W, Pension, Vacation, Training columns).
+              </p>
+            )}
+
+            {!fringeBreakdownLoading && !fringeBreakdownError && fringeBreakdownRows.length > 0 && (() => {
+              // Build pivot: group rows by (unionLocal, classificationLevel), columns = fund types
+              const FUND_COLS: Array<{ key: FringeBreakdownRow['fundType']; label: string }> = [
+                { key: 'healthWelfare', label: 'H&W' },
+                { key: 'pension',       label: 'Pension' },
+                { key: 'vacation',      label: 'Vacation' },
+                { key: 'training',      label: 'Training' },
+              ];
+
+              // Collect unique group keys in order (rows are pre-sorted by service)
+              const groupKeys: string[] = [];
+              const groupMap = new Map<string, Map<FringeBreakdownRow['fundType'], number>>();
+
+              for (const row of fringeBreakdownRows) {
+                const gk = `${row.unionLocal}||${row.classificationLevel}`;
+                if (!groupMap.has(gk)) {
+                  groupKeys.push(gk);
+                  groupMap.set(gk, new Map());
+                }
+                groupMap.get(gk)!.set(row.fundType, (groupMap.get(gk)!.get(row.fundType) ?? 0) + row.totalAmount);
+              }
+
+              // Totals per fund type
+              const totals = new Map<FringeBreakdownRow['fundType'], number>();
+              for (const row of fringeBreakdownRows) {
+                totals.set(row.fundType, (totals.get(row.fundType) ?? 0) + row.totalAmount);
+              }
+
+              return (
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-full text-sm text-left">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold text-gray-700">Union Local</th>
+                        <th className="px-4 py-3 font-semibold text-gray-700">Classification</th>
+                        {FUND_COLS.map(({ key, label }) => (
+                          <th key={key} className="px-4 py-3 font-semibold text-gray-700 text-right">{label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupKeys.map((gk, idx) => {
+                        const [unionLocal, classificationLevel] = gk.split('||');
+                        const fundAmounts = groupMap.get(gk)!;
+                        return (
+                          <tr key={gk} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-3 border-b border-gray-200 text-gray-900 font-medium">
+                              {unionLocal}
+                            </td>
+                            <td className="px-4 py-3 border-b border-gray-200 text-gray-700 capitalize">
+                              {classificationLevel}
+                            </td>
+                            {FUND_COLS.map(({ key }) => (
+                              <td key={key} className="px-4 py-3 border-b border-gray-200 text-gray-700 text-right">
+                                {formatCurrency(fundAmounts.get(key) ?? null)}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                      <tr>
+                        <td className="px-4 py-3 text-gray-900" colSpan={2}>Totals</td>
+                        {FUND_COLS.map(({ key }) => (
+                          <td key={key} className="px-4 py-3 text-gray-900 text-right">
+                            {formatCurrency(totals.get(key) ?? null)}
+                          </td>
+                        ))}
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 
