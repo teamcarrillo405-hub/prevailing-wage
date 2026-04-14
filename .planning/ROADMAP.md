@@ -1052,7 +1052,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 54-01-PLAN.md — Migration SQL (0032_subcontractor_schema.sql) + journal registration (idx 28) + Drizzle schema exports for subcontractors and subcontractorCprWeeks
+- [ ] 55-01-PLAN.md — RED test scaffold + subcontractors.ts route file (7 handlers: SUB-03 CRUD + SUB-04 CPR-week tracking) + mount in index.ts
 
 ---
 
@@ -1264,7 +1264,8 @@ Plans:
  (completed 2026-04-14)
 - [x] **Phase 52: NJ PDF Generator** — njPdfGenerator.ts programmatic-draw: contractor header with NJ reg number, per-worker EEO columns (sex/race/ethnicity), FICA/federal/state tax deduction columns, NJ Statement of Compliance (not started)
  (completed 2026-04-14)
-- [x] **Phase 53: CA A-1-131 Gap Close** — Browser verification of existing A-1-131 PDF field coordinates; document and apply any coordinate corrections; confirm UI flow end-to-end (not started) (completed 2026-04-14)
+- [x] **Phase 53: CA A-1-131 Gap Close** — Browser verification of existing A-1-131 PDF field coordinates; document and apply any coordinate corrections; confirm UI flow end-to-end (not started)
+ (completed 2026-04-14)
 - [x] **Phase 54: Subcontractor Schema + Migrations** — subcontractors and subcontractor_cpr_weeks tables, Drizzle schema, migrations with journal registration (not started) (completed 2026-04-14)
 - [ ] **Phase 55: Subcontractor API Routes** — CRUD routes for subs + CPR tracking routes on new subcontractors.ts router, assertProjectAccess on all routes, audit log entries for sub events (not started)
 - [ ] **Phase 56: Subcontractor UI Panel** — SubcontractorPanel.tsx on ProjectDetailPage: add/edit/remove subs, per-sub CPR week table with Received/Non-Compliant/Not Received/Overdue badges (not started)
