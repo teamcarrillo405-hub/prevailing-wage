@@ -959,7 +959,12 @@ Plans:
   3. NJ projects show a state-gated "Download NJ MW-562" button on PayrollWeekDetailPage (wired to the generator in Phase 52)
   4. workerSex is a separate nullable text column in the workers table — it does not reuse the existing gender column from v4.0 IL demographics
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 51-01-PLAN.md — Migration + schema + server routes + NJ integration tests
+- [ ] 51-02-PLAN.md — Client UI: ProjectForm NJ block, WorkersPage workerSex, STATE_FORMS NJ entry
+
 **UI hint**: yes
 
 ---
@@ -1194,7 +1199,8 @@ Plans:
 
 - [x] **Phase 37: Audit Trail Foundation** - audit_logs schema + auditService with insertAuditLog() (completed 2026-04-01)
 - [x] **Phase 38: Audit Trail Wiring + Activity UI** - Tier-1 action wiring, paginated API endpoint, ProjectActivityPage (completed 2026-04-02)
-- [x] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week (completed 2026-04-02)
+- [x] **Phase 39: Worker Profile Depth** - structured address, union fields, apprenticeship fields, multi-classification per week
+ (completed 2026-04-02)
 - [x] **Phase 40: NY Schema + Compliance Rule** - NY project flag, NY-specific DB columns, daily OT rule in computeCompliance() (completed 2026-04-06)
 - [x] **Phase 41: NY State Forms** - PW-12 PDF, MPWR XML, 3-step submission modal (completed 2026-04-06)
 - [x] **Phase 42: IL Schema + Project Flag** - IL project flag, nonPwHours on payroll_entries, demographic fields on workers (completed 2026-04-06)
