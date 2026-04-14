@@ -1074,8 +1074,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 54-01-PLAN.md — Migration SQL (0032_subcontractor_schema.sql) + journal registration (idx 28) + Drizzle schema exports for subcontractors and subcontractorCprWeeks
-**UI hint**: yes
+- [ ] 56-01-PLAN.md — getCprStatus pure function (cprStatus.ts) + SubcontractorsPanel inline component in ProjectDetailPage with add/edit/remove subs, expandable CPR week table, status badges, and mark received/compliant actions
 
 ---
 
