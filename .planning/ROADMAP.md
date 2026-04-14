@@ -962,7 +962,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 51-01-PLAN.md — Migration + schema + server routes + NJ integration tests
+- [x] 51-01-PLAN.md — Migration + schema + server routes + NJ integration tests
 - [ ] 51-02-PLAN.md — Client UI: ProjectForm NJ block, WorkersPage workerSex, STATE_FORMS NJ entry
 
 **UI hint**: yes

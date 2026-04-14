@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 50-02-PLAN.md — MA CPR export route wiring and integration tests
-last_updated: "2026-04-14T06:56:18.715Z"
+status: Ready to execute
+stopped_at: Completed 51-01-PLAN.md — NJ schema migration, route extensions, and integration tests
+last_updated: "2026-04-14T07:37:59.270Z"
 progress:
   total_phases: 37
   completed_phases: 28
-  total_plans: 72
-  completed_plans: 72
+  total_plans: 74
+  completed_plans: 73
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 50 — ma-pdf-generator
+**Current focus:** Phase 51 — nj-schema-routes
 
 ## Current Position
 
-Phase: 51
-Plan: Not started
+Phase: 51 (nj-schema-routes) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -146,6 +146,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 50]: Statement of Compliance always on dedicated page 2 via unconditional addPage() (Phase 43 pattern)
 - [Phase 50-ma-pdf-generator]: Sunday-first day order in MA entry mapping matches MaPdfInput interface; checkNumber/totalWeekGrossWages/allOtherHours use null (not 0) for blank-on-PDF semantics
 - [Phase 50-ma-pdf-generator]: Audit log action 'ma_pdf.downloaded' matches IL pattern 'il_pdf.downloaded'; assertProjectAccess before state gate preserved (NFR-03)
+- [Phase 51-nj-schema-routes]: workerSex uses text() not integer — EEO sex codes M/F/N are not boolean; Zod enum enforces valid values at route layer; no NJ state gate on workers route
+- [Phase 51-nj-schema-routes]: NJ export stub returns 501 following assertProjectAccess before state gate (NFR-03); Phase 52 implements the PDF generator
 
 ### Phase Order Rationale
 
@@ -178,7 +180,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T06:51:54.207Z
-Stopped at: Completed 50-02-PLAN.md — MA CPR export route wiring and integration tests
+Last session: 2026-04-14T07:37:59.266Z
+Stopped at: Completed 51-01-PLAN.md — NJ schema migration, route extensions, and integration tests
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
