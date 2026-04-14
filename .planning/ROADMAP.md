@@ -1006,7 +1006,11 @@ Plans:
   3. Any coordinate corrections discovered are applied to a1131Generator.ts and the corrected PDF is re-verified before closing the phase
   4. The CA UI flow is confirmed working: CSLB/WC advisory modal appears on CA projects, DT hour columns are visible on CA projects only, and the WH-347 download still works alongside the CA button
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 53-01-PLAN.md — Fix CA button routing bug (modal bypass) + add ca_pdf.downloaded audit log
+- [ ] 53-02-PLAN.md — Browser verification of A-1-131 PDF field coordinates; apply any corrections
 
 ---
 
@@ -1240,7 +1244,8 @@ Plans:
 - [x] **Phase 50: MA PDF Generator** — maPdfGenerator.ts programmatic-draw: contractor/project header, per-worker rows with OSHA 10 / woman / minority columns, supplemental unemployment fringe sub-column, project gross vs total gross, check number, Statement of Compliance (not started) (completed 2026-04-14)
 - [x] **Phase 51: NJ Schema + Routes** — NJ state flag, njPwcNumber project field, workerSex nullable column, NJ project fields migration, state-gated download button (not started)
  (completed 2026-04-14)
-- [x] **Phase 52: NJ PDF Generator** — njPdfGenerator.ts programmatic-draw: contractor header with NJ reg number, per-worker EEO columns (sex/race/ethnicity), FICA/federal/state tax deduction columns, NJ Statement of Compliance (not started) (completed 2026-04-14)
+- [x] **Phase 52: NJ PDF Generator** — njPdfGenerator.ts programmatic-draw: contractor header with NJ reg number, per-worker EEO columns (sex/race/ethnicity), FICA/federal/state tax deduction columns, NJ Statement of Compliance (not started)
+ (completed 2026-04-14)
 - [ ] **Phase 53: CA A-1-131 Gap Close** — Browser verification of existing A-1-131 PDF field coordinates; document and apply any coordinate corrections; confirm UI flow end-to-end (not started)
 - [ ] **Phase 54: Subcontractor Schema + Migrations** — subcontractors and subcontractor_cpr_weeks tables, Drizzle schema, migrations with journal registration (not started)
 - [ ] **Phase 55: Subcontractor API Routes** — CRUD routes for subs + CPR tracking routes on new subcontractors.ts router, assertProjectAccess on all routes, audit log entries for sub events (not started)
