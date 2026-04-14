@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 55-01-PLAN.md — subcontractor API routes (7 handlers, 16 tests green, index.ts mounted)
-last_updated: "2026-04-14T09:26:43.924Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 56-01-PLAN.md — SubcontractorsPanel with getCprStatus, TDD 14 tests green, TypeScript clean
+last_updated: "2026-04-14T09:48:48.504Z"
 progress:
   total_phases: 37
-  completed_phases: 33
-  total_plans: 80
-  completed_plans: 80
+  completed_phases: 34
+  total_plans: 81
+  completed_plans: 81
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 55 — subcontractor-api-routes
+**Current focus:** Phase 56 — subcontractor-ui-panel
 
 ## Current Position
 
-Phase: 56
-Plan: Not started
+Phase: 56 (subcontractor-ui-panel) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -162,6 +162,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 55]: isCompliant uses z.union([z.literal(0), z.literal(1)]) not z.boolean() — three-state null/0/1 semantics preserved
 - [Phase 55]: Audit logs only on subcontractor.created and subcontractor.removed — no audit on PATCH or CPR-week operations
 - [Phase 55]: 409 from application-level duplicate check before insert, not from DB UNIQUE constraint propagation
+- [Phase 56]: BadgeVariant exported from Badge.tsx to allow import type in cprStatus.ts (Rule 2 auto-fix)
+- [Phase 56]: CprWeekTable nested inside SubcontractorsPanel body (single-use, not exported)
+- [Phase 56]: isCompliant === 1 strict equality enforced; weekEndingDate + T00:00:00 for local time parse
 
 ### Phase Order Rationale
 
@@ -194,7 +197,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T09:24:01.663Z
-Stopped at: Completed 55-01-PLAN.md — subcontractor API routes (7 handlers, 16 tests green, index.ts mounted)
+Last session: 2026-04-14T09:48:48.500Z
+Stopped at: Completed 56-01-PLAN.md — SubcontractorsPanel with getCprStatus, TDD 14 tests green, TypeScript clean
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)

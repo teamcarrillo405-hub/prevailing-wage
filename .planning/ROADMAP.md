@@ -1074,7 +1074,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 56-01-PLAN.md — getCprStatus pure function (cprStatus.ts) + SubcontractorsPanel inline component in ProjectDetailPage with add/edit/remove subs, expandable CPR week table, status badges, and mark received/compliant actions
+- [x] 56-01-PLAN.md — getCprStatus pure function (cprStatus.ts) + SubcontractorsPanel inline component in ProjectDetailPage with add/edit/remove subs, expandable CPR week table, status badges, and mark received/compliant actions
 
 ---
 
@@ -1267,7 +1267,7 @@ Plans:
  (completed 2026-04-14)
 - [x] **Phase 54: Subcontractor Schema + Migrations** — subcontractors and subcontractor_cpr_weeks tables, Drizzle schema, migrations with journal registration (not started) (completed 2026-04-14)
 - [x] **Phase 55: Subcontractor API Routes** — CRUD routes for subs + CPR tracking routes on new subcontractors.ts router, assertProjectAccess on all routes, audit log entries for sub events (not started) (completed 2026-04-14)
-- [ ] **Phase 56: Subcontractor UI Panel** — SubcontractorPanel.tsx on ProjectDetailPage: add/edit/remove subs, per-sub CPR week table with Received/Non-Compliant/Not Received/Overdue badges (not started)
+- [x] **Phase 56: Subcontractor UI Panel** — SubcontractorPanel.tsx on ProjectDetailPage: add/edit/remove subs, per-sub CPR week table with Received/Non-Compliant/Not Received/Overdue badges (not started) (completed 2026-04-14)
 - [ ] **Phase 57: Audit Log CSV Export** — GET /api/audit/:projectId/csv route, UTF-8 BOM output, formula injection sanitization, download button on ProjectActivityPage (not started)
 - [ ] **Phase 58: Enhanced Fringe Report** — getFringeBreakdown() in reportsService.ts grouped by fund type/union local/J-RA, GET /api/projects/:id/reports/fringe-enhanced, new Fringe Breakdown tab on ReportsPage (not started)
 - [ ] **Phase 59: Multi-Project Compliance PDF** — complianceSummaryPdfGenerator.ts programmatic table, GET /api/export/compliance-summary, download button on DashboardPage (not started)

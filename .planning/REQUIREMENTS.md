@@ -69,7 +69,7 @@ Prime contractors bear strict liability under 29 CFR 5 for subcontractor prevail
 - [x] **SUB-02** — `subcontractor_cpr_weeks` table: `(id UUID, subcontractorId FK→subcontractors, weekEndingDate text NOT NULL, receivedDate text, isCompliant integer, notes text, createdAt text)`. Tracks weekly CPR receipt status per sub. UNIQUE on `(subcontractorId, weekEndingDate)`. Migration + Drizzle schema.
 - [x] **SUB-03** — Sub management routes: `GET /api/projects/:id/subcontractors`, `POST /api/projects/:id/subcontractors`, `PATCH /api/projects/:id/subcontractors/:subId`, `DELETE /api/projects/:id/subcontractors/:subId` — all with `assertProjectAccess`.
 - [x] **SUB-04** — CPR tracking routes: `GET /api/projects/:id/subcontractors/:subId/cpr-weeks`, `POST /api/projects/:id/subcontractors/:subId/cpr-weeks`, `PATCH /api/projects/:id/subcontractors/:subId/cpr-weeks/:weekId` — mark week as received/compliant with optional notes.
-- [ ] **SUB-05** — Subcontractors panel on ProjectDetailPage: list all subs for the project; add/edit/remove subs; expandable per-sub CPR week table showing each payroll week with status badge (Received + Compliant / Received + Non-Compliant / Not Received / Overdue). "Overdue" fires when `weekEndingDate` is more than 7 days ago and CPR not yet received.
+- [x] **SUB-05** — Subcontractors panel on ProjectDetailPage: list all subs for the project; add/edit/remove subs; expandable per-sub CPR week table showing each payroll week with status badge (Received + Compliant / Received + Non-Compliant / Not Received / Overdue). "Overdue" fires when `weekEndingDate` is more than 7 days ago and CPR not yet received.
 
 ---
 
