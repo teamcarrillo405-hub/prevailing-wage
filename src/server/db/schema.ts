@@ -274,6 +274,10 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   checkNumber: text('check_number'),
   allOtherHours: real('all_other_hours'),
   totalWeekGrossWages: real('total_week_gross_wages'),
+  // Phase 52 — NJ deduction breakdown columns (nullable; NJ projects only)
+  ficaTax: real('fica_tax'),
+  federalIncomeTax: real('federal_income_tax'),
+  stateIncomeTax: real('state_income_tax'),
   // Phase 32 — user attribution (nullable for all existing rows per D-09)
   createdByUserId: text('created_by_user_id').references(() => users.id),
   updatedByUserId: text('updated_by_user_id').references(() => users.id),

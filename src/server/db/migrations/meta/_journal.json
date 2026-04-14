@@ -190,6 +190,13 @@
       "when": 1744243200000,
       "tag": "0030_nj_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1744329600000,
+      "tag": "0031_nj_deductions",
+      "breakpoints": true
     }
   ]
 }
