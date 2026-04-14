@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 51-01-PLAN.md — NJ schema migration, route extensions, and integration tests
-last_updated: "2026-04-14T07:37:59.270Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 51-02-PLAN.md — NJ client UI wiring (ProjectForm, WorkersPage, PayrollWeekDetailPage)
+last_updated: "2026-04-14T07:44:24.568Z"
 progress:
   total_phases: 37
-  completed_phases: 28
+  completed_phases: 29
   total_plans: 74
-  completed_plans: 73
+  completed_plans: 74
 ---
 
 # State
@@ -148,6 +148,7 @@ Key decisions locked for v5.0 scope:
 - [Phase 50-ma-pdf-generator]: Audit log action 'ma_pdf.downloaded' matches IL pattern 'il_pdf.downloaded'; assertProjectAccess before state gate preserved (NFR-03)
 - [Phase 51-nj-schema-routes]: workerSex uses text() not integer — EEO sex codes M/F/N are not boolean; Zod enum enforces valid values at route layer; no NJ state gate on workers route
 - [Phase 51-nj-schema-routes]: NJ export stub returns 501 following assertProjectAccess before state gate (NFR-03); Phase 52 implements the PDF generator
+- [Phase 51-nj-schema-routes]: Indigo color scheme for NJ blocks distinct from MA teal; workerSex sent only in isNJ mutation branch; STATE_FORMS NJ entry uses route key nj-mw562 matching server path
 
 ### Phase Order Rationale
 
@@ -180,7 +181,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T07:37:59.266Z
-Stopped at: Completed 51-01-PLAN.md — NJ schema migration, route extensions, and integration tests
+Last session: 2026-04-14T07:44:24.564Z
+Stopped at: Completed 51-02-PLAN.md — NJ client UI wiring (ProjectForm, WorkersPage, PayrollWeekDetailPage)
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
