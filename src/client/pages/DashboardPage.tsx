@@ -165,6 +165,17 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {/* Compliance summary download — Phase 59 */}
+      <div className="flex justify-end mb-4">
+        <a
+          href="/api/export/compliance-summary"
+          download="compliance-summary.pdf"
+          className="inline-flex items-center gap-1.5 text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary hover:border-brand-gold hover:text-brand-gold transition-colors"
+        >
+          Download Compliance Summary
+        </a>
+      </div>
+
       <HelpCallout
         icon={LayoutDashboard}
         title="Your Active Projects"

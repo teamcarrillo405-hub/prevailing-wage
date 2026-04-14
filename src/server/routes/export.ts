@@ -62,6 +62,13 @@ import {
 } from '../services/csvExporter.js';
 import { computeCompliance } from '../services/complianceService.js';
 import { decryptSsn } from '../services/cryptoService.js';
+import {
+  generateComplianceSummaryPdf,
+  type ComplianceSummaryInput,
+  type ComplianceSummaryProjectRow,
+} from '../services/complianceSummaryPdfGenerator.js';
+import { eq, and } from 'drizzle-orm';
+import * as schema from '../db/schema.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -1427,6 +1434,105 @@ router.get('/nj-mw562/:weekId', async (req, res) => {
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
   } catch (auditErr) { console.error('[audit]', auditErr); }
+});
+
+// ── GET /api/export/compliance-summary ────────────────────────────────────
+// Returns a single PDF covering all active projects for the authenticated user.
+// No assertProjectAccess — scoped to req.user.userId across all their projects.
+
+router.get('/compliance-summary', async (req, res) => {
+  const db = getDb();
+  const userId = req.user!.userId;
+
+  // 1. Fetch all active projects belonging to this user
+  const userProjects = await db
+    .select()
+    .from(schema.projects)
+    .where(and(eq(schema.projects.userId, userId), eq(schema.projects.status, 'active')));
+
+  const today = new Date();
+  const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgoIso = sevenDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD
+
+  // 2. For each project, gather summary stats
+  type ProjectRow = typeof schema.projects.$inferSelect;
+  type WeekRow = { id: string; weekEndingDate: string; submittedAt: string | null };
+
+  const rows: ComplianceSummaryProjectRow[] = await Promise.all(
+    userProjects.map(async (proj: ProjectRow) => {
+      // Worker count (active workers only)
+      const workerRows = await db
+        .select({ id: schema.workers.id })
+        .from(schema.workers)
+        .where(and(eq(schema.workers.projectId, proj.id), eq(schema.workers.isActive, true)));
+
+      // Payroll weeks
+      const weeks: WeekRow[] = await db
+        .select({
+          id: schema.payrollWeeks.id,
+          weekEndingDate: schema.payrollWeeks.weekEndingDate,
+          submittedAt: schema.payrollWeeks.submittedAt,
+        })
+        .from(schema.payrollWeeks)
+        .where(eq(schema.payrollWeeks.projectId, proj.id));
+
+      const weeksSubmitted = weeks.filter((w: WeekRow) => w.submittedAt !== null).length;
+      const weeksPending = weeks.filter((w: WeekRow) => w.submittedAt === null).length;
+      const cprOverdueCount = weeks.filter(
+        (w: WeekRow) => w.submittedAt === null && w.weekEndingDate < sevenDaysAgoIso
+      ).length;
+
+      // Subcontractor CPR weeks — join via subcontractors -> subcontractorCprWeeks
+      const subs = await db
+        .select({ id: schema.subcontractors.id })
+        .from(schema.subcontractors)
+        .where(eq(schema.subcontractors.projectId, proj.id));
+
+      let subCprTotal = 0, subCprCompliant = 0, subCprViolation = 0, subCprPending = 0;
+      for (const sub of subs) {
+        const cprWeeks = await db
+          .select({
+            isCompliant: schema.subcontractorCprWeeks.isCompliant,
+            receivedDate: schema.subcontractorCprWeeks.receivedDate,
+          })
+          .from(schema.subcontractorCprWeeks)
+          .where(eq(schema.subcontractorCprWeeks.subcontractorId, sub.id));
+        subCprTotal += cprWeeks.length;
+        for (const cw of cprWeeks) {
+          if (cw.isCompliant === 1) subCprCompliant++;
+          else if (cw.isCompliant === 0) subCprViolation++;
+          else subCprPending++;
+        }
+      }
+
+      return {
+        name: proj.name,
+        state: proj.state,
+        awardDate: proj.awardDate,
+        workerCount: workerRows.length,
+        weeksTotal: weeks.length,
+        weeksSubmitted,
+        weeksPending,
+        cprOverdueCount,
+        subCprTotal,
+        subCprCompliant,
+        subCprViolation,
+        subCprPending,
+      };
+    })
+  );
+
+  const input: ComplianceSummaryInput = {
+    generatedAt: today,
+    contractorEmail: req.user!.email,
+    projects: rows,
+  };
+
+  const pdfBytes = await generateComplianceSummaryPdf(input);
+
+  res.set('Content-Type', 'application/pdf');
+  res.set('Content-Disposition', 'attachment; filename="compliance-summary.pdf"');
+  res.send(Buffer.from(pdfBytes));
 });
 
 export { router as exportRouter };
