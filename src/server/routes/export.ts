@@ -362,6 +362,21 @@ router.get('/a1131/:weekId', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Length', filledPdf.length);
   res.end(Buffer.from(filledPdf));
+
+  // Best-effort audit log (AUDIT-03)
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'ca_pdf.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
+    });
+  } catch (auditErr) { console.error('[audit]', auditErr); }
 });
 
 // ── GET /api/export/f700/:weekId ─────────────────────────────────────────
