@@ -1028,7 +1028,10 @@ Plans:
   3. The Drizzle schema file reflects both new tables
   4. Migration files are registered in drizzle/meta/_journal.json and use correct statement-breakpoint separators
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 54-01-PLAN.md — Migration SQL (0032_subcontractor_schema.sql) + journal registration (idx 28) + Drizzle schema exports for subcontractors and subcontractorCprWeeks
 
 ---
 
@@ -1046,7 +1049,10 @@ Plans:
   3. A request from a user without project membership receives a 403 on every sub and CPR route
   4. Creating and removing a sub writes audit log rows with action subcontractor.created and subcontractor.removed with correct meta payload
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 54-01-PLAN.md — Migration SQL (0032_subcontractor_schema.sql) + journal registration (idx 28) + Drizzle schema exports for subcontractors and subcontractorCprWeeks
 
 ---
 
@@ -1065,7 +1071,10 @@ Plans:
   4. The user can mark a week as Received or Non-Compliant and optionally save a notes field — the status badge updates immediately
   5. Subcontractor entries are never mixed into GC worker counts, totals, or compliance roll-ups shown elsewhere on the page
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 54-01-PLAN.md — Migration SQL (0032_subcontractor_schema.sql) + journal registration (idx 28) + Drizzle schema exports for subcontractors and subcontractorCprWeeks
 **UI hint**: yes
 
 ---
@@ -1084,7 +1093,10 @@ Plans:
   3. A cell value beginning with =, +, -, or @ has a space character prepended — the file opens in Excel without formula execution prompts
   4. ProjectActivityPage shows a "Download CSV" button in the page header toolbar alongside the existing date filter; the button is absent for non-members
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 54-01-PLAN.md — Migration SQL (0032_subcontractor_schema.sql) + journal registration (idx 28) + Drizzle schema exports for subcontractors and subcontractorCprWeeks
 **UI hint**: yes
 
 ---
@@ -1103,7 +1115,10 @@ Plans:
   3. GET /api/projects/:id/reports/fringe-enhanced returns the breakdown data; the existing GET /api/projects/:id/reports/fringe-summary route and its response shape are not modified
   4. getFringeBreakdown() in reportsService.ts is a new exported function added alongside the existing getFringeSummary() — it does not alter or wrap getFringeSummary()
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 54-01-PLAN.md — Migration SQL (0032_subcontractor_schema.sql) + journal registration (idx 28) + Drizzle schema exports for subcontractors and subcontractorCprWeeks
 **UI hint**: yes
 
 ---
@@ -1123,7 +1138,10 @@ Plans:
   4. The route is cross-project and user-scoped — no weekId parameter, no state gate; it never returns data for projects the requesting user is not a member of
   5. complianceSummaryPdfGenerator.ts uses PDFDocument.create() (programmatic draw) and never loads multiple per-week PDF objects into memory simultaneously — safe within Render.com 512 MB memory ceiling
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 54-01-PLAN.md — Migration SQL (0032_subcontractor_schema.sql) + journal registration (idx 28) + Drizzle schema exports for subcontractors and subcontractorCprWeeks
 **UI hint**: yes
 
 ---
