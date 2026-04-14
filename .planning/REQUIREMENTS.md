@@ -49,7 +49,7 @@ New Jersey MW-562 (February 2025 revision) — requires EEO demographic columns 
 
 - [x] **NJ-01** — NJ is a selectable project state. NJ project form shows NJ Public Works Contractor Registration Number field when state=NJ. NJ projects show a state-gated "Download NJ MW-562" button on PayrollWeekDetailPage.
 - [x] **NJ-02** — New nullable worker EEO field: `workerSex` (text: `'M'` | `'F'` | `'N'` | null). Extends existing `race` and `ethnicity` columns from v4.0 (IL) — no new race/ethnicity columns needed. `workerSex` shown on WorkersPage for NJ projects (and alongside existing demographics for IL projects).
-- [ ] **NJ-03** — NJ MW-562 PDF generator (`njPdfGenerator.ts`): contractor header with NJ contractor reg number, per-worker rows with EEO columns (sex/race/ethnicity using standard NJ 6-code race system), FICA/federal income tax/state income tax deduction columns, statement of compliance with NJ-specific certification language.
+- [x] **NJ-03** — NJ MW-562 PDF generator (`njPdfGenerator.ts`): contractor header with NJ contractor reg number, per-worker rows with EEO columns (sex/race/ethnicity using standard NJ 6-code race system), FICA/federal income tax/state income tax deduction columns, statement of compliance with NJ-specific certification language.
 
 ---
 

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to plan
-stopped_at: Completed 51-02-PLAN.md — NJ client UI wiring (ProjectForm, WorkersPage, PayrollWeekDetailPage)
-last_updated: "2026-04-14T07:47:53.795Z"
+status: Ready to execute
+stopped_at: Completed 52-01-PLAN.md — NJ deduction columns, payrollService extension, PayrollWeekForm NJ UI
+last_updated: "2026-04-14T08:07:32.927Z"
 progress:
   total_phases: 37
   completed_phases: 29
-  total_plans: 74
-  completed_plans: 74
+  total_plans: 76
+  completed_plans: 75
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 51 — nj-schema-routes
+**Current focus:** Phase 52 — nj-pdf-generator
 
 ## Current Position
 
-Phase: 52
-Plan: Not started
+Phase: 52 (nj-pdf-generator) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -149,6 +149,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 51-nj-schema-routes]: workerSex uses text() not integer — EEO sex codes M/F/N are not boolean; Zod enum enforces valid values at route layer; no NJ state gate on workers route
 - [Phase 51-nj-schema-routes]: NJ export stub returns 501 following assertProjectAccess before state gate (NFR-03); Phase 52 implements the PDF generator
 - [Phase 51-nj-schema-routes]: Indigo color scheme for NJ blocks distinct from MA teal; workerSex sent only in isNJ mutation branch; STATE_FORMS NJ entry uses route key nj-mw562 matching server path
+- [Phase 52]: ficaTax/federalIncomeTax/stateIncomeTax use nullable real() with no .notNull()/.default() — matches fringeHealthWelfare pattern
+- [Phase 52]: Amendment clone carries NJ deduction fields verbatim per 29 CFR Part 3 (user-entered data, not computed)
 
 ### Phase Order Rationale
 
@@ -181,7 +183,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T07:44:24.564Z
-Stopped at: Completed 51-02-PLAN.md — NJ client UI wiring (ProjectForm, WorkersPage, PayrollWeekDetailPage)
+Last session: 2026-04-14T08:07:32.923Z
+Stopped at: Completed 52-01-PLAN.md — NJ deduction columns, payrollService extension, PayrollWeekForm NJ UI
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
