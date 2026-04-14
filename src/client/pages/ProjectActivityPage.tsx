@@ -126,6 +126,14 @@ export function ProjectActivityPage() {
     setSearchParams(next);
   }
 
+  function handleExportCsv() {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const url = `/api/audit/${projectId}/csv${params.size > 0 ? '?' + params.toString() : ''}`;
+    window.location.href = url;
+  }
+
   function handlePageChange(newPage: number) {
     const next = new URLSearchParams(searchParams);
     next.set('page', String(newPage));
@@ -194,6 +202,12 @@ export function ProjectActivityPage() {
                 Clear filters
               </button>
             )}
+            <button
+              onClick={handleExportCsv}
+              className="px-3 py-1.5 text-sm border border-brand-gold text-brand-gold rounded hover:bg-brand-gold/10 transition-colors"
+            >
+              Export CSV
+            </button>
           </div>
         </Card>
 

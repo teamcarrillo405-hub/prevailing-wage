@@ -8,6 +8,72 @@ import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 const router = Router();
 router.use(requireAuth);
 
+// GET /api/audit/:projectId/csv — full audit log as CSV download (AUDIT-05)
+router.get('/:projectId/csv', async (req, res) => {
+  const projectId = req.params.projectId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const from = req.query.from as string | undefined;
+  const to = req.query.to as string | undefined;
+
+  const conditions: ReturnType<typeof eq>[] = [eq(auditLogs.projectId, projectId)];
+  if (from) conditions.push(gte(auditLogs.createdAt, from));
+  if (to) conditions.push(lte(auditLogs.createdAt, to + 'T23:59:59.999Z'));
+
+  const rows = await db.select()
+    .from(auditLogs)
+    .where(and(...conditions))
+    .orderBy(desc(auditLogs.createdAt));
+
+  function sanitize(value: string): string {
+    if (/^[=+\-@]/.test(value)) return `'${value}`;
+    return value;
+  }
+
+  function toDetails(meta: string | null): string {
+    if (!meta) return '';
+    try {
+      const obj = JSON.parse(meta) as Record<string, unknown>;
+      return Object.entries(obj)
+        .map(([k, v]) => `${k}=${String(v)}`)
+        .join('; ');
+    } catch {
+      return meta;
+    }
+  }
+
+  function csvRow(cells: string[]): string {
+    return cells.map(c => `"${c.replace(/"/g, '""')}"`).join(',');
+  }
+
+  const header = csvRow(['Date', 'User', 'Entity Type', 'Entity ID', 'Action', 'Details']);
+  const lines = rows.map(row => csvRow([
+    sanitize(row.createdAt),
+    sanitize(row.userEmail ?? ''),
+    sanitize(row.entityType),
+    sanitize(row.entityId),
+    sanitize(row.action),
+    sanitize(toDetails(row.meta)),
+  ]));
+
+  const csvText = [header, ...lines].join('\r\n');
+  // Prepend UTF-8 BOM (EF BB BF) as raw bytes so Excel auto-detects UTF-8
+  const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+  const csvBuffer = Buffer.concat([bom, Buffer.from(csvText, 'utf8')]);
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="project-audit-${projectId}.csv"`);
+  res.send(csvBuffer);
+});
+
 // GET /api/audit/:projectId — paginated audit log (AUDIT-04)
 // NFR-03: assertProjectAccess called before any data access
 router.get('/:projectId', async (req, res) => {

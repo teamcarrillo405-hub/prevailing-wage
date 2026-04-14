@@ -225,3 +225,77 @@ describe('GET /api/audit/:projectId', () => {
     expect(typeof res.body.items[0].meta).toBe('object');
   });
 });
+
+// ── AUDIT-05: CSV Export ───────────────────────────────────────────────────
+
+describe('GET /api/audit/:projectId/csv', () => {
+  it('returns 403 for unauthorized user (non-owner)', async () => {
+    const ownerCookie = await registerAndLogin('csv-owner');
+    const otherCookie = await registerAndLogin('csv-other');
+    const projectId = await createProject(ownerCookie);
+
+    const res = await supertest(app)
+      .get(`/api/audit/${projectId}/csv`)
+      .set('Cookie', otherCookie);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 200 with CSV content-type for authorized user', async () => {
+    const cookie = await registerAndLogin('csv-200');
+    const projectId = await createProject(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/audit/${projectId}/csv`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+  });
+
+  it('CSV starts with UTF-8 BOM (EF BB BF)', async () => {
+    const cookie = await registerAndLogin('csv-bom');
+    const projectId = await createProject(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/audit/${projectId}/csv`)
+      .set('Cookie', cookie)
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.body[0]).toBe(0xef);
+    expect(res.body[1]).toBe(0xbb);
+    expect(res.body[2]).toBe(0xbf);
+  });
+
+  it('formula injection: action starting with = is prefixed with single quote', async () => {
+    const cookie = await registerAndLogin('csv-inject');
+    const projectId = await createProject(cookie);
+    const db = getDb();
+
+    await db.insert(auditLogs).values({
+      id: randomUUID(),
+      createdAt: new Date().toISOString(),
+      userId: null,
+      userEmail: 'csv-inject@test.com',
+      ipAddress: null,
+      projectId,
+      entityType: 'worker',
+      entityId: randomUUID(),
+      action: '=HYPERLINK("http://evil.com","Click")',
+      diff: null,
+      snapshot: null,
+      meta: JSON.stringify({ workerName: 'Test Worker' }),
+    });
+
+    const res = await supertest(app)
+      .get(`/api/audit/${projectId}/csv`)
+      .set('Cookie', cookie);
+
+    expect(res.text).toContain("'=HYPERLINK");
+  });
+});
