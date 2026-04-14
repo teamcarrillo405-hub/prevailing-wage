@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
-type BadgeVariant = 'compliant' | 'violation' | 'warning' | 'neutral';
+export type BadgeVariant = 'compliant' | 'violation' | 'warning' | 'neutral';
 
 interface BadgeProps {
   variant: BadgeVariant;
