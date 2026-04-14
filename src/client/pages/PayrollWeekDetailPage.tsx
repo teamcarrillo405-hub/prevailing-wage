@@ -1037,7 +1037,11 @@ export function PayrollWeekDetailPage() {
                 variant="secondary"
                 size="sm"
                 disabled={generating}
-                onClick={() => handleStateFormDownload(stateFormConfig.route, weekId)}
+                onClick={() =>
+                  stateFormConfig.route === 'a1131'
+                    ? handleCaDownloadClick()
+                    : handleStateFormDownload(stateFormConfig.route, weekId)
+                }
               >
                 {stateFormConfig.downloadLabel}
               </Button>
