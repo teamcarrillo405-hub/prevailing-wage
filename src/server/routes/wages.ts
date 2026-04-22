@@ -75,7 +75,7 @@ wagesRouter.get('/coverage', async (_req, res) => {
     .orderBy(wageDeterminations.state)
     .all();
 
-  const byState = byStateRaw.map(r => ({
+  const byState = byStateRaw.map((r: typeof byStateRaw[number]) => ({
     state: r.state,
     wdCount: Number(r.wdCount),
     countyCount: Number(r.countyCount),
@@ -93,8 +93,8 @@ wagesRouter.get('/coverage', async (_req, res) => {
   return res.json({
     byState,
     totalStates: byState.length,
-    totalWds: byState.reduce((sum, r) => sum + r.wdCount, 0),
-    totalCounties: byState.reduce((sum, r) => sum + r.countyCount, 0),
+    totalWds: byState.reduce((sum: number, r: typeof byState[number]) => sum + r.wdCount, 0),
+    totalCounties: byState.reduce((sum: number, r: typeof byState[number]) => sum + r.countyCount, 0),
     latestSync: latestSync ?? null,
   });
 });

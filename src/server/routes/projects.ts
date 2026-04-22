@@ -145,7 +145,7 @@ router.get('/', async (req, res) => {
     )
     .where(statusCondition);
 
-  res.json({ data: { projects: userProjects.map(r => r.project) } });
+  res.json({ data: { projects: userProjects.map((r: { project: typeof projects.$inferSelect }) => r.project) } });
 });
 
 // GET /api/projects/:id — get single project

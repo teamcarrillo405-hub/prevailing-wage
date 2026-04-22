@@ -55,7 +55,7 @@ router.get('/:projectId/csv', async (req, res) => {
   }
 
   const header = csvRow(['Date', 'User', 'Entity Type', 'Entity ID', 'Action', 'Details']);
-  const lines = rows.map(row => csvRow([
+  const lines = rows.map((row: typeof auditLogs.$inferSelect) => csvRow([
     sanitize(row.createdAt),
     sanitize(row.userEmail ?? ''),
     sanitize(row.entityType),
@@ -119,7 +119,7 @@ router.get('/:projectId', async (req, res) => {
   ]);
 
   // Parse JSON text columns for client consumption
-  const parsed = items.map(row => ({
+  const parsed = items.map((row: typeof auditLogs.$inferSelect) => ({
     ...row,
     diff: row.diff ? JSON.parse(row.diff) : null,
     snapshot: row.snapshot ? JSON.parse(row.snapshot) : null,
