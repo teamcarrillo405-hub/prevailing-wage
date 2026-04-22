@@ -93,6 +93,24 @@ export function PayrollWizard({ projectId, weekId }: Props) {
     return <Navigate to={`/projects/${projectId}/payroll/${weekId}`} replace />;
   }
 
+  // Mid-session lock: another tab submitted the week while this one was editing.
+  if (state.locked) {
+    return (
+      <div className="p-6 rounded-sm border border-red-300 bg-red-50">
+        <h3 className="text-sm font-semibold text-red-900 mb-2">Payroll week was submitted</h3>
+        <p className="text-sm text-red-800 mb-3">
+          Changes can't be saved. To make changes, go to the payroll detail page and use the amend flow.
+        </p>
+        <a
+          href={`/projects/${projectId}/payroll/${state.weekId}`}
+          className="text-sm font-semibold text-red-900 underline"
+        >
+          Open detail page →
+        </a>
+      </div>
+    );
+  }
+
   if (state.step === 'roster') {
     return (
       <>
