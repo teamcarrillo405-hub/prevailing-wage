@@ -52,6 +52,53 @@ wagesRouter.get('/lookup', async (req, res) => {
   return res.json({ wd, classifications: wd.classifications ?? [] });
 });
 
+// GET /api/wages/coverage
+// Aggregate health view: per-state WD counts, distinct counties, last-sync status.
+// Powers the admin coverage dashboard.
+wagesRouter.get('/coverage', async (_req, res) => {
+  const { getDb } = await import('../db/index.js');
+  const { wageDeterminations, wageSyncMeta } = await import('../db/schema.js');
+  const { sql, desc } = await import('drizzle-orm');
+  const db = getDb();
+
+  // Per-state aggregate
+  const byStateRaw = db
+    .select({
+      state: wageDeterminations.state,
+      wdCount: sql<number>`count(*)`.as('wdCount'),
+      countyCount: sql<number>`count(distinct coalesce(${wageDeterminations.county}, '__statewide__'))`.as('countyCount'),
+      cached: sql<number>`sum(case when ${wageDeterminations.rawDocument} is not null then 1 else 0 end)`.as('cached'),
+    })
+    .from(wageDeterminations)
+    .where(sql`${wageDeterminations.isActive} = 1`)
+    .groupBy(wageDeterminations.state)
+    .orderBy(wageDeterminations.state)
+    .all();
+
+  const byState = byStateRaw.map(r => ({
+    state: r.state,
+    wdCount: Number(r.wdCount),
+    countyCount: Number(r.countyCount),
+    cached: Number(r.cached),
+  }));
+
+  // Latest sync run
+  const [latestSync] = db
+    .select()
+    .from(wageSyncMeta)
+    .orderBy(desc(wageSyncMeta.startedAt))
+    .limit(1)
+    .all();
+
+  return res.json({
+    byState,
+    totalStates: byState.length,
+    totalWds: byState.reduce((sum, r) => sum + r.wdCount, 0),
+    totalCounties: byState.reduce((sum, r) => sum + r.countyCount, 0),
+    latestSync: latestSync ?? null,
+  });
+});
+
 // GET /api/wages/:id
 // Returns { wd, classifications } or 404.
 wagesRouter.get('/:id', (req, res) => {
