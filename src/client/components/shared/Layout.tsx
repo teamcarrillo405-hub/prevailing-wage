@@ -30,6 +30,12 @@ export function Layout({ children }: LayoutProps) {
             <Link to="/wages" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
               Wage Lookup
             </Link>
+            <Link to="/cost-estimation" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
+              Cost Estimator
+            </Link>
+            <Link to="/admin/coverage" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
+              Coverage
+            </Link>
             <button
               onClick={handleLogout}
               className="text-sm text-gray-300 hover:text-white px-3 py-1.5 border border-gray-600 hover:border-gray-400 rounded transition-colors"
