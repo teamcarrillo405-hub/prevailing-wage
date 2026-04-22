@@ -1,0 +1,686 @@
+[
+  {
+    "state": "CA",
+    "wdNumber": "CA20250001",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250001",
+    "county": null,
+    "publishDate": "2025-01-24"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250002",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250002",
+    "county": null,
+    "publishDate": "2025-01-24"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250004",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250004",
+    "county": null,
+    "publishDate": "2025-02-21"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250005",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250005",
+    "county": "Del Norte",
+    "publishDate": "2025-12-12"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250007",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250007",
+    "county": null,
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250008",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250008",
+    "county": null,
+    "publishDate": "2025-12-12"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250009",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250009",
+    "county": "Fresno",
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250011",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250011",
+    "county": null,
+    "publishDate": "2025-12-12"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250012",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250012",
+    "county": null,
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250013",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250013",
+    "county": null,
+    "publishDate": "2025-12-12"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250014",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250014",
+    "county": null,
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250015",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250015",
+    "county": null,
+    "publishDate": "2025-01-24"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250016",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250016",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250017",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250017",
+    "county": "Imperial",
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250018",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250018",
+    "county": null,
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250019",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250019",
+    "county": "Alameda",
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250020",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250020",
+    "county": null,
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250021",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250021",
+    "county": null,
+    "publishDate": "2025-02-21"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250022",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250022",
+    "county": null,
+    "publishDate": "2025-01-24"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250023",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250023",
+    "county": null,
+    "publishDate": "2025-12-12"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250024",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250024",
+    "county": null,
+    "publishDate": "2025-01-24"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250025",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250025",
+    "county": null,
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250026",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250026",
+    "county": null,
+    "publishDate": "2025-01-10"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250027",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250027",
+    "county": null,
+    "publishDate": "2025-02-21"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250028",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250028",
+    "county": null,
+    "publishDate": "2025-02-21"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250029",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250029",
+    "county": null,
+    "publishDate": "2025-02-21"
+  },
+  {
+    "state": "CA",
+    "wdNumber": "CA20250030",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "CA20250030",
+    "county": null,
+    "publishDate": "2025-02-21"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250001",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250001",
+    "county": null,
+    "publishDate": "2025-02-21"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250002",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250002",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250003",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250003",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250004",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250004",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250005",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250005",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250006",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250006",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250007",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250007",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250008",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250008",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250009",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250009",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250010",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250010",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250011",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250011",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250012",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250012",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250013",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250013",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250014",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250014",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250015",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250015",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250016",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250016",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250017",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250017",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250018",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250018",
+    "county": null,
+    "publishDate": "2025-05-16"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250019",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250019",
+    "county": null,
+    "publishDate": "2025-03-14"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250020",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250020",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250021",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250021",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250022",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250022",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250023",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250023",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250024",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250024",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250025",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250025",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250026",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250026",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250027",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250027",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250029",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250029",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250030",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250030",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250031",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250031",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250032",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250032",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250033",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250033",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250034",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250034",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250035",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250035",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250036",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250036",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250037",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250037",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250038",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250038",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250039",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250039",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250040",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250040",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250041",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250041",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250042",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250042",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250043",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250043",
+    "county": null,
+    "publishDate": "2025-05-16"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250044",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250044",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250045",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250045",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250046",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250046",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250047",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250047",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250048",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250048",
+    "county": null,
+    "publishDate": "2025-02-28"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250049",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250049",
+    "county": null,
+    "publishDate": "2025-02-07"
+  },
+  {
+    "state": "NY",
+    "wdNumber": "NY20250050",
+    "revision": 0,
+    "status": "valid",
+    "fullReferenceNumber": "NY20250050",
+    "county": null,
+    "publishDate": "2025-02-07"
+  }
+]
