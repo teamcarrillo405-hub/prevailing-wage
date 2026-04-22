@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';
 import { useWizardState } from './useWizardState';
-import { Step1Roster, type Step1Values } from './Step1Roster';
+import { Step1Roster, type Step1Values, type RosterRow } from './Step1Roster';
+import { Step2HoursGrid, type GridWorkerRow } from './Step2HoursGrid';
+import type { RowValues } from './Step2GridRow';
 import { api } from '../../lib/api';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
 
@@ -106,13 +108,60 @@ export function PayrollWizard({ projectId, weekId }: Props) {
   }
 
   if (state.step === 'hours') {
-    const entryCount = weekData?.entries.length ?? step1?.roster.filter((r) => r.included).length ?? 0;
+    const gridRows = buildGridRows(step1, weekData);
     return (
-      <div className="text-sm text-gray-500">
-        Step 2 — hours grid (wired in later tasks). Week: {state.weekId}. Workers: {entryCount}.
-      </div>
+      <Step2HoursGrid
+        initialRows={gridRows}
+        onRowChange={(_row) => {
+          /* dirty-set + debounced save wired in T13 */
+        }}
+        onReview={() => dispatch({ type: 'ADVANCE' })}
+        onBack={() => dispatch({ type: 'GO_BACK' })}
+      />
     );
   }
 
   return <div className="text-sm text-gray-500">Step 3 — review (wired in later tasks)</div>;
+}
+
+function emptyRowValues(): RowValues {
+  return {
+    monSt: 0, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
+    monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+  };
+}
+
+function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefined): GridWorkerRow[] {
+  // Edit mode: derive rows from existing entries
+  if (weekData) {
+    return weekData.entries.map((e) => ({
+      workerId: e.entry.workerId,
+      classificationId: e.entry.classificationId,
+      workerName: e.workerName,
+      tradeDescription: e.tradeDescription,
+      baseRate: e.entry.baseRateSnapshot,
+      fringeRate: e.entry.fringeRateSnapshot,
+      values: {
+        monSt: e.entry.monSt, tueSt: e.entry.tueSt, wedSt: e.entry.wedSt, thuSt: e.entry.thuSt,
+        friSt: e.entry.friSt, satSt: e.entry.satSt, sunSt: e.entry.sunSt,
+        monOt: e.entry.monOt, tueOt: e.entry.tueOt, wedOt: e.entry.wedOt, thuOt: e.entry.thuOt,
+        friOt: e.entry.friOt, satOt: e.entry.satOt, sunOt: e.entry.sunOt,
+      },
+    }));
+  }
+  // Create mode: derive from Step 1 roster (included workers only)
+  if (step1) {
+    return step1.roster
+      .filter((r: RosterRow) => r.included)
+      .map((r) => ({
+        workerId: r.workerId,
+        classificationId: r.classificationId,
+        workerName: r.workerName,
+        tradeDescription: r.tradeDescription,
+        baseRate: r.baseRate,
+        fringeRate: r.fringeRate,
+        values: emptyRowValues(),
+      }));
+  }
+  return [];
 }
