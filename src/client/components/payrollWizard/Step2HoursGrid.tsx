@@ -1,5 +1,5 @@
 // src/client/components/payrollWizard/Step2HoursGrid.tsx
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Step2GridRow, type RowValues } from './Step2GridRow';
 import { Button } from '../ui/Button';
 
@@ -47,6 +47,33 @@ export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: P
     },
     [rows, onRowChange]
   );
+
+  // Keyboard nav: Enter + ArrowDown = next row same column, ArrowUp = prev row same column.
+  // Tab/Shift-Tab handled by browser defaults. All grid cells carry data-worker-id + data-field.
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      const target = e.target as HTMLInputElement;
+      if (target.tagName !== 'INPUT') return;
+      if (!target.dataset.workerId || !target.dataset.field) return;
+      if (e.key !== 'Enter' && e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      const field = target.dataset.field;
+      const currentKey = `${target.dataset.workerId}::${target.dataset.classificationId}`;
+      const idx = rows.findIndex((r) => `${r.workerId}::${r.classificationId}` === currentKey);
+      if (idx === -1) return;
+      const nextIdx =
+        e.key === 'ArrowUp' ? Math.max(0, idx - 1) : Math.min(rows.length - 1, idx + 1);
+      if (nextIdx === idx) return;
+      const nextRow = rows[nextIdx];
+      const sel = document.querySelector<HTMLInputElement>(
+        `input[data-worker-id="${nextRow.workerId}"][data-classification-id="${nextRow.classificationId}"][data-field="${field}"]`
+      );
+      sel?.focus();
+      sel?.select();
+    }
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [rows]);
 
   return (
     <div>
