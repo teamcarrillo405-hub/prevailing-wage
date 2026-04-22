@@ -1,0 +1,5 @@
+{
+  "pageSize": { "w": 1008, "h": 612 },
+  "note": "PENDING: page has /Rotate=90 — widget rectangles need solution (see README). Coordinates below are LANDSCAPE (lx 0-1008, ly 0-612) as the existing a1131Generator uses.",
+  "widgets": []
+}
