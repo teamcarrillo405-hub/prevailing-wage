@@ -32,7 +32,7 @@ each form's directory.
 | M1.3 | NY PW-12 | `pw12Generator.ts` | Create-from-scratch, 447 lines, dual ST/OT | Medium |
 | M1.4 | NJ MW-562 | `njPdfGenerator.ts` | Create-from-scratch, 540 lines, EEO columns | Medium |
 | M1.5 | MA Certified Payroll | `maPdfGenerator.ts` | Create-from-scratch, 565 lines, OSHA cols | Large |
-| M1.6 | Multi-project Compliance PDF | `complianceSummaryPdfGenerator.ts` | Small, 103 lines | Small |
+| ~~M1.6~~ | ~~Multi-project Compliance PDF~~ | `complianceSummaryPdfGenerator.ts` | **NOT A WIDGET CANDIDATE** — dynamic report with variable-length project list; pagination is data-driven. Coordinate-overlay is correct here. Leave as-is. | n/a |
 | M1.7 | WA L&I F700 | `f700Generator.ts` | Currently unimplemented skeleton — build + port together | Medium |
 
 **Exit criteria:** all 7 generators fill by widget name + flatten. Zero
