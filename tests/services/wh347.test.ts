@@ -171,13 +171,35 @@ describe('multi-page WH-347', () => {
     filledBytes9 = await fillWh347(FIXTURE_9_WORKERS, templateBytes);
   });
 
-  // NOTE: the widget-template generator currently ships single-page-set only.
-  // 9-worker input is truncated to the first 8. Overflow (4-page output for
-  // 9+ workers) is pending follow-up work and will require duplicating the
-  // widget template with set-prefixed field names.
-  it('9 workers currently render as a single 2-page set (overflow pending)', async () => {
+  it('produces 4 pages for 9 workers (2 page-sets)', async () => {
     const doc = await PDFDocument.load(filledBytes9);
-    expect(doc.getPageCount()).toBe(2);
+    expect(doc.getPageCount()).toBe(4);
+  });
+
+  it('produces 6 pages for 17 workers (3 page-sets: 8+8+1)', { timeout: 30000 }, async () => {
+    const FIXTURE_17: Wh347Data = {
+      ...FIXTURE,
+      workers: Array.from({ length: 17 }, (_, i) => ({
+        entryNo: i + 1,
+        workerName: `Worker ${i + 1}, Test`,
+        laborType: 'journeyworker' as const,
+        identifyingNo: String(2000 + i),
+        classification: 'Carpenter',
+        monSt: 8, monOt: 0,
+        tueSt: 8, tueOt: 0,
+        wedSt: 8, wedOt: 0,
+        thuSt: 8, thuOt: 0,
+        friSt: 8, friOt: 0,
+        satSt: 0, satOt: 0,
+        totalSt: 40, totalOt: 0,
+        baseRate: 50, fringeCredit: 10,
+        grossWagesProject: 2000, grossWagesAll: 2000,
+        deductions: 300, netPay: 1700,
+      })),
+    };
+    const bytes = await fillWh347(FIXTURE_17, templateBytes);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(6);
   });
 });
 

@@ -124,27 +124,52 @@ export async function fillWh347(
   data: Wh347Data,
   templateBytes: Uint8Array,
 ): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.load(templateBytes);
-  const form = pdfDoc.getForm();
-
-  // ── Chunk workers into page-sets of ROWS_PER_PAGE ───────────────────────
+  // Chunk workers into page-sets of ROWS_PER_PAGE. Empty worker list still
+  // produces one (empty) page-set so every form renders the header.
   const chunks: Wh347WorkerRow[][] = [];
   for (let i = 0; i < data.workers.length; i += ROWS_PER_PAGE) {
     chunks.push(data.workers.slice(i, i + ROWS_PER_PAGE));
   }
   if (chunks.length === 0) chunks.push([]);
 
-  // For overflow (>8 workers), duplicate the 2-page template and suffix
-  // subsequent set widget names with `__s{N}`. First set uses the original
-  // widget names baked into the template. See overflow note below.
-  // NOTE: first iteration ships single-page-set only. Overflow handling is
-  // a follow-up.
-  if (chunks.length > 1) {
-    // Truncate to first ROWS_PER_PAGE for now — overflow support pending.
-    chunks.length = 1;
+  // Single-set fast path: fill + flatten + return directly.
+  if (chunks.length === 1) {
+    return fillSingleSet(data, chunks[0], 1, 1, templateBytes);
   }
 
-  const workers = chunks[0];
+  // Overflow path: each 8-worker chunk gets its own filled+flattened copy of
+  // the 2-page template. We merge all of them into one master PDF.
+  //
+  // This avoids AcroForm widget-name collisions entirely: after flatten(),
+  // each chunk's widgets become inline content (PDF operators), so copying
+  // pages into the master doc carries no widget state.
+  const filledSets: Uint8Array[] = [];
+  for (let setIdx = 0; setIdx < chunks.length; setIdx++) {
+    filledSets.push(
+      await fillSingleSet(data, chunks[setIdx], setIdx + 1, chunks.length, templateBytes),
+    );
+  }
+
+  const master = await PDFDocument.create();
+  for (const bytes of filledSets) {
+    const src = await PDFDocument.load(bytes);
+    const pages = await master.copyPages(src, src.getPageIndices());
+    for (const p of pages) master.addPage(p);
+  }
+  return master.save();
+}
+
+// ── Per-set filler (fills one template copy with up to 8 workers) ─────────
+
+async function fillSingleSet(
+  data: Wh347Data,
+  workers: Wh347WorkerRow[],
+  setNumber: number,     // 1-based (shown as "Page X of Y")
+  totalSets: number,
+  templateBytes: Uint8Array,
+): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const form = pdfDoc.getForm();
 
   // ── Page 1 header ───────────────────────────────────────────────────────
   setText(form, 'header_projectName',         data.projectName);
@@ -160,6 +185,11 @@ export async function fillWh347(
   setCheck(form, 'cb_final', !!data.isFinal);
   setCheck(form, 'cb_prime', data.isPrime !== false);
   setCheck(form, 'cb_sub',   data.isPrime === false);
+
+  // Optional "Page X of Y" indicator widget, if template includes one
+  if (totalSets > 1) {
+    setText(form, 'pageOfPages', `Page ${setNumber} of ${totalSets}`);
+  }
 
   // ── Worker rows ─────────────────────────────────────────────────────────
   for (let i = 0; i < workers.length; i++) {
