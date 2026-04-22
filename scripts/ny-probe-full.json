@@ -1,0 +1,282 @@
+[
+  {
+    "wdNumber": "NY20260001",
+    "revision": 0,
+    "county": "New York",
+    "notes": "matched:Counties?:\\s*([A-Z][^\\n]+?)(?:Constructi",
+    "snippet": "\"General Decision Number: NY20260001 01/02/2026 |  | Superseded General Decision Number: NY20250001 |  | State: New York |  | Construction Type: Heavy Dredging |  | Counties: New York Statewide. | STATEWIDE |  | New York |  | All dredging, except self-propelled hopper dredges, on the | Atlantic Coast and tributary waters empty"
+  },
+  {
+    "wdNumber": "NY20260002",
+    "revision": 0,
+    "county": "by the wage",
+    "notes": "matched:Area[s]?\\s+Covered[:\\s]+([A-Z][^\\n]+)",
+    "snippet": "\"General Decision Number: NY20260002 01/02/2026 |  | Superseded General Decision Number: NY20250002 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | Counties: Albany, Columbia, Fulton, Greene, Montgomery,  | Rensselaer, Saratoga, Schenectady, Schoharie and Washington  | Counties in New Yor"
+  },
+  {
+    "wdNumber": "NY20260003",
+    "revision": 0,
+    "county": "by the wage",
+    "notes": "matched:Area[s]?\\s+Covered[:\\s]+([A-Z][^\\n]+)",
+    "snippet": "\"General Decision Number: NY20260003 01/02/2026 |  | Superseded General Decision Number: NY20250003 |  | State: New York |  | Construction Types: Building, Heavy, Highway and Residential |  |  | Counties: Bronx, Kings, New York, Queens and Richmond  | Counties in New York. |  |  | BUILDING & RESIDENTIAL CONSTRUCTION PROJECTS"
+  },
+  {
+    "wdNumber": "NY20260004",
+    "revision": 0,
+    "county": "by the wage",
+    "notes": "matched:Area[s]?\\s+Covered[:\\s]+([A-Z][^\\n]+)",
+    "snippet": "\"General Decision Number: NY20260004 01/02/2026 |  | Superseded General Decision Number: NY20250004 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | Counties: Broome and Chenango Counties in New York. |  | BUILDING CONSTRUCTION PROJECTS FOR BROOME COUNTY ONLY (does not | include single famil"
+  },
+  {
+    "wdNumber": "NY20260005",
+    "revision": 0,
+    "county": "by the wage",
+    "notes": "matched:Area[s]?\\s+Covered[:\\s]+([A-Z][^\\n]+)",
+    "snippet": "\"General Decision Number: NY20260005 01/02/2026 |  | Superseded General Decision Number: NY20250005 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | Counties: Chemung and Schuyler Counties in New York. |  | BUILDING CONSTRUCTION PROJECTS FOR CHEMUNG COUNTY ONLY (does | not include single fam"
+  },
+  {
+    "wdNumber": "NY20260007",
+    "revision": 0,
+    "county": "by the wage",
+    "notes": "matched:Area[s]?\\s+Covered[:\\s]+([A-Z][^\\n]+)",
+    "snippet": "\"General Decision Number: NY20260007 01/02/2026 |  | Superseded General Decision Number: NY20250007 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | Counties: Dutchess, Orange, Sullivan and Ulster Counties in  | New York. |  |  | BUILDING  CONSTRUCTION PROJECTS FOR ALL COUNTIES EXCEPT | SULLIVAN"
+  },
+  {
+    "wdNumber": "NY20260008",
+    "revision": 0,
+    "county": "by the wage",
+    "notes": "matched:Area[s]?\\s+Covered[:\\s]+([A-Z][^\\n]+)",
+    "snippet": "\"General Decision Number: NY20260008 01/02/2026 |  | Superseded General Decision Number: NY20250008 |  | State: New York |  | Construction Types: Heavy and Highway |  | Counties: Cattaraugus, Chautauqua and Erie Counties in New  | York. |  | HEAVY CONSTRUCTION PROJECTS: CHAUTAUQUA AND ERIE COUNTIES; AND  | HIGHWAY CONSTRUC"
+  },
+  {
+    "wdNumber": "NY20260009",
+    "revision": 0,
+    "county": "by the wage",
+    "notes": "matched:Area[s]?\\s+Covered[:\\s]+([A-Z][^\\n]+)",
+    "snippet": "\"General Decision Number: NY20260009 01/02/2026 |  | Superseded General Decision Number: NY20250009 |  | State: New York |  | Construction Types: Heavy and Highway |  | Counties: Jefferson, Lewis and St Lawrence Counties in New  | York. |  |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS: |  | Modification Number     Publication D"
+  },
+  {
+    "wdNumber": "NY20260010",
+    "revision": 0,
+    "county": "Monroe County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260010 01/02/2026 |  | Superseded General Decision Number: NY20250010 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | County: Monroe County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include single family | homes and apartments up to and includi"
+  },
+  {
+    "wdNumber": "NY20260011",
+    "revision": 0,
+    "county": "Niagara County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260011 01/02/2026 |  | Superseded General Decision Number: NY20250011 |  | State: New York |  | Construction Types: Heavy and Highway |  | County: Niagara County in New York. |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date |           0             01/0"
+  },
+  {
+    "wdNumber": "NY20260012",
+    "revision": 0,
+    "county": "by the wage",
+    "notes": "matched:Area[s]?\\s+Covered[:\\s]+([A-Z][^\\n]+)",
+    "snippet": "\"General Decision Number: NY20260012 01/02/2026 |  | Superseded General Decision Number: NY20250012 |  | State: New York |  | Construction Types: Building, Heavy, Highway and Residential |  |  | Counties: Nassau and Suffolk Counties in New York. |  | BUILDING CONSTRUCTION PROJECTS, RESIDENTIAL CONSTRUCTION | PROJECTS (incl"
+  },
+  {
+    "wdNumber": "NY20260013",
+    "revision": 0,
+    "county": "Oneida County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260013 01/02/2026 |  | Superseded General Decision Number: NY20250013 |  | State: New York |  | Construction Type: Building |  | County: Oneida County in New York. |  | BUILDING CONSTRUCTION PROJECTS (excluding single family homes | and apartment up to and including 4 stories) |  |  | Modification"
+  },
+  {
+    "wdNumber": "NY20260014",
+    "revision": 0,
+    "county": "Oneida County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260014 01/02/2026 |  | Superseded General Decision Number: NY20250014 |  | State: New York |  | Construction Types: Heavy and Highway | HEAVY & HIGHWAY CONSTRUCTION |  | County: Oneida County in New York. |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date | "
+  },
+  {
+    "wdNumber": "NY20260015",
+    "revision": 0,
+    "county": "Madison County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260015 01/02/2026 |  | Superseded General Decision Number: NY20250015 |  | State: New York |  | Construction Types: Heavy and Highway |  | County: Madison County in New York. |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date |           0             01/0"
+  },
+  {
+    "wdNumber": "NY20260016",
+    "revision": 0,
+    "county": "Onondaga County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260016 01/02/2026 |  | Superseded General Decision Number: NY20250016 |  | State: New York |  | Construction Types: Heavy and Highway |  | County: Onondaga County in New York. |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date |           0             01/"
+  },
+  {
+    "wdNumber": "NY20260017",
+    "revision": 0,
+    "county": "Westchester County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260017 01/02/2026 |  | Superseded General Decision Number: NY20250017 |  | State: New York |  | Construction Types: Building, Heavy, Highway and Residential |  |  | County: Westchester County in New York. |  | BUILDING CONSTRUCTION PROJECTS, RESIDENTIAL CONSTRUCTION | PROJECTS (consisting of s"
+  },
+  {
+    "wdNumber": "NY20260020",
+    "revision": 0,
+    "county": "Rockland County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260020 01/02/2026 |  | Superseded General Decision Number: NY20250020 |  | State: New York |  | Construction Types: Building, Heavy, Highway and Residential |  |  | County: Rockland County in New York. |  | BUILDING; HEAVY; HIGHWAY; AND RESIDENTIAL CONSTRUCTION PROJECTS | (Includes single fami"
+  },
+  {
+    "wdNumber": "NY20260022",
+    "revision": 0,
+    "county": "Jefferson County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260022 01/02/2026 |  | Superseded General Decision Number: NY20250022 |  | State: New York |  | Construction Type: Building |  | County: Jefferson County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include single family | homes or apartments up to and including 4 stories). |  |  | M"
+  },
+  {
+    "wdNumber": "NY20260023",
+    "revision": 0,
+    "county": "Madison County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260023 01/02/2026 |  | Superseded General Decision Number: NY20250023 |  | State: New York |  | Construction Type: Building |  | County: Madison County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include single family | homes or apartments up to and including 4 stories). |  |  | Mod"
+  },
+  {
+    "wdNumber": "NY20260024",
+    "revision": 0,
+    "county": "Tompkins County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260024 01/02/2026 |  | Superseded General Decision Number: NY20250024 |  | State: New York |  | Construction Type: Highway |  | County: Tompkins County in New York. |  | HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date |           0             01/02/2026 |  | * BRNY0003-0"
+  },
+  {
+    "wdNumber": "NY20260025",
+    "revision": 0,
+    "county": "Putnam County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260025 01/02/2026 |  | Superseded General Decision Number: NY20250025 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | County: Putnam County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single family"
+  },
+  {
+    "wdNumber": "NY20260026",
+    "revision": 0,
+    "county": "Onondaga County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260026 01/02/2026 |  | Superseded General Decision Number: NY20250026 |  | State: New York |  | Construction Type: Building |  | County: Onondaga County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include single family | homes or apartments up to and including 4 stories). |  |  | Mo"
+  },
+  {
+    "wdNumber": "NY20260027",
+    "revision": 0,
+    "county": "Oswego County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260027 01/02/2026 |  | Superseded General Decision Number: NY20250027 |  | State: New York |  | Construction Type: Building |  | County: Oswego County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include single family | homes or apartments up to and including 4 stories). |  |  | Modi"
+  },
+  {
+    "wdNumber": "NY20260029",
+    "revision": 0,
+    "county": "Genesee County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260029 01/02/2026 |  | Superseded General Decision Number: NY20250029 |  | State: New York |  | Construction Types: Heavy and Highway |  | County: Genesee County in New York. |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date |           0             01/0"
+  },
+  {
+    "wdNumber": "NY20260030",
+    "revision": 0,
+    "county": "Livingston County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260030 01/02/2026 |  | Superseded General Decision Number: NY20250030 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | County: Livingston County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single fa"
+  },
+  {
+    "wdNumber": "NY20260031",
+    "revision": 0,
+    "county": "Herkimer County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260031 01/02/2026 |  | Superseded General Decision Number: NY20250031 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | County: Herkimer County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single fami"
+  },
+  {
+    "wdNumber": "NY20260034",
+    "revision": 0,
+    "county": "Orleans County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260034 01/02/2026 |  | Superseded General Decision Number: NY20250034 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | County: Orleans County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single famil"
+  },
+  {
+    "wdNumber": "NY20260036",
+    "revision": 0,
+    "county": "Cayuga County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260036 01/02/2026 |  | Superseded General Decision Number: NY20250036 |  | State: New York |  | Construction Types: Heavy and Highway |  | County: Cayuga County in New York. |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS. |  | Modification Number     Publication Date |           0             01/0"
+  },
+  {
+    "wdNumber": "NY20260037",
+    "revision": 0,
+    "county": "Otsego County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260037 01/02/2026 |  | Superseded General Decision Number: NY20250037 |  | State: New York |  | Construction Types: Heavy and Highway |  | County: Otsego County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single family homes and"
+  },
+  {
+    "wdNumber": "NY20260038",
+    "revision": 0,
+    "county": "Oswego County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260038 01/02/2026 |  | Superseded General Decision Number: NY20250038 |  | State: New York |  | Construction Types: Heavy and Highway |  | County: Oswego County in New York. |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date |           0             01/02"
+  },
+  {
+    "wdNumber": "NY20260039",
+    "revision": 0,
+    "county": "Warren County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260039 01/02/2026 |  | Superseded General Decision Number: NY20250039 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | County: Warren County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single family"
+  },
+  {
+    "wdNumber": "NY20260040",
+    "revision": 0,
+    "county": "Seneca County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260040 01/02/2026 |  | Superseded General Decision Number: NY20250040 |  | State: New York |  | Construction Type: Highway |  | County: Seneca County in New York. |  | HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date |           0             01/02/2026 |  |  CARP0277-019 "
+  },
+  {
+    "wdNumber": "NY20260042",
+    "revision": 0,
+    "county": "Cortland County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260042 01/02/2026 |  | Superseded General Decision Number: NY20250042 |  | State: New York |  | Construction Type: Highway |  | County: Cortland County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single family homes and apartmen"
+  },
+  {
+    "wdNumber": "NY20260045",
+    "revision": 0,
+    "county": "Tioga County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260045 01/02/2026 |  | Superseded General Decision Number: NY20250045 |  | State: New York |  | Construction Types: Building, Heavy and Highway |  | County: Tioga County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single family "
+  },
+  {
+    "wdNumber": "NY20260046",
+    "revision": 0,
+    "county": "Hamilton County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260046 01/02/2026 |  | Superseded General Decision Number: NY20250046 |  | State: New York |  | Construction Types: Heavy and Highway |  | County: Hamilton County in New York. |  | HEAVY AND HIGHWAY CONSTRUCTION PROJECTS. |  | Modification Number     Publication Date |           0             01"
+  },
+  {
+    "wdNumber": "NY20260047",
+    "revision": 0,
+    "county": "Allegany County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260047 01/02/2026 |  | Superseded General Decision Number: NY20250047 |  | State: New York |  | Construction Type: Highway |  | County: Allegany County in New York. |  | HIGHWAY CONSTRUCTION PROJECTS |  | Modification Number     Publication Date |           0             01/02/2026 |  | * BRNY0003-0"
+  },
+  {
+    "wdNumber": "NY20260049",
+    "revision": 0,
+    "county": "Orange County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260049 01/02/2026 |  | Superseded General Decision Number: NY20250049 |  | State: New York |  | Construction Type: Residential |  | County: Orange County in New York. |  | RESIDENTIAL CONSTRUCTION PROJECTS (consisting of single family | homes and apartments up to and including 4 stories |  |  | Mo"
+  },
+  {
+    "wdNumber": "NY20260051",
+    "revision": 0,
+    "county": "Tompkins County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260051 01/02/2026 |  | Superseded General Decision Number: NY20250051 |  | State: New York |  | Construction Type: Building |  | County: Tompkins County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include residential | construction consisting of single family homes and apartme"
+  },
+  {
+    "wdNumber": "NY20260073",
+    "revision": 0,
+    "county": "Yates County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260073 01/02/2026 |  | Superseded General Decision Number: NY20250073 |  | State: New York |  | Construction Type: Building |  | County: Yates County in New York. |  | BUILDING CONSTRUCTION PROJECTS (does not include single family | homes or apartments up to and including 4 stories). |  |  | Modif"
+  },
+  {
+    "wdNumber": "NY20260113",
+    "revision": 0,
+    "county": "Otsego County",
+    "notes": "matched:County:\\s*([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)",
+    "snippet": "\"General Decision Number: NY20260113 01/02/2026 |  | Superseded General Decision Number: NY20250113 |  | State: New York |  | Construction Type: Building | BUILDING CONSTRUCTION PROJECTS (does not include single family  | homes or apartments up to and including 4 stories). |  |  | County: Otsego County in New York. |  | BUIL"
+  }
+]

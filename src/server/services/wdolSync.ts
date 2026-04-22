@@ -35,6 +35,49 @@ export const WD_SEED_LIST: Array<{
   { wdNumber: 'TX20250001', state: 'TX', county: null, revision: 0 },
   { wdNumber: 'FL20250001', state: 'FL', county: null, revision: 0 },
   { wdNumber: 'NY20250046', state: 'NY', county: 'New York', revision: 2 },
+  // 2026 NY WDs — user-provided batch, county parsed from WD document text
+  // via scripts/probe-ny-wds.mts. 32 of 40 reliably parsed.
+  { wdNumber: 'NY20260001', state: 'NY', county: 'New York',    revision: 0 },
+  { wdNumber: 'NY20260010', state: 'NY', county: 'Monroe',      revision: 0 },
+  { wdNumber: 'NY20260011', state: 'NY', county: 'Niagara',     revision: 0 },
+  { wdNumber: 'NY20260013', state: 'NY', county: 'Oneida',      revision: 0 },
+  { wdNumber: 'NY20260014', state: 'NY', county: 'Oneida',      revision: 0 }, // alt construction type
+  { wdNumber: 'NY20260015', state: 'NY', county: 'Madison',     revision: 0 },
+  { wdNumber: 'NY20260016', state: 'NY', county: 'Onondaga',    revision: 0 },
+  { wdNumber: 'NY20260017', state: 'NY', county: 'Westchester', revision: 0 },
+  { wdNumber: 'NY20260020', state: 'NY', county: 'Rockland',    revision: 0 },
+  { wdNumber: 'NY20260022', state: 'NY', county: 'Jefferson',   revision: 0 },
+  { wdNumber: 'NY20260023', state: 'NY', county: 'Madison',     revision: 0 }, // alt construction type
+  { wdNumber: 'NY20260024', state: 'NY', county: 'Tompkins',    revision: 0 },
+  { wdNumber: 'NY20260025', state: 'NY', county: 'Putnam',      revision: 0 },
+  { wdNumber: 'NY20260026', state: 'NY', county: 'Onondaga',    revision: 0 }, // alt construction type
+  { wdNumber: 'NY20260027', state: 'NY', county: 'Oswego',      revision: 0 },
+  { wdNumber: 'NY20260029', state: 'NY', county: 'Genesee',     revision: 0 },
+  { wdNumber: 'NY20260030', state: 'NY', county: 'Livingston',  revision: 0 },
+  { wdNumber: 'NY20260031', state: 'NY', county: 'Herkimer',    revision: 0 },
+  { wdNumber: 'NY20260034', state: 'NY', county: 'Orleans',     revision: 0 },
+  { wdNumber: 'NY20260036', state: 'NY', county: 'Cayuga',      revision: 0 },
+  { wdNumber: 'NY20260037', state: 'NY', county: 'Otsego',      revision: 0 },
+  { wdNumber: 'NY20260038', state: 'NY', county: 'Oswego',      revision: 0 }, // alt construction type
+  { wdNumber: 'NY20260039', state: 'NY', county: 'Warren',      revision: 0 },
+  { wdNumber: 'NY20260040', state: 'NY', county: 'Seneca',      revision: 0 },
+  { wdNumber: 'NY20260042', state: 'NY', county: 'Cortland',    revision: 0 },
+  { wdNumber: 'NY20260045', state: 'NY', county: 'Tioga',       revision: 0 },
+  { wdNumber: 'NY20260046', state: 'NY', county: 'Hamilton',    revision: 0 },
+  { wdNumber: 'NY20260047', state: 'NY', county: 'Allegany',    revision: 0 },
+  { wdNumber: 'NY20260049', state: 'NY', county: 'Orange',      revision: 0 },
+  { wdNumber: 'NY20260051', state: 'NY', county: 'Tompkins',    revision: 0 }, // alt construction type
+  { wdNumber: 'NY20260073', state: 'NY', county: 'Yates',       revision: 0 },
+  { wdNumber: 'NY20260113', state: 'NY', county: 'Otsego',      revision: 0 }, // alt construction type
+  // 2026 NY WDs — county parse ambiguous in document text, TODO manual verify via sam.gov UI
+  { wdNumber: 'NY20260002', state: 'NY', county: null, revision: 0 },
+  { wdNumber: 'NY20260003', state: 'NY', county: null, revision: 0 },
+  { wdNumber: 'NY20260004', state: 'NY', county: null, revision: 0 },
+  { wdNumber: 'NY20260005', state: 'NY', county: null, revision: 0 },
+  { wdNumber: 'NY20260007', state: 'NY', county: null, revision: 0 },
+  { wdNumber: 'NY20260008', state: 'NY', county: null, revision: 0 },
+  { wdNumber: 'NY20260009', state: 'NY', county: null, revision: 0 },
+  { wdNumber: 'NY20260012', state: 'NY', county: null, revision: 0 },
   { wdNumber: 'IL20250001', state: 'IL', county: null, revision: 0 },
   { wdNumber: 'PA20250001', state: 'PA', county: null, revision: 0 },
   { wdNumber: 'OH20250001', state: 'OH', county: null, revision: 0 },
