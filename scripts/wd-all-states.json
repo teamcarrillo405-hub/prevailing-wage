@@ -25117,5 +25117,9005 @@
     "constructionType": "BUILDING",
     "publishDate": "2026-01-02",
     "active": true
+  },
+  {
+    "wdNumber": "PA20260030",
+    "state": "PA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260015",
+    "state": "SD",
+    "revision": 0,
+    "county": "Hughes",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260018",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260031",
+    "state": "PA",
+    "revision": 0,
+    "county": "Lawrence",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260016",
+    "state": "SD",
+    "revision": 0,
+    "county": "Lawrence",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260019",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260017",
+    "state": "SD",
+    "revision": 0,
+    "county": "Oglala Lakota",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260020",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260018",
+    "state": "SD",
+    "revision": 0,
+    "county": "Todd",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260021",
+    "state": "SC",
+    "revision": 0,
+    "county": "Anderson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TN20260002",
+    "state": "TN",
+    "revision": 0,
+    "county": "Cocke",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260019",
+    "state": "SD",
+    "revision": 0,
+    "county": "Walworth",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260022",
+    "state": "SC",
+    "revision": 0,
+    "county": "Berkeley",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TN20260003",
+    "state": "TN",
+    "revision": 0,
+    "county": "Crockett",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260033",
+    "state": "PA",
+    "revision": 0,
+    "county": "Greene",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260020",
+    "state": "SD",
+    "revision": 0,
+    "county": "Yankton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260023",
+    "state": "SC",
+    "revision": 0,
+    "county": "Charleston",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260034",
+    "state": "PA",
+    "revision": 0,
+    "county": "Fulton",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TN20260004",
+    "state": "TN",
+    "revision": 0,
+    "county": "Greene",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260021",
+    "state": "SD",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260024",
+    "state": "SC",
+    "revision": 0,
+    "county": "Dorchester",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260035",
+    "state": "PA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TN20260005",
+    "state": "TN",
+    "revision": 0,
+    "county": "Obion",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260022",
+    "state": "SD",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260025",
+    "state": "SC",
+    "revision": 0,
+    "county": "Greenville",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260036",
+    "state": "PA",
+    "revision": 0,
+    "county": "Snyder",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TN20260006",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260023",
+    "state": "SD",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260026",
+    "state": "SC",
+    "revision": 0,
+    "county": "Horry",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260037",
+    "state": "PA",
+    "revision": 0,
+    "county": "Monroe",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260007",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260024",
+    "state": "SD",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260027",
+    "state": "SC",
+    "revision": 0,
+    "county": "Kershaw",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260038",
+    "state": "PA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TN20260008",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260025",
+    "state": "SD",
+    "revision": 0,
+    "county": "Custer",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260028",
+    "state": "SC",
+    "revision": 0,
+    "county": "Richland",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260039",
+    "state": "PA",
+    "revision": 0,
+    "county": "Union",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TN20260009",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260026",
+    "state": "SD",
+    "revision": 0,
+    "county": "Lincoln",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260029",
+    "state": "SC",
+    "revision": 0,
+    "county": "Spartanburg",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260040",
+    "state": "PA",
+    "revision": 0,
+    "county": "Huntingdon",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TN20260010",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260027",
+    "state": "SD",
+    "revision": 0,
+    "county": "Meade",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260030",
+    "state": "SC",
+    "revision": 0,
+    "county": "Sumter",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260041",
+    "state": "PA",
+    "revision": 0,
+    "county": "Mercer",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260011",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260028",
+    "state": "SD",
+    "revision": 0,
+    "county": "Minnehaha",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260031",
+    "state": "SC",
+    "revision": 0,
+    "county": "York",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260042",
+    "state": "PA",
+    "revision": 0,
+    "county": "Westmoreland",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260012",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260029",
+    "state": "SD",
+    "revision": 0,
+    "county": "Pennington",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260032",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260043",
+    "state": "PA",
+    "revision": 0,
+    "county": "Bedford",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260013",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260030",
+    "state": "SD",
+    "revision": 0,
+    "county": "Union",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260033",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260044",
+    "state": "PA",
+    "revision": 0,
+    "county": "Bradford",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260014",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260031",
+    "state": "SD",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260034",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260045",
+    "state": "PA",
+    "revision": 0,
+    "county": "Cameron",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260015",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SD20260032",
+    "state": "SD",
+    "revision": 0,
+    "county": "South Dakota",
+    "constructionType": "HEAVY",
+    "publishDate": null,
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260035",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260046",
+    "state": "PA",
+    "revision": 0,
+    "county": "Clarion",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260016",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260036",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260047",
+    "state": "PA",
+    "revision": 0,
+    "county": "Clearfield",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260017",
+    "state": "TN",
+    "revision": 0,
+    "county": "Chester",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260037",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260048",
+    "state": "PA",
+    "revision": 0,
+    "county": "Clinton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260018",
+    "state": "TN",
+    "revision": 0,
+    "county": "Davidson",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260038",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260049",
+    "state": "PA",
+    "revision": 0,
+    "county": "Crawford",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260019",
+    "state": "TN",
+    "revision": 0,
+    "county": "Macon",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260039",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260050",
+    "state": "PA",
+    "revision": 0,
+    "county": "Elk",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260020",
+    "state": "TN",
+    "revision": 0,
+    "county": "Madison",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260040",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260051",
+    "state": "PA",
+    "revision": 0,
+    "county": "Forest",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260021",
+    "state": "TN",
+    "revision": 0,
+    "county": "Rutherford",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260041",
+    "state": "SC",
+    "revision": 0,
+    "county": "Charleston",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260052",
+    "state": "PA",
+    "revision": 0,
+    "county": "Fulton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260022",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260042",
+    "state": "SC",
+    "revision": 0,
+    "county": "Fairfield",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260053",
+    "state": "PA",
+    "revision": 0,
+    "county": "Greene",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260023",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260043",
+    "state": "SC",
+    "revision": 0,
+    "county": "Horry",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260054",
+    "state": "PA",
+    "revision": 0,
+    "county": "Huntingdon",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260024",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260044",
+    "state": "SC",
+    "revision": 0,
+    "county": "Kershaw",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260055",
+    "state": "PA",
+    "revision": 0,
+    "county": "Indiana",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260025",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260045",
+    "state": "SC",
+    "revision": 0,
+    "county": "Laurens",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260056",
+    "state": "PA",
+    "revision": 0,
+    "county": "Jefferson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260026",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260046",
+    "state": "SC",
+    "revision": 0,
+    "county": "York",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260057",
+    "state": "PA",
+    "revision": 0,
+    "county": "Juniata",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260027",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260047",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260058",
+    "state": "PA",
+    "revision": 0,
+    "county": "Lawrence",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260028",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260048",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260059",
+    "state": "PA",
+    "revision": 0,
+    "county": "McKean",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TN20260029",
+    "state": "TN",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260049",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260060",
+    "state": "PA",
+    "revision": 0,
+    "county": "Mifflin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260050",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260061",
+    "state": "PA",
+    "revision": 0,
+    "county": "Northumberland",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260051",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260062",
+    "state": "PA",
+    "revision": 0,
+    "county": "Potter",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260052",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260063",
+    "state": "PA",
+    "revision": 0,
+    "county": "Schuylkill",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260053",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260064",
+    "state": "PA",
+    "revision": 0,
+    "county": "Snyder",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260054",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260065",
+    "state": "PA",
+    "revision": 0,
+    "county": "Somerset",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260055",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260066",
+    "state": "PA",
+    "revision": 0,
+    "county": "Sullivan",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260056",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260067",
+    "state": "PA",
+    "revision": 0,
+    "county": "Susquehanna",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260057",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260068",
+    "state": "PA",
+    "revision": 0,
+    "county": "Tioga",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260058",
+    "state": "SC",
+    "revision": 0,
+    "county": "Anderson",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260069",
+    "state": "PA",
+    "revision": 0,
+    "county": "Union",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260059",
+    "state": "SC",
+    "revision": 0,
+    "county": "Charleston",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260070",
+    "state": "PA",
+    "revision": 0,
+    "county": "Venango",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260001",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260060",
+    "state": "SC",
+    "revision": 0,
+    "county": "Richland",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260071",
+    "state": "PA",
+    "revision": 0,
+    "county": "Warren",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260002",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260061",
+    "state": "SC",
+    "revision": 0,
+    "county": "Spartanburg",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260072",
+    "state": "PA",
+    "revision": 0,
+    "county": "Wayne",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260003",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260062",
+    "state": "SC",
+    "revision": 0,
+    "county": "York",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260073",
+    "state": "PA",
+    "revision": 0,
+    "county": "Adams",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260004",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260063",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260074",
+    "state": "PA",
+    "revision": 0,
+    "county": "Armstrong",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260005",
+    "state": "TX",
+    "revision": 0,
+    "county": "Wichita",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260064",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260075",
+    "state": "PA",
+    "revision": 0,
+    "county": "Beaver",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260006",
+    "state": "TX",
+    "revision": 0,
+    "county": "Victoria",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260065",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260076",
+    "state": "PA",
+    "revision": 0,
+    "county": "Berks",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260007",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "SC20260066",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260077",
+    "state": "PA",
+    "revision": 0,
+    "county": "Blair",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "SC20260067",
+    "state": "SC",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260078",
+    "state": "PA",
+    "revision": 0,
+    "county": "Bucks",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260079",
+    "state": "PA",
+    "revision": 0,
+    "county": "Butler",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260080",
+    "state": "PA",
+    "revision": 0,
+    "county": "Cambria",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260009",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260010",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260081",
+    "state": "PA",
+    "revision": 0,
+    "county": "Carbon",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260011",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260082",
+    "state": "PA",
+    "revision": 0,
+    "county": "Centre",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260012",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "Residential",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260083",
+    "state": "PA",
+    "revision": 0,
+    "county": "Chester",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260013",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "Residential",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260084",
+    "state": "PA",
+    "revision": 0,
+    "county": "Columbia",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260014",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260085",
+    "state": "PA",
+    "revision": 0,
+    "county": "Cumberland",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260015",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "Residential",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260086",
+    "state": "PA",
+    "revision": 0,
+    "county": "Dauphin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260087",
+    "state": "PA",
+    "revision": 0,
+    "county": "Delaware",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260016",
+    "state": "TX",
+    "revision": 0,
+    "county": "Denton",
+    "constructionType": "Heavy",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260088",
+    "state": "PA",
+    "revision": 0,
+    "county": "Erie",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260017",
+    "state": "TX",
+    "revision": 0,
+    "county": "Dallas",
+    "constructionType": "Heavy",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260089",
+    "state": "PA",
+    "revision": 0,
+    "county": "Fayette",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260018",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260090",
+    "state": "PA",
+    "revision": 0,
+    "county": "Franklin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260019",
+    "state": "TX",
+    "revision": 0,
+    "county": "Grayson",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260091",
+    "state": "PA",
+    "revision": 0,
+    "county": "Lackawanna",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260020",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "Heavy",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260092",
+    "state": "PA",
+    "revision": 0,
+    "county": "Lancaster",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260021",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260093",
+    "state": "PA",
+    "revision": 0,
+    "county": "Lebanon",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260022",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260094",
+    "state": "PA",
+    "revision": 0,
+    "county": "Lehigh",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260023",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260095",
+    "state": "PA",
+    "revision": 0,
+    "county": "Luzerne",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260096",
+    "state": "PA",
+    "revision": 0,
+    "county": "Lycoming",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260097",
+    "state": "PA",
+    "revision": 0,
+    "county": "Mercer",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260098",
+    "state": "PA",
+    "revision": 0,
+    "county": "Monroe",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260099",
+    "state": "PA",
+    "revision": 0,
+    "county": "Montgomery",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260100",
+    "state": "PA",
+    "revision": 0,
+    "county": "Montour",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260026",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "Heavy",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260101",
+    "state": "PA",
+    "revision": 0,
+    "county": "Northampton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260102",
+    "state": "PA",
+    "revision": 0,
+    "county": "Perry",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260103",
+    "state": "PA",
+    "revision": 0,
+    "county": "Pike",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260104",
+    "state": "PA",
+    "revision": 0,
+    "county": "Washington",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260105",
+    "state": "PA",
+    "revision": 0,
+    "county": "Westmoreland",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260106",
+    "state": "PA",
+    "revision": 0,
+    "county": "Wyoming",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260107",
+    "state": "PA",
+    "revision": 0,
+    "county": "York",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "PA20260108",
+    "state": "PA",
+    "revision": 0,
+    "county": "Berks",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260109",
+    "state": "PA",
+    "revision": 0,
+    "county": "Delaware",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260110",
+    "state": "PA",
+    "revision": 0,
+    "county": "Montgomery",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260111",
+    "state": "PA",
+    "revision": 0,
+    "county": "Montour",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260112",
+    "state": "PA",
+    "revision": 0,
+    "county": "Northampton",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260031",
+    "state": "TX",
+    "revision": 0,
+    "county": "Harris",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260113",
+    "state": "PA",
+    "revision": 0,
+    "county": "Perry",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260032",
+    "state": "TX",
+    "revision": 0,
+    "county": "Brazoria",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260114",
+    "state": "PA",
+    "revision": 0,
+    "county": "Philadelphia",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "UT20260001",
+    "state": "UT",
+    "revision": 0,
+    "county": "Wasatch",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260033",
+    "state": "TX",
+    "revision": 0,
+    "county": "Texas",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260002",
+    "state": "UT",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260034",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260003",
+    "state": "UT",
+    "revision": 0,
+    "county": "Box Elder",
+    "constructionType": "Residential",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260035",
+    "state": "TX",
+    "revision": 0,
+    "county": "El Paso",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260004",
+    "state": "UT",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260116",
+    "state": "PA",
+    "revision": 0,
+    "county": "York",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260036",
+    "state": "TX",
+    "revision": 0,
+    "county": "El Paso",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260005",
+    "state": "UT",
+    "revision": 0,
+    "county": "Rich",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260117",
+    "state": "PA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260006",
+    "state": "UT",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260118",
+    "state": "PA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260007",
+    "state": "UT",
+    "revision": 0,
+    "county": "Duchesne",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260119",
+    "state": "PA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "UT20260008",
+    "state": "UT",
+    "revision": 0,
+    "county": "Emery",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260009",
+    "state": "UT",
+    "revision": 0,
+    "county": "Garfield",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260010",
+    "state": "UT",
+    "revision": 0,
+    "county": "Grand",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260039",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260011",
+    "state": "UT",
+    "revision": 0,
+    "county": "Summit",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260121",
+    "state": "PA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260040",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260012",
+    "state": "UT",
+    "revision": 0,
+    "county": "Iron",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260041",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260013",
+    "state": "UT",
+    "revision": 0,
+    "county": "Kane",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260014",
+    "state": "UT",
+    "revision": 0,
+    "county": "Millard",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260015",
+    "state": "UT",
+    "revision": 0,
+    "county": "Piute",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260001",
+    "state": "VT",
+    "revision": 0,
+    "county": "Washington",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "PA20260123",
+    "state": "PA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260016",
+    "state": "UT",
+    "revision": 0,
+    "county": "San Juan",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260002",
+    "state": "VT",
+    "revision": 0,
+    "county": "Rutland",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260043",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260003",
+    "state": "VT",
+    "revision": 0,
+    "county": "Caledonia",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260017",
+    "state": "UT",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260044",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260018",
+    "state": "UT",
+    "revision": 0,
+    "county": "Carbon",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260045",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260019",
+    "state": "UT",
+    "revision": 0,
+    "county": "Iron",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260046",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260020",
+    "state": "UT",
+    "revision": 0,
+    "county": "Millard",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260047",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260005",
+    "state": "VT",
+    "revision": 0,
+    "county": "Franklin",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260021",
+    "state": "UT",
+    "revision": 0,
+    "county": "Rich",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260048",
+    "state": "TX",
+    "revision": 0,
+    "county": "Wise",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260006",
+    "state": "VT",
+    "revision": 0,
+    "county": "Windham",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260022",
+    "state": "UT",
+    "revision": 0,
+    "county": "San Juan",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260049",
+    "state": "TX",
+    "revision": 0,
+    "county": "Calhoun",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260007",
+    "state": "VT",
+    "revision": 0,
+    "county": "Addison",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260023",
+    "state": "UT",
+    "revision": 0,
+    "county": "Uintah",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260050",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260008",
+    "state": "VT",
+    "revision": 0,
+    "county": "Bennington",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260024",
+    "state": "UT",
+    "revision": 0,
+    "county": "Wasatch",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260051",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260009",
+    "state": "VT",
+    "revision": 0,
+    "county": "Chittenden",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260025",
+    "state": "UT",
+    "revision": 0,
+    "county": "Daggett",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260052",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260010",
+    "state": "VT",
+    "revision": 0,
+    "county": "Essex",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260026",
+    "state": "UT",
+    "revision": 0,
+    "county": "Duchesne",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260053",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260011",
+    "state": "VT",
+    "revision": 0,
+    "county": "Grand Isle",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260027",
+    "state": "UT",
+    "revision": 0,
+    "county": "Sanpete",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260054",
+    "state": "TX",
+    "revision": 0,
+    "county": "Fort Bend",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260012",
+    "state": "VT",
+    "revision": 0,
+    "county": "Orleans",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260028",
+    "state": "UT",
+    "revision": 0,
+    "county": "Garfield",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260055",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260013",
+    "state": "VT",
+    "revision": 0,
+    "county": "Lamoille",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260029",
+    "state": "UT",
+    "revision": 0,
+    "county": "Sevier",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260056",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260014",
+    "state": "VT",
+    "revision": 0,
+    "county": "Orange",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260030",
+    "state": "UT",
+    "revision": 0,
+    "county": "Cache",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260057",
+    "state": "TX",
+    "revision": 0,
+    "county": "Brazos",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260015",
+    "state": "VT",
+    "revision": 0,
+    "county": "Windsor",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260031",
+    "state": "UT",
+    "revision": 0,
+    "county": "Davis",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260058",
+    "state": "TX",
+    "revision": 0,
+    "county": "Grayson",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260016",
+    "state": "VT",
+    "revision": 0,
+    "county": "Addison",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260032",
+    "state": "UT",
+    "revision": 0,
+    "county": "Juab",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260059",
+    "state": "TX",
+    "revision": 0,
+    "county": "Goliad",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260017",
+    "state": "VT",
+    "revision": 0,
+    "county": "Bennington",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260033",
+    "state": "UT",
+    "revision": 0,
+    "county": "Morgan",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260060",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260001",
+    "state": "VA",
+    "revision": 0,
+    "county": "Virginia",
+    "constructionType": null,
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "VT20260018",
+    "state": "VT",
+    "revision": 0,
+    "county": "Caledonia",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260034",
+    "state": "UT",
+    "revision": 0,
+    "county": "Salt Lake",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260061",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260002",
+    "state": "VA",
+    "revision": 0,
+    "county": "Halifax",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "VT20260019",
+    "state": "VT",
+    "revision": 0,
+    "county": "Orleans",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260035",
+    "state": "UT",
+    "revision": 0,
+    "county": "Summit",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260062",
+    "state": "TX",
+    "revision": 0,
+    "county": "Galveston",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260003",
+    "state": "VA",
+    "revision": 0,
+    "county": "Pittsylvania",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "VT20260020",
+    "state": "VT",
+    "revision": 0,
+    "county": "Rutland",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260036",
+    "state": "UT",
+    "revision": 0,
+    "county": "Tooele",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260063",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260004",
+    "state": "VA",
+    "revision": 0,
+    "county": "Arlington",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "VT20260021",
+    "state": "VT",
+    "revision": 0,
+    "county": "Washington",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260037",
+    "state": "UT",
+    "revision": 0,
+    "county": "Utah",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260064",
+    "state": "TX",
+    "revision": 0,
+    "county": "Montgomery",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260005",
+    "state": "VA",
+    "revision": 0,
+    "county": "Smyth",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260022",
+    "state": "VT",
+    "revision": 0,
+    "county": "Windham",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260038",
+    "state": "UT",
+    "revision": 0,
+    "county": "Washington",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260065",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260006",
+    "state": "VA",
+    "revision": 0,
+    "county": "Wise",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260023",
+    "state": "VT",
+    "revision": 0,
+    "county": "Windsor",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "UT20260039",
+    "state": "UT",
+    "revision": 0,
+    "county": "Weber",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260066",
+    "state": "TX",
+    "revision": 0,
+    "county": "Fort Bend",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260007",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260024",
+    "state": "VT",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260067",
+    "state": "TX",
+    "revision": 0,
+    "county": "Harris",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260008",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260025",
+    "state": "VT",
+    "revision": 0,
+    "county": "Chittenden",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260068",
+    "state": "TX",
+    "revision": 0,
+    "county": "Galveston",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260009",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260026",
+    "state": "VT",
+    "revision": 0,
+    "county": "Franklin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260069",
+    "state": "TX",
+    "revision": 0,
+    "county": "Angelina",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260010",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "VT20260027",
+    "state": "VT",
+    "revision": 0,
+    "county": "Grand Isle",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260070",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bosque",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260011",
+    "state": "VA",
+    "revision": 0,
+    "county": "Albemarle",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260071",
+    "state": "TX",
+    "revision": 0,
+    "county": "Camp",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260012",
+    "state": "VA",
+    "revision": 0,
+    "county": "Appomattox",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260072",
+    "state": "TX",
+    "revision": 0,
+    "county": "Cooke",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260013",
+    "state": "VA",
+    "revision": 0,
+    "county": "Arlington",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260073",
+    "state": "TX",
+    "revision": 0,
+    "county": "Culberson",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260014",
+    "state": "VA",
+    "revision": 0,
+    "county": "Augusta",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260074",
+    "state": "TX",
+    "revision": 0,
+    "county": "De Witt",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260015",
+    "state": "VA",
+    "revision": 0,
+    "county": "Caroline",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260075",
+    "state": "TX",
+    "revision": 0,
+    "county": "Matagorda",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260016",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260076",
+    "state": "TX",
+    "revision": 0,
+    "county": "McCulloch",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260017",
+    "state": "VA",
+    "revision": 0,
+    "county": "Chesterfield",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260077",
+    "state": "TX",
+    "revision": 0,
+    "county": "Pecos",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260018",
+    "state": "VA",
+    "revision": 0,
+    "county": "Clarke",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260078",
+    "state": "TX",
+    "revision": 0,
+    "county": "Scurry",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260019",
+    "state": "VA",
+    "revision": 0,
+    "county": "Dinwiddie",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260079",
+    "state": "TX",
+    "revision": 0,
+    "county": "Throckmorton",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260020",
+    "state": "VA",
+    "revision": 0,
+    "county": "Fauquier",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260080",
+    "state": "TX",
+    "revision": 0,
+    "county": "Ward",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260021",
+    "state": "VA",
+    "revision": 0,
+    "county": "Frederick",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260081",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260022",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260082",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260023",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260083",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260024",
+    "state": "VA",
+    "revision": 0,
+    "county": "Bath",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260084",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260025",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260085",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260026",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260086",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260027",
+    "state": "VA",
+    "revision": 0,
+    "county": "Buchanan",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260087",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260028",
+    "state": "VA",
+    "revision": 0,
+    "county": "Greensville",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260088",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260029",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260089",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260030",
+    "state": "VA",
+    "revision": 0,
+    "county": "Patrick",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260090",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260031",
+    "state": "VA",
+    "revision": 0,
+    "county": "Surry",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260091",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260032",
+    "state": "VA",
+    "revision": 0,
+    "county": "Smyth",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260092",
+    "state": "TX",
+    "revision": 0,
+    "county": "Cass",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260033",
+    "state": "VA",
+    "revision": 0,
+    "county": "Tazewell",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260093",
+    "state": "TX",
+    "revision": 0,
+    "county": "Cooke",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260094",
+    "state": "TX",
+    "revision": 0,
+    "county": "De Witt",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260095",
+    "state": "TX",
+    "revision": 0,
+    "county": "Gillespie",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260096",
+    "state": "TX",
+    "revision": 0,
+    "county": "Morris",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260097",
+    "state": "TX",
+    "revision": 0,
+    "county": "Navarro",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260098",
+    "state": "TX",
+    "revision": 0,
+    "county": "Shelby",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260036",
+    "state": "VA",
+    "revision": 0,
+    "county": "Cumberland",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260099",
+    "state": "TX",
+    "revision": 0,
+    "county": "Stephens",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260037",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260100",
+    "state": "TX",
+    "revision": 0,
+    "county": "Terry",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260101",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260102",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260103",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260104",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260105",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260106",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260107",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260108",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260109",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260110",
+    "state": "TX",
+    "revision": 0,
+    "county": "Blanco",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260111",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260001",
+    "state": "WA",
+    "revision": 0,
+    "county": "Washington",
+    "constructionType": "heavy",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260042",
+    "state": "VA",
+    "revision": 0,
+    "county": "King And Queen",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260112",
+    "state": "TX",
+    "revision": 0,
+    "county": "Aransas",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260002",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "residential",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260113",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260003",
+    "state": "WA",
+    "revision": 0,
+    "county": "Asotin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260114",
+    "state": "TX",
+    "revision": 0,
+    "county": "Anderson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260115",
+    "state": "TX",
+    "revision": 0,
+    "county": "Andrews",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260116",
+    "state": "TX",
+    "revision": 0,
+    "county": "Angelina",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260117",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bailey",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260118",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bee",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260119",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bosque",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260120",
+    "state": "TX",
+    "revision": 0,
+    "county": "Brewster",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260121",
+    "state": "TX",
+    "revision": 0,
+    "county": "Brooks",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260122",
+    "state": "TX",
+    "revision": 0,
+    "county": "Brown",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260123",
+    "state": "TX",
+    "revision": 0,
+    "county": "Burnet",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260124",
+    "state": "TX",
+    "revision": 0,
+    "county": "Camp",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260125",
+    "state": "TX",
+    "revision": 0,
+    "county": "Cass",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260048",
+    "state": "VT",
+    "revision": 0,
+    "county": "Addison",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260126",
+    "state": "TX",
+    "revision": 0,
+    "county": "Cherokee",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260049",
+    "state": "VT",
+    "revision": 0,
+    "county": "Bennington",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260127",
+    "state": "TX",
+    "revision": 0,
+    "county": "Cochran",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260050",
+    "state": "VT",
+    "revision": 0,
+    "county": "Caledonia",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260128",
+    "state": "TX",
+    "revision": 0,
+    "county": "Colorado",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260051",
+    "state": "VT",
+    "revision": 0,
+    "county": "Essex",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260129",
+    "state": "TX",
+    "revision": 0,
+    "county": "Cooke",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260052",
+    "state": "VT",
+    "revision": 0,
+    "county": "Lamoille",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260130",
+    "state": "TX",
+    "revision": 0,
+    "county": "Crockett",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260053",
+    "state": "VT",
+    "revision": 0,
+    "county": "Orange",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260131",
+    "state": "TX",
+    "revision": 0,
+    "county": "Culberson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260054",
+    "state": "VT",
+    "revision": 0,
+    "county": "Orleans",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260132",
+    "state": "TX",
+    "revision": 0,
+    "county": "De Witt",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260055",
+    "state": "VT",
+    "revision": 0,
+    "county": "Rutland",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260133",
+    "state": "TX",
+    "revision": 0,
+    "county": "Dimmit",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260056",
+    "state": "VT",
+    "revision": 0,
+    "county": "Washington",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260134",
+    "state": "TX",
+    "revision": 0,
+    "county": "Duval",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260057",
+    "state": "VT",
+    "revision": 0,
+    "county": "Windham",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260135",
+    "state": "TX",
+    "revision": 0,
+    "county": "Eastland",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260001",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260058",
+    "state": "VT",
+    "revision": 0,
+    "county": "Windsor",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260136",
+    "state": "TX",
+    "revision": 0,
+    "county": "Erath",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260002",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260059",
+    "state": "VT",
+    "revision": 0,
+    "county": "Chittenden",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260137",
+    "state": "TX",
+    "revision": 0,
+    "county": "Falls",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260052",
+    "state": "VA",
+    "revision": 0,
+    "county": "Louisa",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260003",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260060",
+    "state": "VT",
+    "revision": 0,
+    "county": "Franklin",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260138",
+    "state": "TX",
+    "revision": 0,
+    "county": "Fannin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260004",
+    "state": "WV",
+    "revision": 0,
+    "county": "Braxton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260061",
+    "state": "VT",
+    "revision": 0,
+    "county": "Grand Isle",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260139",
+    "state": "TX",
+    "revision": 0,
+    "county": "Fayette",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260005",
+    "state": "WV",
+    "revision": 0,
+    "county": "Doddridge",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260062",
+    "state": "VT",
+    "revision": 0,
+    "county": "Bennington",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260140",
+    "state": "TX",
+    "revision": 0,
+    "county": "Fisher",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260063",
+    "state": "VT",
+    "revision": 0,
+    "county": "Rutland",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260006",
+    "state": "WV",
+    "revision": 0,
+    "county": "Fayette",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260141",
+    "state": "TX",
+    "revision": 0,
+    "county": "Floyd",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260142",
+    "state": "TX",
+    "revision": 0,
+    "county": "Franklin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260064",
+    "state": "VT",
+    "revision": 0,
+    "county": "Windham",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260007",
+    "state": "WV",
+    "revision": 0,
+    "county": "Gilmer",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260065",
+    "state": "VT",
+    "revision": 0,
+    "county": "Windsor",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260143",
+    "state": "TX",
+    "revision": 0,
+    "county": "Gaines",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260008",
+    "state": "WV",
+    "revision": 0,
+    "county": "Grant",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260066",
+    "state": "VT",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260144",
+    "state": "TX",
+    "revision": 0,
+    "county": "Gillespie",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260009",
+    "state": "WV",
+    "revision": 0,
+    "county": "Greenbrier",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260067",
+    "state": "VT",
+    "revision": 0,
+    "county": "Chittenden",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260145",
+    "state": "TX",
+    "revision": 0,
+    "county": "Glasscock",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260010",
+    "state": "WV",
+    "revision": 0,
+    "county": "Hardy",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260068",
+    "state": "VT",
+    "revision": 0,
+    "county": "Franklin",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260146",
+    "state": "TX",
+    "revision": 0,
+    "county": "Gonzales",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260011",
+    "state": "WV",
+    "revision": 0,
+    "county": "Harrison",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260147",
+    "state": "TX",
+    "revision": 0,
+    "county": "Gray",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VT20260069",
+    "state": "VT",
+    "revision": 0,
+    "county": "Grand Isle",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260012",
+    "state": "WV",
+    "revision": 0,
+    "county": "Jackson",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260148",
+    "state": "TX",
+    "revision": 0,
+    "county": "Grimes",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260013",
+    "state": "WV",
+    "revision": 0,
+    "county": "Lewis",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260149",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hale",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260014",
+    "state": "WV",
+    "revision": 0,
+    "county": "Logan",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260150",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hamilton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260015",
+    "state": "WV",
+    "revision": 0,
+    "county": "Marion",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260151",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hansford",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260016",
+    "state": "WV",
+    "revision": 0,
+    "county": "Mason",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260058",
+    "state": "VA",
+    "revision": 0,
+    "county": "Rockingham",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260152",
+    "state": "TX",
+    "revision": 0,
+    "county": "Harrison",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260017",
+    "state": "WV",
+    "revision": 0,
+    "county": "McDowell",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260153",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hood",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260018",
+    "state": "WV",
+    "revision": 0,
+    "county": "Mercer",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260154",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hopkins",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260019",
+    "state": "WV",
+    "revision": 0,
+    "county": "Mingo",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260155",
+    "state": "TX",
+    "revision": 0,
+    "county": "Houston",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260020",
+    "state": "WV",
+    "revision": 0,
+    "county": "Monroe",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260156",
+    "state": "TX",
+    "revision": 0,
+    "county": "Howard",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260021",
+    "state": "WV",
+    "revision": 0,
+    "county": "Nicholas",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260157",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hudspeth",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260022",
+    "state": "WV",
+    "revision": 0,
+    "county": "Pocahontas",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260158",
+    "state": "TX",
+    "revision": 0,
+    "county": "Jackson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260023",
+    "state": "WV",
+    "revision": 0,
+    "county": "Raleigh",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260159",
+    "state": "TX",
+    "revision": 0,
+    "county": "Jasper",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260024",
+    "state": "WV",
+    "revision": 0,
+    "county": "Randolph",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260160",
+    "state": "TX",
+    "revision": 0,
+    "county": "Jim Hogg",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260025",
+    "state": "WV",
+    "revision": 0,
+    "county": "Ritchie",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260161",
+    "state": "TX",
+    "revision": 0,
+    "county": "Kerr",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260021",
+    "state": "WA",
+    "revision": 0,
+    "county": "Adams",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "WV20260026",
+    "state": "WV",
+    "revision": 0,
+    "county": "Summers",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260162",
+    "state": "TX",
+    "revision": 0,
+    "county": "Kimble",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260022",
+    "state": "WA",
+    "revision": 0,
+    "county": "Clallam",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260027",
+    "state": "WV",
+    "revision": 0,
+    "county": "Taylor",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260163",
+    "state": "TX",
+    "revision": 0,
+    "county": "Kleberg",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260028",
+    "state": "WV",
+    "revision": 0,
+    "county": "Tucker",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260164",
+    "state": "TX",
+    "revision": 0,
+    "county": "Lamar",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260029",
+    "state": "WV",
+    "revision": 0,
+    "county": "Tyler",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260165",
+    "state": "TX",
+    "revision": 0,
+    "county": "Lamb",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260030",
+    "state": "WV",
+    "revision": 0,
+    "county": "Upshur",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260024",
+    "state": "WA",
+    "revision": 0,
+    "county": "Ferry",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260166",
+    "state": "TX",
+    "revision": 0,
+    "county": "Loving",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260031",
+    "state": "WV",
+    "revision": 0,
+    "county": "Webster",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260025",
+    "state": "WA",
+    "revision": 0,
+    "county": "Garfield",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260167",
+    "state": "TX",
+    "revision": 0,
+    "county": "Madison",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260032",
+    "state": "WV",
+    "revision": 0,
+    "county": "Wetzel",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260026",
+    "state": "WA",
+    "revision": 0,
+    "county": "Grant",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260168",
+    "state": "TX",
+    "revision": 0,
+    "county": "Marion",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260033",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260027",
+    "state": "WA",
+    "revision": 0,
+    "county": "Grays Harbor",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260169",
+    "state": "TX",
+    "revision": 0,
+    "county": "Montague",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260065",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260034",
+    "state": "WV",
+    "revision": 0,
+    "county": "Berkeley",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260028",
+    "state": "WA",
+    "revision": 0,
+    "county": "Island",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260170",
+    "state": "TX",
+    "revision": 0,
+    "county": "Morris",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260066",
+    "state": "VA",
+    "revision": 0,
+    "county": "Bath",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260035",
+    "state": "WV",
+    "revision": 0,
+    "county": "Cabell",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260029",
+    "state": "WA",
+    "revision": 0,
+    "county": "Jefferson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260171",
+    "state": "TX",
+    "revision": 0,
+    "county": "Nacogdoches",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260067",
+    "state": "VA",
+    "revision": 0,
+    "county": "Bland",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260036",
+    "state": "WV",
+    "revision": 0,
+    "county": "Hampshire",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260030",
+    "state": "WA",
+    "revision": 0,
+    "county": "Kittitas",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260172",
+    "state": "TX",
+    "revision": 0,
+    "county": "Navarro",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260068",
+    "state": "VA",
+    "revision": 0,
+    "county": "Brunswick",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260037",
+    "state": "WV",
+    "revision": 0,
+    "county": "Jefferson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260031",
+    "state": "WA",
+    "revision": 0,
+    "county": "Klickitat",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260173",
+    "state": "TX",
+    "revision": 0,
+    "county": "Pecos",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260069",
+    "state": "VA",
+    "revision": 0,
+    "county": "Buchanan",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260038",
+    "state": "WV",
+    "revision": 0,
+    "county": "Kanawha",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260032",
+    "state": "WA",
+    "revision": 0,
+    "county": "Lewis",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260174",
+    "state": "TX",
+    "revision": 0,
+    "county": "Polk",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260070",
+    "state": "VA",
+    "revision": 0,
+    "county": "Carroll",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260039",
+    "state": "WV",
+    "revision": 0,
+    "county": "Lincoln",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260033",
+    "state": "WA",
+    "revision": 0,
+    "county": "Lincoln",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260175",
+    "state": "TX",
+    "revision": 0,
+    "county": "Rains",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260071",
+    "state": "VA",
+    "revision": 0,
+    "county": "Dickenson",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260040",
+    "state": "WV",
+    "revision": 0,
+    "county": "Marshall",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260034",
+    "state": "WA",
+    "revision": 0,
+    "county": "Mason",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260176",
+    "state": "TX",
+    "revision": 0,
+    "county": "Real",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260072",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260041",
+    "state": "WV",
+    "revision": 0,
+    "county": "Mineral",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260035",
+    "state": "WA",
+    "revision": 0,
+    "county": "Okanogan",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260177",
+    "state": "TX",
+    "revision": 0,
+    "county": "Red River",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260073",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260042",
+    "state": "WV",
+    "revision": 0,
+    "county": "Monongalia",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260036",
+    "state": "WA",
+    "revision": 0,
+    "county": "Pacific",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260178",
+    "state": "TX",
+    "revision": 0,
+    "county": "Sabine",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260074",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260043",
+    "state": "WV",
+    "revision": 0,
+    "county": "Morgan",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260179",
+    "state": "TX",
+    "revision": 0,
+    "county": "Scurry",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260075",
+    "state": "VA",
+    "revision": 0,
+    "county": "Highland",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260044",
+    "state": "WV",
+    "revision": 0,
+    "county": "Ohio",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260180",
+    "state": "TX",
+    "revision": 0,
+    "county": "Shackelford",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260076",
+    "state": "VA",
+    "revision": 0,
+    "county": "King George",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260045",
+    "state": "WV",
+    "revision": 0,
+    "county": "Pleasants",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260181",
+    "state": "TX",
+    "revision": 0,
+    "county": "Stephens",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260077",
+    "state": "VA",
+    "revision": 0,
+    "county": "Lee",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260046",
+    "state": "WV",
+    "revision": 0,
+    "county": "Preston",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260182",
+    "state": "TX",
+    "revision": 0,
+    "county": "Sutton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260038",
+    "state": "WA",
+    "revision": 0,
+    "county": "San Juan",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260078",
+    "state": "VA",
+    "revision": 0,
+    "county": "Louisa",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260047",
+    "state": "WV",
+    "revision": 0,
+    "county": "Putnam",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260183",
+    "state": "TX",
+    "revision": 0,
+    "county": "Terrell",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260079",
+    "state": "VA",
+    "revision": 0,
+    "county": "Lunenburg",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260048",
+    "state": "WV",
+    "revision": 0,
+    "county": "Wayne",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260184",
+    "state": "TX",
+    "revision": 0,
+    "county": "Throckmorton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260080",
+    "state": "VA",
+    "revision": 0,
+    "county": "Madison",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260049",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260185",
+    "state": "TX",
+    "revision": 0,
+    "county": "Titus",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260081",
+    "state": "VA",
+    "revision": 0,
+    "county": "Mecklenburg",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260050",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260040",
+    "state": "WA",
+    "revision": 0,
+    "county": "Wahkiakum",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260186",
+    "state": "TX",
+    "revision": 0,
+    "county": "Val Verde",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260082",
+    "state": "VA",
+    "revision": 0,
+    "county": "Nottoway",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260051",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260187",
+    "state": "TX",
+    "revision": 0,
+    "county": "Van Zandt",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260083",
+    "state": "VA",
+    "revision": 0,
+    "county": "Orange",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260052",
+    "state": "WV",
+    "revision": 0,
+    "county": "Grant",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260188",
+    "state": "TX",
+    "revision": 0,
+    "county": "Walker",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260084",
+    "state": "VA",
+    "revision": 0,
+    "county": "Page",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260189",
+    "state": "TX",
+    "revision": 0,
+    "county": "Winkler",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260053",
+    "state": "WV",
+    "revision": 0,
+    "county": "Hardy",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260085",
+    "state": "VA",
+    "revision": 0,
+    "county": "Patrick",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260042",
+    "state": "WA",
+    "revision": 0,
+    "county": "Whitman",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260190",
+    "state": "TX",
+    "revision": 0,
+    "county": "Wood",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260054",
+    "state": "WV",
+    "revision": 0,
+    "county": "Harrison",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260086",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260043",
+    "state": "WA",
+    "revision": 0,
+    "county": "Adams",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260191",
+    "state": "TX",
+    "revision": 0,
+    "county": "Young",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260055",
+    "state": "WV",
+    "revision": 0,
+    "county": "Logan",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260087",
+    "state": "VA",
+    "revision": 0,
+    "county": "Prince Edward",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260044",
+    "state": "WA",
+    "revision": 0,
+    "county": "Clallam",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260192",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260056",
+    "state": "WV",
+    "revision": 0,
+    "county": "Marion",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260088",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260045",
+    "state": "WA",
+    "revision": 0,
+    "county": "Grant",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260193",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260057",
+    "state": "WV",
+    "revision": 0,
+    "county": "Mercer",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260089",
+    "state": "VA",
+    "revision": 0,
+    "county": "Russell",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260046",
+    "state": "WA",
+    "revision": 0,
+    "county": "Grays Harbor",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260194",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260058",
+    "state": "WV",
+    "revision": 0,
+    "county": "Raleigh",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260090",
+    "state": "VA",
+    "revision": 0,
+    "county": "Shenandoah",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260047",
+    "state": "WA",
+    "revision": 0,
+    "county": "Island",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260195",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260059",
+    "state": "WV",
+    "revision": 0,
+    "county": "Taylor",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260091",
+    "state": "VA",
+    "revision": 0,
+    "county": "Smyth",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260048",
+    "state": "WA",
+    "revision": 0,
+    "county": "Jefferson",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260196",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260060",
+    "state": "WV",
+    "revision": 0,
+    "county": "Wetzel",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260092",
+    "state": "VA",
+    "revision": 0,
+    "county": "Tazewell",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260049",
+    "state": "WA",
+    "revision": 0,
+    "county": "Kittitas",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260197",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260061",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260093",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260050",
+    "state": "WA",
+    "revision": 0,
+    "county": "Klickitat",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260198",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260062",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260094",
+    "state": "VA",
+    "revision": 0,
+    "county": "Wythe",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260051",
+    "state": "WA",
+    "revision": 0,
+    "county": "Lewis",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260199",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260063",
+    "state": "WV",
+    "revision": 0,
+    "county": "Berkeley",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260095",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260052",
+    "state": "WA",
+    "revision": 0,
+    "county": "Lincoln",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260200",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260064",
+    "state": "WV",
+    "revision": 0,
+    "county": "Boone",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260096",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260053",
+    "state": "WA",
+    "revision": 0,
+    "county": "Mason",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260201",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260065",
+    "state": "WV",
+    "revision": 0,
+    "county": "Brooke",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260097",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260054",
+    "state": "WA",
+    "revision": 0,
+    "county": "Okanogan",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260202",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260066",
+    "state": "WV",
+    "revision": 0,
+    "county": "Cabell",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260098",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260055",
+    "state": "WA",
+    "revision": 0,
+    "county": "Pacific",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260203",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260067",
+    "state": "WV",
+    "revision": 0,
+    "county": "Hancock",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260099",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260204",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260068",
+    "state": "WV",
+    "revision": 0,
+    "county": "Jefferson",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260100",
+    "state": "VA",
+    "revision": 0,
+    "county": "Amelia",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260205",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260069",
+    "state": "WV",
+    "revision": 0,
+    "county": "Kanawha",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260101",
+    "state": "VA",
+    "revision": 0,
+    "county": "Amherst",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260206",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260070",
+    "state": "WV",
+    "revision": 0,
+    "county": "Marshall",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260057",
+    "state": "WA",
+    "revision": 0,
+    "county": "San Juan",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260102",
+    "state": "VA",
+    "revision": 0,
+    "county": "Appomattox",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260207",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260071",
+    "state": "WV",
+    "revision": 0,
+    "county": "Monongalia",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260103",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260208",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260072",
+    "state": "WV",
+    "revision": 0,
+    "county": "Morgan",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260104",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260209",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260073",
+    "state": "WV",
+    "revision": 0,
+    "county": "Ohio",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260105",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260210",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260059",
+    "state": "WA",
+    "revision": 0,
+    "county": "Wahkiakum",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260074",
+    "state": "WV",
+    "revision": 0,
+    "county": "Preston",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260106",
+    "state": "VA",
+    "revision": 0,
+    "county": "Botetourt",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260211",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260075",
+    "state": "WV",
+    "revision": 0,
+    "county": "Putnam",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260107",
+    "state": "VA",
+    "revision": 0,
+    "county": "Buckingham",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260212",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260076",
+    "state": "WV",
+    "revision": 0,
+    "county": "Wayne",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260108",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260213",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260077",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260109",
+    "state": "VA",
+    "revision": 0,
+    "county": "Caroline",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260061",
+    "state": "WA",
+    "revision": 0,
+    "county": "Whitman",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260214",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260078",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260110",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260062",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260215",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260079",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260111",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260216",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "WI20260001",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260112",
+    "state": "VA",
+    "revision": 0,
+    "county": "Clarke",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260217",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260002",
+    "state": "WI",
+    "revision": 0,
+    "county": "Marathon",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260113",
+    "state": "VA",
+    "revision": 0,
+    "county": "Craig",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260218",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260003",
+    "state": "WI",
+    "revision": 0,
+    "county": "La Crosse",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260114",
+    "state": "VA",
+    "revision": 0,
+    "county": "Culpeper",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260081",
+    "state": "WV",
+    "revision": 0,
+    "county": "Barbour",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260219",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260004",
+    "state": "WI",
+    "revision": 0,
+    "county": "Kenosha",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260115",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260082",
+    "state": "WV",
+    "revision": 0,
+    "county": "Braxton",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260220",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260005",
+    "state": "WI",
+    "revision": 0,
+    "county": "Dane",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260116",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260083",
+    "state": "WV",
+    "revision": 0,
+    "county": "Greenbrier",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260006",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260221",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260117",
+    "state": "VA",
+    "revision": 0,
+    "county": "Fauquier",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260084",
+    "state": "WV",
+    "revision": 0,
+    "county": "Hardy",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260007",
+    "state": "WI",
+    "revision": 0,
+    "county": "Douglas",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260222",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260118",
+    "state": "VA",
+    "revision": 0,
+    "county": "Floyd",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260085",
+    "state": "WV",
+    "revision": 0,
+    "county": "Harrison",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260223",
+    "state": "TX",
+    "revision": 0,
+    "county": "Clay",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260008",
+    "state": "WI",
+    "revision": 0,
+    "county": "Wisconsin",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260119",
+    "state": "VA",
+    "revision": 0,
+    "county": "Fluvanna",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260086",
+    "state": "WV",
+    "revision": 0,
+    "county": "Marion",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260224",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260009",
+    "state": "WI",
+    "revision": 0,
+    "county": "Racine",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260120",
+    "state": "VA",
+    "revision": 0,
+    "county": "Franklin",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260087",
+    "state": "WV",
+    "revision": 0,
+    "county": "McDowell",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260225",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260010",
+    "state": "WI",
+    "revision": 0,
+    "county": "Wisconsin",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260121",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260088",
+    "state": "WV",
+    "revision": 0,
+    "county": "Mercer",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260226",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260011",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260122",
+    "state": "VA",
+    "revision": 0,
+    "county": "Giles",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260089",
+    "state": "WV",
+    "revision": 0,
+    "county": "Mingo",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260227",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260012",
+    "state": "WI",
+    "revision": 0,
+    "county": "Rock",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260123",
+    "state": "VA",
+    "revision": 0,
+    "county": "Goochland",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260090",
+    "state": "WV",
+    "revision": 0,
+    "county": "Randolph",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260228",
+    "state": "TX",
+    "revision": 0,
+    "county": "Armstrong",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260013",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260124",
+    "state": "VA",
+    "revision": 0,
+    "county": "Greene",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260091",
+    "state": "WV",
+    "revision": 0,
+    "county": "Ritchie",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260229",
+    "state": "TX",
+    "revision": 0,
+    "county": "Austin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260014",
+    "state": "WI",
+    "revision": 0,
+    "county": "Brown",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260125",
+    "state": "VA",
+    "revision": 0,
+    "county": "Hanover",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260092",
+    "state": "WV",
+    "revision": 0,
+    "county": "Roane",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260015",
+    "state": "WI",
+    "revision": 0,
+    "county": "Wisconsin",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260230",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bell",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260126",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260093",
+    "state": "WV",
+    "revision": 0,
+    "county": "Summers",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260016",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260231",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bexar",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260127",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260094",
+    "state": "WV",
+    "revision": 0,
+    "county": "Wetzel",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260017",
+    "state": "WI",
+    "revision": 0,
+    "county": "Ashland",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260232",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bowie",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260128",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260095",
+    "state": "WV",
+    "revision": 0,
+    "county": "Wyoming",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260018",
+    "state": "WI",
+    "revision": 0,
+    "county": "Monroe",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260233",
+    "state": "TX",
+    "revision": 0,
+    "county": "Brazoria",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260129",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260096",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260019",
+    "state": "WI",
+    "revision": 0,
+    "county": "Rusk",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260234",
+    "state": "TX",
+    "revision": 0,
+    "county": "Brazos",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260130",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260020",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260235",
+    "state": "TX",
+    "revision": 0,
+    "county": "Burleson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260097",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260131",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260021",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260098",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260236",
+    "state": "TX",
+    "revision": 0,
+    "county": "Cameron",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260132",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260022",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260099",
+    "state": "WV",
+    "revision": 0,
+    "county": "Berkeley",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260237",
+    "state": "TX",
+    "revision": 0,
+    "county": "Carson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260133",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260023",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260100",
+    "state": "WV",
+    "revision": 0,
+    "county": "Cabell",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260238",
+    "state": "TX",
+    "revision": 0,
+    "county": "Chambers",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260134",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260024",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260101",
+    "state": "WV",
+    "revision": 0,
+    "county": "Clay",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260239",
+    "state": "TX",
+    "revision": 0,
+    "county": "Collin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260135",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260025",
+    "state": "WI",
+    "revision": 0,
+    "county": "Chippewa",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "WV20260102",
+    "state": "WV",
+    "revision": 0,
+    "county": "Fayette",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260240",
+    "state": "TX",
+    "revision": 0,
+    "county": "Comal",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260136",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260026",
+    "state": "WI",
+    "revision": 0,
+    "county": "Kenosha",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260103",
+    "state": "WV",
+    "revision": 0,
+    "county": "Kanawha",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260241",
+    "state": "TX",
+    "revision": 0,
+    "county": "Dallas",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260137",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260104",
+    "state": "WV",
+    "revision": 0,
+    "county": "Marshall",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260242",
+    "state": "TX",
+    "revision": 0,
+    "county": "Delta",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260027",
+    "state": "WI",
+    "revision": 0,
+    "county": "Milwaukee",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260138",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260105",
+    "state": "WV",
+    "revision": 0,
+    "county": "Putnam",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260243",
+    "state": "TX",
+    "revision": 0,
+    "county": "Denton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260028",
+    "state": "WI",
+    "revision": 0,
+    "county": "Racine",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260139",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260106",
+    "state": "WV",
+    "revision": 0,
+    "county": "Raleigh",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260244",
+    "state": "TX",
+    "revision": 0,
+    "county": "Ector",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260029",
+    "state": "WI",
+    "revision": 0,
+    "county": "Rock",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260140",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260107",
+    "state": "WV",
+    "revision": 0,
+    "county": "Wayne",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260245",
+    "state": "TX",
+    "revision": 0,
+    "county": "El Paso",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260030",
+    "state": "WI",
+    "revision": 0,
+    "county": "Sheboygan",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260141",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260108",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260246",
+    "state": "TX",
+    "revision": 0,
+    "county": "Ellis",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260031",
+    "state": "WI",
+    "revision": 0,
+    "county": "Waukesha",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260142",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260109",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260032",
+    "state": "WI",
+    "revision": 0,
+    "county": "Winnebago",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260247",
+    "state": "TX",
+    "revision": 0,
+    "county": "Fort Bend",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260143",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260110",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260033",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260248",
+    "state": "TX",
+    "revision": 0,
+    "county": "Galveston",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260144",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260111",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260034",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260249",
+    "state": "TX",
+    "revision": 0,
+    "county": "Grayson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260145",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260112",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260035",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260250",
+    "state": "TX",
+    "revision": 0,
+    "county": "Gregg",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260146",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WV20260113",
+    "state": "WV",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260251",
+    "state": "TX",
+    "revision": 0,
+    "county": "Guadalupe",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260036",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260147",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260252",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hardin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260037",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260148",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260253",
+    "state": "TX",
+    "revision": 0,
+    "county": "Harris",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WI20260038",
+    "state": "WI",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260149",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260254",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hays",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260150",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260255",
+    "state": "TX",
+    "revision": 0,
+    "county": "Hidalgo",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260151",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260256",
+    "state": "TX",
+    "revision": 0,
+    "county": "Jefferson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260152",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260257",
+    "state": "TX",
+    "revision": 0,
+    "county": "Johnson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260153",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260258",
+    "state": "TX",
+    "revision": 0,
+    "county": "Kendall",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260154",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260259",
+    "state": "TX",
+    "revision": 0,
+    "county": "Liberty",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260155",
+    "state": "VA",
+    "revision": 0,
+    "county": "Henrico",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260260",
+    "state": "TX",
+    "revision": 0,
+    "county": "McLennan",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260156",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260261",
+    "state": "TX",
+    "revision": 0,
+    "county": "Midland",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260157",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260262",
+    "state": "TX",
+    "revision": 0,
+    "county": "Montgomery",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260080",
+    "state": "WA",
+    "revision": 0,
+    "county": "Washington",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260158",
+    "state": "VA",
+    "revision": 0,
+    "county": "Loudoun",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260263",
+    "state": "TX",
+    "revision": 0,
+    "county": "Orange",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260081",
+    "state": "WA",
+    "revision": 0,
+    "county": "Clallam",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260159",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260264",
+    "state": "TX",
+    "revision": 0,
+    "county": "Parker",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260082",
+    "state": "WA",
+    "revision": 0,
+    "county": "Grant",
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260160",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260265",
+    "state": "TX",
+    "revision": 0,
+    "county": "Potter",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260083",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260161",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260266",
+    "state": "TX",
+    "revision": 0,
+    "county": "Randall",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260084",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260162",
+    "state": "VA",
+    "revision": 0,
+    "county": "Prince William",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260267",
+    "state": "TX",
+    "revision": 0,
+    "county": "Robertson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260085",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260163",
+    "state": "VA",
+    "revision": 0,
+    "county": "Pulaski",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260268",
+    "state": "TX",
+    "revision": 0,
+    "county": "San Jacinto",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260086",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": null,
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260164",
+    "state": "VA",
+    "revision": 0,
+    "county": "Rockingham",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260269",
+    "state": "TX",
+    "revision": 0,
+    "county": "Smith",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260087",
+    "state": "WA",
+    "revision": 0,
+    "county": "Benton",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260165",
+    "state": "VA",
+    "revision": 0,
+    "county": "Spotsylvania",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260270",
+    "state": "TX",
+    "revision": 0,
+    "county": "Tarrant",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260088",
+    "state": "WA",
+    "revision": 0,
+    "county": "Chelan",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260166",
+    "state": "VA",
+    "revision": 0,
+    "county": "Sussex",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260271",
+    "state": "TX",
+    "revision": 0,
+    "county": "Travis",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260089",
+    "state": "WA",
+    "revision": 0,
+    "county": "Cowlitz",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260167",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260272",
+    "state": "TX",
+    "revision": 0,
+    "county": "Waller",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260090",
+    "state": "WA",
+    "revision": 0,
+    "county": "Douglas",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260168",
+    "state": "VA",
+    "revision": 0,
+    "county": "Warren",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260273",
+    "state": "TX",
+    "revision": 0,
+    "county": "Webb",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260091",
+    "state": "WA",
+    "revision": 0,
+    "county": "King",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260169",
+    "state": "VA",
+    "revision": 0,
+    "county": "York",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260274",
+    "state": "TX",
+    "revision": 0,
+    "county": "Wichita",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260092",
+    "state": "WA",
+    "revision": 0,
+    "county": "Kitsap",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260170",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260275",
+    "state": "TX",
+    "revision": 0,
+    "county": "Williamson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260093",
+    "state": "WA",
+    "revision": 0,
+    "county": "Pierce",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260171",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260276",
+    "state": "TX",
+    "revision": 0,
+    "county": "Wise",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260094",
+    "state": "WA",
+    "revision": 0,
+    "county": "Snohomish",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260172",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260277",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260095",
+    "state": "WA",
+    "revision": 0,
+    "county": "Spokane",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260173",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260278",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260096",
+    "state": "WA",
+    "revision": 0,
+    "county": "Thurston",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260174",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260279",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260097",
+    "state": "WA",
+    "revision": 0,
+    "county": "Yakima",
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260175",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260280",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260098",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260176",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-30",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260281",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260099",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260177",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260282",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260100",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260178",
+    "state": "VA",
+    "revision": 0,
+    "county": "Fairfax",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "TX20260283",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260101",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260179",
+    "state": "VA",
+    "revision": 0,
+    "county": "Loudoun",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260284",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bandera",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260102",
+    "state": "WA",
+    "revision": 0,
+    "county": "Benton",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260180",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260285",
+    "state": "TX",
+    "revision": 0,
+    "county": "Bastrop",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260181",
+    "state": "VA",
+    "revision": 0,
+    "county": "Nelson",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260103",
+    "state": "WA",
+    "revision": 0,
+    "county": "Chelan",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260286",
+    "state": "TX",
+    "revision": 0,
+    "county": "Caldwell",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260104",
+    "state": "WA",
+    "revision": 0,
+    "county": "Columbia",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260182",
+    "state": "VA",
+    "revision": 0,
+    "county": "New Kent",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260287",
+    "state": "TX",
+    "revision": 0,
+    "county": "Wilson",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260105",
+    "state": "WA",
+    "revision": 0,
+    "county": "Cowlitz",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260183",
+    "state": "VA",
+    "revision": 0,
+    "county": "Powhatan",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260288",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260106",
+    "state": "WA",
+    "revision": 0,
+    "county": "Douglas",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260184",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260289",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260107",
+    "state": "WA",
+    "revision": 0,
+    "county": "Franklin",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260185",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260290",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260108",
+    "state": "WA",
+    "revision": 0,
+    "county": "King",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260186",
+    "state": "VA",
+    "revision": 0,
+    "county": "Pulaski",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260291",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260109",
+    "state": "WA",
+    "revision": 0,
+    "county": "Kitsap",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260187",
+    "state": "VA",
+    "revision": 0,
+    "county": "Rappahannock",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260292",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260110",
+    "state": "WA",
+    "revision": 0,
+    "county": "Pend Oreille",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260188",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260293",
+    "state": "TX",
+    "revision": 0,
+    "county": "El Paso",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260111",
+    "state": "WA",
+    "revision": 0,
+    "county": "Pierce",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260189",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260294",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260112",
+    "state": "WA",
+    "revision": 0,
+    "county": "Skagit",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260190",
+    "state": "VA",
+    "revision": 0,
+    "county": "Scott",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260295",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260113",
+    "state": "WA",
+    "revision": 0,
+    "county": "Snohomish",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260191",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260296",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260114",
+    "state": "WA",
+    "revision": 0,
+    "county": "Spokane",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260192",
+    "state": "VA",
+    "revision": 0,
+    "county": "Stafford",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260297",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260115",
+    "state": "WA",
+    "revision": 0,
+    "county": "Stevens",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260193",
+    "state": "VA",
+    "revision": 0,
+    "county": "Warren",
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260298",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260116",
+    "state": "WA",
+    "revision": 0,
+    "county": "Thurston",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260194",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260299",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260117",
+    "state": "WA",
+    "revision": 0,
+    "county": "Walla Walla",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260195",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "TX20260300",
+    "state": "TX",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260118",
+    "state": "WA",
+    "revision": 0,
+    "county": "Whatcom",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260196",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HIGHWAY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260119",
+    "state": "WA",
+    "revision": 0,
+    "county": "Yakima",
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260197",
+    "state": "VA",
+    "revision": 0,
+    "county": "Fairfax",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "WA20260120",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "BUILDING",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260198",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260121",
+    "state": "WA",
+    "revision": 0,
+    "county": "Benton",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260199",
+    "state": "VA",
+    "revision": 0,
+    "county": "Henrico",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WY20260002",
+    "state": "WY",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260122",
+    "state": "WA",
+    "revision": 0,
+    "county": "Chelan",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260200",
+    "state": "VA",
+    "revision": 0,
+    "county": "Loudoun",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "WY20260003",
+    "state": "WY",
+    "revision": 0,
+    "county": null,
+    "constructionType": "RESIDENTIAL",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260123",
+    "state": "WA",
+    "revision": 0,
+    "county": "Cowlitz",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260201",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260124",
+    "state": "WA",
+    "revision": 0,
+    "county": "Douglas",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260202",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260125",
+    "state": "WA",
+    "revision": 0,
+    "county": "King",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260203",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260126",
+    "state": "WA",
+    "revision": 0,
+    "county": "Kitsap",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260204",
+    "state": "VA",
+    "revision": 0,
+    "county": "York",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260127",
+    "state": "WA",
+    "revision": 0,
+    "county": "Pierce",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260205",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "WA20260128",
+    "state": "WA",
+    "revision": 0,
+    "county": "Skagit",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260206",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260129",
+    "state": "WA",
+    "revision": 0,
+    "county": "Snohomish",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260207",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "WA20260130",
+    "state": "WA",
+    "revision": 0,
+    "county": "Spokane",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260208",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "WA20260131",
+    "state": "WA",
+    "revision": 0,
+    "county": "Stevens",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260209",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260132",
+    "state": "WA",
+    "revision": 0,
+    "county": "Thurston",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260210",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-09",
+    "active": false
+  },
+  {
+    "wdNumber": "WA20260133",
+    "state": "WA",
+    "revision": 0,
+    "county": "Walla Walla",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260211",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-16",
+    "active": false
+  },
+  {
+    "wdNumber": "WA20260134",
+    "state": "WA",
+    "revision": 0,
+    "county": "Whatcom",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260212",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260135",
+    "state": "WA",
+    "revision": 0,
+    "county": "Yakima",
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "VA20260213",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260136",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
+  },
+  {
+    "wdNumber": "VA20260214",
+    "state": "VA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260137",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-02",
+    "active": true
+  },
+  {
+    "wdNumber": "WA20260138",
+    "state": "WA",
+    "revision": 0,
+    "county": null,
+    "constructionType": "HEAVY",
+    "publishDate": "2026-01-23",
+    "active": false
   }
 ]
