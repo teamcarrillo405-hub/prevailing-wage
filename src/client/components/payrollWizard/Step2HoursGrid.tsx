@@ -1,6 +1,7 @@
 // src/client/components/payrollWizard/Step2HoursGrid.tsx
 import { useState, useCallback, useEffect } from 'react';
 import { Step2GridRow, type RowValues } from './Step2GridRow';
+import { Step2BulkActions, STANDARD_WEEK } from './Step2BulkActions';
 import { Button } from '../ui/Button';
 
 export interface GridWorkerRow {
@@ -48,6 +49,34 @@ export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: P
     [rows, onRowChange]
   );
 
+  // Standard-week bulk: replace one row's values atomically and notify dirty.
+  const applyStandardWeekToRow = useCallback(
+    (workerId: string, classificationId: string) => {
+      let updated: GridWorkerRow | null = null;
+      setRows((rs) =>
+        rs.map((r) => {
+          if (r.workerId === workerId && r.classificationId === classificationId) {
+            updated = { ...r, values: { ...STANDARD_WEEK } };
+            return updated;
+          }
+          return r;
+        })
+      );
+      if (updated) onRowChange(updated);
+    },
+    [onRowChange]
+  );
+
+  // Apply standard week to every row + notify each as dirty.
+  const applyStandardWeekToAll = useCallback(() => {
+    setRows((rs) => {
+      const next = rs.map((r) => ({ ...r, values: { ...STANDARD_WEEK } }));
+      // Fire dirty notifications for each row using the just-built next state
+      next.forEach((row) => onRowChange(row));
+      return next;
+    });
+  }, [onRowChange]);
+
   // Keyboard nav: Enter + ArrowDown = next row same column, ArrowUp = prev row same column.
   // Tab/Shift-Tab handled by browser defaults. All grid cells carry data-worker-id + data-field.
   useEffect(() => {
@@ -77,6 +106,7 @@ export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: P
 
   return (
     <div>
+      <Step2BulkActions onApplyStandardWeekAll={applyStandardWeekToAll} />
       <div className="overflow-x-auto border border-gray-200 rounded-sm">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50">
@@ -113,6 +143,7 @@ export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: P
                 values={r.values}
                 onChange={(field, value) => updateCell(r.workerId, r.classificationId, field, value)}
                 onBlur={() => notifyBlur(r.workerId, r.classificationId)}
+                onStandardWeek={() => applyStandardWeekToRow(r.workerId, r.classificationId)}
               />
             ))}
           </tbody>
