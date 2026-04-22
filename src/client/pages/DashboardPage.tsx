@@ -11,6 +11,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { HelpCallout } from '../components/ui/HelpCallout';
+import { ComplianceOverviewCard } from '../components/compliance/ComplianceOverviewCard';
 
 interface Project {
   id: string;
@@ -181,6 +182,15 @@ export function DashboardPage() {
         title="Your Active Projects"
         body="Each project tracks a separate federal job. Add workers and enter payroll weekly to keep your certified payroll current and DOL-ready."
       />
+
+      {/* At-a-glance compliance summary — shows counts + status bar before the grid. */}
+      {projects.length > 0 && (
+        <ComplianceOverviewCard
+          statusMap={summaryMap}
+          totalActiveProjects={projects.filter(p => p.status === 'active').length}
+          isLoading={!summaryData && projects.length > 0}
+        />
+      )}
 
       <div className="flex items-center gap-2 mb-4">
         <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
