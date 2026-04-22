@@ -25,15 +25,21 @@ each form's directory.
 
 **Ports in order (easiest → hardest):**
 
-| Phase | Form | Generator | Approach | Size |
-|---|---|---|---|---|
-| M1.1 | CA A-1-131 | `a1131Generator.ts` | Template-based, 346 lines, 13 coords — straight port | Small |
-| M1.2 | IL Certified Transcript | `ilPdfGenerator.ts` | Create-from-scratch, 517 lines — needs template PDF source | Medium |
-| M1.3 | NY PW-12 | `pw12Generator.ts` | Create-from-scratch, 447 lines, dual ST/OT | Medium |
-| M1.4 | NJ MW-562 | `njPdfGenerator.ts` | Create-from-scratch, 540 lines, EEO columns | Medium |
-| M1.5 | MA Certified Payroll | `maPdfGenerator.ts` | Create-from-scratch, 565 lines, OSHA cols | Large |
-| ~~M1.6~~ | ~~Multi-project Compliance PDF~~ | `complianceSummaryPdfGenerator.ts` | **NOT A WIDGET CANDIDATE** — dynamic report with variable-length project list; pagination is data-driven. Coordinate-overlay is correct here. Leave as-is. | n/a |
-| M1.7 | WA L&I F700 | `f700Generator.ts` | Currently unimplemented skeleton — build + port together | Medium |
+| Phase | Form | Generator | Status |
+|---|---|---|---|
+| M1.1 | CA A-1-131 | `a1131Generator.ts` | ✅ **PORTED** (2026-04-21) via pre-rotated landscape template |
+| ~~M1.2~~ | ~~IL Certified Transcript~~ | `ilPdfGenerator.ts` | **NOT A WIDGET CANDIDATE** — dynamic layout, no official state template, paginates at y<150. Forcing widget pattern = regression (fixed worker count). Keep as coordinate-drawn. |
+| ~~M1.3~~ | ~~NY PW-12~~ | `pw12Generator.ts` | **NOT A WIDGET CANDIDATE** — same reason as M1.2. |
+| ~~M1.4~~ | ~~NJ MW-562~~ | `njPdfGenerator.ts` | **NOT A WIDGET CANDIDATE** — dynamic + EEO columns + complex state-specific logic. |
+| ~~M1.5~~ | ~~MA Certified Payroll~~ | `maPdfGenerator.ts` | **NOT A WIDGET CANDIDATE** — dynamic + OSHA/demographic cols + Sunday-first days. |
+| ~~M1.6~~ | ~~Multi-project Compliance PDF~~ | `complianceSummaryPdfGenerator.ts` | **NOT A WIDGET CANDIDATE** — dynamic report with variable-length project list; pagination is data-driven. |
+| M1.7 | WA L&I F700 | `f700Generator.ts` | Unimplemented skeleton. When built, decide fixed vs dynamic layout. Widget-template only if state ships fillable PDF. |
+
+**Rule:** the widget-template pattern fits forms where the state ships an
+OFFICIAL fillable PDF with a fixed number of worker rows per page (WH-347,
+A-1-131). For states that don't ship such a PDF and we generate from scratch,
+coordinate-drawing with dynamic pagination is correct — porting would replace
+unlimited-worker support with an arbitrary fixed cap. Leave those alone.
 
 **Exit criteria:** all 7 generators fill by widget name + flatten. Zero
 `drawText({x: N, y: N})` coordinate literals in runtime code.

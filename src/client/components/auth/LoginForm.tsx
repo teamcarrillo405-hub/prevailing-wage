@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
 
 const LoginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -35,51 +37,33 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-      <div>
-        <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email address
-        </label>
-        <input
-          id="login-email"
-          type="email"
-          autoComplete="email"
-          {...register('email')}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold focus:border-transparent"
-        />
-        {errors.email && (
-          <p className="text-red-600 text-xs mt-1">{errors.email.message}</p>
-        )}
-      </div>
+      <Input
+        id="login-email"
+        type="email"
+        autoComplete="email"
+        label="Email address"
+        error={errors.email?.message}
+        {...register('email')}
+      />
 
-      <div>
-        <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">
-          Password
-        </label>
-        <input
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          {...register('password')}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold focus:border-transparent"
-        />
-        {errors.password && (
-          <p className="text-red-600 text-xs mt-1">{errors.password.message}</p>
-        )}
-      </div>
+      <Input
+        id="login-password"
+        type="password"
+        autoComplete="current-password"
+        label="Password"
+        error={errors.password?.message}
+        {...register('password')}
+      />
 
       {apiError && (
-        <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-sm text-red-700">
+        <div className="bg-red-50 border border-red-200 rounded-sm px-3 py-2 text-sm text-red-700">
           {apiError}
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full bg-[#F5C518] text-gray-900 font-semibold py-2 px-4 rounded hover:bg-yellow-400 transition-colors disabled:opacity-60"
-      >
-        {isSubmitting ? 'Signing in...' : 'Sign In'}
-      </button>
+      <Button type="submit" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? 'Signing in…' : 'Sign In'}
+      </Button>
     </form>
   );
 }
