@@ -13,7 +13,7 @@ import { WageLookupPage } from './pages/WageLookupPage.js';
 import { CostEstimationPage } from './pages/CostEstimationPage.js';
 import { WageCoveragePage } from './pages/WageCoveragePage.js';
 import { AdminStateWagePage } from './pages/AdminStateWagePage.js';
-import { PayrollEntryPage } from './pages/PayrollEntryPage.js';
+import { PayrollWizardPage } from './pages/PayrollWizardPage.js';
 import { PayrollListPage } from './pages/PayrollListPage.js';
 import { OtScenarioPage } from './pages/OtScenarioPage.js';
 import { WorkersPage } from './pages/WorkersPage.js';
@@ -57,7 +57,8 @@ export default function App() {
               <Route path="/admin/coverage" element={<WageCoveragePage />} />
               <Route path="/admin/wages" element={<AdminStateWagePage />} />
               <Route path="/projects/:projectId/payroll" element={<PayrollListPage />} />
-              <Route path="/projects/:projectId/payroll/new" element={<PayrollEntryPage />} />
+              <Route path="/projects/:projectId/payroll/new" element={<PayrollWizardPage />} />
+              <Route path="/projects/:projectId/payroll/:weekId/edit" element={<PayrollWizardPage />} />
               <Route path="/projects/:projectId/payroll/:weekId" element={<PayrollWeekDetailPage />} />
               <Route path="/projects/:projectId/ot-scenarios" element={<OtScenarioPage />} />
               <Route path="/projects/:projectId/workers" element={<WorkersPage />} />
