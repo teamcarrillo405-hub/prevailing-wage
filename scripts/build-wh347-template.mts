@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync } from 'fs';
 
 const GRID_MODE = process.argv.includes('--grid');
 const SRC = 'assets/wh347-official-2025.pdf';
-const LAYOUT = 'scripts/calibrate/widgets.json';
+const LAYOUT = 'scripts/calibrate/wh347/widgets.json';
 const OUT = GRID_MODE
   ? 'assets/wh347-fillable-grid.pdf'
   : 'assets/wh347-fillable-template.pdf';

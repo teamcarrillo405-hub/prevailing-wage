@@ -28,12 +28,38 @@ text "ROTATE?" and rendered it — text appeared 90° CCW rotated.
    portrait_x = ly, portrait_y = lx (approximately). Requires careful
    math and test rendering.
 
-## Recommended next step
-Prototype option 1 (cheapest). If pdf-lib's `addToPage({rotate: ...})`
-works with flatten, the port becomes straightforward: add widget with
-`rotate: degrees(-90)` and coordinates in landscape space stay as-is.
+## Empirical findings (2026-04-21)
 
-If option 1 doesn't work, fall back to option 2 (pre-rotate template).
+Tested `addToPage({ rotate: ... })` with three values:
+- `rotate: degrees(-90)` → widget invisible / misaligned
+- `rotate: degrees(90)` → **widget text renders UPRIGHT on landscape display** ✓
+- `rotate: degrees(270)` → widget renders upside down
+
+So option 1 works for TEXT ORIENTATION. But widget POSITION (x, y) is
+still in native portrait coords — placing a widget at (x=300, y=500)
+did not land where expected on the landscape-rotated display.
+
+## Coordinate transform needed
+
+Given landscape rect (lx, ly, lw, lh) on the 1008×612 display, the
+native portrait rect for pdf-lib's `addToPage` is (guess, unverified):
+
+```
+x = 612 - (ly + lh)
+y = lx
+w = lh
+h = lw
+// plus rotate: degrees(90)
+```
+
+Needs verification via a targeted test (place widget at known landscape
+position, render, compare). Once verified, port becomes mechanical.
+
+## Status: PARKED
+
+Portrait forms (pw12, ilPdfGenerator, njPdfGenerator, maPdfGenerator,
+complianceSummaryPdfGenerator) don't have this rotation complication
+and should be ported first. Revisit A-1-131 after those land.
 
 ## Files in this directory
 - `bg-page1.png`, `bg-page2.png` — 144 DPI renders of the official PDF

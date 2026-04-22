@@ -109,6 +109,9 @@
 
 <script>
 const SCALE = 2;  // 1 PDF point = 2 screen pixels
+// Form name from URL path, e.g., /wh347 → FORM = "wh347"
+const FORM = window.location.pathname.slice(1).split('/')[0] || 'wh347';
+document.title = `${FORM.toUpperCase()} — Widget Calibration`;
 let layout = null;
 let currentPage = 0;
 let selected = null;
@@ -116,12 +119,16 @@ let dirty = false;
 let dragState = null;
 
 async function load() {
-  const res = await fetch('/widgets.json');
+  const res = await fetch(`/api/${FORM}/widgets`);
+  if (!res.ok) {
+    toast('Failed to load: ' + res.status, 'err');
+    return;
+  }
   layout = await res.json();
   dirty = false;
   render();
   populateCatalog();
-  toast('Loaded ' + layout.widgets.length + ' widgets', 'ok');
+  toast('Loaded ' + layout.widgets.length + ' widgets for ' + FORM, 'ok');
 }
 
 // All widget names the generator knows how to fill. Used to populate the
@@ -216,7 +223,7 @@ function render() {
   const bg = document.getElementById('bg');
   canvas.style.width  = (pageW * SCALE) + 'px';
   canvas.style.height = (pageH * SCALE) + 'px';
-  bg.src = '/bg-page' + (currentPage + 1) + '.png';
+  bg.src = `/api/${FORM}/bg/${currentPage + 1}`;
 
   // Clear existing widget divs
   canvas.querySelectorAll('.widget').forEach(el => el.remove());
@@ -387,7 +394,7 @@ function deleteWidget() {
 
 async function save() {
   if (!layout) return;
-  const res = await fetch('/widgets.json', {
+  const res = await fetch(`/api/${FORM}/widgets`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(layout),
   });
@@ -398,7 +405,7 @@ async function save() {
 
 async function rebuild() {
   toast('Rebuilding template...', 'ok');
-  const res = await fetch('/rebuild', { method: 'POST' });
+  const res = await fetch(`/api/${FORM}/rebuild`, { method: 'POST' });
   const r = await res.json();
   if (r.ok) toast('Template rebuilt · see assets/wh347-fillable-template.pdf', 'ok');
   else toast('Rebuild failed: ' + (r.stderr || '').slice(0, 200), 'err');
