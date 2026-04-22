@@ -16,10 +16,14 @@ export interface ComplianceViolation {
   entryId: string;
   workerId: string;
   workerName: string;
-  violationType: 'under-wage' | 'cwhssa-ot';
-  expected: number;   // totalWeeklyCost from calculateCwhssaOt
-  actual: number;     // grossWages from entry
-  delta: number;      // actual - expected (negative = underpayment)
+  violationType:
+    | 'under-wage'
+    | 'cwhssa-ot'
+    | 'ca-daily-ot'    // CA: hours 8-12 per day must be at OT rate (Labor Code §510)
+    | 'ca-daily-dt';   // CA: hours >12 per day must be at DT rate
+  expected: number;
+  actual: number;
+  delta: number;
 }
 
 export interface WeekViolation {
@@ -50,11 +54,13 @@ export async function computeCompliance(
   const week = await getPayrollWeek(weekId);
   if (!week) return null;
 
-  // 2. Fetch project to determine state (needed for NY daily OT rule)
+  // 2. Fetch project to determine state (needed for per-state OT rules)
   const db = getDb();
   const [project] = await db.select().from(schema.projects)
     .where(eq(schema.projects.id, week.projectId)).limit(1);
-  const isNY = project?.state?.toUpperCase() === 'NY';
+  const stateCode = project?.state?.toUpperCase();
+  const isNY = stateCode === 'NY';
+  const isCA = stateCode === 'CA';
 
   // 3. Load entries (with worker names and classification info)
   const rows = await getPayrollEntries(weekId);
@@ -99,6 +105,53 @@ export async function computeCompliance(
             expected: 8,
             actual: dayTotal,
             delta: dayTotal - 8,
+          });
+        }
+      }
+    }
+
+    // CA state rules (Labor Code §510): daily OT + DT thresholds
+    //   ST limit:  first 8 hrs/day
+    //   OT window: hours 8-12/day (at 1.5×)
+    //   DT window: hours >12/day (at 2×)
+    // Flag a violation if ST hours exceed 8 per day (should have moved excess
+    // to OT bucket) or if OT hours extend past 12 total (should have moved
+    // excess >12 to DT bucket).
+    if (isCA) {
+      const caDays = [
+        { name: 'Mon', st: e.monSt, ot: e.monOt, dt: e.monDt },
+        { name: 'Tue', st: e.tueSt, ot: e.tueOt, dt: e.tueDt },
+        { name: 'Wed', st: e.wedSt, ot: e.wedOt, dt: e.wedDt },
+        { name: 'Thu', st: e.thuSt, ot: e.thuOt, dt: e.thuDt },
+        { name: 'Fri', st: e.friSt, ot: e.friOt, dt: e.friDt },
+        { name: 'Sat', st: e.satSt, ot: e.satOt, dt: e.satDt },
+        { name: 'Sun', st: e.sunSt, ot: e.sunOt, dt: e.sunDt },
+      ];
+      for (const d of caDays) {
+        const st = d.st ?? 0;
+        const ot = d.ot ?? 0;
+        const dt = d.dt ?? 0;
+        if (st > 8) {
+          violations.push({
+            entryId: e.id,
+            workerId: e.workerId,
+            workerName: row.workerName,
+            violationType: 'ca-daily-ot',
+            expected: 8,
+            actual: st,
+            delta: st - 8,
+          });
+        }
+        // OT+ST total > 12 means DT should have been used for excess hours
+        if (st + ot > 12 && dt === 0) {
+          violations.push({
+            entryId: e.id,
+            workerId: e.workerId,
+            workerName: row.workerName,
+            violationType: 'ca-daily-dt',
+            expected: 12,
+            actual: st + ot,
+            delta: (st + ot) - 12,
           });
         }
       }
@@ -242,7 +295,7 @@ export interface WorkerViolationHistoryEntry {
   weekId: string;
   weekEndingDate: string;
   payrollNumber: number;
-  violationType: 'under-wage' | 'cwhssa-ot' | 'apprentice-ratio';
+  violationType: 'under-wage' | 'cwhssa-ot' | 'ca-daily-ot' | 'ca-daily-dt' | 'apprentice-ratio';
   detail?: string;
   expected?: number;
   actual?: number;

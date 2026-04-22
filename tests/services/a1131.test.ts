@@ -53,7 +53,7 @@ let templateBytes: Uint8Array;
 let filledBytes: Uint8Array;
 
 beforeAll(async () => {
-  const templatePath = path.join(process.cwd(), 'assets', 'a1131-official.pdf');
+  const templatePath = path.join(process.cwd(), 'assets', 'a1131-fillable-template.pdf');
   templateBytes = readFileSync(templatePath);
   filledBytes = await fillA1131(FIXTURE, templateBytes);
 });

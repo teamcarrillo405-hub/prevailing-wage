@@ -551,24 +551,30 @@ describe('computeCompliance', () => {
       expect(otViolations).toHaveLength(0);
     });
 
-    it('Test C: Non-NY project (CA) with 9 ST hours on Monday does NOT flag daily OT', async () => {
-      // CA uses weekly 40h rule only — daily 9h on one day should not trigger cwhssa-ot
-      // Total week = 9+8+8+8+7 = 40h (no weekly CWHSSA violation either)
+    it('Test C: CA project with 9 ST hours on Monday flags ca-daily-ot violation', async () => {
+      // CA Labor Code §510: hours 8-12/day must be at OT rate (1.5×).
+      // 9 ST hours on Monday is a violation — that 9th hour should be OT.
+      // Total week stays at 40h so there's no weekly CWHSSA issue.
       const { projectId, workerId, classificationId, cookie } = await seedCaProjectAndWorker();
       const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-22', 103);
 
-      // 9 ST on Monday, total 40h/week — CA weekly rule not triggered, daily OT should not fire
       await seedEntry(cookie, weekId, workerId, classificationId, {
         monSt: 9, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 7,
         baseRateSnapshot: 30,
         fringeRateSnapshot: 10,
-        grossWages: 1600, // 40h * $30 base + 40h * $10 fringe = 1600
+        grossWages: 1600,
       });
 
       const result = await computeCompliance(db, weekId);
       expect(result).not.toBeNull();
-      const otViolations = result!.violations.filter(v => v.violationType === 'cwhssa-ot');
-      expect(otViolations).toHaveLength(0);
+      // Should NOT have a cwhssa-ot violation (that's the federal/NY code path)
+      const cwhssaViolations = result!.violations.filter(v => v.violationType === 'cwhssa-ot');
+      expect(cwhssaViolations).toHaveLength(0);
+      // Should have a ca-daily-ot violation for the 9 ST hour day
+      const caOtViolations = result!.violations.filter(v => v.violationType === 'ca-daily-ot');
+      expect(caOtViolations).toHaveLength(1);
+      expect(caOtViolations[0].actual).toBe(9);
+      expect(caOtViolations[0].expected).toBe(8);
     });
   });
 
