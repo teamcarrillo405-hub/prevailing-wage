@@ -10,6 +10,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { WageLookupPage } from './pages/WageLookupPage.js';
+import { CostEstimationPage } from './pages/CostEstimationPage.js';
 import { AdminStateWagePage } from './pages/AdminStateWagePage.js';
 import { PayrollEntryPage } from './pages/PayrollEntryPage.js';
 import { PayrollListPage } from './pages/PayrollListPage.js';
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/projects/:id" element={<ProjectDetailPage />} />
               <Route path="/wages" element={<WageLookupPage />} />
+              <Route path="/cost-estimation" element={<CostEstimationPage />} />
               <Route path="/admin/wages" element={<AdminStateWagePage />} />
               <Route path="/projects/:projectId/payroll" element={<PayrollListPage />} />
               <Route path="/projects/:projectId/payroll/new" element={<PayrollEntryPage />} />
