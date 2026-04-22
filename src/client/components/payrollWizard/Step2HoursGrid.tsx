@@ -1,7 +1,7 @@
 // src/client/components/payrollWizard/Step2HoursGrid.tsx
 import { useState, useCallback, useEffect } from 'react';
-import { Step2GridRow, type RowValues, type HourValues } from './Step2GridRow';
-import { Step2BulkActions, STANDARD_WEEK } from './Step2BulkActions';
+import { Step2GridRow, type RowValues, type HourValues, type RowExtras } from './Step2GridRow';
+import { Step2BulkActions, STANDARD_WEEK, type StateToggles } from './Step2BulkActions';
 import { parsePastedHours } from './pasteParser';
 import { Button } from '../ui/Button';
 
@@ -31,8 +31,21 @@ interface Props {
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export function Step2HoursGrid({ initialRows, projectState: _projectState, onRowChange, onReview, onBack }: Props) {
+const INITIAL_TOGGLES: StateToggles = {
+  caDt: false,
+  caFringe: false,
+  ilNonPw: false,
+  maFields: false,
+  njDeductions: false,
+};
+
+export function Step2HoursGrid({ initialRows, projectState, onRowChange, onReview, onBack }: Props) {
   const [rows, setRows] = useState(initialRows);
+  const [toggles, setToggles] = useState<StateToggles>(INITIAL_TOGGLES);
+
+  const onToggle = useCallback((key: keyof StateToggles) => {
+    setToggles((t) => ({ ...t, [key]: !t[key] }));
+  }, []);
 
   const updateCell = useCallback(
     (workerId: string, classificationId: string, field: keyof HourValues, value: number) => {
@@ -42,6 +55,38 @@ export function Step2HoursGrid({ initialRows, projectState: _projectState, onRow
             ? { ...r, values: { ...r.values, [field]: value } as RowValues }
             : r
         )
+      );
+    },
+    []
+  );
+
+  const updateExtra = useCallback(
+    (
+      workerId: string,
+      classificationId: string,
+      field: keyof RowExtras,
+      value: number | string | null
+    ) => {
+      setRows((rs) =>
+        rs.map((r) => {
+          if (r.workerId !== workerId || r.classificationId !== classificationId) return r;
+          const nextValues = { ...r.values, [field]: value } as RowValues;
+          // CA fringe live-sum: when any disag field changes, update fringeRate for this row.
+          if (
+            field === 'fringeHealthWelfare' ||
+            field === 'fringePension' ||
+            field === 'fringeVacation' ||
+            field === 'fringeTraining'
+          ) {
+            const sum =
+              (nextValues.fringeHealthWelfare ?? 0) +
+              (nextValues.fringePension ?? 0) +
+              (nextValues.fringeVacation ?? 0) +
+              (nextValues.fringeTraining ?? 0);
+            return { ...r, values: nextValues, fringeRate: parseFloat(sum.toFixed(2)) };
+          }
+          return { ...r, values: nextValues };
+        })
       );
     },
     []
@@ -57,7 +102,6 @@ export function Step2HoursGrid({ initialRows, projectState: _projectState, onRow
     [rows, onRowChange]
   );
 
-  // Standard-week bulk: replace one row's values atomically and notify dirty.
   const applyStandardWeekToRow = useCallback(
     (workerId: string, classificationId: string) => {
       let updated: GridWorkerRow | null = null;
@@ -75,18 +119,15 @@ export function Step2HoursGrid({ initialRows, projectState: _projectState, onRow
     [onRowChange]
   );
 
-  // Apply standard week to every row + notify each as dirty.
   const applyStandardWeekToAll = useCallback(() => {
     setRows((rs) => {
       const next = rs.map((r) => ({ ...r, values: { ...STANDARD_WEEK } }));
-      // Fire dirty notifications for each row using the just-built next state
       next.forEach((row) => onRowChange(row));
       return next;
     });
   }, [onRowChange]);
 
   // Paste handler: spreadsheet-shaped TSV pastes into the focused cell fill rectangularly.
-  // Non-numeric or ragged pastes fall through to default text-input paste behavior.
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTableElement>) => {
       const target = e.target as HTMLInputElement;
@@ -121,7 +162,6 @@ export function Step2HoursGrid({ initialRows, projectState: _projectState, onRow
           return { ...row, values };
         });
 
-        // Notify dirty for each touched row using the freshly-computed state.
         for (let i = 0; i < grid.length && startRowIdx + i < next.length; i++) {
           onRowChange(next[startRowIdx + i]);
         }
@@ -131,8 +171,6 @@ export function Step2HoursGrid({ initialRows, projectState: _projectState, onRow
     [onRowChange]
   );
 
-  // Keyboard nav: Enter + ArrowDown = next row same column, ArrowUp = prev row same column.
-  // Tab/Shift-Tab handled by browser defaults. All grid cells carry data-worker-id + data-field.
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       const target = e.target as HTMLInputElement;
@@ -160,7 +198,12 @@ export function Step2HoursGrid({ initialRows, projectState: _projectState, onRow
 
   return (
     <div>
-      <Step2BulkActions onApplyStandardWeekAll={applyStandardWeekToAll} />
+      <Step2BulkActions
+        onApplyStandardWeekAll={applyStandardWeekToAll}
+        projectState={projectState}
+        toggles={toggles}
+        onToggle={onToggle}
+      />
       <div className="overflow-x-auto border border-gray-200 rounded-sm">
         <table className="min-w-full text-sm" onPaste={handlePaste}>
           <thead className="bg-gray-50">
@@ -182,6 +225,40 @@ export function Step2HoursGrid({ initialRows, projectState: _projectState, onRow
                   OT
                 </th>
               ))}
+              {toggles.caDt &&
+                DAY_LABELS.map((d) => (
+                  <th key={`${d}-dt`} className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">
+                    {d}
+                    <br />
+                    DT
+                  </th>
+                ))}
+              {toggles.caFringe && (
+                <>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">H+W</th>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Pension</th>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Vacation</th>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Training</th>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Fringe $</th>
+                </>
+              )}
+              {toggles.ilNonPw && (
+                <th className="px-1 py-2 text-center text-xs font-semibold bg-purple-50">Non-PW hrs</th>
+              )}
+              {toggles.maFields && (
+                <>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">Check #</th>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">All-other hrs</th>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">Total gross</th>
+                </>
+              )}
+              {toggles.njDeductions && (
+                <>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">FICA</th>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">Fed Tax</th>
+                  <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">State Tax</th>
+                </>
+              )}
               <th className="px-3 py-2 text-right text-xs font-semibold">Total</th>
             </tr>
           </thead>
@@ -195,7 +272,9 @@ export function Step2HoursGrid({ initialRows, projectState: _projectState, onRow
                 tradeDescription={r.tradeDescription}
                 baseRate={r.baseRate}
                 values={r.values}
+                toggles={toggles}
                 onChange={(field, value) => updateCell(r.workerId, r.classificationId, field, value)}
+                onExtraChange={(field, value) => updateExtra(r.workerId, r.classificationId, field, value)}
                 onBlur={() => notifyBlur(r.workerId, r.classificationId)}
                 onStandardWeek={() => applyStandardWeekToRow(r.workerId, r.classificationId)}
               />

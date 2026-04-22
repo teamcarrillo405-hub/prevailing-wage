@@ -2,8 +2,19 @@
 import { Button } from '../ui/Button';
 import type { RowValues } from './Step2GridRow';
 
+export interface StateToggles {
+  caDt: boolean;
+  caFringe: boolean;
+  ilNonPw: boolean;
+  maFields: boolean;
+  njDeductions: boolean;
+}
+
 interface Props {
   onApplyStandardWeekAll: () => void;
+  projectState: string;
+  toggles: StateToggles;
+  onToggle: (key: keyof StateToggles) => void;
 }
 
 // Mon-Fri 8 ST, all else 0. Used by per-row and apply-all buttons.
@@ -18,12 +29,64 @@ export const STANDARD_WEEK: RowValues = {
   ficaTax: null, federalIncomeTax: null, stateIncomeTax: null,
 };
 
-export function Step2BulkActions({ onApplyStandardWeekAll }: Props) {
+function ToggleChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (
-    <div className="flex items-center gap-3 py-3">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+        active
+          ? 'bg-brand-gold text-nav-dark border-brand-gold'
+          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+      }`}
+    >
+      {active ? '− ' : '+ '}{label}
+    </button>
+  );
+}
+
+export function Step2BulkActions({ onApplyStandardWeekAll, projectState, toggles, onToggle }: Props) {
+  const s = projectState.toUpperCase();
+  return (
+    <div className="flex flex-wrap items-center gap-3 py-3">
       <Button variant="secondary" onClick={onApplyStandardWeekAll}>
         Apply standard week to all (40 hrs Mon-Fri)
       </Button>
+      {s === 'CA' && (
+        <>
+          <ToggleChip
+            active={toggles.caDt}
+            onClick={() => onToggle('caDt')}
+            label="CA double-time columns"
+          />
+          <ToggleChip
+            active={toggles.caFringe}
+            onClick={() => onToggle('caFringe')}
+            label="CA fringe disaggregation"
+          />
+        </>
+      )}
+      {s === 'IL' && (
+        <ToggleChip
+          active={toggles.ilNonPw}
+          onClick={() => onToggle('ilNonPw')}
+          label="IL non-PW hours"
+        />
+      )}
+      {s === 'MA' && (
+        <ToggleChip
+          active={toggles.maFields}
+          onClick={() => onToggle('maFields')}
+          label="MA fields (check #, all-other hours)"
+        />
+      )}
+      {s === 'NJ' && (
+        <ToggleChip
+          active={toggles.njDeductions}
+          onClick={() => onToggle('njDeductions')}
+          label="NJ deductions (FICA, FIT, SIT)"
+        />
+      )}
     </div>
   );
 }
