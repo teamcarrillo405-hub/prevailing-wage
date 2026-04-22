@@ -239,8 +239,10 @@ export function PayrollListPage() {
                   </span>
                   {week.submittedAt ? (
                     <Badge variant="compliant" className="ml-2">Submitted</Badge>
-                  ) : (
+                  ) : week.isFinal ? (
                     <Badge variant="neutral" className="ml-2">Not Submitted</Badge>
+                  ) : (
+                    <Badge variant="neutral" className="ml-2">Draft</Badge>
                   )}
                   {week.amendmentNumber != null && (
                     <Badge variant="warning" className="ml-2">Amendment {week.amendmentNumber}</Badge>
