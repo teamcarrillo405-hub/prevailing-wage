@@ -6,6 +6,7 @@ import { useWizardState } from './useWizardState';
 import { Step1Roster, type Step1Values, type RosterRow } from './Step1Roster';
 import { Step2HoursGrid, type GridWorkerRow } from './Step2HoursGrid';
 import type { RowValues } from './Step2GridRow';
+import { Step3Review } from './Step3Review';
 import { useEntryMutation } from './useEntryMutation';
 import { api } from '../../lib/api';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
@@ -152,7 +153,17 @@ export function PayrollWizard({ projectId, weekId }: Props) {
     );
   }
 
-  return <div className="text-sm text-gray-500">Step 3 — review (wired in later tasks)</div>;
+  if (state.step === 'review' && state.weekId) {
+    return (
+      <Step3Review
+        projectId={projectId}
+        weekId={state.weekId}
+        onBack={() => dispatch({ type: 'GO_BACK' })}
+      />
+    );
+  }
+
+  return null;
 }
 
 function emptyRowValues(): RowValues {
