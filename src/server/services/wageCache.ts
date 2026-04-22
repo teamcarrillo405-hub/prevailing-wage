@@ -130,6 +130,26 @@ export function getCachedWd(
     .get() as typeof wageDeterminations.$inferSelect | undefined;
 }
 
+// Returns true iff the WD identified by (wdNumber, revisionNumber) exists AND its cache
+// has not expired. Used by runWageSync() to skip re-fetching already-cached WDs.
+// Distinct from getCachedWd() which looks up by (state, county) for runtime lookups.
+export function isWdCached(wdNumber: string, revisionNumber: number): boolean {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const row = db
+    .select({ id: wageDeterminations.id })
+    .from(wageDeterminations)
+    .where(
+      and(
+        eq(wageDeterminations.wdNumber, wdNumber),
+        eq(wageDeterminations.revisionNumber, revisionNumber),
+        gt(wageDeterminations.cacheExpiresAt, now),
+      )
+    )
+    .get() as { id: string } | undefined;
+  return row !== undefined;
+}
+
 // Returns all classification rows for a WD.
 export function getCachedClassifications(
   wageDeterminationId: string

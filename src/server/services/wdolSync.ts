@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
 import { fetchWdFromSamGov } from './wdolFetcher.js';
 import { parseWdDocument } from './wdolParser.js';
-import { upsertWageDetermination, upsertClassifications, getCachedWd } from './wageCache.js';
+import { upsertWageDetermination, upsertClassifications, isWdCached } from './wageCache.js';
 import { getDb } from '../db/index.js';
 import { wageSyncMeta } from '../db/schema.js';
 
@@ -3891,15 +3891,14 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
   let fetched = 0;
   let failed = 0;
 
+  let skipped = 0;
   for (const seed of WD_SEED_LIST) {
     try {
-      // Skip if this WD still has a fresh cache entry (avoid unnecessary API calls)
-      if (seed.county !== null) {
-        const cached = getCachedWd(seed.state, seed.county);
-        if (cached) {
-          console.log(`[wdolSync] ${seed.wdNumber} — cache fresh, skipping`);
-          continue;
-        }
+      // Skip if this specific WD (by wdNumber+revision) is already cached and unexpired.
+      // Silent skip — logging 1,000+ skip lines before real progress is just noise.
+      if (isWdCached(seed.wdNumber, seed.revision)) {
+        skipped++;
+        continue;
       }
 
       const response = await fetchWdFromSamGov(seed.wdNumber, seed.revision);
@@ -3951,6 +3950,6 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
     .where(eq(wageSyncMeta.id, syncId))
     .run();
 
-  console.log(`[wdolSync] Complete — fetched: ${fetched}, failed: ${failed}`);
+  console.log(`[wdolSync] Complete — fetched: ${fetched}, failed: ${failed}, skipped: ${skipped}`);
   return { fetched, failed };
 }
