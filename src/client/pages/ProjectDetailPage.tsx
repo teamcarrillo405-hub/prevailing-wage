@@ -729,6 +729,46 @@ export function ProjectDetailPage() {
 
           <WorkflowProgress steps={steps} />
 
+          {/* Project sub-page navigation */}
+          <div className="mt-6 mb-8 flex flex-wrap gap-3">
+            <Link
+              to={`/projects/${project.id}/workers`}
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+            >
+              Workers
+            </Link>
+            <Link
+              to={`/projects/${project.id}/payroll`}
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+            >
+              Payroll Weeks
+            </Link>
+            <Link
+              to={`/projects/${project.id}/ot-scenarios`}
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+            >
+              OT Scenario Planner
+            </Link>
+            <Link
+              to={`/projects/${project.id}/variance`}
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+            >
+              Variance
+            </Link>
+            <Link
+              to={`/projects/${project.id}/reports`}
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+            >
+              Reports
+            </Link>
+            <Link
+              to={`/projects/${project.id}/activity`}
+              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+            >
+              Activity
+            </Link>
+          </div>
+
           <Card className="max-w-lg">
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between">
@@ -892,46 +932,6 @@ export function ProjectDetailPage() {
 
           {/* Subcontractors panel */}
           <SubcontractorsPanel projectId={project.id} />
-
-          {/* Project sub-page navigation */}
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              to={`/projects/${project.id}/workers`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
-            >
-              Workers
-            </Link>
-            <Link
-              to={`/projects/${project.id}/payroll`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
-            >
-              Payroll Weeks
-            </Link>
-            <Link
-              to={`/projects/${project.id}/ot-scenarios`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
-            >
-              OT Scenario Planner
-            </Link>
-            <Link
-              to={`/projects/${project.id}/variance`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
-            >
-              Variance
-            </Link>
-            <Link
-              to={`/projects/${project.id}/reports`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
-            >
-              Reports
-            </Link>
-            <Link
-              to={`/projects/${project.id}/activity`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150"
-            >
-              Activity
-            </Link>
-          </div>
         </div>
       )}
     </Layout>
