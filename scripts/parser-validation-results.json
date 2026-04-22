@@ -1,0 +1,327 @@
+{
+  "sampleSize": 40,
+  "successRate": "100.0",
+  "failures": 0,
+  "results": [
+    {
+      "wdNumber": "AK20260001",
+      "state": "AK",
+      "constructionType": "HEAVY",
+      "classificationCount": 56,
+      "docSize": 35356,
+      "docPreview": "\"General Decision Number: AK20260001 01/02/2026 |  | Superseded General Decision Number: AK20250001 |  | State: Alaska |  | Construction Types: Building and Heavy |  | Counties: Alaska Statewide. |  |"
+    },
+    {
+      "wdNumber": "AL20260001",
+      "state": "AL",
+      "constructionType": null,
+      "classificationCount": 1,
+      "docSize": 9688,
+      "docPreview": "\"General Decision Number: AL20260001 01/02/2026 |  | Superseded General Decision Number: AL20250001 |  | State: Alabama |  | Construction Type: Heavy Dredging |  | Counties: Alabama Statewide. |  | DR"
+    },
+    {
+      "wdNumber": "AR20260004",
+      "state": "AR",
+      "constructionType": "BUILDING",
+      "classificationCount": 16,
+      "docSize": 11073,
+      "docPreview": "\"General Decision Number: AR20260004 01/02/2026 |  | Superseded General Decision Number: AR20250004 |  | State: Arkansas |  | Construction Type: Building | BUILDING CONSTRUCTION PROJECTS (does not inc"
+    },
+    {
+      "wdNumber": "AZ20260001",
+      "state": "AZ",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 28,
+      "docSize": 12373,
+      "docPreview": "\"General Decision Number: AZ20260001 01/02/2026 |  | Superseded General Decision Number: AZ20250001 |  | State: Arizona |  | Construction Type: Residential |  | County: Maricopa County in Arizona. |  "
+    },
+    {
+      "wdNumber": "CA20260001",
+      "state": "CA",
+      "constructionType": "BUILDING",
+      "classificationCount": 111,
+      "docSize": 70185,
+      "docPreview": "\"General Decision Number: CA20260001 01/02/2026 |  | Superseded General Decision Number: CA20250001 |  | State: California |  | Construction Types: Building, Heavy (Heavy and Dredging),  | Highway and"
+    },
+    {
+      "wdNumber": "CO20260001",
+      "state": "CO",
+      "constructionType": "BUILDING",
+      "classificationCount": 17,
+      "docSize": 19530,
+      "docPreview": "\"General Decision Number: CO20260001 01/02/2026 |  | Superseded General Decision Number: CO20250001 |  | State: Colorado |  | Construction Type: Building |  | Counties: Alamosa, Archuleta, Baca, Bent,"
+    },
+    {
+      "wdNumber": "CT20260001",
+      "state": "CT",
+      "constructionType": "HIGHWAY",
+      "classificationCount": 51,
+      "docSize": 24387,
+      "docPreview": "\"General Decision Number: CT20260001 01/02/2026 |  | Superseded General Decision Number: CT20250001 |  | State: Connecticut |  | Construction Type: Highway |  | Counties: Fairfield, Litchfield, Middle"
+    },
+    {
+      "wdNumber": "DC20260001",
+      "state": "DC",
+      "constructionType": "HEAVY",
+      "classificationCount": 68,
+      "docSize": 28916,
+      "docPreview": "\"General Decision Number: DC20260001 01/02/2026 |  | Superseded General Decision Number: DC20250001 |  | State: District of Columbia |  | Construction Types: Heavy (Heavy and Sewer and Water Line)  | "
+    },
+    {
+      "wdNumber": "DE20260001",
+      "state": "DE",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 1,
+      "docSize": 10531,
+      "docPreview": "\"General Decision Number: DE20260001 01/02/2026 |  | Superseded General Decision Number: DE20250001 |  | State: Delaware |  | Construction Type: Residential |  | Counties: Delaware Statewide. |  | RES"
+    },
+    {
+      "wdNumber": "FL20260002",
+      "state": "FL",
+      "constructionType": null,
+      "classificationCount": 8,
+      "docSize": 12657,
+      "docPreview": "\"General Decision Number: FL20260002 01/02/2026 |  | Superseded General Decision Number: FL20250002 |  | State: Florida |  | Construction Type: Heavy Dredging |  | Counties: Florida Statewide. |  | Dr"
+    },
+    {
+      "wdNumber": "GA20260001",
+      "state": "GA",
+      "constructionType": "HIGHWAY",
+      "classificationCount": 17,
+      "docSize": 10355,
+      "docPreview": "\"General Decision Number: GA20260001 01/02/2026 |  | Superseded General Decision Number: GA20250001 |  | State: Georgia |  | Construction Type: Highway |  | County: Fulton County in Georgia. |  | HIGH"
+    },
+    {
+      "wdNumber": "HI20260001",
+      "state": "HI",
+      "constructionType": "BUILDING",
+      "classificationCount": 108,
+      "docSize": 54398,
+      "docPreview": "\"General Decision Number: HI20260001 01/02/2026 |  | Superseded General Decision Number: HI20250001 |  | State: Hawaii |  | Construction Types: Building, Heavy (Heavy and Dredging),  | Highway and Res"
+    },
+    {
+      "wdNumber": "IA20260001",
+      "state": "IA",
+      "constructionType": "HIGHWAY",
+      "classificationCount": 22,
+      "docSize": 17618,
+      "docPreview": "\"General Decision Number: IA20260001 01/02/2026 |  | Superseded General Decision Number: IA20250001 |  | State: Iowa |  | Construction Types: Heavy and Highway |  | County: Scott County in Iowa. |  | "
+    },
+    {
+      "wdNumber": "ID20260001",
+      "state": "ID",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 10,
+      "docSize": 10091,
+      "docPreview": "\"General Decision Number: ID20260001 01/02/2026 |  | Superseded General Decision Number: ID20250001 |  | State: Idaho |  | Construction Type: Residential |  | Counties: Ada, Boise, Canyon, Elmore, Gem"
+    },
+    {
+      "wdNumber": "IL20260001",
+      "state": "IL",
+      "constructionType": "BUILDING",
+      "classificationCount": 248,
+      "docSize": 134430,
+      "docPreview": "\"General Decision Number: IL20260001 01/02/2026 |  | Superseded General Decision Number: IL20250001 |  | State: Illinois |  | Construction Type: Building |  | Counties: Adams, Bond, Boone, Brown, Bure"
+    },
+    {
+      "wdNumber": "IN20260001",
+      "state": "IN",
+      "constructionType": "BUILDING",
+      "classificationCount": 102,
+      "docSize": 61501,
+      "docPreview": "\"General Decision Number: IN20260001 01/02/2026 |  | Superseded General Decision Number: IN20250001 |  | State: Indiana |  | Construction Types: Building, Heavy and Highway |  | Counties: La Porte, La"
+    },
+    {
+      "wdNumber": "KS20260001",
+      "state": "KS",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 11,
+      "docSize": 13286,
+      "docPreview": "\"General Decision Number: KS20260001 01/02/2026 |  | Superseded General Decision Number: KS20250001 |  | State: Kansas |  | Construction Type: Residential |  | Counties: Allen, Anderson, Atchison, Bar"
+    },
+    {
+      "wdNumber": "KY20260002",
+      "state": "KY",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 7,
+      "docSize": 9778,
+      "docPreview": "\"General Decision Number: KY20260002 01/02/2026 |  | Superseded General Decision Number: KY20250002 |  | State: Kentucky |  | Construction Type: Residential |  | County: Hart County in Kentucky. |  | "
+    },
+    {
+      "wdNumber": "LA20260001",
+      "state": "LA",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 11,
+      "docSize": 15249,
+      "docPreview": "\"General Decision Number: LA20260001 01/02/2026 |  | Superseded General Decision Number: LA20250001 |  | State: Louisiana |  | Construction Type: Residential |  | Counties: Acadia, Ascension, Bossier,"
+    },
+    {
+      "wdNumber": "MA20260001",
+      "state": "MA",
+      "constructionType": "BUILDING",
+      "classificationCount": 83,
+      "docSize": 47173,
+      "docPreview": "\"General Decision Number: MA20260001 01/02/2026 |  | Superseded General Decision Number: MA20250001 |  | State: Massachusetts |  | Construction Type: Building |  | Counties: Barnstable, Bristol, Dukes"
+    },
+    {
+      "wdNumber": "MD20260001",
+      "state": "MD",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 7,
+      "docSize": 10231,
+      "docPreview": "\"General Decision Number: MD20260001 01/02/2026 |  | Superseded General Decision Number: MD20250001 |  | State: Maryland |  | Construction Type: Residential |  | County: Dorchester County in Maryland."
+    },
+    {
+      "wdNumber": "ME20260001",
+      "state": "ME",
+      "constructionType": null,
+      "classificationCount": 7,
+      "docSize": 11376,
+      "docPreview": "\"General Decision Number: ME20260001 01/02/2026 |  | Superseded General Decision Number: ME20250001 |  | State: Maine |  | Construction Type: Heavy Dredging |  | Counties: Maine Statewide. | STATEWIDE"
+    },
+    {
+      "wdNumber": "MI20260001",
+      "state": "MI",
+      "constructionType": "HIGHWAY",
+      "classificationCount": 163,
+      "docSize": 67973,
+      "docPreview": "\"General Decision Number: MI20260001 01/02/2026 |  | Superseded General Decision Number: MI20250001 |  | State: Michigan |  | Construction Types: Highway (Highway, Airport & Bridge xxxxx  | and Sewer/"
+    },
+    {
+      "wdNumber": "MN20260001",
+      "state": "MN",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 10,
+      "docSize": 10358,
+      "docPreview": "\"General Decision Number: MN20260001 01/02/2026 |  | Superseded General Decision Number: MN20250001 |  | State: Minnesota |  | Construction Type: Residential |  | Counties: Blue Earth, Brown, Faribaul"
+    },
+    {
+      "wdNumber": "MO20260001",
+      "state": "MO",
+      "constructionType": "HIGHWAY",
+      "classificationCount": 143,
+      "docSize": 91116,
+      "docPreview": "\"General Decision Number: MO20260001 01/02/2026 |  | Superseded General Decision Number: MO20250001 |  | State: Missouri |  | Construction Types: Heavy and Highway |  | Counties: Missouri Statewide. |"
+    },
+    {
+      "wdNumber": "MS20260001",
+      "state": "MS",
+      "constructionType": null,
+      "classificationCount": 2,
+      "docSize": 10832,
+      "docPreview": "\"General Decision Number: MS20260001 01/02/2026 |  | Superseded General Decision Number: MS20250001 |  | State: Mississippi |  | Construction Type: Heavy Dredging |  | Counties: Mississippi Statewide."
+    },
+    {
+      "wdNumber": "MT20260001",
+      "state": "MT",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 5,
+      "docSize": 10073,
+      "docPreview": "\"General Decision Number: MT20260001 01/02/2026 |  | Superseded General Decision Number: MT20250001 |  | State: Montana |  | Construction Type: Residential |  | County: Lewis And Clark County in Monta"
+    },
+    {
+      "wdNumber": "NC20260002",
+      "state": "NC",
+      "constructionType": "BUILDING",
+      "classificationCount": 22,
+      "docSize": 11375,
+      "docPreview": "\"General Decision Number: NC20260002 01/02/2026 |  | Superseded General Decision Number: NC20250002 |  | State: North Carolina |  | Construction Type: Building |  | County: Catawba County in North Car"
+    },
+    {
+      "wdNumber": "ND20260001",
+      "state": "ND",
+      "constructionType": "HIGHWAY",
+      "classificationCount": 17,
+      "docSize": 17901,
+      "docPreview": "\"General Decision Number: ND20260001 01/16/2026 |  | State: North Dakota |  | Construction Type: Highway |  | Counties: North Dakota Statewide. |  | HIGHWAY CONSTRUCTION PROJECTS |  | Modification Num"
+    },
+    {
+      "wdNumber": "NE20260001",
+      "state": "NE",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 10,
+      "docSize": 10234,
+      "docPreview": "\"General Decision Number: NE20260001 01/02/2026 |  | Superseded General Decision Number: NE20250001 |  | State: Nebraska |  | Construction Type: Residential |  | Counties: Banner, Box Butte, Cheyenne,"
+    },
+    {
+      "wdNumber": "NH20260001",
+      "state": "NH",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 3,
+      "docSize": 9842,
+      "docPreview": "\"General Decision Number: NH20260001 01/02/2026 |  | Superseded General Decision Number: NH20250001 |  | State: New Hampshire |  | Construction Type: Residential |  | Counties: Belknap, Carroll, Chesh"
+    },
+    {
+      "wdNumber": "NJ20260001",
+      "state": "NJ",
+      "constructionType": "HIGHWAY",
+      "classificationCount": 38,
+      "docSize": 44625,
+      "docPreview": "\"General Decision Number: NJ20260001 01/02/2026 |  | Superseded General Decision Number: NJ20250001 |  | State: New Jersey |  | Construction Type: Highway |  | Counties: Atlantic, Burlington, Camden, "
+    },
+    {
+      "wdNumber": "NM20260001",
+      "state": "NM",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 5,
+      "docSize": 10693,
+      "docPreview": "\"General Decision Number: NM20260001 01/02/2026 |  | Superseded General Decision Number: NM20250001 |  | State: New Mexico |  | Construction Type: Residential |  | County: Bernalillo County in New Mex"
+    },
+    {
+      "wdNumber": "NV20260001",
+      "state": "NV",
+      "constructionType": null,
+      "classificationCount": 46,
+      "docSize": 24018,
+      "docPreview": "\"General Decision Number: NV20260001 01/02/2026 |  | Superseded General Decision Number: NV20250001 |  | State: Nevada |  | Construction Types: Building, Heavy and Highway | DEPARTMENT OF DEFENSE - TO"
+    },
+    {
+      "wdNumber": "NY20260001",
+      "state": "NY",
+      "constructionType": null,
+      "classificationCount": 7,
+      "docSize": 11363,
+      "docPreview": "\"General Decision Number: NY20260001 01/02/2026 |  | Superseded General Decision Number: NY20250001 |  | State: New York |  | Construction Type: Heavy Dredging |  | Counties: New York Statewide. | STA"
+    },
+    {
+      "wdNumber": "OH20260001",
+      "state": "OH",
+      "constructionType": "Highway",
+      "classificationCount": 204,
+      "docSize": 89545,
+      "docPreview": "\"General Decision Number: OH20260001 01/02/2026 |  | Superseded General Decision Number: OH20250001 |  | State: Ohio |  | Construction Types: Heavy and Highway |  | Counties: Ohio Statewide. |  | Heav"
+    },
+    {
+      "wdNumber": "OK20260001",
+      "state": "OK",
+      "constructionType": "RESIDENTIAL",
+      "classificationCount": 13,
+      "docSize": 10903,
+      "docPreview": "\"General Decision Number: OK20260001 01/02/2026 |  | Superseded General Decision Number: OK20250001 |  | State: Oklahoma |  | Construction Type: Residential |  | Counties: Carter, Coal, Garvin, Jeffer"
+    },
+    {
+      "wdNumber": "OR20260001",
+      "state": "OR",
+      "constructionType": "HIGHWAY",
+      "classificationCount": 45,
+      "docSize": 39568,
+      "docPreview": "\"General Decision Number: OR20260001 01/02/2026 |  | Superseded General Decision Number: OR20250001 |  | State: Oregon |  | Construction Type: Highway |  | Counties: Oregon Statewide. |  | HIGHWAY CON"
+    },
+    {
+      "wdNumber": "PA20260001",
+      "state": "PA",
+      "constructionType": "residential",
+      "classificationCount": 30,
+      "docSize": 22702,
+      "docPreview": "\"General Decision Number: PA20260001 01/02/2026 |  | Superseded General Decision Number: PA20250001 |  | State: Pennsylvania |  | Construction Type: Building |  | County: Allegheny County in Pennsylva"
+    },
+    {
+      "wdNumber": "RI20260001",
+      "state": "RI",
+      "constructionType": "BUILDING",
+      "classificationCount": 77,
+      "docSize": 32918,
+      "docPreview": "\"General Decision Number: RI20260001 01/02/2026 |  | Superseded General Decision Number: RI20250001 |  | State: Rhode Island |  | Construction Types: Building, Heavy (Heavy and Marine) and  | Highway "
+    }
+  ]
+}
