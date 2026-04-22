@@ -1,0 +1,97 @@
+// Test the new widget-based wh347Generator end-to-end.
+//   npx tsx scripts/test-fill-wh347.mts
+import { fillWh347, getWh347TemplateBytes, type Wh347Data } from '../src/server/services/wh347Generator.js';
+import { writeFileSync } from 'fs';
+
+const sample: Wh347Data = {
+  contractorName: 'ACME Construction LLC',
+  contractorAddress: '123 Builder Way, Sacramento CA 95814',
+  payrollNumber: '12',
+  weekEndingDate: '2026-04-18',
+  projectName: 'I-80 Bridge Retrofit',
+  projectLocation: 'Yolo County, CA',
+  projectContractNo: 'CT-04-2E-9921',
+  wageDeterminationNo: 'CA20250012',
+  isFinal: false,
+  isPrime: true,
+  workers: [
+    {
+      entryNo: 1,
+      workerName: 'Smith, Jane M',
+      laborType: 'journeyworker',
+      identifyingNo: '1234',
+      classification: 'Carpenter',
+      monSt: 8, monOt: 0,
+      tueSt: 8, tueOt: 2,
+      wedSt: 8, wedOt: 0,
+      thuSt: 8, thuOt: 0,
+      friSt: 8, friOt: 0,
+      satSt: 0, satOt: 0,
+      totalSt: 40, totalOt: 2,
+      baseRate: 52.75,
+      fringeCredit: 18.50,
+      grossWagesProject: 2216.50,
+      grossWagesAll: 2216.50,
+      deductions: 445.32,
+      netPay: 1771.18,
+    },
+    {
+      entryNo: 2,
+      workerName: 'Garcia, Luis A',
+      laborType: 'journeyworker',
+      identifyingNo: '5678',
+      classification: 'Operating Engineer',
+      monSt: 8, monOt: 0,
+      tueSt: 8, tueOt: 0,
+      wedSt: 8, wedOt: 0,
+      thuSt: 8, thuOt: 0,
+      friSt: 8, friOt: 0,
+      satSt: 0, satOt: 0,
+      totalSt: 40, totalOt: 0,
+      baseRate: 64.10,
+      fringeCredit: 22.15,
+      grossWagesProject: 2564.00,
+      grossWagesAll: 2564.00,
+      deductions: 512.80,
+      netPay: 2051.20,
+    },
+    {
+      entryNo: 3,
+      workerName: 'Nguyen, Tran',
+      laborType: 'apprentice',
+      identifyingNo: 'APP-44',
+      classification: 'Electrician Apprentice',
+      monSt: 8, monOt: 0,
+      tueSt: 8, tueOt: 0,
+      wedSt: 8, wedOt: 0,
+      thuSt: 8, thuOt: 0,
+      friSt: 4, friOt: 0,
+      satSt: 0, satOt: 0,
+      totalSt: 36, totalOt: 0,
+      baseRate: 28.45,
+      fringeCredit: 10.05,
+      grossWagesProject: 1024.20,
+      grossWagesAll: 1024.20,
+      deductions: 204.84,
+      netPay: 819.36,
+    },
+  ],
+  compliance: {
+    certProperPayment: true,
+    certAccuratePayroll: true,
+    certWorkPerformed: true,
+    certApprentices: true,
+    certFringeBenefits: true,
+    certDeductions: true,
+    officialName: 'Maria Rodriguez',
+    officialTitle: 'Payroll Administrator',
+    signatureDate: '2026-04-20',
+    phoneNumber: '(916) 555-0199',
+  },
+};
+
+const out = await fillWh347(sample, getWh347TemplateBytes());
+const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+const outPath = `data/wh347-filled-${stamp}.pdf`;
+writeFileSync(outPath, out);
+console.log(`Wrote ${outPath} (${out.length} bytes)`);

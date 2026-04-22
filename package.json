@@ -12,7 +12,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "wh347:build": "tsx scripts/build-wh347-template.mts",
+    "wh347:calibrate": "tsx scripts/calibrate/server.mts"
   },
   "keywords": [],
   "author": "",

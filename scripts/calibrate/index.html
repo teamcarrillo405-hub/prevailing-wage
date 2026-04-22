@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WH-347 Calibration</title>
+<style>
+  :root { --scale: 2; }  /* px per PDF point */
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, Segoe UI, sans-serif; background: #222; color: #eee;
+         display: grid; grid-template-columns: 1fr 320px; height: 100vh; overflow: hidden; }
+  #stage { overflow: auto; padding: 20px; position: relative; }
+  #canvas { position: relative; box-shadow: 0 0 20px rgba(0,0,0,.6); }
+  #canvas img { display: block; width: 100%; height: 100%; user-select: none; pointer-events: none; }
+
+  .widget { position: absolute; cursor: move; user-select: none; }
+  .widget.text { border: 1px solid rgba(255, 60, 60, .85); background: rgba(255, 60, 60, .08); }
+  .widget.checkbox { border: 1px solid rgba(60, 120, 255, .95); background: rgba(60, 120, 255, .12); }
+  .widget.selected { outline: 2px solid #0f0; outline-offset: 2px; z-index: 999; background: rgba(0,255,0,.12); }
+  .widget .lbl { position: absolute; top: -14px; left: 0; font-size: 9px; line-height: 12px;
+                 white-space: nowrap; background: #000; color: #fff; padding: 0 3px; border-radius: 2px;
+                 opacity: 0; pointer-events: none; }
+  .widget:hover .lbl, .widget.selected .lbl { opacity: 1; }
+  .widget .handle { position: absolute; bottom: -5px; right: -5px; width: 10px; height: 10px;
+                    background: #0f0; border: 1px solid #000; cursor: nwse-resize; display: none; }
+  .widget.selected .handle { display: block; }
+
+  #side { background: #2b2b2b; border-left: 1px solid #000; padding: 14px; overflow-y: auto; font-size: 13px; }
+  #side h2 { margin: 4px 0 12px; font-size: 14px; font-weight: 600; color: #ffd866; }
+  #side .group { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #444; }
+  #side label { display: block; margin: 4px 0; font-size: 11px; color: #aaa; }
+  #side input[type=number], #side input[type=text] {
+    width: 100%; padding: 5px 7px; background: #1c1c1c; color: #eee; border: 1px solid #444; border-radius: 3px;
+    font-family: ui-monospace, monospace; font-size: 12px; }
+  #side .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #side button { padding: 6px 10px; border-radius: 3px; border: 1px solid #555;
+                 background: #3a3a3a; color: #eee; cursor: pointer; font-size: 12px; margin: 3px 2px; }
+  #side button.primary { background: #2b5; border-color: #3c6; color: #fff; font-weight: 600; }
+  #side button.warn { background: #832; border-color: #a43; }
+  #side button:hover { filter: brightness(1.2); }
+  #side button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .tabs button { flex: 1; }
+  .tabs button.active { background: #0a6; border-color: #0c8; }
+  #status { position: fixed; bottom: 10px; right: 330px; padding: 8px 12px; background: #111;
+            border: 1px solid #444; border-radius: 4px; font-size: 12px; transition: opacity .3s; }
+  #status.ok { border-color: #2b5; } #status.err { border-color: #d44; color: #fbb; }
+  .filter-row { display: flex; gap: 4px; margin-bottom: 8px; font-size: 11px; }
+  .filter-row input { flex: 1; }
+  .dirty::after { content: '●'; color: #ffd866; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="canvas"><img id="bg"></div>
+</div>
+<div id="side">
+  <h2 id="title">WH-347 Calibration</h2>
+
+  <div class="group">
+    <div class="tabs">
+      <button id="tab0" class="active" onclick="switchPage(0)">Page 1 (grid)</button>
+      <button id="tab1" onclick="switchPage(1)">Page 2 (compliance)</button>
+    </div>
+    <div class="filter-row">
+      <input id="filter" placeholder="Filter by name (e.g. w1_ or cert_)" oninput="render()">
+    </div>
+    <div style="font-size:11px;color:#999">
+      Click a box to select · drag body to move · drag <span style="color:#0f0">green corner</span> to resize · arrow keys nudge 1pt · Shift+arrow 5pt
+    </div>
+  </div>
+
+  <div class="group" id="selPanel" style="display:none">
+    <div style="font-weight:600;color:#ffd866;margin-bottom:6px" id="selName"></div>
+    <div style="font-size:11px;color:#999;margin-bottom:8px" id="selMeta"></div>
+    <div class="row">
+      <div><label>x (pt)</label><input type="number" id="inX" step="0.5" onchange="updateField('x', this.value)"></div>
+      <div><label>y (pt) bottom</label><input type="number" id="inY" step="0.5" onchange="updateField('y', this.value)"></div>
+      <div><label>w (pt)</label><input type="number" id="inW" step="0.5" onchange="updateField('w', this.value)"></div>
+      <div><label>h (pt)</label><input type="number" id="inH" step="0.5" onchange="updateField('h', this.value)"></div>
+    </div>
+    <button onclick="applyToColumn()" id="btnCol" title="Copy x, w to every widget with the same 'col' + same 'kind' (useful for aligning all 8 grid rows in one column)">Apply X+W to column</button>
+    <button onclick="applyRowY()" id="btnRowY" title="Set y to the same baseline for all widgets in this row (by 'row' + 'kind')">Apply Y to row</button>
+    <button class="warn" onclick="deleteWidget()">Delete</button>
+  </div>
+
+  <div class="group">
+    <div style="font-weight:600;color:#ffd866;margin-bottom:6px">Add a box</div>
+    <div style="font-size:11px;color:#999;margin-bottom:6px">
+      Pick a name from the catalog (or type a custom name). The name tells
+      the generator what data goes into the box.
+    </div>
+    <input type="text" id="newName" placeholder="e.g. w1_baseRateOt" list="nameCatalog" style="margin-bottom:4px">
+    <datalist id="nameCatalog"></datalist>
+    <div class="row">
+      <select id="newType"><option value="text">text</option><option value="checkbox">checkbox</option></select>
+      <select id="newPage"><option value="0">Page 1</option><option value="1">Page 2</option></select>
+    </div>
+    <button onclick="addWidget()">➕ Add Widget</button>
+  </div>
+
+  <div class="group">
+    <button class="primary" onclick="save()">💾 Save widgets.json</button>
+    <button onclick="rebuild()">🔨 Rebuild Template</button>
+    <button onclick="load()">⟲ Reload from disk</button>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<script>
+const SCALE = 2;  // 1 PDF point = 2 screen pixels
+let layout = null;
+let currentPage = 0;
+let selected = null;
+let dirty = false;
+let dragState = null;
+
+async function load() {
+  const res = await fetch('/widgets.json');
+  layout = await res.json();
+  dirty = false;
+  render();
+  populateCatalog();
+  toast('Loaded ' + layout.widgets.length + ' widgets', 'ok');
+}
+
+// All widget names the generator knows how to fill. Used to populate the
+// Add-Widget name autocomplete so you don't have to remember them.
+const KNOWN_NAMES = [
+  // Page 1 header
+  'header_projectName', 'header_projectContractNo', 'header_payrollNumber',
+  'header_contractorName', 'header_projectLocation', 'header_wageDeterminationNo',
+  'header_weekEndingDate', 'header_contractorAddress',
+  'cb_final', 'cb_prime', 'cb_sub',
+  // Page 2 header / sig
+  'p2_projectName', 'p2_projectContractNo', 'p2_payrollNo', 'p2_contractorName',
+  'p2_projectLocation', 'p2_weekEndingDate', 'p2_certifyingOfficial',
+  'sig_officialName', 'sig_date', 'sig_phone', 'sig_email',
+  'cert_properPayment', 'cert_accuratePayroll', 'cert_workPerformed',
+  'cert_apprentices', 'cert_fringeBenefits', 'cert_deductions',
+];
+// Grid names: 8 rows × (span columns + day hour columns)
+const SPAN_COLS = ['entryNo','lastName','firstName','middle','ident','labor','classification',
+  'totalHours','totalHoursSt','totalHoursOt',
+  'baseRate','baseRateSt','baseRateOt',
+  'fringe','fringeSt','fringeOt',
+  'inLieu','inLieuSt','inLieuOt',
+  'grossProject','grossAll','taxWithheld','fica','otherDeduct','totalDeduct','netPay'];
+const DAYS = ['mon','tue','wed','thu','fri','sat','sun'];
+for (let r = 1; r <= 8; r++) {
+  for (const c of SPAN_COLS) KNOWN_NAMES.push(`w${r}_${c}`);
+  for (const d of DAYS) { KNOWN_NAMES.push(`w${r}_${d}St`); KNOWN_NAMES.push(`w${r}_${d}Ot`); }
+}
+
+function populateCatalog() {
+  const dl = document.getElementById('nameCatalog');
+  const existing = new Set(layout.widgets.map(w => w.name));
+  dl.innerHTML = KNOWN_NAMES
+    .filter(n => !existing.has(n))
+    .map(n => `<option value="${n}">`)
+    .join('');
+}
+
+function addWidget() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) { toast('Name required', 'err'); return; }
+  if (layout.widgets.some(w => w.name === name)) {
+    toast(`"${name}" already exists`, 'err'); return;
+  }
+  const type = document.getElementById('newType').value;
+  const page = parseInt(document.getElementById('newPage').value);
+  // Parse col/row/kind from name if it follows w{N}_{col}{St|Ot} pattern
+  const m = name.match(/^w(\d+)_(.+)$/);
+  let col, row, kind;
+  if (m) {
+    row = parseInt(m[1]) - 1;
+    const rest = m[2];
+    if (/St$/.test(rest))      { col = rest.slice(0, -2); kind = 'st'; }
+    else if (/Ot$/.test(rest)) { col = rest.slice(0, -2); kind = 'ot'; }
+    else                       { col = rest; kind = 'span'; }
+  } else {
+    kind = 'individual';
+  }
+  // Place at screen center in PDF coords
+  const w = type === 'checkbox' ? 9 : 50;
+  const h = type === 'checkbox' ? 9 : 14;
+  const widget = {
+    name, page, type,
+    x: 400 - w / 2, y: 300 - h / 2, w, h,
+    ...(col !== undefined ? { col } : {}),
+    ...(row !== undefined ? { row } : {}),
+    ...(kind !== undefined ? { kind } : {}),
+  };
+  layout.widgets.push(widget);
+  selected = widget;
+  dirty = true;
+  document.getElementById('newName').value = '';
+  populateCatalog();
+  if (page !== currentPage) switchPage(page);
+  else render();
+  toast(`Added ${name} at (400, 300) — drag to position`, 'ok');
+}
+
+function switchPage(p) {
+  currentPage = p;
+  document.getElementById('tab0').classList.toggle('active', p === 0);
+  document.getElementById('tab1').classList.toggle('active', p === 1);
+  selected = null;
+  render();
+}
+
+function render() {
+  if (!layout) return;
+  const { h: pageH, w: pageW } = layout.pageSize;
+  const canvas = document.getElementById('canvas');
+  const bg = document.getElementById('bg');
+  canvas.style.width  = (pageW * SCALE) + 'px';
+  canvas.style.height = (pageH * SCALE) + 'px';
+  bg.src = '/bg-page' + (currentPage + 1) + '.png';
+
+  // Clear existing widget divs
+  canvas.querySelectorAll('.widget').forEach(el => el.remove());
+
+  const filter = document.getElementById('filter').value.trim().toLowerCase();
+  for (const w of layout.widgets) {
+    if (w.page !== currentPage) continue;
+    if (filter && !w.name.toLowerCase().includes(filter)) continue;
+    canvas.appendChild(makeWidget(w));
+  }
+  renderSelection();
+  document.getElementById('title').textContent =
+    'WH-347 Calibration' + (dirty ? ' ●' : '');
+  document.getElementById('title').classList.toggle('dirty', dirty);
+}
+
+function makeWidget(w) {
+  const { h: pageH } = layout.pageSize;
+  const el = document.createElement('div');
+  el.className = 'widget ' + w.type + (w === selected ? ' selected' : '');
+  el.dataset.name = w.name;
+  el.style.left   = (w.x * SCALE) + 'px';
+  el.style.top    = ((pageH - w.y - w.h) * SCALE) + 'px';
+  el.style.width  = (w.w * SCALE) + 'px';
+  el.style.height = (w.h * SCALE) + 'px';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'lbl';
+  lbl.textContent = w.name;
+  el.appendChild(lbl);
+
+  const handle = document.createElement('div');
+  handle.className = 'handle';
+  el.appendChild(handle);
+
+  el.addEventListener('mousedown', e => startDrag(e, w, el, e.target === handle ? 'resize' : 'move'));
+  return el;
+}
+
+function startDrag(e, w, el, mode) {
+  e.stopPropagation();
+  e.preventDefault();
+  selected = w;
+  dragState = { w, mode, startX: e.clientX, startY: e.clientY,
+                origX: w.x, origY: w.y, origW: w.w, origH: w.h };
+  renderSelection();
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', endDrag);
+}
+
+function onDrag(e) {
+  const d = dragState;
+  if (!d) return;
+  const dx = (e.clientX - d.startX) / SCALE;
+  const dy = (e.clientY - d.startY) / SCALE;  // screen Y increases downward
+  if (d.mode === 'move') {
+    d.w.x = Math.round((d.origX + dx) * 2) / 2;  // snap to 0.5pt
+    d.w.y = Math.round((d.origY - dy) * 2) / 2;  // PDF Y flipped
+  } else {
+    d.w.w = Math.max(2, Math.round((d.origW + dx) * 2) / 2);
+    d.w.h = Math.max(2, Math.round((d.origH + dy) * 2) / 2);
+    // Resizing from top-right corner: top stays constant (screen), so PDF y shifts down
+    d.w.y = Math.round((d.origY - dy) * 2) / 2;
+  }
+  dirty = true;
+  applyWidgetStyle(d.w);
+  updateInputs();
+}
+
+function applyWidgetStyle(w) {
+  const { h: pageH } = layout.pageSize;
+  const el = document.querySelector(`.widget[data-name="${CSS.escape(w.name)}"]`);
+  if (!el) return;
+  el.style.left   = (w.x * SCALE) + 'px';
+  el.style.top    = ((pageH - w.y - w.h) * SCALE) + 'px';
+  el.style.width  = (w.w * SCALE) + 'px';
+  el.style.height = (w.h * SCALE) + 'px';
+}
+
+function endDrag() {
+  dragState = null;
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', endDrag);
+  document.getElementById('title').classList.toggle('dirty', dirty);
+  document.getElementById('title').textContent =
+    'WH-347 Calibration' + (dirty ? ' ●' : '');
+}
+
+function renderSelection() {
+  document.querySelectorAll('.widget').forEach(el => {
+    el.classList.toggle('selected', el.dataset.name === (selected ? selected.name : null));
+  });
+  const panel = document.getElementById('selPanel');
+  panel.style.display = selected ? 'block' : 'none';
+  if (!selected) return;
+  document.getElementById('selName').textContent = selected.name;
+  const meta = [`Page ${selected.page + 1}`, selected.type];
+  if (selected.col)  meta.push(`col: ${selected.col}`);
+  if (selected.row !== undefined) meta.push(`row: ${selected.row + 1}`);
+  if (selected.kind) meta.push(`kind: ${selected.kind}`);
+  document.getElementById('selMeta').textContent = meta.join(' · ');
+  updateInputs();
+  // Enable/disable bulk buttons
+  document.getElementById('btnCol').disabled  = !selected.col;
+  document.getElementById('btnRowY').disabled = selected.row === undefined;
+}
+
+function updateInputs() {
+  if (!selected) return;
+  document.getElementById('inX').value = selected.x;
+  document.getElementById('inY').value = selected.y;
+  document.getElementById('inW').value = selected.w;
+  document.getElementById('inH').value = selected.h;
+}
+
+function updateField(key, val) {
+  if (!selected) return;
+  const v = parseFloat(val);
+  if (!isFinite(v)) return;
+  selected[key] = v;
+  dirty = true;
+  applyWidgetStyle(selected);
+  document.getElementById('title').classList.toggle('dirty', dirty);
+}
+
+function applyToColumn() {
+  if (!selected?.col) return;
+  const { col, kind, x, w } = selected;
+  let n = 0;
+  for (const ww of layout.widgets) {
+    if (ww.col === col && ww.kind === kind && ww !== selected) {
+      ww.x = x; ww.w = w;
+      applyWidgetStyle(ww);
+      n++;
+    }
+  }
+  dirty = true;
+  toast(`Applied x=${x}, w=${w} to ${n} widget(s) in column "${col}" kind=${kind}`, 'ok');
+  document.getElementById('title').classList.toggle('dirty', dirty);
+}
+
+function applyRowY() {
+  if (selected?.row === undefined) return;
+  const { row, kind, y } = selected;
+  let n = 0;
+  for (const ww of layout.widgets) {
+    if (ww.row === row && ww.kind === kind && ww !== selected) {
+      ww.y = y;
+      applyWidgetStyle(ww);
+      n++;
+    }
+  }
+  dirty = true;
+  toast(`Applied y=${y} to ${n} widget(s) in row ${row + 1} kind=${kind}`, 'ok');
+}
+
+function deleteWidget() {
+  if (!selected) return;
+  if (!confirm(`Delete ${selected.name}?`)) return;
+  layout.widgets = layout.widgets.filter(w => w !== selected);
+  selected = null;
+  dirty = true;
+  render();
+}
+
+// Duplicate removed — use the Apply-X+W-to-column button instead for
+// propagating a calibration across rows.
+
+async function save() {
+  if (!layout) return;
+  const res = await fetch('/widgets.json', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(layout),
+  });
+  const r = await res.json();
+  if (r.ok) { dirty = false; render(); toast(`Saved ${r.saved} widgets`, 'ok'); }
+  else toast('Save failed', 'err');
+}
+
+async function rebuild() {
+  toast('Rebuilding template...', 'ok');
+  const res = await fetch('/rebuild', { method: 'POST' });
+  const r = await res.json();
+  if (r.ok) toast('Template rebuilt · see assets/wh347-fillable-template.pdf', 'ok');
+  else toast('Rebuild failed: ' + (r.stderr || '').slice(0, 200), 'err');
+}
+
+function toast(msg, kind) {
+  const s = document.getElementById('status');
+  s.textContent = msg;
+  s.className = kind || '';
+  s.style.opacity = '1';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => s.style.opacity = '0', 3000);
+}
+
+// Keyboard nudging
+document.addEventListener('keydown', e => {
+  if (!selected) return;
+  if (document.activeElement.tagName === 'INPUT') return;
+  const step = e.shiftKey ? 5 : 1;
+  let handled = true;
+  switch (e.key) {
+    case 'ArrowLeft':  selected.x -= step; break;
+    case 'ArrowRight': selected.x += step; break;
+    case 'ArrowUp':    selected.y += step; break;   // PDF y up
+    case 'ArrowDown':  selected.y -= step; break;
+    case 'Delete':     deleteWidget(); return;
+    case 'Escape':     selected = null; renderSelection(); return;
+    default: handled = false;
+  }
+  if (handled) {
+    e.preventDefault();
+    dirty = true;
+    applyWidgetStyle(selected);
+    updateInputs();
+  }
+});
+
+// Click outside any widget deselects
+document.getElementById('stage').addEventListener('click', e => {
+  if (!e.target.closest('.widget')) { selected = null; renderSelection(); }
+});
+
+// Warn before leaving with unsaved changes
+window.addEventListener('beforeunload', e => {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+load();
+</script>
+</body>
+</html>
