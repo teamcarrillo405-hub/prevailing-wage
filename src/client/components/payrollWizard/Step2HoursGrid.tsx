@@ -2,7 +2,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Step2GridRow, type RowValues } from './Step2GridRow';
 import { Step2BulkActions, STANDARD_WEEK } from './Step2BulkActions';
+import { parsePastedHours } from './pasteParser';
 import { Button } from '../ui/Button';
+
+// Field order used for paste — matches the visible column order in the grid.
+const FIELD_ORDER: Array<keyof RowValues> = [
+  'monSt', 'tueSt', 'wedSt', 'thuSt', 'friSt', 'satSt', 'sunSt',
+  'monOt', 'tueOt', 'wedOt', 'thuOt', 'friOt', 'satOt', 'sunOt',
+];
 
 export interface GridWorkerRow {
   workerId: string;
@@ -77,6 +84,52 @@ export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: P
     });
   }, [onRowChange]);
 
+  // Paste handler: spreadsheet-shaped TSV pastes into the focused cell fill rectangularly.
+  // Non-numeric or ragged pastes fall through to default text-input paste behavior.
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTableElement>) => {
+      const target = e.target as HTMLInputElement;
+      if (target.tagName !== 'INPUT') return;
+      const startWorkerId = target.dataset.workerId;
+      const startClassificationId = target.dataset.classificationId;
+      const startField = target.dataset.field as keyof RowValues | undefined;
+      if (!startWorkerId || !startClassificationId || !startField) return;
+
+      const grid = parsePastedHours(e.clipboardData.getData('text/plain'));
+      if (!grid) return;
+
+      e.preventDefault();
+      const startFieldIdx = FIELD_ORDER.indexOf(startField);
+      if (startFieldIdx === -1) return;
+
+      setRows((rs) => {
+        const startRowIdx = rs.findIndex(
+          (r) => r.workerId === startWorkerId && r.classificationId === startClassificationId
+        );
+        if (startRowIdx === -1) return rs;
+
+        const next = rs.map((row, rowIdx) => {
+          const offsetRow = rowIdx - startRowIdx;
+          if (offsetRow < 0 || offsetRow >= grid.length) return row;
+          const values = { ...row.values };
+          for (let colIdx = 0; colIdx < grid[offsetRow].length; colIdx++) {
+            const fieldIdx = startFieldIdx + colIdx;
+            if (fieldIdx >= FIELD_ORDER.length) break;
+            values[FIELD_ORDER[fieldIdx]] = grid[offsetRow][colIdx];
+          }
+          return { ...row, values };
+        });
+
+        // Notify dirty for each touched row using the freshly-computed state.
+        for (let i = 0; i < grid.length && startRowIdx + i < next.length; i++) {
+          onRowChange(next[startRowIdx + i]);
+        }
+        return next;
+      });
+    },
+    [onRowChange]
+  );
+
   // Keyboard nav: Enter + ArrowDown = next row same column, ArrowUp = prev row same column.
   // Tab/Shift-Tab handled by browser defaults. All grid cells carry data-worker-id + data-field.
   useEffect(() => {
@@ -108,7 +161,7 @@ export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: P
     <div>
       <Step2BulkActions onApplyStandardWeekAll={applyStandardWeekToAll} />
       <div className="overflow-x-auto border border-gray-200 rounded-sm">
-        <table className="min-w-full text-sm">
+        <table className="min-w-full text-sm" onPaste={handlePaste}>
           <thead className="bg-gray-50">
             <tr>
               <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left border-r border-gray-200 z-20">
