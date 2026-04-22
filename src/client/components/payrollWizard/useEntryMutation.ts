@@ -33,6 +33,9 @@ export function useEntryMutation(weekId: string | null, onLocked: () => void) {
         const payload = rowData.current.get(key);
         if (!payload) return;
         try {
+          // Spread all values (ST/OT/DT + fringe disaggregation + state-specific fields).
+          // Server's UpsertEntrySchema accepts nullable state-specific fields; unused
+          // fields pass through as null / 0 and the server defaults them.
           await api.post('/payroll/entries', {
             payrollWeekId: weekId,
             workerId,

@@ -2,12 +2,38 @@
 import { useMemo } from 'react';
 import { DAYS } from './types';
 
-export interface RowValues {
+// Split so TS can narrow cell() to numeric fields only.
+export interface HourValues {
+  // Daily straight-time (base)
   monSt: number; tueSt: number; wedSt: number; thuSt: number;
   friSt: number; satSt: number; sunSt: number;
+  // Daily overtime (base)
   monOt: number; tueOt: number; wedOt: number; thuOt: number;
   friOt: number; satOt: number; sunOt: number;
+  // CA daily double-time (Labor Code §510)
+  monDt: number; tueDt: number; wedDt: number; thuDt: number;
+  friDt: number; satDt: number; sunDt: number;
 }
+
+export interface RowExtras {
+  // CA fringe disaggregation (sum = fringeRateSnapshot when all non-null)
+  fringeHealthWelfare: number | null;
+  fringePension: number | null;
+  fringeVacation: number | null;
+  fringeTraining: number | null;
+  // IL non-prevailing-wage hours
+  nonPwHours: number | null;
+  // MA nullable
+  checkNumber: string | null;
+  allOtherHours: number | null;
+  totalWeekGrossWages: number | null;
+  // NJ deductions
+  ficaTax: number | null;
+  federalIncomeTax: number | null;
+  stateIncomeTax: number | null;
+}
+
+export type RowValues = HourValues & RowExtras;
 
 interface Props {
   workerId: string;
@@ -16,7 +42,7 @@ interface Props {
   tradeDescription: string;
   baseRate: number;
   values: RowValues;
-  onChange: (field: keyof RowValues, value: number) => void;
+  onChange: (field: keyof HourValues, value: number) => void;
   onBlur: () => void;
   onStandardWeek: () => void;
 }
@@ -33,15 +59,15 @@ export function Step2GridRow({
   onStandardWeek,
 }: Props) {
   const stTotal = useMemo(
-    () => DAYS.reduce((sum, d) => sum + (values[`${d}St` as keyof RowValues] || 0), 0),
+    () => DAYS.reduce((sum, d) => sum + (values[`${d}St` as keyof HourValues] || 0), 0),
     [values]
   );
   const otTotal = useMemo(
-    () => DAYS.reduce((sum, d) => sum + (values[`${d}Ot` as keyof RowValues] || 0), 0),
+    () => DAYS.reduce((sum, d) => sum + (values[`${d}Ot` as keyof HourValues] || 0), 0),
     [values]
   );
 
-  function cell(field: keyof RowValues) {
+  function cell(field: keyof HourValues) {
     return (
       <td className="px-1 py-1">
         <input

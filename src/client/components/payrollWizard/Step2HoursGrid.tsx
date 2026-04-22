@@ -1,12 +1,12 @@
 // src/client/components/payrollWizard/Step2HoursGrid.tsx
 import { useState, useCallback, useEffect } from 'react';
-import { Step2GridRow, type RowValues } from './Step2GridRow';
+import { Step2GridRow, type RowValues, type HourValues } from './Step2GridRow';
 import { Step2BulkActions, STANDARD_WEEK } from './Step2BulkActions';
 import { parsePastedHours } from './pasteParser';
 import { Button } from '../ui/Button';
 
 // Field order used for paste — matches the visible column order in the grid.
-const FIELD_ORDER: Array<keyof RowValues> = [
+const FIELD_ORDER: Array<keyof HourValues> = [
   'monSt', 'tueSt', 'wedSt', 'thuSt', 'friSt', 'satSt', 'sunSt',
   'monOt', 'tueOt', 'wedOt', 'thuOt', 'friOt', 'satOt', 'sunOt',
 ];
@@ -23,6 +23,7 @@ export interface GridWorkerRow {
 
 interface Props {
   initialRows: GridWorkerRow[];
+  projectState: string;
   onRowChange: (row: GridWorkerRow) => void;
   onReview: () => void;
   onBack: () => void;
@@ -30,15 +31,15 @@ interface Props {
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: Props) {
+export function Step2HoursGrid({ initialRows, projectState: _projectState, onRowChange, onReview, onBack }: Props) {
   const [rows, setRows] = useState(initialRows);
 
   const updateCell = useCallback(
-    (workerId: string, classificationId: string, field: keyof RowValues, value: number) => {
+    (workerId: string, classificationId: string, field: keyof HourValues, value: number) => {
       setRows((rs) =>
         rs.map((r) =>
           r.workerId === workerId && r.classificationId === classificationId
-            ? { ...r, values: { ...r.values, [field]: value } }
+            ? { ...r, values: { ...r.values, [field]: value } as RowValues }
             : r
         )
       );
@@ -92,7 +93,7 @@ export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: P
       if (target.tagName !== 'INPUT') return;
       const startWorkerId = target.dataset.workerId;
       const startClassificationId = target.dataset.classificationId;
-      const startField = target.dataset.field as keyof RowValues | undefined;
+      const startField = target.dataset.field as keyof HourValues | undefined;
       if (!startWorkerId || !startClassificationId || !startField) return;
 
       const grid = parsePastedHours(e.clipboardData.getData('text/plain'));
@@ -111,7 +112,7 @@ export function Step2HoursGrid({ initialRows, onRowChange, onReview, onBack }: P
         const next = rs.map((row, rowIdx) => {
           const offsetRow = rowIdx - startRowIdx;
           if (offsetRow < 0 || offsetRow >= grid.length) return row;
-          const values = { ...row.values };
+          const values: RowValues = { ...row.values };
           for (let colIdx = 0; colIdx < grid[offsetRow].length; colIdx++) {
             const fieldIdx = startFieldIdx + colIdx;
             if (fieldIdx >= FIELD_ORDER.length) break;

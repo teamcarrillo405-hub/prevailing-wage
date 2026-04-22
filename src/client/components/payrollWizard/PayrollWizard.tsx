@@ -45,13 +45,30 @@ interface WeekDetail {
       friSt: number; satSt: number; sunSt: number;
       monOt: number; tueOt: number; wedOt: number; thuOt: number;
       friOt: number; satOt: number; sunOt: number;
+      monDt: number; tueDt: number; wedDt: number; thuDt: number;
+      friDt: number; satDt: number; sunDt: number;
       baseRateSnapshot: number;
       fringeRateSnapshot: number;
       deductions: number | null;
+      fringeHealthWelfare: number | null;
+      fringePension: number | null;
+      fringeVacation: number | null;
+      fringeTraining: number | null;
+      nonPwHours: number | null;
+      checkNumber: string | null;
+      allOtherHours: number | null;
+      totalWeekGrossWages: number | null;
+      ficaTax: number | null;
+      federalIncomeTax: number | null;
+      stateIncomeTax: number | null;
     };
     workerName: string;
     tradeDescription: string;
   }>;
+}
+
+interface ProjectResponse {
+  data: { project: { id: string; state: string } };
 }
 
 export function PayrollWizard({ projectId, weekId }: Props) {
@@ -68,6 +85,13 @@ export function PayrollWizard({ projectId, weekId }: Props) {
     queryFn: () => api.get<WeekDetail>(`/payroll/weeks/${weekId}`),
     enabled: !!weekId,
   });
+
+  // Fetch project state so the grid can render state-specific toggles (CA DT, NJ deductions, etc.)
+  const { data: projectData } = useQuery<ProjectResponse>({
+    queryKey: ['project', projectId],
+    queryFn: () => api.get<ProjectResponse>(`/projects/${projectId}`),
+  });
+  const projectState = (projectData?.data?.project?.state ?? '').toUpperCase();
 
   const createWeek = useMutation<CreateWeekResponse, Error, Step1Values>({
     mutationFn: (v) =>
@@ -134,6 +158,7 @@ export function PayrollWizard({ projectId, weekId }: Props) {
     return (
       <Step2HoursGrid
         initialRows={gridRows}
+        projectState={projectState}
         onRowChange={(row) => {
           markDirty({
             workerId: row.workerId,
@@ -170,6 +195,11 @@ function emptyRowValues(): RowValues {
   return {
     monSt: 0, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
     monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+    monDt: 0, tueDt: 0, wedDt: 0, thuDt: 0, friDt: 0, satDt: 0, sunDt: 0,
+    fringeHealthWelfare: null, fringePension: null, fringeVacation: null, fringeTraining: null,
+    nonPwHours: null,
+    checkNumber: null, allOtherHours: null, totalWeekGrossWages: null,
+    ficaTax: null, federalIncomeTax: null, stateIncomeTax: null,
   };
 }
 
@@ -188,6 +218,20 @@ function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefin
         friSt: e.entry.friSt, satSt: e.entry.satSt, sunSt: e.entry.sunSt,
         monOt: e.entry.monOt, tueOt: e.entry.tueOt, wedOt: e.entry.wedOt, thuOt: e.entry.thuOt,
         friOt: e.entry.friOt, satOt: e.entry.satOt, sunOt: e.entry.sunOt,
+        monDt: e.entry.monDt ?? 0, tueDt: e.entry.tueDt ?? 0, wedDt: e.entry.wedDt ?? 0,
+        thuDt: e.entry.thuDt ?? 0, friDt: e.entry.friDt ?? 0, satDt: e.entry.satDt ?? 0,
+        sunDt: e.entry.sunDt ?? 0,
+        fringeHealthWelfare: e.entry.fringeHealthWelfare,
+        fringePension: e.entry.fringePension,
+        fringeVacation: e.entry.fringeVacation,
+        fringeTraining: e.entry.fringeTraining,
+        nonPwHours: e.entry.nonPwHours,
+        checkNumber: e.entry.checkNumber,
+        allOtherHours: e.entry.allOtherHours,
+        totalWeekGrossWages: e.entry.totalWeekGrossWages,
+        ficaTax: e.entry.ficaTax,
+        federalIncomeTax: e.entry.federalIncomeTax,
+        stateIncomeTax: e.entry.stateIncomeTax,
       },
     }));
   }
