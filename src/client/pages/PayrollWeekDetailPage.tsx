@@ -1,7 +1,7 @@
 // src/client/pages/PayrollWeekDetailPage.tsx
 // Route: /projects/:projectId/payroll/:weekId
 import { useRef, useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileCheck, ExternalLink, Info } from 'lucide-react';
 import { api } from '../lib/api';
@@ -1021,6 +1021,14 @@ export function PayrollWeekDetailPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {weekId && week && !week.isFinal && (
+              <Link
+                to={`/projects/${projectId}/payroll/${weekId}/edit`}
+                className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 transition-colors"
+              >
+                Edit hours
+              </Link>
+            )}
             {weekId && (
               <Button
                 variant="secondary"
