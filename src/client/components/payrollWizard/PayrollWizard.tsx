@@ -6,6 +6,7 @@ import { useWizardState } from './useWizardState';
 import { Step1Roster, type Step1Values, type RosterRow } from './Step1Roster';
 import { Step2HoursGrid, type GridWorkerRow } from './Step2HoursGrid';
 import type { RowValues } from './Step2GridRow';
+import { useEntryMutation } from './useEntryMutation';
 import { api } from '../../lib/api';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
 
@@ -57,6 +58,8 @@ export function PayrollWizard({ projectId, weekId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [step1, setStep1] = useState<Step1Values | null>(null);
   const qc = useQueryClient();
+
+  const { markDirty, flush } = useEntryMutation(state.weekId, () => dispatch({ type: 'LOCK' }));
 
   // Edit-mode: fetch week + entries. Provides lock check + pre-population data.
   const { data: weekData, isLoading: weekLoading } = useQuery<WeekDetail>({
@@ -112,10 +115,20 @@ export function PayrollWizard({ projectId, weekId }: Props) {
     return (
       <Step2HoursGrid
         initialRows={gridRows}
-        onRowChange={(_row) => {
-          /* dirty-set + debounced save wired in T13 */
+        onRowChange={(row) => {
+          markDirty({
+            workerId: row.workerId,
+            classificationId: row.classificationId,
+            values: row.values,
+            baseRateSnapshot: row.baseRate,
+            fringeRateSnapshot: row.fringeRate,
+            deductions: 0,
+          });
         }}
-        onReview={() => dispatch({ type: 'ADVANCE' })}
+        onReview={async () => {
+          await flush();
+          dispatch({ type: 'ADVANCE' });
+        }}
         onBack={() => dispatch({ type: 'GO_BACK' })}
       />
     );
