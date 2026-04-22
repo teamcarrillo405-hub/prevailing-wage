@@ -1,10 +1,11 @@
 ---
 phase: 33
 slug: team-invite-flow-team-ui
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-03-29
+reviewed_at: 2026-03-29
 ---
 
 # Phase 33 — UI Design Contract

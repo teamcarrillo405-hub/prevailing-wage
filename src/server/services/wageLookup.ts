@@ -55,7 +55,7 @@ export class FederalWdolAdapter implements WageAdapter {
     const cacheExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const wdId = crypto.randomUUID();
 
-    upsertWageDetermination({
+    const actualId = upsertWageDetermination({
       id: wdId,
       source: 'federal-dol',
       wdNumber: response.fullReferenceNumber,
@@ -72,10 +72,10 @@ export class FederalWdolAdapter implements WageAdapter {
     });
 
     const classifications = response.document ? parseWdDocument(response.document) : [];
-    upsertClassifications(wdId, classifications);
+    upsertClassifications(actualId, classifications);
 
     return {
-      id: wdId,
+      id: actualId,
       source: 'federal-dol',
       wdNumber: response.fullReferenceNumber,
       revisionNumber: response.revisionNumber,

@@ -1,7 +1,7 @@
 // src/client/components/PayrollWeekForm.tsx
 // Weekly hours entry grid: one row per worker classification, columns Mon-Sun ST + Mon-Sun OT.
 // FormProvider wraps the form so LiveCalcDisplay can call useFormContext().
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { LiveCalcDisplay } from './LiveCalcDisplay';
 
@@ -78,6 +78,7 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
   // Single-worker form — uses first worker for live display
   // Full multi-worker grid would iterate workers; this delivers the CPAY-01 behavior
   const firstWorker = workers[0];
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const methods = useForm<PayrollWeekFormValues>({
     defaultValues: {
@@ -113,6 +114,8 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
   }, [isCA, watchedFringe, setValue]);
 
   async function onSubmit(data: PayrollWeekFormValues) {
+    setSubmitError(null);
+    try {
     // 1. Create the payroll week
     const weekRes = await fetch('/api/payroll/weeks', {
       method: 'POST',
@@ -188,6 +191,9 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
     }
 
     onSave(weekId);
+    } catch (err: any) {
+      setSubmitError(err.message ?? 'Failed to save payroll week. Please try again.');
+    }
   }
 
   return (
@@ -410,6 +416,9 @@ export function PayrollWeekForm({ projectId, workers, onSave, isCA = false, isIL
         <LiveCalcDisplay />
 
         {/* Save button */}
+        {submitError && (
+          <p className="text-sm text-red-600 text-right">{submitError}</p>
+        )}
         <div className="flex justify-end">
           <button
             type="submit"

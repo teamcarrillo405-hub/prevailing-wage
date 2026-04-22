@@ -2,7 +2,7 @@
 // Route: /projects/:projectId/payroll/new
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ClipboardList } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
@@ -88,7 +88,10 @@ export function PayrollEntryPage() {
     })),
   );
 
+  const qc = useQueryClient();
+
   function handleSave(weekId: string) {
+    qc.invalidateQueries({ queryKey: ['payroll-weeks', projectId] });
     navigate(`/projects/${projectId}/payroll`);
   }
 

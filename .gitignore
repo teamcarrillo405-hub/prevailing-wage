@@ -6,3 +6,10 @@ data/*.db-shm
 data/*.db-wal
 *.db-shm
 *.db-wal
+
+# WH-347 widget template artifacts
+data/wh347-filled-*.pdf
+data/wh347-filled-*.png
+data/wh347-grid-*.png
+scripts/calibrate/*.bak
+assets/wh347-fillable-grid.pdf

@@ -3,7 +3,7 @@
 // Uses the getDb() pattern from Phase 1.
 // wdolSync.ts and wageLookup.ts both import from here — never access the tables directly.
 
-import { eq, and, gt, desc } from 'drizzle-orm';
+import { eq, and, gt, desc, isNull, or, sql } from 'drizzle-orm';
 import { wageDeterminations, wageClassifications } from '../db/schema.js';
 import { getDb } from '../db/index.js';
 import type { ParsedClassification } from './wdolParser.js';
@@ -25,22 +25,38 @@ export interface NewWageDetermination {
 }
 
 // Upsert: if (wdNumber, revisionNumber) already exists, update the cache fields.
-// Requires the unique index on (wd_number, revision_number) in the schema.
-export function upsertWageDetermination(data: NewWageDetermination): void {
+// Returns the actual DB row id (may differ from data.id on conflict — caller must use
+// the returned id when inserting classifications to avoid FK constraint failure).
+export function upsertWageDetermination(data: NewWageDetermination): string {
   const db = getDb();
-  db.insert(wageDeterminations)
-    .values({ ...data, isActive: true })
-    .onConflictDoUpdate({
-      target: [wageDeterminations.wdNumber, wageDeterminations.revisionNumber],
-      set: {
+  const existing = db
+    .select({ id: wageDeterminations.id })
+    .from(wageDeterminations)
+    .where(
+      and(
+        eq(wageDeterminations.wdNumber, data.wdNumber),
+        eq(wageDeterminations.revisionNumber, data.revisionNumber),
+      )
+    )
+    .get() as { id: string } | undefined;
+
+  if (existing) {
+    db.update(wageDeterminations)
+      .set({
         rawDocument: data.rawDocument,
         cachedAt: data.cachedAt,
         cacheExpiresAt: data.cacheExpiresAt,
         updatedAt: data.updatedAt,
-      },
-    })
-    .run();
+      })
+      .where(eq(wageDeterminations.id, existing.id))
+      .run();
+    return existing.id;
+  }
+
+  db.insert(wageDeterminations).values({ ...data, isActive: true }).run();
+  return data.id;
 }
+
 
 // Insert parsed classifications for a WD. Deletes existing rows first to prevent
 // duplicate classifications on re-sync. Uses the cascade-delete FK but we delete
@@ -72,20 +88,40 @@ export function upsertClassifications(
   db.insert(wageClassifications).values(rows).run();
 }
 
-// Returns the freshest unexpired WD for state+county, or undefined if none.
+// Returns the freshest unexpired WD for state+county.
+// Tries exact county match first; falls back to statewide (county IS NULL) for the same state.
 export function getCachedWd(
   state: string,
   county: string
 ): typeof wageDeterminations.$inferSelect | undefined {
   const db = getDb();
   const now = new Date().toISOString();
+
+  // Exact county match first (case-insensitive — project stores lowercase, WD may be title case)
+  const exact = db
+    .select()
+    .from(wageDeterminations)
+    .where(
+      and(
+        eq(wageDeterminations.state, state),
+        sql`LOWER(${wageDeterminations.county}) = LOWER(${county})`,
+        gt(wageDeterminations.cacheExpiresAt, now)
+      )
+    )
+    .orderBy(desc(wageDeterminations.publishDate))
+    .limit(1)
+    .get() as typeof wageDeterminations.$inferSelect | undefined;
+
+  if (exact) return exact;
+
+  // Fallback: statewide WD (county IS NULL) for same state
   return db
     .select()
     .from(wageDeterminations)
     .where(
       and(
         eq(wageDeterminations.state, state),
-        eq(wageDeterminations.county, county),
+        isNull(wageDeterminations.county),
         gt(wageDeterminations.cacheExpiresAt, now)
       )
     )

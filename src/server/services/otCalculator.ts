@@ -7,24 +7,9 @@ import { getDb } from '../db/index.js';
 import { otThresholds } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
-// ── Exported Types ─────────────────────────────────────────────────────────
-
-export interface OtScenario {
-  label: string;
-  dailyHours: number[];
-  baseRate: number;
-  fringeRate: number;
-  overtimeThreshold: number;
-  doubletimeThreshold?: number;
-}
-
-export interface OtScenarioResult {
-  label: string;
-  totalHours: number;
-  overtimeHours: number;
-  doubletimeHours: number;
-  result: CwhssaOtResult;
-}
+// Pure types and compareScenarios live in shared/ (no DB deps — safe for browser)
+export type { OtScenario, OtScenarioResult } from '../../shared/otScenarios.js';
+export { compareScenarios } from '../../shared/otScenarios.js';
 
 export interface OtThreshold {
   weeklyOtThreshold: number;
@@ -130,28 +115,3 @@ export function applyOtThreshold(
   });
 }
 
-// ── compareScenarios ───────────────────────────────────────────────────────
-// Pure function — no DB access. For each scenario, sums daily hours,
-// determines OT, and calls calculateCwhssaOt().
-// CRITICAL: fringe is NOT multiplied — calculateCwhssaOt applies it at 1.0x for all hours.
-
-export function compareScenarios(scenarios: OtScenario[]): OtScenarioResult[] {
-  return scenarios.map((s) => {
-    const totalHours = s.dailyHours.reduce((sum, h) => sum + h, 0);
-    const overtimeHours = Math.max(0, totalHours - s.overtimeThreshold);
-    const doubletimeHours = s.doubletimeThreshold
-      ? Math.max(0, totalHours - s.doubletimeThreshold)
-      : 0;
-
-    // calculateCwhssaOt handles: fringe at 1.0x ALL hours, OT premium on base only
-    // DO NOT pass fringeRate * 1.5 — that would violate CWHSSA
-    const result = calculateCwhssaOt({
-      baseRate: s.baseRate,
-      fringeRate: s.fringeRate,
-      totalHoursWorked: totalHours,
-      overtimeHours,
-    });
-
-    return { label: s.label, totalHours, overtimeHours, doubletimeHours, result };
-  });
-}
