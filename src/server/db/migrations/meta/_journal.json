@@ -211,6 +211,34 @@
       "when": 1745452800000,
       "tag": "0033_ca_sdi",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "0034_auditor_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1745539200001,
+      "tag": "0035_invite_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1745539200002,
+      "tag": "0036_plan_tier",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1745539200003,
+      "tag": "0037_sub_upload",
+      "breakpoints": true
     }
   ]
 }
