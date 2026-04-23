@@ -6,12 +6,12 @@
 // URL patterns returned 404. Using the WD seed list approach (Pattern 5 from research).
 
 import crypto from 'crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import { fetchWdFromSamGov } from './wdolFetcher.js';
 import { parseWdDocument } from './wdolParser.js';
 import { upsertWageDetermination, upsertClassifications, isWdCached } from './wageCache.js';
 import { getDb } from '../db/index.js';
-import { wageSyncMeta } from '../db/schema.js';
+import { wageSyncMeta, wageDeterminations, projectWageDeterminations, projects } from '../db/schema.js';
 
 // Known WD identifiers for the top 20 states by Davis-Bacon construction volume.
 // Source: SAM.gov cross-index + live verification of individual WD API responses.
@@ -3875,6 +3875,25 @@ export const WD_SEED_LIST: Array<{
 
 ];
 
+// Returns WD ids linked to active projects whose cache expires within 48 hours.
+async function getActiveProjectWdIds(): Promise<string[]> {
+  const db = getDb();
+  const cutoff = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const rows = db
+    .select({ wdId: projectWageDeterminations.wageDeterminationId })
+    .from(projectWageDeterminations)
+    .innerJoin(projects, eq(projectWageDeterminations.projectId, projects.id))
+    .innerJoin(wageDeterminations, eq(projectWageDeterminations.wageDeterminationId, wageDeterminations.id))
+    .where(
+      and(
+        eq(projects.status, 'active'),
+        lt(wageDeterminations.cacheExpiresAt, cutoff),
+      ),
+    )
+    .all() as { wdId: string }[];
+  return [...new Set(rows.map((r) => r.wdId))];
+}
+
 export async function runWageSync(): Promise<{ fetched: number; failed: number }> {
   const db = getDb();
   const syncId = crypto.randomUUID();
@@ -3890,6 +3909,34 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
 
   let fetched = 0;
   let failed = 0;
+
+  // Phase 1: proactively refresh WDs pinned to active projects expiring within 48h
+  const activeWdIds = await getActiveProjectWdIds();
+  for (const wdId of activeWdIds) {
+    const wd = db.select().from(wageDeterminations).where(eq(wageDeterminations.id, wdId)).get() as typeof wageDeterminations.$inferSelect | undefined;
+    if (!wd) continue;
+    const response = await fetchWdFromSamGov(wd.wdNumber, wd.revisionNumber).catch(() => null);
+    if (!response) { failed++; continue; }
+    const classifications = response.document ? parseWdDocument(response.document) : [];
+    upsertWageDetermination({
+      id: wd.id,
+      source: wd.source as 'federal-dol',
+      wdNumber: wd.wdNumber,
+      revisionNumber: wd.revisionNumber,
+      state: wd.state,
+      county: wd.county ?? null,
+      constructionType: wd.constructionType ?? null,
+      publishDate: response.publishDate,
+      rawDocument: response.document ?? null,
+      cachedAt: new Date().toISOString(),
+      cacheExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: wd.createdAt,
+      updatedAt: new Date().toISOString(),
+      lastFetchedAt: new Date().toISOString(),
+    });
+    upsertClassifications(wd.id, classifications);
+    fetched++;
+  }
 
   let skipped = 0;
   for (const seed of WD_SEED_LIST) {
