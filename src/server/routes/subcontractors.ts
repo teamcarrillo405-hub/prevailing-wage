@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 import { eq, and, desc } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { subcontractors, subcontractorCprWeeks } from '../db/schema.js';
+import { subcontractors, subcontractorCprWeeks, projects } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { sendSubUploadRequestEmail } from '../services/emailService.js';
 
 const router = Router();
 
@@ -295,6 +296,8 @@ router.post('/:id/subcontractors/:subId/cpr-weeks', validate(CreateCprWeekSchema
 
   const id = randomUUID();
   const now = new Date().toISOString();
+  const uploadToken = randomBytes(32).toString('hex');
+  const uploadTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   await db.insert(subcontractorCprWeeks).values({
     id,
@@ -303,6 +306,8 @@ router.post('/:id/subcontractors/:subId/cpr-weeks', validate(CreateCprWeekSchema
     receivedDate: body.receivedDate ?? null,
     isCompliant: body.isCompliant ?? null,
     notes: body.notes ?? null,
+    uploadToken,
+    uploadTokenExpiresAt,
     createdAt: now,
   });
 
@@ -311,6 +316,20 @@ router.post('/:id/subcontractors/:subId/cpr-weeks', validate(CreateCprWeekSchema
     .from(subcontractorCprWeeks)
     .where(eq(subcontractorCprWeeks.id, id))
     .limit(1);
+
+  // Email sub contact if they have an email on file
+  if (sub.contactEmail) {
+    const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+    const uploadUrl = `${baseUrl}/sub-upload/${uploadToken}`;
+    const [projectRow] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, projectId)).limit(1);
+    await sendSubUploadRequestEmail({
+      toEmail: sub.contactEmail,
+      subName: sub.name,
+      projectName: projectRow?.name ?? projectId,
+      weekEndingDate: body.weekEndingDate,
+      uploadUrl,
+    });
+  }
 
   res.status(201).json({ data: { cprWeek: newWeek } });
 });
