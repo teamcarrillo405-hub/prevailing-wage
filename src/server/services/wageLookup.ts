@@ -162,12 +162,15 @@ export async function fetchAndCacheByWdNumber(wdNumber: string): Promise<WageDet
   const cacheExpiresAt = new Date(nowDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const wdId = crypto.randomUUID();
 
+  // Extract state from WD number prefix (e.g. "CA20250001" → "CA") — more reliable than location.description.
+  const stateCode = /^([A-Z]{2})\d/.exec(response.fullReferenceNumber)?.[1] ?? 'XX';
+
   const actualId = upsertWageDetermination({
     id: wdId,
     source: 'federal-dol',
     wdNumber: response.fullReferenceNumber,
     revisionNumber: response.revisionNumber,
-    state: (response.location?.description ?? 'XX').slice(0, 2).toUpperCase(),
+    state: stateCode,
     county: null,
     constructionType: null,
     publishDate: response.publishDate,
@@ -187,7 +190,7 @@ export async function fetchAndCacheByWdNumber(wdNumber: string): Promise<WageDet
     source: 'federal-dol',
     wdNumber: response.fullReferenceNumber,
     revisionNumber: response.revisionNumber,
-    state: (response.location?.description ?? 'XX').slice(0, 2).toUpperCase(),
+    state: stateCode,
     county: null,
     constructionType: null,
     publishDate: response.publishDate,

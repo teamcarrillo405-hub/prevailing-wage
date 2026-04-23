@@ -44,10 +44,15 @@ wagesRouter.get('/lookup', async (req, res) => {
     return res.status(400).json({ error: 'Invalid query', issues: parsed.error.issues });
   }
 
-  const { state, county } = parsed.data;
+  const { state, county, constructionType } = parsed.data;
   const wd = await lookupWageDetermination(state, county);
   if (!wd) {
     return res.status(404).json({ error: `No wage determination found for ${county}, ${state}` });
+  }
+
+  // Filter by constructionType when provided; a WD with null constructionType matches any filter.
+  if (constructionType && wd.constructionType && wd.constructionType !== constructionType) {
+    return res.status(404).json({ error: `No ${constructionType} wage determination found for ${county}, ${state}` });
   }
 
   return res.json({ wds: [wd], classifications: [wd.classifications ?? []] });
