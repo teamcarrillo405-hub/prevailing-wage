@@ -27,6 +27,9 @@ interface PayrollWeek {
   createdAt: string;
   amendmentNumber: number | null;
   originalWeekId: string | null;
+  totalGross: string | null;
+  totalNet: string | null;
+  workerCount: number;
 }
 
 interface PayrollWeeksResponse {
@@ -246,6 +249,13 @@ export function PayrollListPage() {
                   )}
                   {week.amendmentNumber != null && (
                     <Badge variant="warning" className="ml-2">Amendment {week.amendmentNumber}</Badge>
+                  )}
+                  {week.workerCount > 0 && (
+                    <span className="ml-3 text-xs text-gray-400">
+                      {week.workerCount} worker{week.workerCount !== 1 ? 's' : ''}
+                      {week.totalGross != null && ` · $${parseFloat(week.totalGross).toFixed(2)} gross`}
+                      {week.totalNet != null && ` · $${parseFloat(week.totalNet).toFixed(2)} net`}
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-3">

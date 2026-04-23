@@ -1151,6 +1151,8 @@ export function PayrollWeekDetailPage() {
                     <th className="px-5 py-3">Base Rate</th>
                     <th className="px-5 py-3">Fringe Rate</th>
                     <th className="px-5 py-3">Gross Wages</th>
+                    <th className="px-5 py-3">Deductions</th>
+                    <th className="px-5 py-3">Net Pay</th>
                     <th className="px-5 py-3">Status</th>
                   </tr>
                 </thead>
@@ -1217,6 +1219,12 @@ export function PayrollWeekDetailPage() {
                         <td className="px-5 py-3 text-gray-600">
                           {e.grossWages !== null ? `$${e.grossWages.toFixed(2)}` : '—'}
                         </td>
+                        <td className="px-5 py-3 text-gray-600">
+                          {e.deductions !== null ? `$${e.deductions.toFixed(2)}` : '—'}
+                        </td>
+                        <td className="px-5 py-3 font-medium text-gray-900">
+                          {e.netPay !== null ? `$${e.netPay.toFixed(2)}` : '—'}
+                        </td>
                         <td className="px-5 py-3">
                           {violation ? (
                             <Badge variant="violation">{violationLabel(violation.violationType)}</Badge>
@@ -1228,6 +1236,21 @@ export function PayrollWeekDetailPage() {
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50 text-sm font-semibold text-gray-700">
+                    <td colSpan={6} className="px-5 py-3">Totals</td>
+                    <td className="px-5 py-3">
+                      ${entries.reduce((s, r) => s + (r.entry.grossWages ?? 0), 0).toFixed(2)}
+                    </td>
+                    <td className="px-5 py-3">
+                      ${entries.reduce((s, r) => s + (r.entry.deductions ?? 0), 0).toFixed(2)}
+                    </td>
+                    <td className="px-5 py-3">
+                      ${entries.reduce((s, r) => s + (r.entry.netPay ?? 0), 0).toFixed(2)}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </Card>

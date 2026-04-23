@@ -1,6 +1,6 @@
 // src/server/services/payrollService.ts
 import { randomUUID } from 'crypto';
-import { eq, desc, max, and, sql } from 'drizzle-orm';
+import { eq, desc, max, and, sql, sum, count } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { getDb } from '../db/index.js';
 import {
@@ -144,9 +144,27 @@ export async function getPayrollWeek(weekId: string) {
 export async function listPayrollWeeks(projectId: string) {
   const db = getDb();
   return db
-    .select()
+    .select({
+      id: payrollWeeks.id,
+      projectId: payrollWeeks.projectId,
+      weekEndingDate: payrollWeeks.weekEndingDate,
+      payrollNumber: payrollWeeks.payrollNumber,
+      isFinal: payrollWeeks.isFinal,
+      submittedAt: payrollWeeks.submittedAt,
+      submittedTo: payrollWeeks.submittedTo,
+      amendmentNumber: payrollWeeks.amendmentNumber,
+      originalWeekId: payrollWeeks.originalWeekId,
+      createdAt: payrollWeeks.createdAt,
+      updatedAt: payrollWeeks.updatedAt,
+      // Aggregate summaries for the list page (null when no entries yet)
+      totalGross: sum(payrollEntries.grossWages),
+      totalNet: sum(payrollEntries.netPay),
+      workerCount: count(payrollEntries.workerId),
+    })
     .from(payrollWeeks)
+    .leftJoin(payrollEntries, eq(payrollEntries.payrollWeekId, payrollWeeks.id))
     .where(eq(payrollWeeks.projectId, projectId))
+    .groupBy(payrollWeeks.id)
     .orderBy(desc(payrollWeeks.weekEndingDate));
 }
 
