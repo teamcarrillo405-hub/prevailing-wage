@@ -283,6 +283,35 @@ export async function sendSubCprReceivedEmail(opts: {
   }
 }
 
+// ── NOTIF-07: WD change alert to all active project members ────────────────
+
+export async function sendWdChangedEmail(opts: {
+  toEmail: string;
+  projectName: string;
+  wdNumber: string;
+  oldRevision: number;
+  newRevision: number;
+}): Promise<void> {
+  try {
+    const resend = await getResend();
+    if (!resend) {
+      console.log('[email] RESEND_API_KEY not set — skipping WD change notification');
+      return;
+    }
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [opts.toEmail],
+      subject: `Wage determination updated: ${opts.wdNumber}`,
+      html: `<p>The wage determination <strong>${opts.wdNumber}</strong> for project <strong>${opts.projectName}</strong> has been updated from revision ${opts.oldRevision} to revision ${opts.newRevision}.</p><p>Please review your payroll entries for compliance.</p>`,
+    });
+    if (error) {
+      console.error('[email] sendWdChangedEmail Resend error:', error);
+    }
+  } catch (err) {
+    console.error('[email] sendWdChangedEmail failed:', err);
+  }
+}
+
 // ── NOTIF-04: Submission confirmation to acting user ───────────────────────
 
 export async function sendSubmissionConfirmationEmail(

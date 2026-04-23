@@ -27,6 +27,7 @@ import subcontractorsRouter from './routes/subcontractors.js';
 import subUploadRouter from './routes/subUpload.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
+import { checkWdChanges } from './services/wdChangeDetector.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
 import { fileURLToPath } from 'url';
@@ -101,6 +102,18 @@ app.listen(PORT, () => {
       await runDueSoonScan();
     } catch (err) {
       console.error('[due-soon] Scan failed:', err);
+      // Never rethrow — cron failures must not crash Express
+    }
+  }, { timezone: 'America/New_York' });
+
+  // Register daily WD change detector — NOTIF-07
+  // Runs at 3:00 AM Eastern every day (after wage sync window)
+  cron.schedule('0 3 * * *', async () => {
+    console.log('[wd-detector] Running daily WD change detector');
+    try {
+      await checkWdChanges();
+    } catch (err) {
+      console.error('[wd-detector] Failed:', err);
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'America/New_York' });
