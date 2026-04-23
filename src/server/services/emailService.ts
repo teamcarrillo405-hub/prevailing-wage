@@ -231,7 +231,7 @@ export async function sendSubUploadRequestEmail(opts: {
     }
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
-      to: opts.toEmail,
+      to: [opts.toEmail],
       subject: `Upload your certified payroll — ${opts.projectName} week ending ${opts.weekEndingDate}`,
       html: `
         <p>Hi ${opts.subName} team,</p>

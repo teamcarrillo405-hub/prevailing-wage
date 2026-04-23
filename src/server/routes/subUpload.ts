@@ -11,9 +11,8 @@ const router = Router();
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, process.env.UPLOAD_DIR || './uploads'),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `sub-cpr-${randomUUID()}${ext}`);
+  filename: (_req, _file, cb) => {
+    cb(null, `sub-cpr-${randomUUID()}.pdf`);
   },
 });
 
@@ -57,7 +56,15 @@ router.get('/:token', async (req, res) => {
 });
 
 // POST /api/sub-upload/:token — receive PDF upload (public)
-router.post('/:token', upload.single('file'), async (req, res) => {
+router.post('/:token', (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'File upload error' });
+      return;
+    }
+    next();
+  });
+}, async (req, res) => {
   const token = req.params['token'] as string;
   if (!req.file) {
     res.status(400).json({ error: 'No file provided' });
@@ -65,6 +72,7 @@ router.post('/:token', upload.single('file'), async (req, res) => {
   }
 
   const db = getDb();
+  // ISO-8601 strings sort lexicographically in the same order as their timestamps — safe for SQLite gt()
   const now = new Date().toISOString();
 
   const [row] = await db
@@ -82,6 +90,11 @@ router.post('/:token', upload.single('file'), async (req, res) => {
 
   if (!row) {
     res.status(404).json({ error: 'Upload link not found or expired' });
+    return;
+  }
+
+  if (row.week.uploadedAt) {
+    res.status(409).json({ error: 'A file has already been uploaded for this week' });
     return;
   }
 

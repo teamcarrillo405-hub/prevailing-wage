@@ -14,3 +14,4 @@ data/wh347-grid-*.png
 scripts/calibrate/*.bak
 assets/wh347-fillable-grid.pdf
 .worktrees/
+uploads/
