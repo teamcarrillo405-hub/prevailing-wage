@@ -153,7 +153,7 @@ authRouter.post('/accept-invite', validate(AcceptInviteSchema), async (req, res)
         id: randomUUID(),
         projectId: p.projectId,
         userId: newUserId,
-        role: 'member' as const,
+        role: (invite.inviteeRole ?? 'member') as 'member' | 'auditor',
         joinedAt: now,
       }))
     );

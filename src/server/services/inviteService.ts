@@ -34,7 +34,7 @@ export async function sendInviteEmail(to: string, inviteUrl: string): Promise<vo
   }
 }
 
-export async function createInvite(inviterUserId: string, inviteeEmail: string): Promise<{ id: string; token: string }> {
+export async function createInvite(inviterUserId: string, inviteeEmail: string, inviteeRole: 'member' | 'auditor' = 'member'): Promise<{ id: string; token: string }> {
   const db = getDb();
   const now = new Date().toISOString();
   const id = randomUUID();
@@ -45,6 +45,7 @@ export async function createInvite(inviterUserId: string, inviteeEmail: string):
     id,
     inviterUserId,
     inviteeEmail: inviteeEmail.toLowerCase(),
+    inviteeRole,
     token,
     expiresAt,
     createdAt: now,

@@ -134,7 +134,10 @@ router.get('/', async (req, res) => {
   });
 });
 
-const InviteSchema = z.object({ email: z.string().email() });
+const InviteSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(['member', 'auditor']).default('member'),
+});
 
 // POST /api/team/invite — owner sends invite
 router.post('/invite', validate(InviteSchema), async (req, res) => {
@@ -158,8 +161,8 @@ router.post('/invite', validate(InviteSchema), async (req, res) => {
     return;
   }
 
-  const { email } = req.body as z.infer<typeof InviteSchema>;
-  const { token } = await createInvite(userId, email);
+  const { email, role } = req.body as z.infer<typeof InviteSchema>;
+  const { token } = await createInvite(userId, email, role ?? 'member');
 
   // Build invite URL
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;

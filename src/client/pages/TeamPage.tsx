@@ -33,6 +33,7 @@ export function TeamPage() {
     email: string;
   } | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'member' | 'auditor'>('member');
   const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<TeamData>({
@@ -44,12 +45,12 @@ export function TeamPage() {
   });
 
   const sendInviteMutation = useMutation({
-    mutationFn: async (email: string) => {
+    mutationFn: async ({ email, role }: { email: string; role: 'member' | 'auditor' }) => {
       const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, role }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -60,6 +61,7 @@ export function TeamPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team'] });
       setInviteEmail('');
+      setInviteRole('member');
       setError(null);
     },
     onError: (err: any) => {
@@ -271,7 +273,7 @@ export function TeamPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              sendInviteMutation.mutate(inviteEmail);
+              sendInviteMutation.mutate({ email: inviteEmail, role: inviteRole });
             }}
             className="space-y-3"
           >
@@ -283,6 +285,17 @@ export function TeamPage() {
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-brand-gold focus:outline-none"
               disabled={atCapacity || !!data?.pendingInvite}
             />
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
+              <select
+                value={inviteRole}
+                onChange={e => setInviteRole(e.target.value as 'member' | 'auditor')}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              >
+                <option value="member">Member — full read/write access</option>
+                <option value="auditor">Auditor — read-only, no data entry</option>
+              </select>
+            </div>
             <Button
               variant="primary"
               type="submit"

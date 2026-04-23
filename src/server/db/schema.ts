@@ -79,6 +79,7 @@ export const teamInvites = sqliteTable('team_invites', {
   expiresAt: text('expires_at').notNull(),
   acceptedAt: text('accepted_at'),
   revokedAt: text('revoked_at'),
+  inviteeRole: text('invitee_role').notNull().default('member').$type<'member' | 'auditor'>(),
   createdAt: text('created_at').notNull(),
 });
 
