@@ -43,7 +43,7 @@ export function BillingPage() {
         }),
   });
 
-  const { data: team, isLoading: teamLoading } = useQuery<TeamData>({
+  const { data: team, isLoading: teamLoading, error: teamError } = useQuery<TeamData>({
     queryKey: ['team'],
     queryFn: () =>
       fetch('/api/team', { credentials: 'include' })
@@ -95,6 +95,17 @@ export function BillingPage() {
     return (
       <Layout>
         <div className="text-center py-16 text-gray-500">Loading...</div>
+      </Layout>
+    );
+  }
+
+  if (teamError) {
+    return (
+      <Layout>
+        <PageHeader title="Billing" subtitle="Manage your subscription and plan" />
+        <Card padding="default">
+          <p className="text-sm text-red-600">Could not load team information. Please try again.</p>
+        </Card>
       </Layout>
     );
   }
