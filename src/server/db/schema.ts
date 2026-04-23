@@ -7,6 +7,9 @@ export const users = sqliteTable('users', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   planTier: text('plan_tier').notNull().default('starter').$type<'starter' | 'pro' | 'enterprise'>(),
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripeSubscriptionStatus: text('stripe_subscription_status'),
 });
 
 export const projects = sqliteTable('projects', {
