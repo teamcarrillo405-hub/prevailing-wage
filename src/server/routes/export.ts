@@ -171,7 +171,19 @@ router.get('/wh347/:weekId', async (req, res) => {
 
     const grossWagesProject = e.grossWages ?? 0;
     const netPay = e.netPay ?? 0;
-    const deductions = e.deductions;
+    const deductions = e.deductions ?? 0;
+
+    // Deduction breakdown for WH-347 columns 9-12.
+    // Only populate sub-columns when the user entered at least one itemized field;
+    // otherwise leave them undefined so fmtDollar renders blank instead of "0.00".
+    const ficaAmt = e.ficaTax ?? 0;
+    const fedTaxAmt = e.federalIncomeTax ?? 0;
+    const hasBreakdown = e.ficaTax != null || e.federalIncomeTax != null;
+    // "Other" = everything not in the explicit FICA / Fed-tax columns
+    // (state income tax + SDI + union dues + etc. all land here).
+    const otherDeductions = hasBreakdown
+      ? Math.max(0, deductions - ficaAmt - fedTaxAmt)
+      : undefined;
 
     return {
       entryNo: index + 1,
@@ -191,6 +203,9 @@ router.get('/wh347/:weekId', async (req, res) => {
       fringeCredit: e.fringeRateSnapshot,
       grossWagesProject,
       grossWagesAll: grossWagesProject, // single project in v1
+      fica: e.ficaTax ?? undefined,
+      taxWithheld: e.federalIncomeTax ?? undefined,
+      otherDeductions,
       deductions,
       netPay,
     };

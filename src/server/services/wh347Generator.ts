@@ -82,7 +82,7 @@ const ROWS_PER_PAGE = 8;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const fmtDollar = (n: number | undefined) => (n ?? 0).toFixed(2);
+const fmtDollar = (n: number | undefined) => n != null ? n.toFixed(2) : '';
 const fmtHours = (n: number | undefined) => (n != null && n > 0 ? String(n) : '');
 
 /** Set a text-field value if the widget exists; silently skip otherwise. */
