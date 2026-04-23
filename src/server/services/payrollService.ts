@@ -16,6 +16,7 @@ import { lookupWageDetermination } from './wageLookup.js';
 import { insertAuditLog, diffObjects } from './auditService.js';
 import { sendViolationEmail, sendActivityEmail } from './emailService.js';
 import { computeCompliance } from './complianceService.js';
+import { calculateCwhssaOt } from './calculations.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -148,6 +149,75 @@ export async function listPayrollWeeks(projectId: string) {
     .orderBy(desc(payrollWeeks.weekEndingDate));
 }
 
+// Look up rates from the cached WD for this project's state/county using the
+// worker's trade code. Returns null if no matching cached WD or classification.
+// Phase 64: used by upsertPayrollEntry when client sends 0 for baseRateSnapshot.
+async function lookupRatesForEntry(
+  payrollWeekId: string,
+  classificationId: string,
+): Promise<{ baseRate: number; fringeRate: number } | null> {
+  const db = getDb();
+  const [week] = await db
+    .select({ projectId: payrollWeeks.projectId })
+    .from(payrollWeeks)
+    .where(eq(payrollWeeks.id, payrollWeekId))
+    .limit(1);
+  if (!week) return null;
+
+  const [project] = await db
+    .select({ state: projects.state, county: projects.county })
+    .from(projects)
+    .where(eq(projects.id, week.projectId))
+    .limit(1);
+  if (!project || !project.state) return null;
+
+  const [wc] = await db
+    .select({ tradeCode: workerClassifications.tradeCode })
+    .from(workerClassifications)
+    .where(eq(workerClassifications.id, classificationId))
+    .limit(1);
+  if (!wc) return null;
+
+  const wd = await lookupWageDetermination(project.state, project.county ?? '');
+  if (!wd || !wd.classifications) return null;
+
+  const match = wd.classifications.find((c) => c.tradeCode === wc.tradeCode);
+  if (!match) return null;
+
+  return { baseRate: match.baseRate, fringeRate: match.fringeRate };
+}
+
+// Compute grossWages + netPay from hours + rates using the existing CWHSSA
+// rules (fringe NOT multiplied for OT). Phase 64: invoked when grossWages
+// is null on input.
+function computeGrossAndNet(
+  values: {
+    monSt: number; tueSt: number; wedSt: number; thuSt: number;
+    friSt: number; satSt: number; sunSt: number;
+    monOt: number; tueOt: number; wedOt: number; thuOt: number;
+    friOt: number; satOt: number; sunOt: number;
+    monDt: number; tueDt: number; wedDt: number; thuDt: number;
+    friDt: number; satDt: number; sunDt: number;
+  },
+  baseRate: number,
+  fringeRate: number,
+  deductions: number,
+): { grossWages: number; netPay: number } {
+  const totalSt = values.monSt + values.tueSt + values.wedSt + values.thuSt + values.friSt + values.satSt + values.sunSt;
+  const totalOt = values.monOt + values.tueOt + values.wedOt + values.thuOt + values.friOt + values.satOt + values.sunOt;
+  const totalDt = values.monDt + values.tueDt + values.wedDt + values.thuDt + values.friDt + values.satDt + values.sunDt;
+  const totalHoursWorked = totalSt + totalOt + totalDt;
+  const result = calculateCwhssaOt({
+    baseRate,
+    fringeRate,
+    totalHoursWorked,
+    overtimeHours: totalOt + totalDt,
+  });
+  const grossWages = Math.round(result.totalWeeklyCost * 100) / 100;
+  const netPay = Math.round((grossWages - (deductions || 0)) * 100) / 100;
+  return { grossWages, netPay };
+}
+
 export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
   const db = getDb();
   const now = new Date().toISOString();
@@ -164,6 +234,47 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     ))
     .limit(1);
   const isCreate = !existingEntry;
+
+  // Phase 64: if client sent 0 for both rates (meaning: no worker-level rates on
+  // file), try to populate from the project's cached WD. Client can still override
+  // by sending non-zero rates explicitly.
+  let effectiveBase = input.baseRateSnapshot;
+  let effectiveFringe = input.fringeRateSnapshot;
+  if (effectiveBase === 0 && effectiveFringe === 0) {
+    const looked = await lookupRatesForEntry(input.payrollWeekId, input.classificationId);
+    if (looked) {
+      effectiveBase = looked.baseRate;
+      effectiveFringe = looked.fringeRate;
+    }
+  }
+
+  // Phase 64: compute grossWages + netPay server-side if client didn't provide
+  // them. Treats null or missing as "please compute." When client provides a
+  // value explicitly, respect it (the CSV import path and copy-week path may
+  // precompute).
+  const resolvedDeductions = input.deductions ?? 0;
+  let effectiveGross = input.grossWages ?? null;
+  let effectiveNet = input.netPay ?? null;
+  if (effectiveGross == null) {
+    const computed = computeGrossAndNet(
+      {
+        monSt: input.monSt ?? 0, tueSt: input.tueSt ?? 0, wedSt: input.wedSt ?? 0,
+        thuSt: input.thuSt ?? 0, friSt: input.friSt ?? 0, satSt: input.satSt ?? 0,
+        sunSt: input.sunSt ?? 0,
+        monOt: input.monOt ?? 0, tueOt: input.tueOt ?? 0, wedOt: input.wedOt ?? 0,
+        thuOt: input.thuOt ?? 0, friOt: input.friOt ?? 0, satOt: input.satOt ?? 0,
+        sunOt: input.sunOt ?? 0,
+        monDt: input.monDt ?? 0, tueDt: input.tueDt ?? 0, wedDt: input.wedDt ?? 0,
+        thuDt: input.thuDt ?? 0, friDt: input.friDt ?? 0, satDt: input.satDt ?? 0,
+        sunDt: input.sunDt ?? 0,
+      },
+      effectiveBase,
+      effectiveFringe,
+      resolvedDeductions,
+    );
+    effectiveGross = computed.grossWages;
+    if (effectiveNet == null) effectiveNet = computed.netPay;
+  }
 
   const values = {
     id,
@@ -191,11 +302,11 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     friDt: input.friDt ?? 0,
     satDt: input.satDt ?? 0,
     sunDt: input.sunDt ?? 0,
-    baseRateSnapshot: input.baseRateSnapshot,
-    fringeRateSnapshot: input.fringeRateSnapshot,
-    grossWages: input.grossWages ?? null,
-    deductions: input.deductions ?? 0,
-    netPay: input.netPay ?? null,
+    baseRateSnapshot: effectiveBase,
+    fringeRateSnapshot: effectiveFringe,
+    grossWages: effectiveGross,
+    deductions: resolvedDeductions,
+    netPay: effectiveNet,
     fringeHealthWelfare: input.fringeHealthWelfare ?? null,
     fringePension: input.fringePension ?? null,
     fringeVacation: input.fringeVacation ?? null,
