@@ -155,7 +155,7 @@ router.get('/:id', async (req, res) => {
 
   let project: Project;
   try {
-    project = await assertProjectAccess(db, req.params.id, userId);
+    ({ project } = await assertProjectAccess(db, req.params.id, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;

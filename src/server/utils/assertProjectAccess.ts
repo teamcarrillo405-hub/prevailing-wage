@@ -5,15 +5,15 @@ import type * as schema from '../db/schema.js';
 
 type DrizzleDb = BetterSQLite3Database<typeof schema>;
 export type Project = typeof projects.$inferSelect;
+export type ProjectRole = 'owner' | 'member' | 'auditor';
 
 export async function assertProjectAccess(
   db: DrizzleDb,
   projectId: string,
   userId: string,
-): Promise<Project> {
-  // Step 1: membership check — fast path if member found
+): Promise<{ project: Project; role: ProjectRole }> {
   const [row] = await db
-    .select({ project: projects })
+    .select({ project: projects, role: projectMembers.role })
     .from(projectMembers)
     .innerJoin(projects, eq(projectMembers.projectId, projects.id))
     .where(
@@ -25,9 +25,8 @@ export async function assertProjectAccess(
     )
     .limit(1);
 
-  if (row) return row.project;
+  if (row) return { project: row.project, role: row.role as ProjectRole };
 
-  // Step 2: distinguish 404 from 403
   const [exists] = await db
     .select({ id: projects.id })
     .from(projects)

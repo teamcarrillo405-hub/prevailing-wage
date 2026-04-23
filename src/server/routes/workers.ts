@@ -99,7 +99,7 @@ router.get('/:projectId/wage-classifications', async (req, res) => {
 
   let project: Project;
   try {
-    project = await assertProjectAccess(db, projectId, userId);
+    ({ project } = await assertProjectAccess(db, projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -131,7 +131,7 @@ router.get('/:projectId/workers', async (req, res) => {
 
   let project: Project;
   try {
-    project = await assertProjectAccess(db, projectId, userId);
+    ({ project } = await assertProjectAccess(db, projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;

@@ -146,7 +146,7 @@ router.get('/wh347/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -295,7 +295,7 @@ router.get('/a1131/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -420,7 +420,7 @@ router.get('/f700/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -518,7 +518,7 @@ router.get('/csv/lcptracker/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -551,7 +551,7 @@ router.get('/csv/emars/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -588,7 +588,7 @@ router.get('/ecpr-xml/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -769,7 +769,7 @@ router.get('/wa-cpr-xml/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -943,7 +943,7 @@ router.get('/pw12/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -1051,7 +1051,7 @@ router.get('/ny-mpwr-xml/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -1155,7 +1155,7 @@ router.get('/il-pdf/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -1260,7 +1260,7 @@ router.get('/ma-cpr/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -1364,7 +1364,7 @@ router.get('/nj-mw562/:weekId', async (req, res) => {
   const db = getDb();
   let project: Project;
   try {
-    project = await assertProjectAccess(db, week.projectId, userId);
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
