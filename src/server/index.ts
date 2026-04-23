@@ -23,14 +23,19 @@ import { importRouter } from './routes/import.js';
 import { auditRouter } from './routes/audit.js';
 import { payrollWeekClassificationsRouter } from './routes/payrollWeekClassifications.js';
 import subcontractorsRouter from './routes/subcontractors.js';
+import subUploadRouter from './routes/subUpload.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { mkdirSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Ensure upload directory exists at startup
+mkdirSync(process.env.UPLOAD_DIR || './uploads', { recursive: true });
 
 const app = express();
 app.set('trust proxy', 1);
@@ -39,6 +44,7 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', crede
 app.use(express.json());
 app.use(cookieParser());
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/api/sub-upload', subUploadRouter); // public — no auth required
 app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/projects', workersRouter);
