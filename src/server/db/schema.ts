@@ -437,6 +437,10 @@ export const subcontractorCprWeeks = sqliteTable('subcontractor_cpr_weeks', {
   receivedDate: text('received_date'),
   isCompliant: integer('is_compliant'),   // null=unknown, 0=non-compliant, 1=compliant
   notes: text('notes'),
+  uploadToken:          text('upload_token'),
+  uploadTokenExpiresAt: text('upload_token_expires_at'),
+  uploadedAt:           text('uploaded_at'),
+  uploadPath:           text('upload_path'),
   createdAt: text('created_at').notNull(),
 }, (table) => ({
   subCprWeekUnique: uniqueIndex('sub_cpr_week_unique').on(table.subcontractorId, table.weekEndingDate),
