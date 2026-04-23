@@ -20,6 +20,7 @@ import { complianceRouter } from './routes/compliance.js';
 import { reportsRouter } from './routes/reports.js';
 import { teamRouter } from './routes/team.js';
 import { importRouter } from './routes/import.js';
+import { billingRouter } from './routes/billing.js';
 import { auditRouter } from './routes/audit.js';
 import { payrollWeekClassificationsRouter } from './routes/payrollWeekClassifications.js';
 import subcontractorsRouter from './routes/subcontractors.js';
@@ -41,6 +42,8 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', credentials: true }));
+// Stripe webhook needs raw body — must be before express.json()
+app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
@@ -63,6 +66,7 @@ app.use('/api/payroll/import', importRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/projects', payrollWeekClassificationsRouter);
 app.use('/api/projects', subcontractorsRouter);
+app.use('/api/billing', billingRouter);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {
