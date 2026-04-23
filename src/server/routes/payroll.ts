@@ -6,6 +6,7 @@ import { getDb } from '../db/index.js';
 import { payrollEntries, workers, projects } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { requireRole } from '../middleware/requireRole.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { sendSubmissionConfirmationEmail } from '../services/emailService.js';
 import {
@@ -123,7 +124,11 @@ router.post('/weeks', validate(CreateWeekSchema), async (req, res) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, body.projectId, userId);
+    const { role } = await assertProjectAccess(db, body.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -147,7 +152,11 @@ router.post('/weeks/copy', validate(CopyWeekSchema), async (req, res) => {
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, sourceWeek.projectId, userId);
+    const { role } = await assertProjectAccess(db, sourceWeek.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -177,7 +186,11 @@ router.post('/weeks/amend', validate(AmendWeekSchema), async (req, res) => {
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, originalWeek.projectId, userId);
+    const { role } = await assertProjectAccess(db, originalWeek.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -245,7 +258,11 @@ router.post('/entries', validate(UpsertEntrySchema), async (req, res) => {
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role } = await assertProjectAccess(db, week.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -290,7 +307,11 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role } = await assertProjectAccess(db, week.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -357,7 +378,11 @@ router.delete('/entries/:entryId', async (req, res) => {
     }
 
     // Verify user has access to the project before deleting
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role: deleteRole } = await assertProjectAccess(db, week.projectId, userId);
+    if (deleteRole === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
 
     // Now perform the delete with audit
     const result = await deletePayrollEntry({ entryId, userId, userEmail, ipAddress });
@@ -381,7 +406,11 @@ router.patch('/weeks/:id/submit', validate(SubmitWeekSchema), async (req, res) =
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role } = await assertProjectAccess(db, week.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -420,7 +449,11 @@ router.delete('/weeks/:id/submit', async (req, res) => {
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role } = await assertProjectAccess(db, week.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -460,7 +493,11 @@ router.patch('/weeks/:id/ca-submit', validate(AgencySubmitSchema), async (req, r
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role } = await assertProjectAccess(db, week.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -522,7 +559,11 @@ router.patch('/weeks/:id/wa-submit', validate(AgencySubmitSchema), async (req, r
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role } = await assertProjectAccess(db, week.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -583,7 +624,11 @@ router.patch('/weeks/:id/ny-submit', async (req, res) => {
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role } = await assertProjectAccess(db, week.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -639,7 +684,11 @@ router.patch('/weeks/:id/il-submit', async (req, res) => {
 
   const db = getDb();
   try {
-    await assertProjectAccess(db, week.projectId, userId);
+    const { role } = await assertProjectAccess(db, week.projectId, userId);
+    if (role === 'auditor') {
+      res.status(403).json({ error: 'Requires member role or higher' });
+      return;
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
