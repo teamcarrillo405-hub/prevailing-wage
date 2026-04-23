@@ -64,7 +64,7 @@ export const projectMembers = sqliteTable('project_members', {
   id: text('id').primaryKey(),
   projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id),
-  role: text('role').notNull().$type<'owner' | 'member'>(),
+  role: text('role').notNull().$type<'owner' | 'member' | 'auditor'>(),
   joinedAt: text('joined_at').notNull(),
   removedAt: text('removed_at'),
 }, (table) => ({
