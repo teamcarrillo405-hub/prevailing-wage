@@ -16,6 +16,8 @@ export interface EntryPayload {
   baseRateSnapshot: number;
   fringeRateSnapshot: number;
   deductions: number;
+  grossWages: number;
+  netPay: number;
 }
 
 export function useEntryMutation(weekId: string | null, onLocked: () => void) {
@@ -44,6 +46,8 @@ export function useEntryMutation(weekId: string | null, onLocked: () => void) {
             baseRateSnapshot: payload.baseRateSnapshot,
             fringeRateSnapshot: payload.fringeRateSnapshot,
             deductions: payload.deductions,
+            grossWages: payload.grossWages,
+            netPay: payload.netPay,
           });
         } catch (err) {
           const status = (err as Error & { status?: number }).status;

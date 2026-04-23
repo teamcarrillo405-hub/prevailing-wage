@@ -1,6 +1,6 @@
 // src/client/components/payrollWizard/Step2HoursGrid.tsx
 import { useState, useCallback, useEffect } from 'react';
-import { Step2GridRow, type RowValues, type HourValues, type RowExtras } from './Step2GridRow';
+import { Step2GridRow, type RowValues, type HourValues, type RowExtras, type MetaField } from './Step2GridRow';
 import { Step2BulkActions, STANDARD_WEEK, type StateToggles } from './Step2BulkActions';
 import { parsePastedHours } from './pasteParser';
 import { Button } from '../ui/Button';
@@ -18,6 +18,7 @@ export interface GridWorkerRow {
   tradeDescription: string;
   baseRate: number;
   fringeRate: number;
+  deductions: number;
   values: RowValues;
 }
 
@@ -53,6 +54,19 @@ export function Step2HoursGrid({ initialRows, projectState, onRowChange, onRevie
         rs.map((r) =>
           r.workerId === workerId && r.classificationId === classificationId
             ? { ...r, values: { ...r.values, [field]: value } as RowValues }
+            : r
+        )
+      );
+    },
+    []
+  );
+
+  const updateMeta = useCallback(
+    (workerId: string, classificationId: string, field: MetaField, value: number) => {
+      setRows((rs) =>
+        rs.map((r) =>
+          r.workerId === workerId && r.classificationId === classificationId
+            ? { ...r, [field]: value }
             : r
         )
       );
@@ -225,6 +239,9 @@ export function Step2HoursGrid({ initialRows, projectState, onRowChange, onRevie
                   OT
                 </th>
               ))}
+              <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">Base $/hr</th>
+              <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">Fringe $/hr</th>
+              <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">Deductions</th>
               {toggles.caDt &&
                 DAY_LABELS.map((d) => (
                   <th key={`${d}-dt`} className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">
@@ -271,10 +288,13 @@ export function Step2HoursGrid({ initialRows, projectState, onRowChange, onRevie
                 workerName={r.workerName}
                 tradeDescription={r.tradeDescription}
                 baseRate={r.baseRate}
+                fringeRate={r.fringeRate}
+                deductions={r.deductions}
                 values={r.values}
                 toggles={toggles}
                 onChange={(field, value) => updateCell(r.workerId, r.classificationId, field, value)}
                 onExtraChange={(field, value) => updateExtra(r.workerId, r.classificationId, field, value)}
+                onMetaChange={(field, value) => updateMeta(r.workerId, r.classificationId, field, value)}
                 onBlur={() => notifyBlur(r.workerId, r.classificationId)}
                 onStandardWeek={() => applyStandardWeekToRow(r.workerId, r.classificationId)}
               />

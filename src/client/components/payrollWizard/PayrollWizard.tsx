@@ -10,6 +10,8 @@ import { Step3Review } from './Step3Review';
 import { useEntryMutation } from './useEntryMutation';
 import { api } from '../../lib/api';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
+import { calculateCwhssaOt } from '../../../server/services/calculations.js';
+import { DAYS } from './types';
 
 interface Props {
   projectId: string;
@@ -160,17 +162,22 @@ export function PayrollWizard({ projectId, weekId }: Props) {
         initialRows={gridRows}
         projectState={projectState}
         onRowChange={(row) => {
+          const computed = computeGrossNet(row);
           markDirty({
             workerId: row.workerId,
             classificationId: row.classificationId,
             values: row.values,
             baseRateSnapshot: row.baseRate,
             fringeRateSnapshot: row.fringeRate,
-            deductions: 0,
+            deductions: row.deductions,
+            grossWages: computed.grossWages,
+            netPay: computed.netPay,
           });
         }}
         onReview={async () => {
           await flush();
+          // Refetch the week so Step 3 sees the just-saved gross/net values.
+          await qc.invalidateQueries({ queryKey: ['payroll-week', state.weekId] });
           dispatch({ type: 'ADVANCE' });
         }}
         onBack={() => dispatch({ type: 'GO_BACK' })}
@@ -203,6 +210,26 @@ function emptyRowValues(): RowValues {
   };
 }
 
+// Client-side CWHSSA gross + net computation. Mirrors what the server would compute
+// if it had the rate data — needed because server currently stores grossWages/netPay
+// unchanged from client input. Phase 64 will move computation server-side.
+function computeGrossNet(row: GridWorkerRow): { grossWages: number; netPay: number } {
+  const v = row.values;
+  const totalSt = DAYS.reduce((s, d) => s + (v[`${d}St` as keyof typeof v] as number || 0), 0);
+  const totalOt = DAYS.reduce((s, d) => s + (v[`${d}Ot` as keyof typeof v] as number || 0), 0);
+  const totalDt = DAYS.reduce((s, d) => s + (v[`${d}Dt` as keyof typeof v] as number || 0), 0);
+  const totalHoursWorked = totalSt + totalOt + totalDt;
+  const result = calculateCwhssaOt({
+    baseRate: row.baseRate,
+    fringeRate: row.fringeRate,
+    totalHoursWorked,
+    overtimeHours: totalOt + totalDt,
+  });
+  const grossWages = parseFloat(result.totalWeeklyCost.toFixed(2));
+  const netPay = parseFloat((grossWages - (row.deductions || 0)).toFixed(2));
+  return { grossWages, netPay };
+}
+
 function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefined): GridWorkerRow[] {
   // Edit mode: derive rows from existing entries
   if (weekData) {
@@ -213,6 +240,7 @@ function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefin
       tradeDescription: e.tradeDescription,
       baseRate: e.entry.baseRateSnapshot,
       fringeRate: e.entry.fringeRateSnapshot,
+      deductions: e.entry.deductions ?? 0,
       values: {
         monSt: e.entry.monSt, tueSt: e.entry.tueSt, wedSt: e.entry.wedSt, thuSt: e.entry.thuSt,
         friSt: e.entry.friSt, satSt: e.entry.satSt, sunSt: e.entry.sunSt,
@@ -246,6 +274,7 @@ function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefin
         tradeDescription: r.tradeDescription,
         baseRate: r.baseRate,
         fringeRate: r.fringeRate,
+        deductions: 0,
         values: emptyRowValues(),
       }));
   }

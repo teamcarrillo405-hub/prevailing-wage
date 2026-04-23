@@ -36,16 +36,21 @@ export interface RowExtras {
 
 export type RowValues = HourValues & RowExtras;
 
+export type MetaField = 'baseRate' | 'fringeRate' | 'deductions';
+
 interface Props {
   workerId: string;
   classificationId: string;
   workerName: string;
   tradeDescription: string;
   baseRate: number;
+  fringeRate: number;
+  deductions: number;
   values: RowValues;
   toggles: StateToggles;
   onChange: (field: keyof HourValues, value: number) => void;
   onExtraChange: (field: keyof RowExtras, value: number | string | null) => void;
+  onMetaChange: (field: MetaField, value: number) => void;
   onBlur: () => void;
   onStandardWeek: () => void;
 }
@@ -56,10 +61,13 @@ export function Step2GridRow({
   workerName,
   tradeDescription,
   baseRate,
+  fringeRate,
+  deductions,
   values,
   toggles,
   onChange,
   onExtraChange,
+  onMetaChange,
   onBlur,
   onStandardWeek,
 }: Props) {
@@ -96,6 +104,26 @@ export function Step2GridRow({
           onBlur={onBlur}
           onFocus={(e) => e.target.select()}
           className="w-16 px-2 py-1 text-right text-sm border border-gray-200 rounded-sm focus:border-brand-gold focus:outline-hidden"
+          data-worker-id={workerId}
+          data-classification-id={classificationId}
+          data-field={field}
+        />
+      </td>
+    );
+  }
+
+  function metaCell(field: MetaField, current: number, step: number = 0.01, width: string = 'w-20') {
+    return (
+      <td className="px-1 py-1 bg-slate-50">
+        <input
+          type="number"
+          min={0}
+          step={step}
+          value={current}
+          onChange={(e) => onMetaChange(field, Number(e.target.value) || 0)}
+          onBlur={onBlur}
+          onFocus={(e) => e.target.select()}
+          className={`${width} px-2 py-1 text-right text-sm border border-gray-200 rounded-sm focus:border-brand-gold focus:outline-hidden`}
           data-worker-id={workerId}
           data-classification-id={classificationId}
           data-field={field}
@@ -171,6 +199,9 @@ export function Step2GridRow({
       {numCell('friSt')}{numCell('satSt')}{numCell('sunSt')}
       {numCell('monOt')}{numCell('tueOt')}{numCell('wedOt')}{numCell('thuOt')}
       {numCell('friOt')}{numCell('satOt')}{numCell('sunOt')}
+      {metaCell('baseRate', baseRate)}
+      {metaCell('fringeRate', fringeRate)}
+      {metaCell('deductions', deductions, 0.01, 'w-24')}
       {toggles.caDt && (
         <>
           {numCell('monDt')}{numCell('tueDt')}{numCell('wedDt')}{numCell('thuDt')}
