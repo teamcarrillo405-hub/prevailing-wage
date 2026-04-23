@@ -177,8 +177,11 @@ export function PayrollWizard({ projectId, weekId }: Props) {
         }}
         onReview={async () => {
           await flush();
-          // Refetch the week so Step 3 sees the just-saved gross/net values.
-          await qc.invalidateQueries({ queryKey: ['payroll-week', state.weekId] });
+          // Refetch week + compliance so Step 3 never shows stale cached results.
+          await Promise.all([
+            qc.invalidateQueries({ queryKey: ['payroll-week', state.weekId] }),
+            qc.invalidateQueries({ queryKey: ['compliance', state.weekId] }),
+          ]);
           dispatch({ type: 'ADVANCE' });
         }}
         onBack={() => dispatch({ type: 'GO_BACK' })}

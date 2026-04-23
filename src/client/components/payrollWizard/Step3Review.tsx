@@ -66,6 +66,7 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
   const { data: compliance, isLoading: cLoading, isError: cError } = useQuery<ComplianceResponse>({
     queryKey: ['compliance', weekId],
     queryFn: () => api.get<ComplianceResponse>(`/compliance/${weekId}`),
+    refetchOnMount: 'always',
   });
 
   if (weekLoading || cLoading) return <LoadingSpinner />;
