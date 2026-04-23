@@ -28,10 +28,11 @@ export interface RowExtras {
   checkNumber: string | null;
   allOtherHours: number | null;
   totalWeekGrossWages: number | null;
-  // NJ deductions
+  // NJ deductions + CA SDI
   ficaTax: number | null;
   federalIncomeTax: number | null;
   stateIncomeTax: number | null;
+  sdiTax: number | null;
 }
 
 export type RowValues = HourValues & RowExtras;
@@ -232,6 +233,7 @@ export function Step2GridRow({
           {extraNumCell('ficaTax')}
           {extraNumCell('federalIncomeTax')}
           {extraNumCell('stateIncomeTax')}
+          {toggles.caFica && extraNumCell('sdiTax')}
         </>
       )}
       <td className="px-3 py-2 text-right text-sm font-semibold whitespace-nowrap">

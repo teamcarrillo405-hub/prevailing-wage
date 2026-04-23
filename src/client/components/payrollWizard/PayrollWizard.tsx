@@ -63,6 +63,7 @@ interface WeekDetail {
       ficaTax: number | null;
       federalIncomeTax: number | null;
       stateIncomeTax: number | null;
+      sdiTax: number | null;
     };
     workerName: string;
     tradeDescription: string;
@@ -206,7 +207,7 @@ function emptyRowValues(): RowValues {
     fringeHealthWelfare: null, fringePension: null, fringeVacation: null, fringeTraining: null,
     nonPwHours: null,
     checkNumber: null, allOtherHours: null, totalWeekGrossWages: null,
-    ficaTax: null, federalIncomeTax: null, stateIncomeTax: null,
+    ficaTax: null, federalIncomeTax: null, stateIncomeTax: null, sdiTax: null,
   };
 }
 
@@ -260,6 +261,7 @@ function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefin
         ficaTax: e.entry.ficaTax,
         federalIncomeTax: e.entry.federalIncomeTax,
         stateIncomeTax: e.entry.stateIncomeTax,
+        sdiTax: e.entry.sdiTax,
       },
     }));
   }

@@ -96,10 +96,11 @@ export interface UpsertPayrollEntryInput {
   checkNumber?: string | null;
   allOtherHours?: number | null;
   totalWeekGrossWages?: number | null;
-  // Phase 52 — NJ deduction breakdown fields
+  // Phase 52 / 66 — deduction breakdown fields
   ficaTax?: number | null;
   federalIncomeTax?: number | null;
   stateIncomeTax?: number | null;
+  sdiTax?: number | null;
   userId?: string; // populated from req.user.id on POST/PUT; undefined for amendment copies
   // Audit-only fields — threaded from route handler (AUDIT-03)
   userEmail?: string;
@@ -318,6 +319,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     ficaTax: input.ficaTax ?? null,
     federalIncomeTax: input.federalIncomeTax ?? null,
     stateIncomeTax: input.stateIncomeTax ?? null,
+    sdiTax: input.sdiTax ?? null,
     createdByUserId: input.userId ?? null,
     updatedByUserId: input.userId ?? null,
     createdAt: now,
@@ -371,6 +373,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         ficaTax: values.ficaTax,
         federalIncomeTax: values.federalIncomeTax,
         stateIncomeTax: values.stateIncomeTax,
+        sdiTax: values.sdiTax,
         updatedByUserId: values.updatedByUserId,
         updatedAt: now,
       },
@@ -993,6 +996,7 @@ export async function amendPayrollWeek(input: AmendWeekInput): Promise<AmendWeek
       ficaTax: entry.ficaTax ?? null,
       federalIncomeTax: entry.federalIncomeTax ?? null,
       stateIncomeTax: entry.stateIncomeTax ?? null,
+      sdiTax: entry.sdiTax ?? null,
       createdByUserId: null, // amendment copies are system-generated clones, not direct user edits
       updatedByUserId: null,
       createdAt: now,

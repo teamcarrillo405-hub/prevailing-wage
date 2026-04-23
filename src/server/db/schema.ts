@@ -278,6 +278,8 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   ficaTax: real('fica_tax'),
   federalIncomeTax: real('federal_income_tax'),
   stateIncomeTax: real('state_income_tax'),
+  // Phase 66 — CA SDI (State Disability Insurance); CA projects only
+  sdiTax: real('sdi_tax'),
   // Phase 32 — user attribution (nullable for all existing rows per D-09)
   createdByUserId: text('created_by_user_id').references(() => users.id),
   updatedByUserId: text('updated_by_user_id').references(() => users.id),

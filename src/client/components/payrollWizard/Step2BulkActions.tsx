@@ -27,7 +27,7 @@ export const STANDARD_WEEK: RowValues = {
   fringeHealthWelfare: null, fringePension: null, fringeVacation: null, fringeTraining: null,
   nonPwHours: null,
   checkNumber: null, allOtherHours: null, totalWeekGrossWages: null,
-  ficaTax: null, federalIncomeTax: null, stateIncomeTax: null,
+  ficaTax: null, federalIncomeTax: null, stateIncomeTax: null, sdiTax: null,
 };
 
 function ToggleChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {

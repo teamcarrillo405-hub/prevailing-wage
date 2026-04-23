@@ -275,6 +275,7 @@ export function Step2HoursGrid({ initialRows, projectState, onRowChange, onRevie
                   <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">FICA</th>
                   <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">Fed Tax</th>
                   <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">State Tax</th>
+                  {toggles.caFica && <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">SDI</th>}
                 </>
               )}
               <th className="px-3 py-2 text-right text-xs font-semibold">Total</th>
