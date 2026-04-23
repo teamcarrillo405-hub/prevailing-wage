@@ -6,7 +6,6 @@ import { getDb } from '../db/index.js';
 import { payrollEntries, workers, projects } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { requireRole } from '../middleware/requireRole.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { sendSubmissionConfirmationEmail } from '../services/emailService.js';
 import {
