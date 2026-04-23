@@ -239,6 +239,13 @@
       "when": 1745539200003,
       "tag": "0037_sub_upload",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1745539200004,
+      "tag": "0038_stripe_columns",
+      "breakpoints": true
     }
   ]
 }

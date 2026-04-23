@@ -20,12 +20,15 @@ import { complianceRouter } from './routes/compliance.js';
 import { reportsRouter } from './routes/reports.js';
 import { teamRouter } from './routes/team.js';
 import { importRouter } from './routes/import.js';
+import { billingRouter } from './routes/billing.js';
 import { auditRouter } from './routes/audit.js';
 import { payrollWeekClassificationsRouter } from './routes/payrollWeekClassifications.js';
 import subcontractorsRouter from './routes/subcontractors.js';
 import subUploadRouter from './routes/subUpload.js';
+import { auditExportRouter } from './routes/auditExport.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
+import { checkWdChanges } from './services/wdChangeDetector.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
 import { fileURLToPath } from 'url';
@@ -41,6 +44,8 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', credentials: true }));
+// Stripe webhook needs raw body — must be before express.json()
+app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
@@ -63,6 +68,8 @@ app.use('/api/payroll/import', importRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/projects', payrollWeekClassificationsRouter);
 app.use('/api/projects', subcontractorsRouter);
+app.use('/api/billing', billingRouter);
+app.use('/api/audit-export', auditExportRouter);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {
@@ -97,6 +104,18 @@ app.listen(PORT, () => {
       await runDueSoonScan();
     } catch (err) {
       console.error('[due-soon] Scan failed:', err);
+      // Never rethrow — cron failures must not crash Express
+    }
+  }, { timezone: 'America/New_York' });
+
+  // Register daily WD change detector — NOTIF-07
+  // Runs at 3:00 AM Eastern every day (after wage sync window)
+  cron.schedule('0 3 * * *', async () => {
+    console.log('[wd-detector] Running daily WD change detector');
+    try {
+      await checkWdChanges();
+    } catch (err) {
+      console.error('[wd-detector] Failed:', err);
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'America/New_York' });

@@ -110,7 +110,7 @@ describe('POST /api/team/invite', () => {
       .send({ email: `toomany-${Date.now()}@test.com` });
 
     expect(res.status).toBe(409);
-    expect(res.body.error).toBe('Team is at capacity (2 members)');
+    expect(res.body.error).toBe('Team is at capacity (2 members on your plan)');
   });
 
   it('returns 409 "An invite is already pending" when pending invite exists', async () => {

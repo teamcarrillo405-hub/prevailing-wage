@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,9 +8,26 @@ interface LayoutProps {
   children: ReactNode;
 }
 
+interface TeamData {
+  members: { id: string; email: string; role: string; joinedAt: string }[];
+  pendingInvite: { id: string; email: string; expiresAt: string } | null;
+  isOwner: boolean;
+}
+
 export function Layout({ children }: LayoutProps) {
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  const { data: team } = useQuery<TeamData>({
+    queryKey: ['team'],
+    queryFn: () =>
+      fetch('/api/team', { credentials: 'include' })
+        .then((r) => r.json())
+        .then((d) => d.data),
+    enabled: isAuthenticated,
+  });
+
+  const isOwner = team?.isOwner ?? false;
 
   async function handleLogout() {
     await logout();
@@ -27,6 +45,11 @@ export function Layout({ children }: LayoutProps) {
             <Link to="/team" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
               Team
             </Link>
+            {isOwner && (
+              <Link to="/billing" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
+                Billing
+              </Link>
+            )}
             <Link to="/wages" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
               Wage Lookup
             </Link>
