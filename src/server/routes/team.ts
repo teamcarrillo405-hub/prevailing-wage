@@ -155,7 +155,15 @@ router.post('/invite', validate(InviteSchema), async (req, res) => {
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  const limit = getMemberLimit((ownerRow?.planTier ?? 'starter') as PlanTier);
+  if (!ownerRow) {
+    res.status(500).json({ error: 'Owner account not found' });
+    return;
+  }
+  const rawTier = ownerRow.planTier;
+  const tier: PlanTier = ['starter', 'pro', 'enterprise'].includes(rawTier)
+    ? (rawTier as PlanTier)
+    : 'starter';
+  const limit = getMemberLimit(tier);
   if (memberCount >= limit) {
     res.status(409).json({ error: `Team is at capacity (${limit} members on your plan)` });
     return;

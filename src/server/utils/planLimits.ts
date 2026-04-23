@@ -7,5 +7,5 @@ const LIMITS: Record<PlanTier, { maxMembers: number }> = {
 };
 
 export function getMemberLimit(tier: PlanTier): number {
-  return LIMITS[tier]?.maxMembers ?? 2;
+  return LIMITS[tier].maxMembers;
 }
