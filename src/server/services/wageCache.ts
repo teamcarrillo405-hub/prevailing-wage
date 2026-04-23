@@ -23,6 +23,7 @@ export interface NewWageDetermination {
   cacheExpiresAt: string;
   createdAt: string;
   updatedAt: string;
+  lastFetchedAt?: string | null;
 }
 
 // Upsert: if (wdNumber, revisionNumber) already exists, update the cache fields.
@@ -48,6 +49,7 @@ export function upsertWageDetermination(data: NewWageDetermination): string {
         cachedAt: data.cachedAt,
         cacheExpiresAt: data.cacheExpiresAt,
         updatedAt: data.updatedAt,
+        lastFetchedAt: data.lastFetchedAt ?? null,
       })
       .where(eq(wageDeterminations.id, existing.id))
       .run();

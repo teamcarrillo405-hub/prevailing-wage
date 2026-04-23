@@ -176,6 +176,7 @@ export async function fetchAndCacheByWdNumber(wdNumber: string): Promise<WageDet
     cacheExpiresAt,
     createdAt: nowIso,
     updatedAt: nowIso,
+    lastFetchedAt: nowIso,
   });
 
   const classifications = response.document ? parseWdDocument(response.document) : [];

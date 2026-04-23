@@ -15,6 +15,7 @@ export const wagesRouter = Router();
 const LookupQuerySchema = z.object({
   state: z.string().length(2, 'state must be 2-letter code').toUpperCase(),
   county: z.string().min(1, 'county is required'),
+  constructionType: z.enum(['Building', 'Heavy', 'Highway', 'Residential']).optional(),
 });
 
 const ClassificationInputSchema = z.object({
