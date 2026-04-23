@@ -127,7 +127,7 @@ router.get('/', async (req, res) => {
     data: {
       members,
       pendingInvite: pendingInvite
-        ? { id: pendingInvite.id, email: pendingInvite.inviteeEmail, expiresAt: pendingInvite.expiresAt }
+        ? { id: pendingInvite.id, email: pendingInvite.inviteeEmail, role: pendingInvite.inviteeRole, expiresAt: pendingInvite.expiresAt }
         : null,
       isOwner: userIsOwner,
     },
@@ -162,7 +162,7 @@ router.post('/invite', validate(InviteSchema), async (req, res) => {
   }
 
   const { email, role } = req.body as z.infer<typeof InviteSchema>;
-  const { token } = await createInvite(userId, email, role ?? 'member');
+  const { token } = await createInvite(userId, email, role);
 
   // Build invite URL
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;

@@ -290,6 +290,7 @@ export function TeamPage() {
               <select
                 value={inviteRole}
                 onChange={e => setInviteRole(e.target.value as 'member' | 'auditor')}
+                disabled={atCapacity || !!data?.pendingInvite}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
               >
                 <option value="member">Member — full read/write access</option>
