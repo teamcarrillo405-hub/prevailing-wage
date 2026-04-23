@@ -25,6 +25,7 @@ import { auditRouter } from './routes/audit.js';
 import { payrollWeekClassificationsRouter } from './routes/payrollWeekClassifications.js';
 import subcontractorsRouter from './routes/subcontractors.js';
 import subUploadRouter from './routes/subUpload.js';
+import { auditExportRouter } from './routes/auditExport.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
@@ -68,6 +69,7 @@ app.use('/api/audit', auditRouter);
 app.use('/api/projects', payrollWeekClassificationsRouter);
 app.use('/api/projects', subcontractorsRouter);
 app.use('/api/billing', billingRouter);
+app.use('/api/audit-export', auditExportRouter);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {
