@@ -9,6 +9,7 @@ import {
   createInvite, validateToken, sendInviteEmail,
   getPendingInvite, revokeInvite, getTeamMemberCount,
 } from '../services/inviteService.js';
+import { getMemberLimit, type PlanTier } from '../utils/planLimits.js';
 
 const router = Router();
 
@@ -147,10 +148,16 @@ router.post('/invite', validate(InviteSchema), async (req, res) => {
     return;
   }
 
-  // Check capacity (D-06)
+  // Check capacity — tier-aware (D-06)
   const memberCount = await getTeamMemberCount(userId);
-  if (memberCount >= 2) {
-    res.status(409).json({ error: 'Team is at capacity (2 members)' });
+  const db = getDb();
+  const [ownerRow] = await db.select({ planTier: users.planTier })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const limit = getMemberLimit((ownerRow?.planTier ?? 'starter') as PlanTier);
+  if (memberCount >= limit) {
+    res.status(409).json({ error: `Team is at capacity (${limit} members on your plan)` });
     return;
   }
 

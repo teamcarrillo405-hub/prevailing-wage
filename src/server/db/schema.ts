@@ -6,6 +6,7 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  planTier: text('plan_tier').notNull().default('starter').$type<'starter' | 'pro' | 'enterprise'>(),
 });
 
 export const projects = sqliteTable('projects', {

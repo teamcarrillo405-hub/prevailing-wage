@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN plan_tier TEXT NOT NULL DEFAULT 'starter';
