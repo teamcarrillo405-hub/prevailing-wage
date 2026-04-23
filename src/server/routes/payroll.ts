@@ -77,6 +77,10 @@ const UpsertEntrySchema = z.object({
   fringePension: z.number().min(0).nullable().optional(),
   fringeVacation: z.number().min(0).nullable().optional(),
   fringeTraining: z.number().min(0).nullable().optional(),
+  // Phase 52 / Phase 65 — deduction breakdown (CA eCPR + NJ MW-562)
+  ficaTax: z.number().min(0).nullable().optional(),
+  federalIncomeTax: z.number().min(0).nullable().optional(),
+  stateIncomeTax: z.number().min(0).nullable().optional(),
   // Phase 42 — IL non-prevailing-wage hours
   nonPwHours: z.number().min(0).nullable().optional(),
   // Phase 49 — MA payroll entry fields

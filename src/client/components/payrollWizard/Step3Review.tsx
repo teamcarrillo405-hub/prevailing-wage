@@ -40,6 +40,8 @@ interface WeekEntryRow {
   entry: {
     id: string;
     workerId: string;
+    baseRateSnapshot: number;
+    fringeRateSnapshot: number;
     grossWages: number | null;
     deductions: number | null;
     netPay: number | null;
@@ -114,6 +116,8 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
             <tr>
               <th className="px-3 py-2 text-left">Worker</th>
               <th className="px-3 py-2 text-left">Trade</th>
+              <th className="px-3 py-2 text-right text-xs">Base $/hr</th>
+              <th className="px-3 py-2 text-right text-xs">Fringe $/hr</th>
               <th className="px-3 py-2 text-right">Gross</th>
               <th className="px-3 py-2 text-right">Deductions</th>
               <th className="px-3 py-2 text-right">Net</th>
@@ -124,6 +128,8 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
               <tr key={e.entry.id} className="border-t border-gray-100">
                 <td className="px-3 py-2">{e.workerName}</td>
                 <td className="px-3 py-2 text-gray-600">{e.tradeDescription}</td>
+                <td className="px-3 py-2 text-right text-gray-500">${e.entry.baseRateSnapshot.toFixed(2)}</td>
+                <td className="px-3 py-2 text-right text-gray-500">${e.entry.fringeRateSnapshot.toFixed(2)}</td>
                 <td className="px-3 py-2 text-right">${(e.entry.grossWages ?? 0).toFixed(2)}</td>
                 <td className="px-3 py-2 text-right">${(e.entry.deductions ?? 0).toFixed(2)}</td>
                 <td className="px-3 py-2 text-right font-semibold">
@@ -134,7 +140,7 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
           </tbody>
           <tfoot className="bg-gray-50">
             <tr>
-              <td colSpan={2} className="px-3 py-2 text-sm font-semibold">Totals</td>
+              <td colSpan={4} className="px-3 py-2 text-sm font-semibold">Totals</td>
               <td className="px-3 py-2 text-right font-semibold">${totalGross.toFixed(2)}</td>
               <td className="px-3 py-2"></td>
               <td className="px-3 py-2 text-right font-semibold">${totalNet.toFixed(2)}</td>

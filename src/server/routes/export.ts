@@ -664,9 +664,9 @@ router.get('/ecpr-xml/:weekId', async (req, res) => {
       grossThisProject,
       grossAllWork: grossThisProject,  // single-project limitation
       deductions: {
-        fedTax: 0,
-        FICA: 0,
-        stateTax: 0,
+        fedTax: e.federalIncomeTax ?? 0,
+        FICA: e.ficaTax ?? 0,
+        stateTax: e.stateIncomeTax ?? 0,
         SDI: 0,
         vacationHoliday: vac * totalHours,
         healthWelfare: hw * totalHours,
