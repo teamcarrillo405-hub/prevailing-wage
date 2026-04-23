@@ -5,7 +5,7 @@
 // Note: This router is registered in index.ts (Plan 04).
 
 import { Router } from 'express';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { stringify } from 'csv-stringify/sync';
 import { requireAuth } from '../middleware/auth.js';
 import { getDb } from '../db/index.js';
@@ -13,6 +13,7 @@ import * as schema from '../db/schema.js';
 import { computeCompliance, getWorkerComplianceHistory, getBatchProjectCompliance } from '../services/complianceService.js';
 import { listPayrollWeeks } from '../services/payrollService.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { sendViolationAlertEmail } from '../services/emailService.js';
 
 export const complianceRouter = Router();
 
@@ -162,6 +163,60 @@ complianceRouter.get('/:weekId', requireAuth, async (req, res) => {
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
+  }
+
+  // Send violation alert emails to project owners when violations are detected.
+  // Non-fatal: failures must not block the compliance response.
+  if (result.hasViolations) {
+    try {
+      const [projectRow] = await db
+        .select({ name: schema.projects.name })
+        .from(schema.projects)
+        .where(eq(schema.projects.id, result.projectId))
+        .limit(1);
+
+      const [weekRow] = await db
+        .select({ weekEndingDate: schema.payrollWeeks.weekEndingDate })
+        .from(schema.payrollWeeks)
+        .where(eq(schema.payrollWeeks.id, weekId))
+        .limit(1);
+
+      if (projectRow && weekRow) {
+        const projectName = projectRow.name;
+        const weekEndingDate = weekRow.weekEndingDate;
+
+        const totalCount = result.violations.length + result.weekViolations.length;
+        const violationSummary = `${totalCount} violation(s) detected: ${[
+          ...result.violations.map(v => `${v.workerName} (${v.violationType})`),
+          ...result.weekViolations.map(wv => wv.detail),
+        ].join('; ')}`;
+
+        const ownerRows = await db
+          .select({ email: schema.users.email })
+          .from(schema.projectMembers)
+          .innerJoin(schema.users, eq(schema.projectMembers.userId, schema.users.id))
+          .where(
+            and(
+              eq(schema.projectMembers.projectId, result.projectId),
+              eq(schema.projectMembers.role, 'owner'),
+              isNull(schema.projectMembers.removedAt),
+            ),
+          );
+
+        for (const owner of ownerRows) {
+          if (!owner.email) continue;
+          // Non-fatal per NFR-02: individual send failures must not block others
+          sendViolationAlertEmail({
+            toEmail: owner.email,
+            projectName,
+            weekEndingDate,
+            violationSummary,
+          }).catch(err => console.error('[compliance] violation alert email failed:', err));
+        }
+      }
+    } catch (err) {
+      console.error('[compliance] failed to send violation alert emails:', err);
+    }
   }
 
   res.json(result);

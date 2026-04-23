@@ -312,6 +312,36 @@ export async function sendWdChangedEmail(opts: {
   }
 }
 
+// ── NOTIF-08: Violation alert to project owners only (Task 6, v4.1) ────────
+// Simpler per-recipient function — one call per owner. Keep send failures non-fatal.
+
+export async function sendViolationAlertEmail(opts: {
+  toEmail: string;
+  projectName: string;
+  weekEndingDate: string;
+  violationSummary: string;
+}): Promise<void> {
+  try {
+    const resend = await getResend();
+    if (!resend) {
+      console.log('[email] RESEND_API_KEY not set — skipping violation alert');
+      return;
+    }
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [opts.toEmail],
+      subject: `Payroll violation detected: ${opts.projectName} (week ending ${opts.weekEndingDate})`,
+      html: `<p>A payroll compliance violation was detected for project <strong>${opts.projectName}</strong>, week ending <strong>${opts.weekEndingDate}</strong>.</p><p><strong>Summary:</strong> ${opts.violationSummary}</p><p>Please review and correct the payroll entries.</p>`,
+    });
+    if (error) {
+      console.error('[email] sendViolationAlertEmail Resend error:', error);
+    }
+  } catch (err) {
+    console.error('[email] sendViolationAlertEmail failed:', err);
+    // Non-fatal per NFR-02 — never rethrow
+  }
+}
+
 // ── NOTIF-04: Submission confirmation to acting user ───────────────────────
 
 export async function sendSubmissionConfirmationEmail(
