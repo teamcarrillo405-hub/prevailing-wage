@@ -35,6 +35,7 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const INITIAL_TOGGLES: StateToggles = {
   caDt: false,
   caFringe: false,
+  caFica: false,
   ilNonPw: false,
   maFields: false,
   njDeductions: false,
@@ -269,7 +270,7 @@ export function Step2HoursGrid({ initialRows, projectState, onRowChange, onRevie
                   <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">Total gross</th>
                 </>
               )}
-              {toggles.njDeductions && (
+              {(toggles.njDeductions || toggles.caFica) && (
                 <>
                   <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">FICA</th>
                   <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">Fed Tax</th>

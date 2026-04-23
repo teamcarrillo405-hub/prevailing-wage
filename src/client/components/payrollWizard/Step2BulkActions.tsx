@@ -5,6 +5,7 @@ import type { RowValues } from './Step2GridRow';
 export interface StateToggles {
   caDt: boolean;
   caFringe: boolean;
+  caFica: boolean;
   ilNonPw: boolean;
   maFields: boolean;
   njDeductions: boolean;
@@ -63,6 +64,11 @@ export function Step2BulkActions({ onApplyStandardWeekAll, projectState, toggles
             active={toggles.caFringe}
             onClick={() => onToggle('caFringe')}
             label="CA fringe disaggregation"
+          />
+          <ToggleChip
+            active={toggles.caFica}
+            onClick={() => onToggle('caFica')}
+            label="CA deductions (FICA, FIT, SIT)"
           />
         </>
       )}

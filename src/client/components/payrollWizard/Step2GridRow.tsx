@@ -227,7 +227,7 @@ export function Step2GridRow({
           {extraNumCell('totalWeekGrossWages', 'w-24')}
         </>
       )}
-      {toggles.njDeductions && (
+      {(toggles.njDeductions || toggles.caFica) && (
         <>
           {extraNumCell('ficaTax')}
           {extraNumCell('federalIncomeTax')}
