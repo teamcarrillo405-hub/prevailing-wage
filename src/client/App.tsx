@@ -23,6 +23,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { WorkerComplianceHistoryPage } from './pages/WorkerComplianceHistoryPage';
 import { ProjectActivityPage } from './pages/ProjectActivityPage';
 import { TeamPage } from './pages/TeamPage.js';
+import { BillingPage } from './pages/BillingPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage.js';
 import { SubUploadPage } from './pages/SubUploadPage';
 
@@ -68,6 +69,7 @@ export default function App() {
               <Route path="/projects/:projectId/reports" element={<ReportsPage />} />
               <Route path="/projects/:id/activity" element={<ProjectActivityPage />} />
               <Route path="/team" element={<TeamPage />} />
+              <Route path="/billing" element={<BillingPage />} />
             </Route>
 
             {/* Public accept-invite route — no auth wrapper per D-09 */}
