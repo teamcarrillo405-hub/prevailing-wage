@@ -4,9 +4,10 @@
 // wdolSync.ts and wageLookup.ts both import from here — never access the tables directly.
 
 import { eq, and, gt, desc, isNull, or, sql } from 'drizzle-orm';
-import { wageDeterminations, wageClassifications } from '../db/schema.js';
+import { wageDeterminations, wageClassifications, projectWageDeterminations } from '../db/schema.js';
 import { getDb } from '../db/index.js';
 import type { ParsedClassification } from './wdolParser.js';
+import crypto from 'crypto';
 
 export interface NewWageDetermination {
   id: string;
@@ -172,4 +173,75 @@ export function getWdById(
     .from(wageDeterminations)
     .where(eq(wageDeterminations.id, id))
     .get() as typeof wageDeterminations.$inferSelect | undefined;
+}
+
+export interface PinnedWdRow {
+  wageDeterminationId: string;
+  constructionType: string | null;
+  isPrimary: boolean;
+  pinnedAt: string;
+  pinnedByUserId: string | null;
+}
+
+export function getPinnedWdsForProject(projectId: string): PinnedWdRow[] {
+  const db = getDb();
+  return db
+    .select({
+      wageDeterminationId: projectWageDeterminations.wageDeterminationId,
+      constructionType: projectWageDeterminations.constructionType,
+      isPrimary: projectWageDeterminations.isPrimary,
+      pinnedAt: projectWageDeterminations.pinnedAt,
+      pinnedByUserId: projectWageDeterminations.pinnedByUserId,
+    })
+    .from(projectWageDeterminations)
+    .where(eq(projectWageDeterminations.projectId, projectId))
+    .all() as PinnedWdRow[];
+}
+
+export function pinWdToProject(
+  projectId: string,
+  wageDeterminationId: string,
+  constructionType: string | null,
+  pinnedByUserId: string | null,
+): void {
+  const db = getDb();
+  db.insert(projectWageDeterminations).values({
+    id: crypto.randomUUID(),
+    projectId,
+    wageDeterminationId,
+    constructionType: constructionType as 'Building' | 'Heavy' | 'Highway' | 'Residential' | null,
+    isPrimary: false,
+    pinnedAt: new Date().toISOString(),
+    pinnedByUserId,
+  }).run();
+}
+
+export function unpinWdFromProject(projectId: string, wageDeterminationId: string): void {
+  const db = getDb();
+  db.delete(projectWageDeterminations)
+    .where(
+      and(
+        eq(projectWageDeterminations.projectId, projectId),
+        eq(projectWageDeterminations.wageDeterminationId, wageDeterminationId),
+      ),
+    )
+    .run();
+}
+
+// Atomically sets isPrimary=true for the given WD and clears it for all others in the project.
+export function setPrimaryWd(projectId: string, wageDeterminationId: string): void {
+  const db = getDb();
+  db.update(projectWageDeterminations)
+    .set({ isPrimary: false })
+    .where(eq(projectWageDeterminations.projectId, projectId))
+    .run();
+  db.update(projectWageDeterminations)
+    .set({ isPrimary: true })
+    .where(
+      and(
+        eq(projectWageDeterminations.projectId, projectId),
+        eq(projectWageDeterminations.wageDeterminationId, wageDeterminationId),
+      ),
+    )
+    .run();
 }
