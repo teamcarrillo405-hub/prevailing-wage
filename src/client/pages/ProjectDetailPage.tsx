@@ -200,6 +200,14 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
                     <td className="py-1.5 pr-3">
                       <Badge variant={badge.variant}>{badge.label}</Badge>
                     </td>
+                    <td className="py-1.5 pr-3">
+                      {week.uploadedAt
+                        ? <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">PDF Uploaded</span>
+                        : week.uploadToken
+                          ? <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Awaiting upload</span>
+                          : null
+                      }
+                    </td>
                     <td className="py-1.5 pr-3 text-gray-600">{week.receivedDate ?? '—'}</td>
                     <td className="py-1.5 pr-3 text-gray-500 max-w-xs truncate">{week.notes ?? '—'}</td>
                     <td className="py-1.5">

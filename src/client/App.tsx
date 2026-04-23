@@ -24,6 +24,7 @@ import { WorkerComplianceHistoryPage } from './pages/WorkerComplianceHistoryPage
 import { ProjectActivityPage } from './pages/ProjectActivityPage';
 import { TeamPage } from './pages/TeamPage.js';
 import { AcceptInvitePage } from './pages/AcceptInvitePage.js';
+import { SubUploadPage } from './pages/SubUploadPage';
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,9 @@ export default function App() {
 
             {/* Public accept-invite route — no auth wrapper per D-09 */}
             <Route path="/accept-invite" element={<AcceptInvitePage />} />
+
+            {/* Public sub upload route — token-based, no auth required */}
+            <Route path="/sub-upload/:token" element={<SubUploadPage />} />
 
             {/* Auth-aware wildcard */}
             <Route path="*" element={<WildcardRedirect />} />

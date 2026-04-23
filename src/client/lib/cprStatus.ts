@@ -18,6 +18,8 @@ export interface CprWeek {
   receivedDate: string | null;   // YYYY-MM-DD text, null = not received
   isCompliant: number | null;    // null=unassessed, 0=non-compliant, 1=compliant (THREE-STATE — never coerce to boolean)
   notes: string | null;
+  uploadToken: string | null;
+  uploadedAt: string | null;
   createdAt: string;
 }
 
