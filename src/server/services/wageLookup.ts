@@ -7,6 +7,9 @@
 // For now (02-02), only FederalWdolAdapter is active.
 
 import crypto from 'crypto';
+import { eq, desc } from 'drizzle-orm';
+import { wageDeterminations } from '../db/schema.js';
+import { getDb } from '../db/index.js';
 import { getCachedWd, upsertWageDetermination, upsertClassifications, getCachedClassifications } from './wageCache.js';
 import { fetchWdFromSamGov } from './wdolFetcher.js';
 import { parseWdDocument } from './wdolParser.js';
@@ -111,6 +114,99 @@ let WAGE_ADAPTERS: WageAdapter[] = [new FederalWdolAdapter()];
 // modifying this file.
 export function registerAdapters(adapters: WageAdapter[]): void {
   WAGE_ADAPTERS = adapters;
+}
+
+// Direct WD number lookup — cache-first, falls back to live SAM.gov fetch.
+// Called by GET /api/wages/fetch. Never call fetchWdFromSamGov directly from routes.
+export async function fetchAndCacheByWdNumber(wdNumber: string): Promise<WageDetermination | null> {
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  // Cache hit: return if unexpired
+  const cached = db
+    .select()
+    .from(wageDeterminations)
+    .where(eq(wageDeterminations.wdNumber, wdNumber))
+    .orderBy(desc(wageDeterminations.revisionNumber))
+    .limit(1)
+    .get() as typeof wageDeterminations.$inferSelect | undefined;
+
+  if (cached && cached.cacheExpiresAt > now) {
+    const classifications = getCachedClassifications(cached.id);
+    return {
+      ...cached,
+      county: cached.county ?? null,
+      constructionType: cached.constructionType ?? null,
+      publishDate: cached.publishDate ?? null,
+      isActive: Boolean(cached.isActive),
+      classifications: classifications.map((c) => ({
+        id: c.id,
+        wageDeterminationId: c.wageDeterminationId,
+        tradeCode: c.tradeCode,
+        tradeDescription: c.tradeDescription,
+        laborType: c.laborType as 'journeyworker' | 'foreman' | 'apprentice',
+        baseRate: c.baseRate,
+        fringeRate: c.fringeRate,
+        totalRate: c.totalRate,
+        createdAt: c.createdAt,
+      })),
+    };
+  }
+
+  // Cache miss — fetch live from SAM.gov
+  const response = await fetchWdFromSamGov(wdNumber, 0);
+  if (!response) return null;
+
+  const nowDate = new Date();
+  const nowIso = nowDate.toISOString();
+  const cacheExpiresAt = new Date(nowDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const wdId = crypto.randomUUID();
+
+  const actualId = upsertWageDetermination({
+    id: wdId,
+    source: 'federal-dol',
+    wdNumber: response.fullReferenceNumber,
+    revisionNumber: response.revisionNumber,
+    state: (response.location?.description ?? 'XX').slice(0, 2).toUpperCase(),
+    county: null,
+    constructionType: null,
+    publishDate: response.publishDate,
+    rawDocument: response.document ?? null,
+    cachedAt: nowIso,
+    cacheExpiresAt,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  });
+
+  const classifications = response.document ? parseWdDocument(response.document) : [];
+  upsertClassifications(actualId, classifications);
+
+  return {
+    id: actualId,
+    source: 'federal-dol',
+    wdNumber: response.fullReferenceNumber,
+    revisionNumber: response.revisionNumber,
+    state: (response.location?.description ?? 'XX').slice(0, 2).toUpperCase(),
+    county: null,
+    constructionType: null,
+    publishDate: response.publishDate,
+    isActive: true,
+    cachedAt: nowIso,
+    cacheExpiresAt,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    classifications: classifications.map((c, i) => ({
+      id: `${actualId}-${i}`,
+      wageDeterminationId: actualId,
+      tradeCode: c.code,
+      tradeDescription: c.description,
+      laborType: 'journeyworker' as const,
+      baseRate: c.baseRate,
+      fringeRate: c.fringeRate,
+      totalRate: c.totalRate,
+      createdAt: nowIso,
+    })),
+  };
 }
 
 // Cache-first lookup entry point. Never call wdolFetcher from route handlers.

@@ -4,6 +4,8 @@ import request from 'supertest';
 import crypto from 'crypto';
 import { app } from '../../src/server/index.js';
 import { upsertWageDetermination, upsertClassifications } from '../../src/server/services/wageCache.js';
+import { fetchWdFromSamGov } from '../../src/server/services/wdolFetcher.js';
+const mockFetch = fetchWdFromSamGov as ReturnType<typeof vi.fn>;
 
 // Mock fetcher to prevent live network calls
 vi.mock('../../src/server/services/wdolFetcher.js', () => ({
@@ -50,10 +52,13 @@ describe('GET /api/wages/lookup', () => {
     seedWd({ state: 'CA', county });
     const res = await request(app).get(`/api/wages/lookup?state=CA&county=${encodeURIComponent(county)}`);
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('wd');
+    expect(res.body).toHaveProperty('wds');
+    expect(Array.isArray(res.body.wds)).toBe(true);
+    expect(res.body.wds[0]).toHaveProperty('wdNumber');
     expect(res.body).toHaveProperty('classifications');
     expect(Array.isArray(res.body.classifications)).toBe(true);
-    expect(res.body.classifications.length).toBeGreaterThan(0);
+    expect(Array.isArray(res.body.classifications[0])).toBe(true);
+    expect(res.body.classifications[0].length).toBeGreaterThan(0);
   });
 
   it('returns 400 when state param is missing', async () => {
@@ -128,5 +133,44 @@ describe('POST /api/wages/sync', () => {
     const res = await request(app).post('/api/wages/sync');
     expect(res.status).toBe(202);
     expect(res.body.message).toMatch(/sync started/i);
+  });
+});
+
+describe('GET /api/wages/fetch', () => {
+  it('returns 400 when wdNumber param is missing', async () => {
+    const res = await request(app).get('/api/wages/fetch');
+    expect(res.status).toBe(400);
+  });
+
+  it('returns cached WD when found in cache', async () => {
+    const wdNumber = `FETCHCACHE${Date.now()}`;
+    seedWd({ wdNumber, state: 'CA', county: `FetchCounty${Date.now()}` });
+    const res = await request(app).get(`/api/wages/fetch?wdNumber=${wdNumber}`);
+    expect(res.status).toBe(200);
+    expect(res.body.wd.wdNumber).toBe(wdNumber);
+  });
+
+  it('returns 404 when not in cache and SAM.gov returns null', async () => {
+    mockFetch.mockResolvedValueOnce(null);
+    const res = await request(app).get('/api/wages/fetch?wdNumber=NOTEXIST99999');
+    expect(res.status).toBe(404);
+  });
+
+  it('fetches from SAM.gov and caches when not in cache', async () => {
+    const wdNumber = `LIVE${Date.now()}`;
+    mockFetch.mockResolvedValueOnce({
+      fullReferenceNumber: wdNumber,
+      revisionNumber: 0,
+      location: { description: 'CA-Los Angeles', mapping: {} },
+      document: '',
+      shortName: 'ca1',
+      year: 2025,
+      publishDate: '2025-01-01',
+      standard: true,
+      active: true,
+    });
+    const res = await request(app).get(`/api/wages/fetch?wdNumber=${wdNumber}`);
+    expect(res.status).toBe(200);
+    expect(res.body.wd.wdNumber).toBe(wdNumber);
   });
 });

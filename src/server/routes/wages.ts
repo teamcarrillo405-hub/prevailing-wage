@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import crypto from 'crypto';
-import { lookupWageDetermination } from '../services/wageLookup.js';
+import { lookupWageDetermination, fetchAndCacheByWdNumber } from '../services/wageLookup.js';
 import { upsertWageDetermination, upsertClassifications, getWdById, getCachedClassifications } from '../services/wageCache.js';
 import { runWageSync } from '../services/wdolSync.js';
 
@@ -49,7 +49,7 @@ wagesRouter.get('/lookup', async (req, res) => {
     return res.status(404).json({ error: `No wage determination found for ${county}, ${state}` });
   }
 
-  return res.json({ wd, classifications: wd.classifications ?? [] });
+  return res.json({ wds: [wd], classifications: [wd.classifications ?? []] });
 });
 
 // GET /api/wages/coverage
@@ -97,6 +97,21 @@ wagesRouter.get('/coverage', async (_req, res) => {
     totalCounties: byState.reduce((sum: number, r: typeof byState[number]) => sum + r.countyCount, 0),
     latestSync: latestSync ?? null,
   });
+});
+
+// GET /api/wages/fetch?wdNumber=CA20250001
+wagesRouter.get('/fetch', async (req, res) => {
+  const wdNumber = req.query['wdNumber'];
+  if (typeof wdNumber !== 'string' || !wdNumber.trim()) {
+    res.status(400).json({ error: 'wdNumber query param is required' });
+    return;
+  }
+  const wd = await fetchAndCacheByWdNumber(wdNumber.trim().toUpperCase());
+  if (!wd) {
+    res.status(404).json({ error: `WD ${wdNumber} not found on SAM.gov` });
+    return;
+  }
+  res.json({ wd, classifications: wd.classifications ?? [] });
 });
 
 // GET /api/wages/:id
