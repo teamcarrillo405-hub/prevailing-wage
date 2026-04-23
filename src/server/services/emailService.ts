@@ -214,6 +214,75 @@ export async function sendActivityEmail(
   }
 }
 
+// ── NOTIF-05: Sub upload request — sent to sub contact on cpr-week creation ──
+
+export async function sendSubUploadRequestEmail(opts: {
+  toEmail: string;
+  subName: string;
+  projectName: string;
+  weekEndingDate: string;
+  uploadUrl: string;
+}): Promise<void> {
+  try {
+    const resend = await getResend();
+    if (!resend) {
+      console.log('[email] RESEND_API_KEY not set — skipping sub upload request');
+      return;
+    }
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: opts.toEmail,
+      subject: `Upload your certified payroll — ${opts.projectName} week ending ${opts.weekEndingDate}`,
+      html: `
+        <p>Hi ${opts.subName} team,</p>
+        <p>Please upload your certified payroll report for the week ending <strong>${opts.weekEndingDate}</strong> on <strong>${opts.projectName}</strong>.</p>
+        <p><a href="${opts.uploadUrl}" style="background:#b8860b;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;">Upload Certified Payroll</a></p>
+        <p>This link expires in 7 days.</p>
+      `,
+    });
+    if (error) console.error('[email] sendSubUploadRequestEmail Resend error:', error);
+  } catch (err) {
+    console.error('[email] sendSubUploadRequestEmail failed:', err);
+  }
+}
+
+// ── NOTIF-06: Sub CPR received — sent to project owner when sub uploads PDF ──
+
+export async function sendSubCprReceivedEmail(opts: {
+  projectId: string;
+  projectName: string;
+  subName: string;
+  weekEndingDate: string;
+}): Promise<void> {
+  try {
+    const resend = await getResend();
+    if (!resend) {
+      console.log('[email] RESEND_API_KEY not set — skipping sub CPR received notification');
+      return;
+    }
+    const memberRows = await getProjectMemberRows(opts.projectId);
+    const owners = memberRows.filter((r: { userId: string; role: string; email: string }) => r.role === 'owner' && r.email);
+    for (const owner of owners) {
+      try {
+        const { error } = await resend.emails.send({
+          from: FROM_EMAIL,
+          to: owner.email!,
+          subject: `CPR received — ${opts.subName} week ending ${opts.weekEndingDate}`,
+          html: `
+            <p><strong>${opts.subName}</strong> uploaded their certified payroll for the week ending <strong>${opts.weekEndingDate}</strong> on <strong>${opts.projectName}</strong>.</p>
+            <p><a href="${APP_URL}/projects/${opts.projectId}">Review in dashboard →</a></p>
+          `,
+        });
+        if (error) console.error('[email] sendSubCprReceivedEmail Resend error:', error);
+      } catch (err) {
+        console.error('[email] sendSubCprReceivedEmail failed:', err);
+      }
+    }
+  } catch (err) {
+    console.error('[email] sendSubCprReceivedEmail outer error:', err);
+  }
+}
+
 // ── NOTIF-04: Submission confirmation to acting user ───────────────────────
 
 export async function sendSubmissionConfirmationEmail(
