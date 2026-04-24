@@ -1265,3 +1265,62 @@ describe('PATCH /api/payroll/weeks/:id/il-submit', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('GET /api/payroll/due-soon', () => {
+  it('returns empty array when user has no projects', async () => {
+    const cookie = await registerAndLogin('due-soon-empty');
+    const res = await supertest(app)
+      .get('/api/payroll/due-soon')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it('returns unsubmitted past weeks as overdue', async () => {
+    const cookie = await registerAndLogin('due-soon-owner');
+    const projectId = await createProject(cookie);
+    await createWorkerWithClassification(cookie, projectId);
+
+    // Create a week with a past date (overdue)
+    const pastDate = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
+    const wRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: pastDate, payrollNumber: 1 });
+    expect(wRes.status).toBe(201);
+
+    const res = await supertest(app)
+      .get('/api/payroll/due-soon')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    const item = res.body.find((r: any) => r.projectId === projectId);
+    expect(item).toBeDefined();
+    expect(item.status).toBe('overdue');
+    expect(item.daysUntil).toBeLessThan(0);
+  });
+
+  it('does not return submitted weeks', async () => {
+    const cookie = await registerAndLogin('due-soon-submitted');
+    const projectId = await createProject(cookie);
+    await createWorkerWithClassification(cookie, projectId);
+
+    const pastDate = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+    const wRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: pastDate });
+    const weekId = wRes.body.data?.week?.id;
+
+    // Submit it
+    await supertest(app)
+      .patch(`/api/payroll/weeks/${weekId}/submit`)
+      .set('Cookie', cookie)
+      .send({ submittedTo: 'DOL', submittedAt: new Date().toISOString() });
+
+    const res = await supertest(app)
+      .get('/api/payroll/due-soon')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.find((r: any) => r.weekId === weekId)).toBeUndefined();
+  });
+});

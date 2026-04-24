@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { ComplianceOverviewCard } from '../components/compliance/ComplianceOverviewCard';
+import { DueSoonPanel } from '../components/dashboard/DueSoonPanel';
 import { OnboardingChecklist } from '../components/ui/OnboardingChecklist';
 
 interface Project {
@@ -219,6 +220,9 @@ export function DashboardPage() {
           isLoading={!summaryData && projects.length > 0}
         />
       )}
+
+      {/* Due-soon / overdue payroll weeks across all projects */}
+      <DueSoonPanel />
 
       {/* Filter bar — only rendered when there is at least one project or archived view is active */}
       {(!isLoading && (projects.length > 0 || showArchived)) && (

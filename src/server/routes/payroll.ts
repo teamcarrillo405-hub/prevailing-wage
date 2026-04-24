@@ -731,4 +731,59 @@ router.patch('/weeks/:id/il-submit', async (req, res) => {
   res.status(200).json(result);
 });
 
+// GET /api/payroll/due-soon
+// Returns unsubmitted payroll weeks whose weekEndingDate is within the next
+// DUE_SOON_WINDOW days (or already past) for all projects the user belongs to.
+// Fixed 7-day lookahead — separate from per-project email notif settings.
+const DUE_SOON_WINDOW = 7;
+
+router.get('/due-soon', async (req, res) => {
+  const userId = (req as any).user?.userId as string;
+  const db = getDb();
+  const { payrollWeeks: pw, projectMembers } = await import('../db/schema.js');
+  const { sql: sq } = await import('drizzle-orm');
+
+  const memberships = db
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(eq(projectMembers.userId, userId))
+    .all();
+
+  if (memberships.length === 0) return res.json([]);
+
+  const projectIds = memberships.map((m: { projectId: string }) => m.projectId);
+  const today = new Date().toISOString().slice(0, 10);
+  const windowEnd = new Date(Date.now() + DUE_SOON_WINDOW * 86_400_000).toISOString().slice(0, 10);
+
+  const idList = sq.join(projectIds.map((id: string) => sq`${id}`), sq`, `);
+
+  const rows = db
+    .select({
+      weekId: pw.id,
+      projectId: pw.projectId,
+      weekEndingDate: pw.weekEndingDate,
+      payrollNumber: pw.payrollNumber,
+      projectName: projects.name,
+    })
+    .from(pw)
+    .innerJoin(projects, eq(pw.projectId, projects.id))
+    .where(sq`${pw.submittedAt} IS NULL AND ${pw.projectId} IN (${idList}) AND ${pw.weekEndingDate} <= ${windowEnd}`)
+    .orderBy(pw.weekEndingDate)
+    .all();
+
+  const result = rows.map((r: typeof rows[number]) => ({
+    weekId: r.weekId,
+    projectId: r.projectId,
+    projectName: r.projectName,
+    weekEndingDate: r.weekEndingDate,
+    payrollNumber: r.payrollNumber,
+    status: r.weekEndingDate < today ? 'overdue' : r.weekEndingDate === today ? 'due-today' : 'due-soon',
+    daysUntil: Math.round(
+      (new Date(r.weekEndingDate + 'T00:00:00Z').getTime() - new Date(today + 'T00:00:00Z').getTime()) / 86_400_000,
+    ),
+  }));
+
+  res.json(result);
+});
+
 export { router as payrollRouter };
