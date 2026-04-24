@@ -1,5 +1,7 @@
 // src/client/components/UnionTradeForm.tsx
 import { useForm } from 'react-hook-form';
+import { useToast } from '../contexts/ToastContext';
+import { Button } from './ui/Button';
 
 interface TradeFormValues {
   tradeCode: string;
@@ -15,19 +17,26 @@ interface Props {
 }
 
 export function UnionTradeForm({ projectId, onSaved }: Props) {
+  const { toast } = useToast();
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<TradeFormValues>({
     defaultValues: { fringeRate: 0 },
   });
 
   async function onSubmit(values: TradeFormValues) {
-    await fetch(`/api/union/${projectId}/trades`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(values),
-    });
-    reset();
-    onSaved();
+    try {
+      const res = await fetch(`/api/union/${projectId}/trades`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(values),
+      });
+      if (!res.ok) throw new Error('Failed to add trade');
+      toast.success(`Trade "${values.tradeName}" added`);
+      reset();
+      onSaved();
+    } catch {
+      toast.error('Could not add union trade. Try again.');
+    }
   }
 
   return (
@@ -67,13 +76,9 @@ export function UnionTradeForm({ projectId, onSaved }: Props) {
         />
       </div>
       <div className="col-span-2 flex justify-end">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-[#F5C518] text-black text-sm font-semibold px-4 py-2 rounded hover:bg-yellow-400 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Adding...' : 'Add Trade'}
-        </button>
+        </Button>
       </div>
     </form>
   );

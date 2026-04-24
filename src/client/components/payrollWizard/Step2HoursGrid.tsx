@@ -2,8 +2,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Step2GridRow, type RowValues, type HourValues, type RowExtras, type MetaField } from './Step2GridRow';
 import { Step2BulkActions, STANDARD_WEEK, type StateToggles } from './Step2BulkActions';
+import { Step2MobileEntry } from './Step2MobileEntry';
 import { parsePastedHours } from './pasteParser';
 import { Button } from '../ui/Button';
+import { TermTooltip } from '../ui/TermTooltip';
 
 // Field order used for paste — matches the visible column order in the grid.
 const FIELD_ORDER: Array<keyof HourValues> = [
@@ -25,6 +27,8 @@ export interface GridWorkerRow {
 interface Props {
   initialRows: GridWorkerRow[];
   projectState: string;
+  saveStatus?: 'idle' | 'pending' | 'saving';
+  highlightedWorkerIds?: Set<string>;
   onRowChange: (row: GridWorkerRow) => void;
   onReview: () => void;
   onBack: () => void;
@@ -41,9 +45,15 @@ const INITIAL_TOGGLES: StateToggles = {
   njDeductions: false,
 };
 
-export function Step2HoursGrid({ initialRows, projectState, onRowChange, onReview, onBack }: Props) {
+export function Step2HoursGrid({ initialRows, projectState, saveStatus, highlightedWorkerIds, onRowChange, onReview, onBack }: Props) {
   const [rows, setRows] = useState(initialRows);
   const [toggles, setToggles] = useState<StateToggles>(INITIAL_TOGGLES);
+
+  useEffect(() => {
+    if (!highlightedWorkerIds || highlightedWorkerIds.size === 0) return;
+    const el = document.querySelector<HTMLElement>('[data-highlighted="true"]');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlightedWorkerIds]);
 
   const onToggle = useCallback((key: keyof StateToggles) => {
     setToggles((t) => ({ ...t, [key]: !t[key] }));
@@ -219,96 +229,148 @@ export function Step2HoursGrid({ initialRows, projectState, onRowChange, onRevie
         toggles={toggles}
         onToggle={onToggle}
       />
-      <div className="overflow-x-auto border border-gray-200 rounded-sm">
-        <table className="min-w-full text-sm" onPaste={handlePaste}>
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left border-r border-gray-200 z-20">
-                Worker
-              </th>
-              {DAY_LABELS.map((d) => (
-                <th key={`${d}-st`} className="px-1 py-2 text-center text-xs font-semibold">
-                  {d}
-                  <br />
-                  ST
+
+      {/* Mobile view — hidden on sm+ */}
+      <div className="block sm:hidden">
+        <Step2MobileEntry
+          rows={rows}
+          toggles={toggles}
+          saveStatus={saveStatus}
+          onCellChange={(workerId, classId, field, value) => updateCell(workerId, classId, field, value)}
+          onMetaChange={(workerId, classId, field, value) => updateMeta(workerId, classId, field, value)}
+          onExtraChange={(workerId, classId, field, value) => updateExtra(workerId, classId, field, value)}
+          onBlur={(workerId, classId) => notifyBlur(workerId, classId)}
+          onStandardWeek={(workerId, classId) => applyStandardWeekToRow(workerId, classId)}
+          onReview={onReview}
+          onBack={onBack}
+        />
+      </div>
+
+      {/* Desktop table — hidden below sm */}
+      <div className="hidden sm:block">
+        <div className="overflow-x-auto border border-gray-200 rounded-sm">
+          <table className="min-w-full text-sm" aria-label="Weekly payroll hours entry grid" onPaste={handlePaste}>
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left border-r border-gray-200 z-20">
+                  Worker
                 </th>
-              ))}
-              {DAY_LABELS.map((d) => (
-                <th key={`${d}-ot`} className="px-1 py-2 text-center text-xs font-semibold">
-                  {d}
-                  <br />
-                  OT
-                </th>
-              ))}
-              <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">Base $/hr</th>
-              <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">Fringe $/hr</th>
-              <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">Deductions</th>
-              {toggles.caDt &&
-                DAY_LABELS.map((d) => (
-                  <th key={`${d}-dt`} className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">
+                {DAY_LABELS.map((d) => (
+                  <th key={`${d}-st`} className="px-1 py-2 text-center text-xs font-semibold" abbr="Straight Time">
                     {d}
                     <br />
-                    DT
+                    ST
                   </th>
                 ))}
-              {toggles.caFringe && (
-                <>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">H+W</th>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Pension</th>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Vacation</th>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Training</th>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Fringe $</th>
-                </>
-              )}
-              {toggles.ilNonPw && (
-                <th className="px-1 py-2 text-center text-xs font-semibold bg-purple-50">Non-PW hrs</th>
-              )}
-              {toggles.maFields && (
-                <>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">Check #</th>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">All-other hrs</th>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">Total gross</th>
-                </>
-              )}
-              {(toggles.njDeductions || toggles.caFica) && (
-                <>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">FICA</th>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">Fed Tax</th>
-                  <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">State Tax</th>
-                  {toggles.caFica && <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">SDI</th>}
-                </>
-              )}
-              <th className="px-3 py-2 text-right text-xs font-semibold">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <Step2GridRow
-                key={`${r.workerId}::${r.classificationId}`}
-                workerId={r.workerId}
-                classificationId={r.classificationId}
-                workerName={r.workerName}
-                tradeDescription={r.tradeDescription}
-                baseRate={r.baseRate}
-                fringeRate={r.fringeRate}
-                deductions={r.deductions}
-                values={r.values}
-                toggles={toggles}
-                onChange={(field, value) => updateCell(r.workerId, r.classificationId, field, value)}
-                onExtraChange={(field, value) => updateExtra(r.workerId, r.classificationId, field, value)}
-                onMetaChange={(field, value) => updateMeta(r.workerId, r.classificationId, field, value)}
-                onBlur={() => notifyBlur(r.workerId, r.classificationId)}
-                onStandardWeek={() => applyStandardWeekToRow(r.workerId, r.classificationId)}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-4 flex justify-between">
-        <Button variant="secondary" onClick={onBack}>
-          ← Back to roster
-        </Button>
-        <Button onClick={onReview}>Review →</Button>
+                {DAY_LABELS.map((d) => (
+                  <th key={`${d}-ot`} className="px-1 py-2 text-center text-xs font-semibold" abbr="Overtime">
+                    {d}
+                    <br />
+                    OT
+                  </th>
+                ))}
+                <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">Base $/hr</th>
+                <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">Fringe $/hr</th>
+                <th className="px-1 py-2 text-center text-xs font-semibold bg-slate-100">
+                  <TermTooltip
+                    term="Deductions"
+                    definition="Voluntary pre-tax deductions (e.g. 401k, health insurance). Do not include taxes — those are calculated automatically. Required for accurate net pay on WH-347."
+                  />
+                </th>
+                {toggles.caDt &&
+                  DAY_LABELS.map((d) => (
+                    <th
+                      key={`${d}-dt`}
+                      className="px-1 py-2 text-center text-xs font-semibold bg-amber-50"
+                      title="Daily double-time: CA requires 2x pay for hours over 12/day or over 8/day on the 7th consecutive day (CA Labor Code §510)"
+                    >
+                      {d}
+                      <br />
+                      DT
+                    </th>
+                  ))}
+                {toggles.caFringe && (
+                  <>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">H+W</th>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Pension</th>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Vacation</th>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Training</th>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Fringe $</th>
+                  </>
+                )}
+                {toggles.ilNonPw && (
+                  <th
+                    className="px-1 py-2 text-center text-xs font-semibold bg-purple-50"
+                    title="Non-Prevailing Wage Hours — IL hours worked on non-public-works portions of the project. Not subject to prevailing wage rates."
+                  >
+                    Non-PW hrs
+                  </th>
+                )}
+                {toggles.maFields && (
+                  <>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">Check #</th>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">All-other hrs</th>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-green-50">Total gross</th>
+                  </>
+                )}
+                {(toggles.njDeductions || toggles.caFica) && (
+                  <>
+                    <th
+                      className="px-1 py-2 text-center text-xs font-semibold bg-pink-50"
+                      title="Federal Insurance Contributions Act — Social Security (6.2%) + Medicare (1.45%) taxes withheld from worker pay"
+                    >
+                      FICA
+                    </th>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">Fed Tax</th>
+                    <th className="px-1 py-2 text-center text-xs font-semibold bg-pink-50">State Tax</th>
+                    {toggles.caFica && (
+                      <th
+                        className="px-1 py-2 text-center text-xs font-semibold bg-pink-50"
+                        title="State Disability Insurance — CA state payroll tax withheld from worker wages"
+                      >
+                        SDI
+                      </th>
+                    )}
+                  </>
+                )}
+                <th className="px-3 py-2 text-right text-xs font-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <Step2GridRow
+                  key={`${r.workerId}::${r.classificationId}`}
+                  workerId={r.workerId}
+                  classificationId={r.classificationId}
+                  workerName={r.workerName}
+                  tradeDescription={r.tradeDescription}
+                  baseRate={r.baseRate}
+                  fringeRate={r.fringeRate}
+                  deductions={r.deductions}
+                  values={r.values}
+                  toggles={toggles}
+                  highlighted={highlightedWorkerIds?.has(r.workerId) ?? false}
+                  onChange={(field, value) => updateCell(r.workerId, r.classificationId, field, value)}
+                  onExtraChange={(field, value) => updateExtra(r.workerId, r.classificationId, field, value)}
+                  onMetaChange={(field, value) => updateMeta(r.workerId, r.classificationId, field, value)}
+                  onBlur={() => notifyBlur(r.workerId, r.classificationId)}
+                  onStandardWeek={() => applyStandardWeekToRow(r.workerId, r.classificationId)}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <span aria-live="polite" className="text-xs text-gray-400">
+            {saveStatus === 'pending' || saveStatus === 'saving' ? 'Saving…' : 'All changes saved'}
+          </span>
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={onBack}>
+              ← Back to roster
+            </Button>
+            <Button onClick={onReview}>Review →</Button>
+          </div>
+        </div>
       </div>
     </div>
   );

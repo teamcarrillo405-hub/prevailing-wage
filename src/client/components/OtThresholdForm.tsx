@@ -7,6 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useToast } from '../contexts/ToastContext';
+import { Button } from './ui/Button';
 
 // ── Zod Schema (mirrors server) ────────────────────────────────────────────
 
@@ -46,6 +48,7 @@ interface OtThresholdFormProps {
 
 export function OtThresholdForm({ projectId, existingThreshold }: OtThresholdFormProps) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const {
     register,
@@ -77,7 +80,9 @@ export function OtThresholdForm({ projectId, existingThreshold }: OtThresholdFor
       api.post<{ id: string }>(`/ot-thresholds/${projectId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ot-threshold', projectId] });
+      toast.success('OT threshold saved');
     },
+    onError: (err: Error) => toast.error(err.message || 'Could not save OT threshold'),
   });
 
   function onSubmit(values: OtThresholdFormValues) {
@@ -151,21 +156,9 @@ export function OtThresholdForm({ projectId, existingThreshold }: OtThresholdFor
 
         {/* Submit */}
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={isSubmitting || mutation.isPending}
-            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors disabled:opacity-50"
-          >
+          <Button type="submit" disabled={isSubmitting || mutation.isPending}>
             {mutation.isPending ? 'Saving...' : 'Save Threshold'}
-          </button>
-          {mutation.isSuccess && (
-            <span className="text-xs text-green-600">Threshold saved.</span>
-          )}
-          {mutation.isError && (
-            <span className="text-xs text-red-600">
-              {(mutation.error as Error).message}
-            </span>
-          )}
+          </Button>
         </div>
       </form>
     </div>

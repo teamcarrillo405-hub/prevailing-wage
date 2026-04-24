@@ -5,6 +5,8 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { useToast } from '../contexts/ToastContext';
+import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 
 interface Member {
   id: string;
@@ -27,6 +29,7 @@ interface TeamData {
 
 export function TeamPage() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [confirmAction, setConfirmAction] = useState<{
     type: 'remove' | 'transfer';
     userId: string;
@@ -58,8 +61,9 @@ export function TeamPage() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, { email }) => {
       queryClient.invalidateQueries({ queryKey: ['team'] });
+      toast.success(`Invite sent to ${email}`);
       setInviteEmail('');
       setInviteRole('member');
       setError(null);
@@ -80,6 +84,10 @@ export function TeamPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team'] });
+      toast.success('Invite revoked');
+    },
+    onError: () => {
+      toast.error('Could not revoke invite. Try again.');
     },
   });
 
@@ -94,6 +102,7 @@ export function TeamPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team'] });
+      toast.success('Member removed');
       setConfirmAction(null);
     },
     onError: (err: any) => {
@@ -114,6 +123,7 @@ export function TeamPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team'] });
+      toast.success('Ownership transferred');
       setConfirmAction(null);
     },
     onError: (err: any) => {
@@ -126,7 +136,7 @@ export function TeamPage() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="text-center py-16 text-gray-500">Loading...</div>
+        <LoadingSpinner />
       </Layout>
     );
   }

@@ -51,7 +51,7 @@ export function UnionSummaryTable({ result }: Props) {
             <td className="px-4 py-3 text-right font-mono text-gray-900">
               {result.grandTotalHours.toFixed(1)}
             </td>
-            <td className="px-4 py-3 text-right font-mono text-[#F5C518]">
+            <td className="px-4 py-3 text-right font-mono text-brand-gold">
               {fmt(result.grandTotalCost)}
             </td>
           </tr>

@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, FolderOpen } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
-import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { SkeletonGrid } from '../components/ui/SkeletonCard';
 import { ProjectCard } from '../components/projects/ProjectCard';
 import { ProjectForm } from '../components/projects/ProjectForm';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { ComplianceOverviewCard } from '../components/compliance/ComplianceOverviewCard';
+import { OnboardingChecklist } from '../components/ui/OnboardingChecklist';
 
 interface Project {
   id: string;
@@ -48,6 +49,14 @@ const COMPLIANCE_FILTER_OPTIONS = [
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => localStorage.getItem('onboarding-dismissed') !== 'true'
+  );
+
+  function handleDismissOnboarding() {
+    localStorage.setItem('onboarding-dismissed', 'true');
+    setShowOnboarding(false);
+  }
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -59,7 +68,7 @@ export function DashboardPage() {
   // Local controlled-input state initialized from URL (avoids useSearchParams lag on keystroke)
   const [inputValue, setInputValue] = useState(() => searchParams.get('q') ?? '');
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['projects', showArchived ? 'all' : 'active'],
     queryFn: () => api.get<{ data: { projects: Project[] } }>(
       showArchived ? '/projects?status=all' : '/projects'
@@ -140,6 +149,13 @@ export function DashboardPage() {
 
   const complianceFilterLabel = COMPLIANCE_FILTER_OPTIONS.find(o => o.value === complianceFilter)?.label;
 
+  useEffect(() => {
+    if (!showForm) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowForm(false); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [showForm]);
+
   return (
     <Layout>
 
@@ -166,22 +182,34 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Compliance summary download — Phase 59 */}
-      <div className="flex justify-end mb-4">
-        <a
-          href="/api/export/compliance-summary"
-          download="compliance-summary.pdf"
-          className="inline-flex items-center gap-1.5 text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary hover:border-brand-gold hover:text-brand-gold transition-colors"
-        >
-          Download Compliance Summary
-        </a>
-      </div>
+      {/* Compliance summary download — Phase 59 — hidden until at least one project exists */}
+      {!isLoading && projects.length > 0 && (
+        <div className="flex justify-end mb-4">
+          <a
+            href="/api/export/compliance-summary"
+            download="compliance-summary.pdf"
+            className="inline-flex items-center gap-1.5 text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary hover:border-brand-gold hover:text-brand-gold transition-colors"
+          >
+            Download Compliance Summary
+          </a>
+        </div>
+      )}
 
       <HelpCallout
         icon={LayoutDashboard}
         title="Your Active Projects"
         body="Each project tracks a separate federal job. Add workers and enter payroll weekly to keep your certified payroll current and DOL-ready."
       />
+
+      {showOnboarding && !isLoading && (
+        <OnboardingChecklist
+          hasProjects={projects.length > 0}
+          hasWorkers={false}
+          hasPayroll={false}
+          firstProjectId={projects[0]?.id}
+          onDismiss={handleDismissOnboarding}
+        />
+      )}
 
       {/* At-a-glance compliance summary — shows counts + status bar before the grid. */}
       {projects.length > 0 && (
@@ -192,59 +220,70 @@ export function DashboardPage() {
         />
       )}
 
-      <div className="flex items-center gap-2 mb-4">
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
-            className="rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
-          />
-          Show Archived
-        </label>
-      </div>
+      {/* Filter bar — only rendered when there is at least one project or archived view is active */}
+      {(!isLoading && (projects.length > 0 || showArchived)) && (
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+              />
+              Show Archived
+            </label>
+          </div>
 
-      {/* Search + funding filter bar — DASH-03 / DASH-04 */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <input
-          type="text"
-          value={inputValue}
-          onChange={handleSearchChange}
-          placeholder="Search projects..."
-          className="text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary placeholder:text-text-secondary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold w-56"
-        />
-        <select
-          value={fundingFilter}
-          onChange={handleFundingChange}
-          className="text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
-        >
-          {FUNDING_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-      </div>
+          {/* Search + funding filter bar — DASH-03 / DASH-04 */}
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={handleSearchChange}
+              placeholder="Search projects..."
+              className="text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary placeholder:text-text-secondary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold w-56"
+            />
+            <select
+              value={fundingFilter}
+              onChange={handleFundingChange}
+              className="text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
+            >
+              {FUNDING_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
 
-      {/* Compliance filter chips — DASH-05 */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        {COMPLIANCE_FILTER_OPTIONS.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => handleComplianceFilterChange(opt.value)}
-            className={`text-xs px-3 py-1 rounded border transition-colors ${
-              complianceFilter === opt.value
-                ? 'bg-brand-gold text-white border-brand-gold'
-                : 'bg-surface-card text-text-primary border-border-default hover:border-brand-gold'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+          {/* Compliance filter chips — DASH-05 */}
+          <div className="flex flex-wrap items-center gap-2">
+            {COMPLIANCE_FILTER_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => handleComplianceFilterChange(opt.value)}
+                aria-pressed={complianceFilter === opt.value}
+                className={`text-sm px-3 py-2 rounded border transition-all duration-100 active:scale-95 ${
+                  complianceFilter === opt.value
+                    ? 'bg-brand-gold text-white border-brand-gold'
+                    : 'bg-surface-card text-text-primary border-border-default hover:border-brand-gold'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
-            <h3 className="font-headline text-xl text-gray-900 mb-5">New Project</h3>
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-project-modal-title"
+          >
+            <h3 id="new-project-modal-title" className="font-headline text-xl text-gray-900 mb-5">New Project</h3>
             <ProjectForm
               onSuccess={() => setShowForm(false)}
               onCancel={() => setShowForm(false)}
@@ -253,16 +292,23 @@ export function DashboardPage() {
         </div>
       )}
 
-      {isLoading && <LoadingSpinner />}
+      {isLoading && <SkeletonGrid count={6} />}
 
       {isError && (
-        <div className="text-center py-12 text-red-600 text-sm">
-          Failed to load projects. Please refresh.
+        <div className="text-center py-12">
+          <p className="text-red-600 text-sm mb-4">Failed to load projects. Please refresh.</p>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-2.5 bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+          >
+            Try Again
+          </button>
         </div>
       )}
 
       {!isLoading && !isError && projects.length === 0 && (
         <EmptyState
+          icon={FolderOpen}
           heading="No projects yet"
           message="Create your first project to start tracking certified payroll. You'll need your project location to pull prevailing wage rates from SAM.gov."
           action={

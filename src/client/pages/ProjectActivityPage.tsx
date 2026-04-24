@@ -204,6 +204,7 @@ export function ProjectActivityPage() {
             )}
             <button
               onClick={handleExportCsv}
+              title="Export all project activity as CSV — includes timestamps, user, action type, and details for every recorded event."
               className="px-3 py-1.5 text-sm border border-brand-gold text-brand-gold rounded hover:bg-brand-gold/10 transition-colors"
             >
               Export CSV

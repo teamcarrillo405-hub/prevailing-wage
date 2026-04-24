@@ -1,4 +1,12 @@
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN, // no-op if undefined — safe to deploy without it
+  environment: process.env.NODE_ENV ?? 'development',
+  tracesSampleRate: 0.1,
+});
+
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -49,6 +57,25 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', crede
 app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
+
+const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
+
+app.use((req, res, next) => {
+  // Only check mutating methods — GET/HEAD/OPTIONS are safe
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  // Skip webhook endpoint — Stripe sends without browser Origin
+  if (req.path.startsWith('/api/billing/webhook')) return next();
+  // Skip health check
+  if (req.path === '/api/health') return next();
+
+  const origin = req.headers.origin;
+  if (origin && origin !== ALLOWED_ORIGIN) {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+  next();
+});
+
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/sub-upload', subUploadRouter); // public — no auth required
 app.use('/api/auth', authRouter);
@@ -84,7 +111,7 @@ if (process.env.NODE_ENV === 'production') {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
   // Register monthly wage sync — MUST be inside listen() callback so getDb() is initialized
   // Cron: 2:00 AM on the 1st of every month
@@ -122,4 +149,21 @@ app.listen(PORT, () => {
     }
   }, { timezone: 'America/New_York' });
 });
+
+// Graceful shutdown — give in-flight requests 10s to complete
+function shutdown(signal: string) {
+  console.log(`[shutdown] ${signal} received — closing server`);
+  server.close(() => {
+    console.log('[shutdown] All connections closed. Exiting.');
+    process.exit(0);
+  });
+  // Force exit after 10s if connections hang
+  setTimeout(() => {
+    console.error('[shutdown] Forced exit after timeout');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
 export { app };

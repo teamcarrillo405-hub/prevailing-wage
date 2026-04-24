@@ -49,6 +49,7 @@ interface Props {
   deductions: number;
   values: RowValues;
   toggles: StateToggles;
+  highlighted?: boolean;
   onChange: (field: keyof HourValues, value: number) => void;
   onExtraChange: (field: keyof RowExtras, value: number | string | null) => void;
   onMetaChange: (field: MetaField, value: number) => void;
@@ -66,6 +67,7 @@ export function Step2GridRow({
   deductions,
   values,
   toggles,
+  highlighted,
   onChange,
   onExtraChange,
   onMetaChange,
@@ -93,22 +95,60 @@ export function Step2GridRow({
     [values.fringeHealthWelfare, values.fringePension, values.fringeVacation, values.fringeTraining]
   );
 
+  // Per-day totals (ST + OT + DT) used for the >24h validation.
+  const dayTotals = useMemo(() => {
+    const result: Partial<Record<string, number>> = {};
+    for (const d of DAYS) {
+      result[d] =
+        (values[`${d}St` as keyof HourValues] || 0) +
+        (values[`${d}Ot` as keyof HourValues] || 0) +
+        (values[`${d}Dt` as keyof HourValues] || 0);
+    }
+    return result;
+  }, [values]);
+
+  const weeklyTotal = stTotal + otTotal + dtTotal;
+
   function numCell(field: keyof HourValues) {
+    // Derive the day key (e.g. 'mon', 'tue') from the field name.
+    const dayKey = field.replace(/St$|Ot$|Dt$/, '');
+    const daySum = dayTotals[dayKey] ?? 0;
+    const cellValue = values[field];
+    const dayInvalid = daySum > 24;
+    const weekInvalid = weeklyTotal > 168;
+    const isInvalid = dayInvalid || (weekInvalid && cellValue > 0);
+
     return (
       <td className="px-1 py-1">
-        <input
-          type="number"
-          min={0}
-          step={0.25}
-          value={values[field]}
-          onChange={(e) => onChange(field, Number(e.target.value) || 0)}
-          onBlur={onBlur}
-          onFocus={(e) => e.target.select()}
-          className="w-16 px-2 py-1 text-right text-sm border border-gray-200 rounded-sm focus:border-brand-gold focus:outline-hidden"
-          data-worker-id={workerId}
-          data-classification-id={classificationId}
-          data-field={field}
-        />
+        <div className="relative group">
+          <input
+            type="number"
+            min={0}
+            step={0.25}
+            value={cellValue}
+            onChange={(e) => onChange(field, Number(e.target.value) || 0)}
+            onBlur={onBlur}
+            onFocus={(e) => e.target.select()}
+            className={`w-16 px-2 py-1 text-right text-sm border rounded-sm focus:outline-hidden ${
+              isInvalid
+                ? 'border-red-400 focus:border-red-400'
+                : 'border-gray-200 focus:border-brand-gold'
+            }`}
+            data-worker-id={workerId}
+            data-classification-id={classificationId}
+            data-field={field}
+          />
+          {dayInvalid && (
+            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 whitespace-nowrap rounded-sm bg-red-600 px-1.5 py-0.5 text-xs text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+              Max 24h/day
+            </span>
+          )}
+          {!dayInvalid && weekInvalid && cellValue > 0 && (
+            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 whitespace-nowrap rounded-sm bg-red-600 px-1.5 py-0.5 text-xs text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+              Weekly total &gt; 168h
+            </span>
+          )}
+        </div>
       </td>
     );
   }
@@ -177,7 +217,10 @@ export function Step2GridRow({
   }
 
   return (
-    <tr className="border-b border-gray-100">
+    <tr
+      className={`border-b border-gray-100 transition-colors ${highlighted ? 'bg-amber-50 border-l-4 border-l-amber-400' : ''}`}
+      data-highlighted={highlighted ? 'true' : undefined}
+    >
       <td className="sticky left-0 bg-white px-3 py-2 border-r border-gray-200 z-10">
         <div className="flex items-start gap-2">
           <div className="flex-1">

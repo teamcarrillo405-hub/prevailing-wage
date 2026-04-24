@@ -47,7 +47,7 @@ export function GsaRateDisplay() {
           </tr>
           <tr className="font-semibold">
             <td className="pt-2 text-gray-900">Billable Rate (After Profit {profitPct.toFixed(1)}%)</td>
-            <td className="pt-2 text-right font-mono text-[#F5C518]">
+            <td className="pt-2 text-right font-mono text-brand-gold">
               {fmt(result.billableRate)}/hr
             </td>
           </tr>

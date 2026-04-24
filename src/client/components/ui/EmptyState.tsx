@@ -6,11 +6,14 @@ interface EmptyStateProps {
   message: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
 }
 
-export function EmptyState({ heading, message, action, className }: EmptyStateProps) {
+export function EmptyState({ heading, message, action, className, icon }: EmptyStateProps) {
+  const Icon = icon;
   return (
     <div className={cn('text-center py-16', className)}>
+      {Icon && <Icon size={40} className="mx-auto mb-4 text-gray-300" />}
       <p className="font-headline text-lg text-text-primary mb-2">{heading}</p>
       <p className="text-sm text-text-secondary mb-6">{message}</p>
       {action && <div>{action}</div>}

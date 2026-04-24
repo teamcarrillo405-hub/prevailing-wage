@@ -5,6 +5,8 @@ import { VarianceSummaryTable } from '../components/VarianceSummaryTable.js';
 import { VarianceTrendChart } from '../components/VarianceTrendChart.js';
 import type { VarianceReport } from '../../server/services/varianceService.js';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Button } from '../components/ui/Button';
+import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 
 interface BudgetFormValues {
   bidAmount?: number;
@@ -106,19 +108,15 @@ export function VarianceReportPage({ projectId }: Props) {
               />
             </div>
             <div className="col-span-2 flex justify-end">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-[#F5C518] text-black text-sm font-semibold px-4 py-2 rounded hover:bg-yellow-400 disabled:opacity-50"
-              >
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : 'Set Budget'}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
       )}
 
-      {loading && <p className="text-sm text-gray-500">Loading...</p>}
+      {loading && <LoadingSpinner />}
 
       {report && !loading && (
         <>

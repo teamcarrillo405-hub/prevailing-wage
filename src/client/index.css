@@ -46,6 +46,39 @@
   }
 }
 
+/* ── Toast animations ───────────────────────── */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0)   scale(1); }
+  to   { opacity: 0; transform: translateY(4px)  scale(0.97); }
+}
+.toast-enter { animation: toast-in  220ms ease-out both; }
+.toast-exit  { animation: toast-out 160ms ease-in  both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter, .toast-exit { animation: none; }
+}
+
+/* ── Wizard step transitions ─────────────────── */
+@keyframes wizard-enter-forward {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes wizard-enter-backward {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.wizard-enter-forward  { animation: wizard-enter-forward  220ms ease-out both; }
+.wizard-enter-backward { animation: wizard-enter-backward 220ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-enter-forward,
+  .wizard-enter-backward { animation: none; }
+}
+
 @media print {
   .hero-bg,
   .dashboard-bg {

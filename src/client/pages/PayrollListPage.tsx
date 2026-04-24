@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileCheck } from 'lucide-react';
+import { FileCheck, FileText } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -15,6 +15,8 @@ import { TermTooltip } from '../components/ui/TermTooltip';
 const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { useToast } from '../contexts/ToastContext';
 
 interface PayrollWeek {
   id: string;
@@ -85,8 +87,11 @@ export function PayrollListPage() {
   const [copyError, setCopyError] = useState<string | null>(null);
   const [isCopying, setIsCopying] = useState(false);
   const copyingRef = useRef(false); // synchronous double-click guard
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading, isError } = useQuery({
+  const { toast } = useToast();
+
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['payroll-weeks', projectId],
     queryFn: () =>
       api.get<PayrollWeeksResponse>(`/payroll/projects/${projectId}/weeks`),
@@ -104,6 +109,15 @@ export function PayrollListPage() {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [showModal]);
+
+  // Focus management: move focus to first focusable element when modal opens
+  useEffect(() => {
+    if (!showModal) return;
+    const first = modalRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    first?.focus();
+  }, [showModal, modalStep]);
 
   function handleNewWeekClick() {
     if (weeks.length === 0) {
@@ -147,7 +161,9 @@ export function PayrollListPage() {
       setPreviewResult(result);
       setModalStep('preview');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Preview failed';
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Could not copy that payroll week — the source week may have been modified. Try refreshing and copying again.';
       setCopyError(message);
     } finally {
       setIsCopying(false);
@@ -170,7 +186,9 @@ export function PayrollListPage() {
       setShowModal(false);
       navigate(`/projects/${projectId}/payroll/${result.weekId}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Copy failed';
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Could not copy that payroll week — the source week may have been modified. Try refreshing and copying again.';
       setCopyError(message);
     } finally {
       setIsCopying(false);
@@ -209,13 +227,20 @@ export function PayrollListPage() {
         {isLoading && <LoadingSpinner />}
 
         {isError && (
-          <p className="text-sm text-red-600">
-            Failed to load payroll weeks.
-          </p>
+          <div className="text-center py-12">
+            <p className="text-red-600 text-sm mb-4">Failed to load payroll weeks.</p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-2.5 bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+            >
+              Try Again
+            </button>
+          </div>
         )}
 
         {!isLoading && !isError && weeks.length === 0 && (
           <EmptyState
+            icon={FileText}
             heading="No payroll weeks yet"
             message="Create a payroll week to begin entering hours. You'll need to add workers first."
             action={
@@ -248,7 +273,14 @@ export function PayrollListPage() {
                     <Badge variant="neutral" className="ml-2">Draft</Badge>
                   )}
                   {week.amendmentNumber != null && (
-                    <Badge variant="warning" className="ml-2">Amendment {week.amendmentNumber}</Badge>
+                    <>
+                      <Badge variant="warning" className="ml-2">Amendment {week.amendmentNumber}</Badge>
+                      <TermTooltip
+                        term="Amendment"
+                        definition="A corrected re-filing of a previously submitted certified payroll. Required when you discover errors in a submitted WH-347. The amendment number increments with each correction."
+                        className="ml-1"
+                      />
+                    </>
                   )}
                   {week.workerCount > 0 && (
                     <span className="ml-3 text-xs text-gray-400">
@@ -261,7 +293,8 @@ export function PayrollListPage() {
                 <div className="flex items-center gap-3">
                   <a
                     href={`/api/export/wh347/${week.id}`}
-                    className="px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded hover:bg-gray-800"
+                    className="inline-flex items-center justify-center text-xs px-3 py-2 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
+                    onClick={() => toast.success('WH-347 downloading — submit to your contracting officer within 7 days of the week ending date.')}
                   >
                     Download WH-347
                   </a>
@@ -285,12 +318,31 @@ export function PayrollListPage() {
               if (e.target === e.currentTarget) setShowModal(false);
             }}
           >
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
+            <div
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="copy-modal-title"
+              className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6"
+            >
+
+              {/* Step indicator */}
+              {(() => {
+                const currentStep = modalStep === 'choose' ? 1 : modalStep === 'configure' ? 2 : 3;
+                return (
+                  <div className="flex items-center gap-1.5 mb-4">
+                    {[1, 2, 3].map(n => (
+                      <div key={n} className={`h-1.5 rounded-full transition-all ${n <= currentStep ? 'bg-brand-gold w-6' : 'bg-gray-200 w-4'}`} />
+                    ))}
+                    <span className="text-xs text-gray-500 ml-1">Step {currentStep} of 3</span>
+                  </div>
+                );
+              })()}
 
               {/* Step: choose */}
               {modalStep === 'choose' && (
                 <>
-                  <h2 className="text-base font-headline text-gray-900 mb-3">New Payroll Week</h2>
+                  <h2 id="copy-modal-title" className="text-base font-headline text-gray-900 mb-3">New Payroll Week</h2>
                   <p className="text-sm text-gray-600 mb-5">
                     How would you like to create this week?
                   </p>
@@ -327,7 +379,7 @@ export function PayrollListPage() {
               {/* Step: configure */}
               {modalStep === 'configure' && (
                 <>
-                  <h2 className="text-base font-headline text-gray-900 mb-3">Copy Previous Week</h2>
+                  <h2 id="copy-modal-title" className="text-base font-headline text-gray-900 mb-3">Copy Previous Week</h2>
                   <p className="text-sm text-gray-600 mb-4">
                     Select a source week and confirm the new week details.
                   </p>
@@ -347,7 +399,9 @@ export function PayrollListPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Payroll Number</label>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Payroll Number <TermTooltip term="Payroll Number" definition="A sequential number assigned to each certified payroll submission for a project. The first submission is #1; each subsequent week increments by 1. Must match the number on your WH-347 form." />
+                      </label>
                       <input
                         type="number"
                         min={1}
@@ -376,13 +430,9 @@ export function PayrollListPage() {
                     >
                       Cancel
                     </button>
-                    <button
-                      onClick={handlePreview}
-                      disabled={isCopying}
-                      className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <Button onClick={handlePreview} disabled={isCopying}>
                       {isCopying ? 'Loading...' : 'Preview Copy'}
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
@@ -390,7 +440,7 @@ export function PayrollListPage() {
               {/* Step: preview */}
               {modalStep === 'preview' && previewResult && (
                 <>
-                  <h2 className="text-base font-headline text-gray-900 mb-3">Preview Copy</h2>
+                  <h2 id="copy-modal-title" className="text-base font-headline text-gray-900 mb-3">Preview Copy</h2>
                   <p className="text-sm text-gray-600 mb-4">
                     {previewResult.copied.length} {previewResult.copied.length === 1 ? 'entry' : 'entries'} will be copied with current wage rates.
                   </p>
@@ -422,7 +472,12 @@ export function PayrollListPage() {
                   )}
 
                   {copyError && (
-                    <p className="text-xs text-red-600 mb-3">{copyError}</p>
+                    <div className="flex items-center gap-3 mb-3">
+                      <p className="text-xs text-red-600">{copyError}</p>
+                      <Button variant="secondary" size="sm" onClick={handlePreview} disabled={isCopying}>
+                        Try Again
+                      </Button>
+                    </div>
                   )}
 
                   <div className="flex gap-3 justify-end">
@@ -432,13 +487,9 @@ export function PayrollListPage() {
                     >
                       Cancel
                     </button>
-                    <button
-                      onClick={handleConfirmCopy}
-                      disabled={isCopying || previewResult.copied.length === 0}
-                      className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <Button onClick={handleConfirmCopy} disabled={isCopying || previewResult.copied.length === 0}>
                       {isCopying ? 'Copying...' : 'Confirm Copy'}
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}

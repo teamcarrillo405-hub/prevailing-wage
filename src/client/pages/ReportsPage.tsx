@@ -4,6 +4,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader';
+import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { TermTooltip } from '../components/ui/TermTooltip';
 
 // ---- Interfaces from Plan 02 shapes ----
 
@@ -226,9 +228,7 @@ export function ReportsPage() {
               Fringe Benefit Summary
             </h2>
 
-            {fringeLoading && (
-              <p className="text-sm text-gray-500">Loading fringe summary...</p>
-            )}
+            {fringeLoading && <LoadingSpinner />}
 
             {fringeError && (
               <p className="text-sm text-red-600">
@@ -248,8 +248,8 @@ export function ReportsPage() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-4 py-3 font-semibold text-gray-700">Worker Name</th>
-                      <th className="px-4 py-3 font-semibold text-gray-700 text-right">ST Hours</th>
-                      <th className="px-4 py-3 font-semibold text-gray-700 text-right">OT Hours</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700 text-right"><TermTooltip term="ST Hours" definition="Straight-time hours — regular hours at the base prevailing wage rate (typically up to 40 hours/week)." /></th>
+                      <th className="px-4 py-3 font-semibold text-gray-700 text-right"><TermTooltip term="OT Hours" definition="Overtime hours — hours beyond the weekly threshold (usually 40h) paid at 1.5x the base rate under CWHSSA." /></th>
                       <th className="px-4 py-3 font-semibold text-gray-700 text-right">Total Hours</th>
                       <th className="px-4 py-3 font-semibold text-gray-700 text-right">Total Fringe Credits</th>
                       <th className="px-4 py-3 font-semibold text-gray-700 text-right">Weeks</th>
@@ -344,9 +344,7 @@ export function ReportsPage() {
               <p className="text-sm text-gray-500">No workers found for this project.</p>
             )}
 
-            {payHistoryLoading && (
-              <p className="text-sm text-gray-500">Loading pay history...</p>
-            )}
+            {payHistoryLoading && <LoadingSpinner />}
 
             {payHistoryError && (
               <p className="text-sm text-red-600">
@@ -365,8 +363,8 @@ export function ReportsPage() {
                     <tr>
                       <th className="px-4 py-3 font-semibold text-gray-700">Week #</th>
                       <th className="px-4 py-3 font-semibold text-gray-700">Week Ending</th>
-                      <th className="px-4 py-3 font-semibold text-gray-700 text-right">ST Hours</th>
-                      <th className="px-4 py-3 font-semibold text-gray-700 text-right">OT Hours</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700 text-right"><TermTooltip term="ST Hours" definition="Straight-time hours — regular hours at the base prevailing wage rate (typically up to 40 hours/week)." /></th>
+                      <th className="px-4 py-3 font-semibold text-gray-700 text-right"><TermTooltip term="OT Hours" definition="Overtime hours — hours beyond the weekly threshold (usually 40h) paid at 1.5x the base rate under CWHSSA." /></th>
                       <th className="px-4 py-3 font-semibold text-gray-700 text-right">Base Rate</th>
                       <th className="px-4 py-3 font-semibold text-gray-700 text-right">Fringe Rate</th>
                       <th className="px-4 py-3 font-semibold text-gray-700 text-right">Gross Wages</th>
@@ -423,9 +421,7 @@ export function ReportsPage() {
               Fringe Breakdown by Fund Type
             </h2>
 
-            {fringeBreakdownLoading && (
-              <p className="text-sm text-gray-500">Loading fringe breakdown...</p>
-            )}
+            {fringeBreakdownLoading && <LoadingSpinner />}
 
             {fringeBreakdownError && (
               <p className="text-sm text-red-600">Failed to load fringe breakdown. Please try again.</p>
@@ -433,7 +429,7 @@ export function ReportsPage() {
 
             {!fringeBreakdownLoading && !fringeBreakdownError && fringeBreakdownRows.length === 0 && (
               <p className="text-sm text-gray-500">
-                No fringe benefit data found. Fringe breakdown requires CA-style itemized fringe entries (H&W, Pension, Vacation, Training columns).
+                Enter CA fringe items (H&W, Pension, Vacation, Training) in your payroll entries to see this breakdown.
               </p>
             )}
 
@@ -473,7 +469,13 @@ export function ReportsPage() {
                         <th className="px-4 py-3 font-semibold text-gray-700">Union Local</th>
                         <th className="px-4 py-3 font-semibold text-gray-700">Classification</th>
                         {FUND_COLS.map(({ key, label }) => (
-                          <th key={key} className="px-4 py-3 font-semibold text-gray-700 text-right">{label}</th>
+                          <th key={key} className="px-4 py-3 font-semibold text-gray-700 text-right">
+                            {key === 'healthWelfare' ? (
+                              <TermTooltip term="H&W" definition="Health & Welfare — the fringe benefit component covering medical, dental, and vision insurance as required by the prevailing wage determination." />
+                            ) : key === 'pension' ? (
+                              <TermTooltip term="Pension" definition="The retirement/pension fringe benefit component required under the prevailing wage determination." />
+                            ) : label}
+                          </th>
                         ))}
                       </tr>
                     </thead>

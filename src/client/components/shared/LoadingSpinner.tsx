@@ -13,12 +13,12 @@ export function LoadingSpinner() {
           cx="20"
           cy="20"
           r="16"
-          stroke="#e5e7eb"
+          style={{ stroke: '#e5e7eb' }}
           strokeWidth="4"
         />
         <path
           d="M20 4a16 16 0 0 1 16 16"
-          stroke="#F5C518"
+          style={{ stroke: 'var(--color-brand-gold)' }}
           strokeWidth="4"
           strokeLinecap="round"
         />

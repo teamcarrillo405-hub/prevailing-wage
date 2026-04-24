@@ -4,6 +4,7 @@ import { UnionTradeForm } from '../components/UnionTradeForm.js';
 import { UnionSummaryTable } from '../components/UnionSummaryTable.js';
 import type { UnionAllocationResult } from '../../server/services/unionAllocation.js';
 import { PageHeader } from '../components/ui/PageHeader';
+import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 
 interface Props {
   projectId: string;
@@ -54,7 +55,7 @@ export function UnionAllocationPage({ projectId }: Props) {
         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
           Allocation Summary
         </h2>
-        {loading && <p className="text-sm text-gray-500">Loading...</p>}
+        {loading && <LoadingSpinner />}
         {error && <p className="text-sm text-red-600">{error}</p>}
         {result && !loading && <UnionSummaryTable result={result} />}
       </section>

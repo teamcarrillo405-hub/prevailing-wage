@@ -1,5 +1,6 @@
 // src/client/components/payrollWizard/Step1Roster.tsx
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { Input } from '../ui/Input';
@@ -133,7 +134,15 @@ export function Step1Roster({ projectId, defaultPayrollNumber, defaultWeekEnding
       <div>
         <h3 className="text-sm font-semibold mb-3">Who worked this week?</h3>
         {roster.length === 0 ? (
-          <p className="text-sm text-gray-500">No workers assigned to this project yet.</p>
+          <p className="text-sm text-gray-500">
+            No workers on this project yet.{' '}
+            <Link
+              to={`/projects/${projectId}/workers`}
+              className="text-brand-gold hover:underline"
+            >
+              Add workers →
+            </Link>
+          </p>
         ) : (
           <ul className="divide-y divide-gray-200 border border-gray-200 rounded-sm max-w-2xl">
             {roster.map((r) => (
@@ -145,7 +154,7 @@ export function Step1Roster({ projectId, defaultPayrollNumber, defaultWeekEnding
                   type="checkbox"
                   checked={r.included}
                   onChange={() => toggle(r.workerId, r.classificationId)}
-                  className="h-4 w-4"
+                  className="h-5 w-5"
                 />
                 <span className="flex-1 text-sm">{r.workerName}</span>
                 <span className="text-xs text-gray-500">{r.tradeDescription}</span>

@@ -90,7 +90,7 @@ export function VarianceSummaryTable({ report }: Props) {
             <td colSpan={4} className="px-3 py-3 text-gray-900">Overall</td>
             <td className="px-3 py-3 text-right font-mono text-gray-900">{fmtCurrency(report.totalActual)}</td>
             <td className="px-3 py-3 text-right font-mono text-gray-900">{fmtCurrency(report.totalBudgetBurned)}</td>
-            <td className={`px-3 py-3 text-right font-mono ${Math.abs(report.overallVariancePct) > report.varianceThresholdPct ? 'text-red-600' : 'text-[#F5C518]'}`}>
+            <td className={`px-3 py-3 text-right font-mono ${Math.abs(report.overallVariancePct) > report.varianceThresholdPct ? 'text-red-600' : 'text-brand-gold'}`}>
               {fmtPct(report.overallVariancePct)}
             </td>
           </tr>

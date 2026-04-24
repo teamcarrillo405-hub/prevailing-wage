@@ -1,0 +1,61 @@
+# CI Pipeline — prevailing-wage
+#
+# Runs on every push to main/master and on all pull requests.
+# Steps: install → typecheck → test → build
+#
+# No secrets are required at build time; env vars are injected at runtime only.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  ci:
+    name: Typecheck · Test · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Source ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ─────────────────────────────────────────────────────────
+      # Caches ~/.npm automatically when cache: 'npm' is set.
+      - name: Setup Node.js 20 (LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Dependencies ────────────────────────────────────────────────────
+      # npm ci installs exactly what package-lock.json specifies.
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. TypeScript typecheck ────────────────────────────────────────────
+      # Uses --noEmit so no output files are written; catches type errors only.
+      # The project's tsconfig.json covers both client and server source trees.
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+
+      # ── 5. Unit tests ──────────────────────────────────────────────────────
+      # Runs vitest directly to avoid the interactive TTY prompt that
+      # `npm test` can trigger in some CI environments.
+      #
+      # Excludes:
+      #   .worktrees/   — git worktree copies; cause EADDRINUSE port conflicts
+      #   .claude/worktrees/ — Claude Code scratch worktrees (same reason)
+      #   (node_modules and dist are already excluded in vitest.config.ts)
+      - name: Run unit tests
+        run: npx vitest run --exclude ".worktrees/**" --exclude ".claude/worktrees/**"
+
+      # ── 6. Production build ────────────────────────────────────────────────
+      # Compiles the Express server (tsc -p tsconfig.server.json) and then
+      # bundles the React client (vite build).
+      - name: Build
+        run: npm run build

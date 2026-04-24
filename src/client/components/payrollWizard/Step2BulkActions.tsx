@@ -30,11 +30,12 @@ export const STANDARD_WEEK: RowValues = {
   ficaTax: null, federalIncomeTax: null, stateIncomeTax: null, sdiTax: null,
 };
 
-function ToggleChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function ToggleChip({ active, onClick, label, title }: { active: boolean; onClick: () => void; label: string; title?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={title}
       className={`text-xs px-3 py-1 rounded-full border transition-colors ${
         active
           ? 'bg-brand-gold text-nav-dark border-brand-gold'
@@ -50,25 +51,35 @@ export function Step2BulkActions({ onApplyStandardWeekAll, projectState, toggles
   const s = projectState.toUpperCase();
   return (
     <div className="flex flex-wrap items-center gap-3 py-3">
-      <Button variant="secondary" onClick={onApplyStandardWeekAll}>
+      <Button
+        variant="secondary"
+        onClick={onApplyStandardWeekAll}
+        title="Fills all workers with 8 hours Mon–Fri (40h straight time, no OT)"
+      >
         Apply standard week to all (40 hrs Mon-Fri)
       </Button>
+      {(s === 'CA' || s === 'IL' || s === 'MA' || s === 'NJ') && (
+        <span className="text-xs text-gray-500 whitespace-nowrap">State columns:</span>
+      )}
       {s === 'CA' && (
         <>
           <ToggleChip
             active={toggles.caDt}
             onClick={() => onToggle('caDt')}
             label="CA double-time columns"
+            title="Show daily double-time columns — required for CA Labor Code §510 (hours over 12/day or 8/day on 7th day)"
           />
           <ToggleChip
             active={toggles.caFringe}
             onClick={() => onToggle('caFringe')}
             label="CA fringe disaggregation"
+            title="Show fringe benefit disaggregation — required if paying fringe components separately (H&W, Pension, Vacation, Training)"
           />
           <ToggleChip
             active={toggles.caFica}
             onClick={() => onToggle('caFica')}
             label="CA deductions (FICA, FIT, SIT)"
+            title="Show tax withholding columns — FICA, Federal/State income tax, SDI"
           />
         </>
       )}
@@ -77,6 +88,7 @@ export function Step2BulkActions({ onApplyStandardWeekAll, projectState, toggles
           active={toggles.ilNonPw}
           onClick={() => onToggle('ilNonPw')}
           label="IL non-PW hours"
+          title="Show non-prevailing-wage hours — for IL projects mixing public and private work"
         />
       )}
       {s === 'MA' && (
@@ -84,6 +96,7 @@ export function Step2BulkActions({ onApplyStandardWeekAll, projectState, toggles
           active={toggles.maFields}
           onClick={() => onToggle('maFields')}
           label="MA fields (check #, all-other hours)"
+          title="Show MA-required fields — check number, all-other hours, total gross wages"
         />
       )}
       {s === 'NJ' && (
@@ -91,6 +104,7 @@ export function Step2BulkActions({ onApplyStandardWeekAll, projectState, toggles
           active={toggles.njDeductions}
           onClick={() => onToggle('njDeductions')}
           label="NJ deductions (FICA, FIT, SIT)"
+          title="Show NJ deduction columns — FICA, Federal/State income tax"
         />
       )}
     </div>

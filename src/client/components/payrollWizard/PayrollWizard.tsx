@@ -1,5 +1,5 @@
 // src/client/components/payrollWizard/PayrollWizard.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';
 import { useWizardState } from './useWizardState';
@@ -7,11 +7,10 @@ import { Step1Roster, type Step1Values, type RosterRow } from './Step1Roster';
 import { Step2HoursGrid, type GridWorkerRow } from './Step2HoursGrid';
 import type { RowValues } from './Step2GridRow';
 import { Step3Review } from './Step3Review';
+import { StepProgress, StepTransition } from './StepTransition';
 import { useEntryMutation } from './useEntryMutation';
 import { api } from '../../lib/api';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
-import { calculateCwhssaOt } from '../../../server/services/calculations.js';
-import { DAYS } from './types';
 
 interface Props {
   projectId: string;
@@ -76,11 +75,28 @@ interface ProjectResponse {
 
 export function PayrollWizard({ projectId, weekId }: Props) {
   const [state, dispatch] = useWizardState(weekId);
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [error, setError] = useState<string | null>(null);
   const [step1, setStep1] = useState<Step1Values | null>(null);
+  const [highlightWorkerIds, setHighlightWorkerIds] = useState<Set<string>>(new Set());
   const qc = useQueryClient();
 
-  const { markDirty, flush } = useEntryMutation(state.weekId, () => dispatch({ type: 'LOCK' }));
+  function advance() { setDirection('forward');  dispatch({ type: 'ADVANCE' }); }
+  function goBack()  { setDirection('backward'); dispatch({ type: 'GO_BACK' }); }
+
+  const { markDirty, flush, saveStatus } = useEntryMutation(state.weekId, () => dispatch({ type: 'LOCK' }));
+
+  // Warn the user before closing/refreshing the tab while they have unsaved payroll data.
+  // Only active on Step 2 (hours entry) and Step 3 (review) — not Step 1 (roster setup).
+  useEffect(() => {
+    if (state.step === 'roster') return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ''; // Required for Chrome
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [state.step]);
 
   // Edit-mode: fetch week + entries. Provides lock check + pre-population data.
   const { data: weekData, isLoading: weekLoading } = useQuery<WeekDetail>({
@@ -106,7 +122,7 @@ export function PayrollWizard({ projectId, weekId }: Props) {
     onSuccess: (data, variables) => {
       setStep1(variables);
       dispatch({ type: 'SET_WEEK_ID', weekId: data.id });
-      dispatch({ type: 'ADVANCE' });
+      advance();
       qc.invalidateQueries({ queryKey: ['payroll-weeks-list', projectId] });
     },
     onError: (err) => setError(err.message),
@@ -139,67 +155,82 @@ export function PayrollWizard({ projectId, weekId }: Props) {
     );
   }
 
-  if (state.step === 'roster') {
-    return (
-      <>
-        {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-        <Step1Roster
+  const stepContent = (() => {
+    if (state.step === 'roster') {
+      return (
+        <>
+          {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+          <Step1Roster
+            projectId={projectId}
+            defaultPayrollNumber={1}
+            defaultWeekEndingDate={getNextSunday()}
+            onNext={(v) => {
+              setError(null);
+              createWeek.mutate(v);
+            }}
+          />
+        </>
+      );
+    }
+
+    if (state.step === 'hours') {
+      const gridRows = buildGridRows(step1, weekData);
+      return (
+        <Step2HoursGrid
+          initialRows={gridRows}
+          projectState={projectState}
+          saveStatus={saveStatus}
+          highlightedWorkerIds={highlightWorkerIds}
+          onRowChange={(row) => {
+            markDirty({
+              workerId: row.workerId,
+              classificationId: row.classificationId,
+              values: row.values,
+              baseRateSnapshot: row.baseRate,
+              fringeRateSnapshot: row.fringeRate,
+              deductions: row.deductions,
+              // grossWages and netPay intentionally omitted — server computes these
+            });
+          }}
+          onReview={async () => {
+            await flush();
+            await Promise.all([
+              qc.invalidateQueries({ queryKey: ['payroll-week', state.weekId] }),
+              qc.invalidateQueries({ queryKey: ['compliance', state.weekId] }),
+            ]);
+            advance();
+          }}
+          onBack={goBack}
+        />
+      );
+    }
+
+    if (state.step === 'review' && state.weekId) {
+      return (
+        <Step3Review
           projectId={projectId}
-          defaultPayrollNumber={1}
-          defaultWeekEndingDate={getNextSunday()}
-          onNext={(v) => {
-            setError(null);
-            createWeek.mutate(v);
+          weekId={state.weekId}
+          onBack={(violatedWorkerIds) => {
+            setHighlightWorkerIds(new Set(violatedWorkerIds ?? []));
+            goBack();
           }}
         />
-      </>
-    );
-  }
+      );
+    }
 
-  if (state.step === 'hours') {
-    const gridRows = buildGridRows(step1, weekData);
-    return (
-      <Step2HoursGrid
-        initialRows={gridRows}
-        projectState={projectState}
-        onRowChange={(row) => {
-          const computed = computeGrossNet(row);
-          markDirty({
-            workerId: row.workerId,
-            classificationId: row.classificationId,
-            values: row.values,
-            baseRateSnapshot: row.baseRate,
-            fringeRateSnapshot: row.fringeRate,
-            deductions: row.deductions,
-            grossWages: computed.grossWages,
-            netPay: computed.netPay,
-          });
-        }}
-        onReview={async () => {
-          await flush();
-          // Refetch week + compliance so Step 3 never shows stale cached results.
-          await Promise.all([
-            qc.invalidateQueries({ queryKey: ['payroll-week', state.weekId] }),
-            qc.invalidateQueries({ queryKey: ['compliance', state.weekId] }),
-          ]);
-          dispatch({ type: 'ADVANCE' });
-        }}
-        onBack={() => dispatch({ type: 'GO_BACK' })}
-      />
-    );
-  }
+    return null;
+  })();
 
-  if (state.step === 'review' && state.weekId) {
-    return (
-      <Step3Review
-        projectId={projectId}
-        weekId={state.weekId}
-        onBack={() => dispatch({ type: 'GO_BACK' })}
-      />
-    );
-  }
+  if (!stepContent) return null;
 
-  return null;
+  return (
+    <>
+      <StepProgress currentStep={state.step} />
+      <StepTransition key={state.step} direction={direction}>
+        {stepContent}
+      </StepTransition>
+    </>
+  );
 }
 
 function emptyRowValues(): RowValues {
@@ -214,25 +245,6 @@ function emptyRowValues(): RowValues {
   };
 }
 
-// Client-side CWHSSA gross + net computation. Mirrors what the server would compute
-// if it had the rate data — needed because server currently stores grossWages/netPay
-// unchanged from client input. Phase 64 will move computation server-side.
-function computeGrossNet(row: GridWorkerRow): { grossWages: number; netPay: number } {
-  const v = row.values;
-  const totalSt = DAYS.reduce((s, d) => s + (v[`${d}St` as keyof typeof v] as number || 0), 0);
-  const totalOt = DAYS.reduce((s, d) => s + (v[`${d}Ot` as keyof typeof v] as number || 0), 0);
-  const totalDt = DAYS.reduce((s, d) => s + (v[`${d}Dt` as keyof typeof v] as number || 0), 0);
-  const totalHoursWorked = totalSt + totalOt + totalDt;
-  const result = calculateCwhssaOt({
-    baseRate: row.baseRate,
-    fringeRate: row.fringeRate,
-    totalHoursWorked,
-    overtimeHours: totalOt + totalDt,
-  });
-  const grossWages = parseFloat(result.totalWeeklyCost.toFixed(2));
-  const netPay = parseFloat((grossWages - (row.deductions || 0)).toFixed(2));
-  return { grossWages, netPay };
-}
 
 function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefined): GridWorkerRow[] {
   // Edit mode: derive rows from existing entries

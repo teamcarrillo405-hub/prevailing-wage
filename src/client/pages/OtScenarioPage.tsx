@@ -4,12 +4,14 @@
 // Renders OtThresholdForm and OtScenarioComparison.
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Calculator } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { OtThresholdForm } from '../components/OtThresholdForm';
 import { OtScenarioComparison } from '../components/OtScenarioComparison';
 import { PageHeader } from '../components/ui/PageHeader';
+import { HelpCallout } from '../components/ui/HelpCallout';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -57,7 +59,7 @@ export function OtScenarioPage() {
           >
             &larr; Back to Project
           </button>
-          <PageHeader title="OT Scenario Planner" className="mb-0" />
+          <PageHeader title="Schedule & Overtime Cost Planner" className="mb-0" />
         </div>
 
         {isLoading && <LoadingSpinner />}
@@ -70,6 +72,12 @@ export function OtScenarioPage() {
 
         {!isLoading && (
           <div className="space-y-6">
+            <HelpCallout
+              icon={Calculator}
+              title="How this works"
+              body="Compare different work schedules to see how overtime costs change. Enter your hourly rates and daily hours to calculate total weekly labor cost under Davis-Bacon rules."
+            />
+
             {/* Threshold form — persists to DB */}
             <OtThresholdForm
               projectId={projectId!}

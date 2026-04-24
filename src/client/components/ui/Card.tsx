@@ -18,6 +18,7 @@ export function Card({ children, padding = 'default', className }: CardProps) {
     <div
       className={cn(
         'bg-surface-card rounded-card shadow-card border border-border-default',
+        'transition-all duration-150 hover:shadow-md hover:-translate-y-0.5',
         PADDING_CLASSES[padding],
         className
       )}

@@ -4,6 +4,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 
 interface BillingStatus {
   customerId: string | null;
@@ -94,7 +95,7 @@ export function BillingPage() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="text-center py-16 text-gray-500">Loading...</div>
+        <LoadingSpinner />
       </Layout>
     );
   }

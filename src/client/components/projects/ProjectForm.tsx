@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { api } from '../../lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Button } from '../ui/Button';
 
 const CreateProjectSchema = z.object({
   name: z.string().min(1, 'Job name is required').max(200),
@@ -90,6 +91,8 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
         <input
           id="proj-name"
           type="text"
+          required
+          aria-required="true"
           {...register('name')}
           className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
         />
@@ -106,6 +109,8 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             type="text"
             maxLength={2}
             placeholder="CA"
+            required
+            aria-required="true"
             {...register('state')}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm uppercase focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
@@ -119,6 +124,8 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           <input
             id="proj-county"
             type="text"
+            required
+            aria-required="true"
             {...register('county')}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
@@ -132,6 +139,8 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
         </label>
         <select
           id="proj-contract-type"
+          required
+          aria-required="true"
           {...register('contractType')}
           className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
         >
@@ -154,6 +163,8 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           <input
             id="proj-award-date"
             type="date"
+            required
+            aria-required="true"
             {...register('awardDate')}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
@@ -168,6 +179,8 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           </label>
           <select
             id="proj-funding-type"
+            required
+            aria-required="true"
             {...register('fundingType')}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           >
@@ -396,20 +409,12 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
       )}
 
       <div className="flex gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="flex-1 bg-[#F5C518] text-gray-900 font-semibold py-2 px-4 rounded hover:bg-yellow-400 transition-colors disabled:opacity-60"
-        >
+        <Button type="submit" loading={isSubmitting} disabled={isSubmitting} className="flex-1">
           {isSubmitting ? 'Creating...' : 'Create Project'}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-        >
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -170,7 +170,15 @@ export function CostEstimationPage() {
         </form>
 
         {isLoading && <p className="mt-3 text-sm text-gray-500">Loading wage determination…</p>}
-        {error && <p className="mt-3 text-sm text-red-600">Error: {error.message}</p>}
+        {error && (
+          <p className="mt-3 text-sm text-red-600">
+            {/404/.test(error.message)
+              ? 'County not found — double-check the spelling or try searching by state only.'
+              : /fetch|network|failed to fetch/i.test(error.message)
+                ? 'Could not reach the wage database. Check your connection and try again.'
+                : 'Something went wrong. Please try again.'}
+          </p>
+        )}
         {data && (
           <p className="mt-3 text-sm text-gray-600">
             Loaded <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{data.wd.wdNumber}</span>
@@ -273,9 +281,13 @@ export function CostEstimationPage() {
             <Input id="profit" label="Profit %" type="number" min={0} max={100} value={profitPct}
               onChange={e => setProfitPct(+e.target.value || 0)} />
           </div>
-          <p className="mt-2 text-xs text-gray-500">
-            Formula: (base + fringe) × (1+OH) × (1+G&amp;A) × (1+profit)
-          </p>
+          <div className="mt-3 text-xs text-gray-500 space-y-0.5">
+            <p className="font-medium text-gray-600">How your billable rate is built:</p>
+            <p>Step 1: Labor cost = Base rate + Fringe rate</p>
+            <p>Step 2: Add overhead = Labor cost × (1 + Overhead %)</p>
+            <p>Step 3: Add G&amp;A = Step 2 × (1 + G&amp;A %)</p>
+            <p>Step 4: Add profit = Step 3 × (1 + Profit %) = <span className="font-medium text-gray-700">your billable rate</span></p>
+          </div>
         </section>
       )}
 

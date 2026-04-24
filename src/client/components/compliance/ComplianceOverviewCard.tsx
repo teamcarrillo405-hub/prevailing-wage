@@ -38,11 +38,20 @@ export function ComplianceOverviewCard({
   if (isLoading) {
     return (
       <div className={cn('rounded-lg border border-gray-200 bg-white p-6 mb-6 animate-pulse', className)}>
-        <div className="h-5 w-40 bg-gray-200 rounded mb-4" />
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          {[0, 1, 2].map(i => <div key={i} className="h-16 bg-gray-100 rounded" />)}
+        {/* Header row: matches flex items-baseline justify-between mb-5 */}
+        <div className="flex items-baseline justify-between mb-5">
+          <div className="h-5 w-40 bg-gray-200 rounded" />
+          <div className="h-3.5 w-28 bg-gray-200 rounded" />
         </div>
-        <div className="h-8 bg-gray-100 rounded" />
+        {/* Stat badges: px-3 py-3 + text-2xl (~32px) + text-xs mt-0.5 (~16px) = ~76px total */}
+        <div className="grid grid-cols-3 gap-4 mb-5">
+          {[0, 1, 2].map(i => <div key={i} className="h-[76px] bg-gray-100 rounded-md" />)}
+        </div>
+        {/* Status bar area: h-3 rounded-full bar + mt-2 text-xs label */}
+        <div>
+          <div className="h-3 w-full bg-gray-200 rounded-full" />
+          <div className="mt-2 h-3.5 w-32 bg-gray-200 rounded" />
+        </div>
       </div>
     );
   }

@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Table, THead, TBody, Tr, Th, Td } from '../components/ui/Table';
+import { useToast } from '../contexts/ToastContext';
 
 interface StateCoverage {
   state: string;
@@ -55,17 +56,17 @@ export function WageCoveragePage() {
     refetchInterval: 60_000,
   });
 
+  const { toast } = useToast();
   const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   async function handleSync() {
-    setSyncing(true); setSyncMsg(null);
+    setSyncing(true);
     try {
       await triggerSync();
-      setSyncMsg('Sync started — will populate rates in the background.');
+      toast.info('Sync started — rates will populate in the background.');
       setTimeout(() => refetch(), 2000);
     } catch (e) {
-      setSyncMsg(`Sync failed: ${(e as Error).message}`);
+      toast.error(`Sync failed: ${(e as Error).message}`);
     } finally { setSyncing(false); }
   }
 
@@ -81,12 +82,6 @@ export function WageCoveragePage() {
           </Button>
         }
       />
-
-      {syncMsg && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          {syncMsg}
-        </div>
-      )}
 
       {isLoading && <p className="text-sm text-gray-500">Loading coverage…</p>}
       {error && <p className="text-sm text-red-600">Error: {(error as Error).message}</p>}

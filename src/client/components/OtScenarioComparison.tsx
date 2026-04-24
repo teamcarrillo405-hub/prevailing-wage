@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { compareScenarios } from '../../shared/otScenarios.js';
 import type { OtScenario } from '../../shared/otScenarios.js';
+import { Button } from './ui/Button';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -188,7 +189,7 @@ export function OtScenarioComparison({
                 <td className="py-2 text-right font-mono text-gray-900">
                   {fmt(r.result.totalFringePay)}
                 </td>
-                <td className="py-2 text-right font-mono font-semibold text-[#F5C518]">
+                <td className="py-2 text-right font-mono font-semibold text-brand-gold">
                   {fmt(r.result.totalWeeklyCost)}
                 </td>
                 <td className="py-2 text-right">
@@ -213,7 +214,7 @@ export function OtScenarioComparison({
 
       {/* Add Scenario Form */}
       <div className="border-t border-gray-100 pt-4">
-        <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
+        <h4 className="text-sm font-semibold text-gray-900 mb-3">
           Add Scenario
         </h4>
         <div className="flex gap-3 items-end">
@@ -239,13 +240,9 @@ export function OtScenarioComparison({
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
           </div>
-          <button
-            type="button"
-            onClick={addScenario}
-            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors"
-          >
+          <Button type="button" onClick={addScenario}>
             + Add
-          </button>
+          </Button>
         </div>
         {addError && <p className="mt-2 text-xs text-red-600">{addError}</p>}
       </div>

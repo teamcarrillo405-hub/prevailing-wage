@@ -80,7 +80,7 @@ export function LiveCalcDisplay() {
           </tr>
           <tr className="font-semibold">
             <td className="pt-2 text-gray-900">Total Weekly Cost</td>
-            <td className="pt-2 text-right font-mono text-[#F5C518]">
+            <td className="pt-2 text-right font-mono text-brand-gold">
               {fmt(result.totalWeeklyCost)}
             </td>
           </tr>

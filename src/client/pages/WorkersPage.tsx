@@ -158,8 +158,11 @@ export function WorkersPage() {
   // Delete confirmation
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // Delete-classification error state (displayed inline near the affected worker)
+  const [deleteClassError, setDeleteClassError] = useState('');
+
   // ── Queries ──────────────────────────────────────────────────────────────
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['workers', projectId],
     queryFn: () => api.get<{ data: { workers: Worker[] } }>(`/projects/${projectId}/workers`),
     enabled: !!projectId,
@@ -236,7 +239,7 @@ export function WorkersPage() {
       setForm(blankWorkerForm());
       setFormError('');
     },
-    onError: (e: Error) => setFormError(e.message),
+    onError: () => setFormError('Could not save worker — check that all required fields are filled in and try again.'),
   });
 
   const updateWorker = useMutation({
@@ -273,7 +276,7 @@ export function WorkersPage() {
       setEditingId(null);
       setEditError('');
     },
-    onError: (e: Error) => setEditError(e.message),
+    onError: () => setEditError('Could not save worker — check that all required fields are filled in and try again.'),
   });
 
   const deleteWorker = useMutation({
@@ -283,12 +286,17 @@ export function WorkersPage() {
       qc.invalidateQueries({ queryKey: ['workers', projectId] });
       setConfirmDeleteId(null);
     },
+    onError: () => setEditError('Could not remove worker — they may have payroll entries that must be deleted first.'),
   });
 
   const deleteClassification = useMutation({
     mutationFn: ({ workerId, classificationId }: { workerId: string; classificationId: string }) =>
       api.delete(`/projects/${projectId}/workers/${workerId}/classifications/${classificationId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workers', projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workers', projectId] });
+      setDeleteClassError('');
+    },
+    onError: () => setDeleteClassError('Could not update classification — try refreshing the page.'),
   });
 
   const addClassification = useMutation({
@@ -310,7 +318,7 @@ export function WorkersPage() {
       setExtraClass({ tradeCode: '', tradeDescription: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' });
       setExtraError('');
     },
-    onError: (e: Error) => setExtraError(e.message),
+    onError: () => setExtraError('Could not update classification — try refreshing the page.'),
   });
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -377,16 +385,27 @@ export function WorkersPage() {
         )}
 
         {isLoading && <LoadingSpinner />}
-        {isError && <p className="text-sm text-red-600">Failed to load workers.</p>}
+        {isError && (
+          <div className="text-center py-12">
+            <p className="text-red-600 text-sm mb-4">Failed to load workers.</p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-2.5 bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
 
         {!isLoading && !isError && workers.length === 0 && (
           <EmptyState
+            icon={Users}
             heading="No workers on this project yet"
-            message={<>Add every worker before entering payroll. Federal <TermTooltip term="Davis-Bacon" definition={DB_DEF} /> rules require all workers to be classified and logged — even if they worked only one day.</>}
+            message={<>Federal law requires all workers to be registered before entering certified payroll. Each worker's trade classification and wage rate determines overtime calculations and DOL compliance — even workers who worked only one day must be logged.</>}
             action={
               <button
                 onClick={() => {
-                  const nameInput = document.querySelector<HTMLInputElement>('input[placeholder="Full Name"]');
+                  const nameInput = document.querySelector<HTMLInputElement>('#add-worker-name');
                   if (nameInput) nameInput.focus();
                 }}
                 className="inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent text-sm px-4 py-2"
@@ -395,6 +414,14 @@ export function WorkersPage() {
               </button>
             }
           />
+        )}
+
+        {/* Ready-for-payroll nudge */}
+        {workers.length > 0 && (
+          <div className="mb-4 rounded-lg border border-brand-gold/40 bg-brand-gold/5 px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-gray-700"><span className="font-semibold">{workers.length} worker{workers.length !== 1 ? 's' : ''} registered.</span> Ready to enter payroll for the current week.</p>
+            <Link to={`/projects/${projectId}/payroll`} className="text-sm font-semibold text-brand-gold hover:underline whitespace-nowrap ml-4">Enter Payroll →</Link>
+          </div>
         )}
 
         {/* Worker list */}
@@ -406,18 +433,22 @@ export function WorkersPage() {
                 {editingId === w.id ? (
                   /* ── Inline edit form ── */
                   <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Edit Worker</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-3">Edit Worker</p>
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div className="col-span-2">
-                        <label className="block text-xs text-gray-600 mb-1">Full Name *</label>
-                        <input type="text" value={editForm.name}
+                        <label htmlFor={`edit-name-${w.id}`} className="block text-xs text-gray-600 mb-1">Full Name *</label>
+                        <input
+                          id={`edit-name-${w.id}`}
+                          type="text"
+                          value={editForm.name}
                           onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
                           className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Social Security Number</label>
+                        <label htmlFor={`edit-ssn-${w.id}`} className="block text-xs text-gray-600 mb-1">Social Security Number</label>
                         <input
+                          id={`edit-ssn-${w.id}`}
                           type="password"
                           inputMode="numeric"
                           maxLength={9}
@@ -435,8 +466,11 @@ export function WorkersPage() {
                         )}
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Trade Union</label>
-                        <input type="text" value={editForm.tradeUnion}
+                        <label htmlFor={`edit-union-${w.id}`} className="block text-xs text-gray-600 mb-1">Trade Union</label>
+                        <input
+                          id={`edit-union-${w.id}`}
+                          type="text"
+                          value={editForm.tradeUnion}
                           onChange={e => setEditForm(p => ({ ...p, tradeUnion: e.target.value }))}
                           placeholder="optional"
                           className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
@@ -444,9 +478,11 @@ export function WorkersPage() {
                       </div>
                     </div>
                     <div className="mt-4">
-                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Address <span className="text-gray-400 font-normal normal-case">(required for WH-347)</span></p>
+                      <p className="text-sm font-semibold text-gray-900 mb-2">Address <span className="text-gray-400 font-normal normal-case">(required for WH-347)</span></p>
                       <div className="space-y-2">
+                        <label htmlFor={`edit-street-${w.id}`} className="sr-only">Street address</label>
                         <input
+                          id={`edit-street-${w.id}`}
                           type="text"
                           placeholder="Street"
                           value={editForm.addressStreet}
@@ -454,72 +490,107 @@ export function WorkersPage() {
                           className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                         />
                         <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label htmlFor={`edit-city-${w.id}`} className="sr-only">City</label>
+                            <input
+                              id={`edit-city-${w.id}`}
+                              type="text"
+                              placeholder="City"
+                              value={editForm.addressCity}
+                              onChange={e => setEditForm(p => ({ ...p, addressCity: e.target.value }))}
+                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`edit-state-${w.id}`} className="sr-only">State</label>
+                            <input
+                              id={`edit-state-${w.id}`}
+                              type="text"
+                              placeholder="State"
+                              value={editForm.addressState}
+                              onChange={e => setEditForm(p => ({ ...p, addressState: e.target.value }))}
+                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`edit-zip-${w.id}`} className="sr-only">Zip code</label>
+                            <input
+                              id={`edit-zip-${w.id}`}
+                              type="text"
+                              placeholder="Zip"
+                              value={editForm.addressZip}
+                              onChange={e => setEditForm(p => ({ ...p, addressZip: e.target.value }))}
+                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <details className="mt-4 border-t border-gray-100 pt-4 group">
+                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1 list-none">
+                        Union Information
+                        <span className="text-xs font-normal text-gray-400 ml-1">(optional — click to expand)</span>
+                      </summary>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div>
+                          <label htmlFor={`edit-union-local-${w.id}`} className="sr-only">Union local</label>
                           <input
+                            id={`edit-union-local-${w.id}`}
                             type="text"
-                            placeholder="City"
-                            value={editForm.addressCity}
-                            onChange={e => setEditForm(p => ({ ...p, addressCity: e.target.value }))}
+                            placeholder="Union Local"
+                            value={editForm.unionLocal}
+                            onChange={e => setEditForm(p => ({ ...p, unionLocal: e.target.value }))}
                             className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                           />
+                        </div>
+                        <div>
+                          <label htmlFor={`edit-book-${w.id}`} className="sr-only">Union book number</label>
                           <input
+                            id={`edit-book-${w.id}`}
                             type="text"
-                            placeholder="State"
-                            value={editForm.addressState}
-                            onChange={e => setEditForm(p => ({ ...p, addressState: e.target.value }))}
-                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Zip"
-                            value={editForm.addressZip}
-                            onChange={e => setEditForm(p => ({ ...p, addressZip: e.target.value }))}
+                            placeholder="Book Number"
+                            value={editForm.unionBookNumber}
+                            onChange={e => setEditForm(p => ({ ...p, unionBookNumber: e.target.value }))}
                             className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                           />
                         </div>
                       </div>
-                    </div>
-                    <div className="mt-4 border-t border-gray-100 pt-4">
-                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Union Information</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          placeholder="Union Local"
-                          value={editForm.unionLocal}
-                          onChange={e => setEditForm(p => ({ ...p, unionLocal: e.target.value }))}
-                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Book Number"
-                          value={editForm.unionBookNumber}
-                          onChange={e => setEditForm(p => ({ ...p, unionBookNumber: e.target.value }))}
-                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                        />
-                      </div>
-                    </div>
+                    </details>
                     {w.classifications?.some(c => c.laborType === 'apprentice') && (
                       <div className="mt-4 border-t border-gray-100 pt-4">
-                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Apprenticeship</p>
+                        <p className="text-sm font-semibold text-gray-900 mb-2">Apprenticeship</p>
                         <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            placeholder="Committee"
-                            value={editForm.apprenticeshipCommittee}
-                            onChange={e => setEditForm(p => ({ ...p, apprenticeshipCommittee: e.target.value }))}
-                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Registration Number"
-                            value={editForm.apprenticeshipRegNumber}
-                            onChange={e => setEditForm(p => ({ ...p, apprenticeshipRegNumber: e.target.value }))}
-                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                          />
+                          <div>
+                            <label htmlFor={`edit-app-committee-${w.id}`} className="sr-only">Apprenticeship committee</label>
+                            <input
+                              id={`edit-app-committee-${w.id}`}
+                              type="text"
+                              placeholder="Committee"
+                              value={editForm.apprenticeshipCommittee}
+                              onChange={e => setEditForm(p => ({ ...p, apprenticeshipCommittee: e.target.value }))}
+                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`edit-app-reg-${w.id}`} className="sr-only">Apprenticeship registration number</label>
+                            <input
+                              id={`edit-app-reg-${w.id}`}
+                              type="text"
+                              placeholder="Registration Number"
+                              value={editForm.apprenticeshipRegNumber}
+                              onChange={e => setEditForm(p => ({ ...p, apprenticeshipRegNumber: e.target.value }))}
+                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
-                    <div className="mt-4 border-t border-gray-100 pt-4">
-                      <div className="flex items-center gap-2">
+                    <details className="mt-4 border-t border-gray-100 pt-4">
+                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 list-none flex items-center gap-2">
+                        Apprenticeship
+                        <span className="text-xs font-normal text-gray-400">(optional)</span>
+                      </summary>
+                      <div className="mt-3 flex items-center gap-2">
                         <input
                           type="checkbox"
                           id={`nysRegisteredApprentice-edit-${w.id}`}
@@ -531,32 +602,32 @@ export function WorkersPage() {
                           NYS Registered Apprentice
                         </label>
                       </div>
-                    </div>
+                    </details>
                     {isIL && (
                       <details className="rounded-lg border border-purple-200 bg-purple-50 p-3" open>
                         <summary className="cursor-pointer text-sm font-medium text-purple-800">IL Compliance Demographics</summary>
                         <div className="mt-3 space-y-3">
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Race</label>
-                              <input className="w-full rounded border px-2 py-1 text-sm" value={editForm.race} onChange={e => setEditForm(f => ({ ...f, race: e.target.value }))} placeholder="Optional" />
+                              <label htmlFor={`edit-il-race-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Race</label>
+                              <input id={`edit-il-race-${w.id}`} className="w-full rounded border px-2 py-1 text-sm" value={editForm.race} onChange={e => setEditForm(f => ({ ...f, race: e.target.value }))} placeholder="Optional" />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Ethnicity</label>
-                              <input className="w-full rounded border px-2 py-1 text-sm" value={editForm.ethnicity} onChange={e => setEditForm(f => ({ ...f, ethnicity: e.target.value }))} placeholder="Optional" />
+                              <label htmlFor={`edit-il-ethnicity-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Ethnicity</label>
+                              <input id={`edit-il-ethnicity-${w.id}`} className="w-full rounded border px-2 py-1 text-sm" value={editForm.ethnicity} onChange={e => setEditForm(f => ({ ...f, ethnicity: e.target.value }))} placeholder="Optional" />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
-                              <input className="w-full rounded border px-2 py-1 text-sm" value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))} placeholder="Optional" />
+                              <label htmlFor={`edit-il-gender-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
+                              <input id={`edit-il-gender-${w.id}`} className="w-full rounded border px-2 py-1 text-sm" value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))} placeholder="Optional" />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Veteran Status</label>
-                              <input className="w-full rounded border px-2 py-1 text-sm" value={editForm.veteranStatus} onChange={e => setEditForm(f => ({ ...f, veteranStatus: e.target.value }))} placeholder="Optional" />
+                              <label htmlFor={`edit-il-veteran-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Veteran Status</label>
+                              <input id={`edit-il-veteran-${w.id}`} className="w-full rounded border px-2 py-1 text-sm" value={editForm.veteranStatus} onChange={e => setEditForm(f => ({ ...f, veteranStatus: e.target.value }))} placeholder="Optional" />
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Skill Level</label>
-                            <select className="w-full rounded border px-2 py-1 text-sm" value={editForm.skillLevel} onChange={e => setEditForm(f => ({ ...f, skillLevel: e.target.value }))}>
+                            <label htmlFor={`edit-il-skill-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Skill Level</label>
+                            <select id={`edit-il-skill-${w.id}`} className="w-full rounded border px-2 py-1 text-sm" value={editForm.skillLevel} onChange={e => setEditForm(f => ({ ...f, skillLevel: e.target.value }))}>
                               <option value="">Not specified</option>
                               <option value="journeyman">Journeyman</option>
                               <option value="apprentice">Apprentice</option>
@@ -606,7 +677,9 @@ export function WorkersPage() {
                     {isNJ && (
                       <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
                         <p className="text-sm font-medium text-indigo-800 mb-2">NJ EEO — Sex</p>
+                        <label htmlFor={`edit-nj-sex-${w.id}`} className="sr-only">Worker sex (NJ EEO)</label>
                         <select
+                          id={`edit-nj-sex-${w.id}`}
                           className="w-full rounded border px-2 py-1 text-sm"
                           value={editForm.workerSex ?? ''}
                           onChange={e => setEditForm(f => ({ ...f, workerSex: e.target.value || null }))}
@@ -631,12 +704,18 @@ export function WorkersPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-700">Remove <span className="font-medium">{w.name}</span> and all their trade assignments?</p>
                     <div className="flex gap-2">
-                      <button onClick={() => deleteWorker.mutate(w.id)} disabled={deleteWorker.isPending}
-                        className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 disabled:opacity-50 transition-colors">
+                      <button
+                        onClick={() => deleteWorker.mutate(w.id)}
+                        disabled={deleteWorker.isPending}
+                        className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        aria-label={`Confirm remove ${w.name}`}
+                      >
                         {deleteWorker.isPending ? 'Removing...' : 'Yes, Remove'}
                       </button>
-                      <button onClick={() => setConfirmDeleteId(null)}
-                        className="px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                      >
                         Cancel
                       </button>
                     </div>
@@ -680,6 +759,7 @@ export function WorkersPage() {
                         <button
                           onClick={() => { setEditingId(w.id); setEditForm(workerToEditForm(w)); setAddingClassFor(null); }}
                           className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                          aria-label={`Edit ${w.name}`}
                         >
                           Edit
                         </button>
@@ -687,6 +767,7 @@ export function WorkersPage() {
                           <button
                             onClick={() => { setAddingClassFor(addingClassFor === w.id ? null : w.id); setExtraError(''); setExtraClass({ tradeCode: '', tradeDescription: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' }); setEditingId(null); }}
                             className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                            aria-label={`Add trade for ${w.name}`}
                           >
                             + Trade
                           </button>
@@ -694,6 +775,7 @@ export function WorkersPage() {
                         <button
                           onClick={() => { setConfirmDeleteId(w.id); setEditingId(null); setAddingClassFor(null); }}
                           className="text-xs text-red-400 border border-red-200 rounded px-3 py-1.5 hover:bg-red-50 transition-colors"
+                          aria-label={`Remove ${w.name}`}
                         >
                           Remove
                         </button>
@@ -703,6 +785,9 @@ export function WorkersPage() {
                     {/* Classifications */}
                     {w.classifications.length > 0 && (
                       <div className="mt-3 divide-y divide-gray-100 border border-gray-100 rounded">
+                        {deleteClassError && (
+                          <p className="px-3 py-2 text-xs text-red-600">{deleteClassError}</p>
+                        )}
                         {w.classifications.map((c) => (
                           <div key={c.id} className="flex items-center justify-between px-3 py-2">
                             <div>
@@ -721,7 +806,8 @@ export function WorkersPage() {
                               </div>
                               <button
                                 onClick={() => deleteClassification.mutate({ workerId: w.id, classificationId: c.id })}
-                                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                                className="p-2 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                                aria-label={`Remove ${c.tradeDescription} classification for ${w.name}`}
                                 title="Remove trade"
                               >
                                 ×
@@ -735,21 +821,27 @@ export function WorkersPage() {
                     {/* Add extra classification */}
                     {addingClassFor === w.id && (
                       <div className="mt-4 border-t border-gray-100 pt-4">
-                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Add Another Trade</p>
+                        <p className="text-sm font-semibold text-gray-900 mb-3">Add Another Trade</p>
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           {isWA ? (
                             <>
                               <div>
-                                <label className="block text-xs text-gray-600 mb-1">Trade Code</label>
-                                <input type="text" value={extraClass.tradeCode}
+                                <label htmlFor={`extra-trade-code-${w.id}`} className="block text-xs text-gray-600 mb-1">Trade Code</label>
+                                <input
+                                  id={`extra-trade-code-${w.id}`}
+                                  type="text"
+                                  value={extraClass.tradeCode}
                                   onChange={(e) => setExtraClass(p => ({ ...p, tradeCode: e.target.value.toUpperCase() }))}
                                   placeholder="e.g. CARP"
                                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs text-gray-600 mb-1">Trade Description</label>
-                                <input type="text" value={extraClass.tradeDescription ?? ''}
+                                <label htmlFor={`extra-trade-desc-${w.id}`} className="block text-xs text-gray-600 mb-1">Trade Description</label>
+                                <input
+                                  id={`extra-trade-desc-${w.id}`}
+                                  type="text"
+                                  value={extraClass.tradeDescription ?? ''}
                                   onChange={(e) => setExtraClass(p => ({ ...p, tradeDescription: e.target.value }))}
                                   placeholder="e.g. Carpenter"
                                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
@@ -758,8 +850,9 @@ export function WorkersPage() {
                             </>
                           ) : (
                             <div className="col-span-2">
-                              <label className="block text-xs text-gray-600 mb-1">Trade Classification</label>
+                              <label htmlFor={`extra-trade-select-${w.id}`} className="block text-xs text-gray-600 mb-1">Trade Classification</label>
                               <select
+                                id={`extra-trade-select-${w.id}`}
                                 value={extraClass.tradeCode}
                                 onChange={(e) => setExtraClass(p => ({ ...p, tradeCode: e.target.value }))}
                                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
@@ -774,8 +867,9 @@ export function WorkersPage() {
                             </div>
                           )}
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1">Labor Type</label>
+                            <label htmlFor={`extra-labor-type-${w.id}`} className="block text-xs text-gray-600 mb-1">Labor Type</label>
                             <select
+                              id={`extra-labor-type-${w.id}`}
                               value={extraClass.laborType}
                               onChange={(e) => setExtraClass(p => ({ ...p, laborType: e.target.value as typeof extraClass.laborType }))}
                               className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
@@ -785,8 +879,13 @@ export function WorkersPage() {
                           </div>
                           {extraClass.laborType === 'apprentice' && (
                             <div>
-                              <label className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
-                              <input type="number" min="0" max="100" value={extraClass.apprenticePercent}
+                              <label htmlFor={`extra-app-pct-${w.id}`} className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
+                              <input
+                                id={`extra-app-pct-${w.id}`}
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={extraClass.apprenticePercent}
                                 onChange={(e) => setExtraClass(p => ({ ...p, apprenticePercent: e.target.value }))}
                                 placeholder="e.g. 80"
                                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
@@ -795,8 +894,9 @@ export function WorkersPage() {
                           )}
                           {extraClass.laborType === 'apprentice' && (
                             <div className="col-span-2">
-                              <label className="block text-xs text-gray-600 mb-1">DOL Apprenticeship Program Name <span className="text-gray-400">(optional)</span></label>
+                              <label htmlFor={`extra-program-name-${w.id}`} className="block text-xs text-gray-600 mb-1">DOL Apprenticeship Program Name <span className="text-gray-400">(optional)</span></label>
                               <input
+                                id={`extra-program-name-${w.id}`}
                                 type="text"
                                 placeholder="DOL apprenticeship program name (optional)"
                                 value={extraClass.programName}
@@ -809,10 +909,11 @@ export function WorkersPage() {
                             <div className="col-span-2 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
                               <p className="text-xs font-medium text-blue-800">Washington Prevailing Wage</p>
                               <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                <label htmlFor={`extra-wa-rate-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">
                                   WA Prevailing Rate ($/hr)
                                 </label>
                                 <input
+                                  id={`extra-wa-rate-${w.id}`}
                                   type="number"
                                   step="0.01"
                                   min="0"
@@ -823,10 +924,11 @@ export function WorkersPage() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                <label htmlFor={`extra-wa-trade-code-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">
                                   WA Trade Code
                                 </label>
                                 <select
+                                  id={`extra-wa-trade-code-${w.id}`}
                                   value={extraClass.waTradeCode}
                                   onChange={(e) => setExtraClass(s => ({ ...s, waTradeCode: e.target.value }))}
                                   className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
@@ -855,10 +957,9 @@ export function WorkersPage() {
                         </div>
                         {extraError && <p className="text-xs text-red-600 mb-2">{extraError}</p>}
                         <div className="flex gap-2">
-                          <button onClick={() => handleAddExtraClass(w.id)} disabled={addClassification.isPending}
-                            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 disabled:opacity-50 transition-colors">
+                          <Button onClick={() => handleAddExtraClass(w.id)} disabled={addClassification.isPending}>
                             {addClassification.isPending ? 'Saving...' : 'Save'}
-                          </button>
+                          </Button>
                           <button onClick={() => setAddingClassFor(null)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
                         </div>
                       </div>
@@ -879,15 +980,20 @@ export function WorkersPage() {
             {/* Name + SSN + Union */}
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Full Name *</label>
-                <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                <label htmlFor="add-worker-name" className="block text-xs text-gray-600 mb-1">Full Name *</label>
+                <input
+                  id="add-worker-name"
+                  type="text"
+                  value={form.name}
+                  onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="e.g. John Smith"
                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Social Security Number (optional)</label>
+                <label htmlFor="add-worker-ssn" className="block text-xs text-gray-600 mb-1">Social Security Number (optional)</label>
                 <input
+                  id="add-worker-ssn"
                   type="password"
                   inputMode="numeric"
                   maxLength={9}
@@ -899,17 +1005,23 @@ export function WorkersPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Trade Union (optional)</label>
-                <input type="text" value={form.tradeUnion} onChange={e => setForm(p => ({ ...p, tradeUnion: e.target.value }))}
+                <label htmlFor="add-worker-union" className="block text-xs text-gray-600 mb-1">Trade Union (optional)</label>
+                <input
+                  id="add-worker-union"
+                  type="text"
+                  value={form.tradeUnion}
+                  onChange={e => setForm(p => ({ ...p, tradeUnion: e.target.value }))}
                   placeholder="e.g. Carpenters Local 150"
                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Address <span className="text-gray-400 font-normal normal-case">(required for WH-347)</span></p>
+              <p className="text-sm font-semibold text-gray-900 mb-2">Address <span className="text-gray-400 font-normal normal-case">(required for WH-347)</span></p>
               <div className="space-y-2">
+                <label htmlFor="add-worker-street" className="sr-only">Street address</label>
                 <input
+                  id="add-worker-street"
                   type="text"
                   placeholder="Street"
                   value={form.addressStreet}
@@ -917,52 +1029,79 @@ export function WorkersPage() {
                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
                 <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label htmlFor="add-worker-city" className="sr-only">City</label>
+                    <input
+                      id="add-worker-city"
+                      type="text"
+                      placeholder="City"
+                      value={form.addressCity}
+                      onChange={e => setForm(p => ({ ...p, addressCity: e.target.value }))}
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="add-worker-state" className="sr-only">State</label>
+                    <input
+                      id="add-worker-state"
+                      type="text"
+                      placeholder="State"
+                      value={form.addressState}
+                      onChange={e => setForm(p => ({ ...p, addressState: e.target.value }))}
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="add-worker-zip" className="sr-only">Zip code</label>
+                    <input
+                      id="add-worker-zip"
+                      type="text"
+                      placeholder="Zip"
+                      value={form.addressZip}
+                      onChange={e => setForm(p => ({ ...p, addressZip: e.target.value }))}
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details className="mt-2 border-t border-gray-100 pt-4 group">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1 list-none">
+                Union Information
+                <span className="text-xs font-normal text-gray-400 ml-1">(optional — click to expand)</span>
+              </summary>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div>
+                  <label htmlFor="add-worker-union-local" className="sr-only">Union local</label>
                   <input
+                    id="add-worker-union-local"
                     type="text"
-                    placeholder="City"
-                    value={form.addressCity}
-                    onChange={e => setForm(p => ({ ...p, addressCity: e.target.value }))}
+                    placeholder="Union Local"
+                    value={form.unionLocal}
+                    onChange={e => setForm(p => ({ ...p, unionLocal: e.target.value }))}
                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                   />
+                </div>
+                <div>
+                  <label htmlFor="add-worker-book-number" className="sr-only">Union book number</label>
                   <input
+                    id="add-worker-book-number"
                     type="text"
-                    placeholder="State"
-                    value={form.addressState}
-                    onChange={e => setForm(p => ({ ...p, addressState: e.target.value }))}
-                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Zip"
-                    value={form.addressZip}
-                    onChange={e => setForm(p => ({ ...p, addressZip: e.target.value }))}
+                    placeholder="Book Number"
+                    value={form.unionBookNumber}
+                    onChange={e => setForm(p => ({ ...p, unionBookNumber: e.target.value }))}
                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                   />
                 </div>
               </div>
-            </div>
-            <div className="mt-2 border-t border-gray-100 pt-4">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Union Information</p>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Union Local"
-                  value={form.unionLocal}
-                  onChange={e => setForm(p => ({ ...p, unionLocal: e.target.value }))}
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                />
-                <input
-                  type="text"
-                  placeholder="Book Number"
-                  value={form.unionBookNumber}
-                  onChange={e => setForm(p => ({ ...p, unionBookNumber: e.target.value }))}
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                />
-              </div>
-            </div>
+            </details>
 
-            <div className="mt-2 border-t border-gray-100 pt-4">
-              <div className="flex items-center gap-2">
+            <details className="mt-2 border-t border-gray-100 pt-4">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-700 list-none flex items-center gap-2">
+                Apprenticeship
+                <span className="text-xs font-normal text-gray-400">(optional)</span>
+              </summary>
+              <div className="mt-3 flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="nysRegisteredApprentice"
@@ -974,7 +1113,7 @@ export function WorkersPage() {
                   NYS Registered Apprentice
                 </label>
               </div>
-            </div>
+            </details>
 
             {isIL && (
               <details className="rounded-lg border border-purple-200 bg-purple-50 p-3" open>
@@ -982,25 +1121,25 @@ export function WorkersPage() {
                 <div className="mt-3 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Race</label>
-                      <input className="w-full rounded border px-2 py-1 text-sm" value={form.race} onChange={e => setForm(f => ({ ...f, race: e.target.value }))} placeholder="Optional" />
+                      <label htmlFor="add-il-race" className="block text-xs font-medium text-gray-700 mb-1">Race</label>
+                      <input id="add-il-race" className="w-full rounded border px-2 py-1 text-sm" value={form.race} onChange={e => setForm(f => ({ ...f, race: e.target.value }))} placeholder="Optional" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Ethnicity</label>
-                      <input className="w-full rounded border px-2 py-1 text-sm" value={form.ethnicity} onChange={e => setForm(f => ({ ...f, ethnicity: e.target.value }))} placeholder="Optional" />
+                      <label htmlFor="add-il-ethnicity" className="block text-xs font-medium text-gray-700 mb-1">Ethnicity</label>
+                      <input id="add-il-ethnicity" className="w-full rounded border px-2 py-1 text-sm" value={form.ethnicity} onChange={e => setForm(f => ({ ...f, ethnicity: e.target.value }))} placeholder="Optional" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
-                      <input className="w-full rounded border px-2 py-1 text-sm" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} placeholder="Optional" />
+                      <label htmlFor="add-il-gender" className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
+                      <input id="add-il-gender" className="w-full rounded border px-2 py-1 text-sm" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} placeholder="Optional" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Veteran Status</label>
-                      <input className="w-full rounded border px-2 py-1 text-sm" value={form.veteranStatus} onChange={e => setForm(f => ({ ...f, veteranStatus: e.target.value }))} placeholder="Optional" />
+                      <label htmlFor="add-il-veteran" className="block text-xs font-medium text-gray-700 mb-1">Veteran Status</label>
+                      <input id="add-il-veteran" className="w-full rounded border px-2 py-1 text-sm" value={form.veteranStatus} onChange={e => setForm(f => ({ ...f, veteranStatus: e.target.value }))} placeholder="Optional" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Skill Level</label>
-                    <select className="w-full rounded border px-2 py-1 text-sm" value={form.skillLevel} onChange={e => setForm(f => ({ ...f, skillLevel: e.target.value }))}>
+                    <label htmlFor="add-il-skill" className="block text-xs font-medium text-gray-700 mb-1">Skill Level</label>
+                    <select id="add-il-skill" className="w-full rounded border px-2 py-1 text-sm" value={form.skillLevel} onChange={e => setForm(f => ({ ...f, skillLevel: e.target.value }))}>
                       <option value="">Not specified</option>
                       <option value="journeyman">Journeyman</option>
                       <option value="apprentice">Apprentice</option>
@@ -1012,7 +1151,7 @@ export function WorkersPage() {
 
             {/* Trade selection */}
             <div className="border-t border-gray-100 pt-4">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Trade Classification</p>
+              <p className="text-sm font-semibold text-gray-900 mb-3">Trade Classification</p>
 
               {wdLoading ? (
                 <p className="text-sm text-gray-400">Loading available trades...</p>
@@ -1020,22 +1159,33 @@ export function WorkersPage() {
                 /* WA projects: manual trade entry + WA rate section */
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Trade Code</label>
-                    <input type="text" value={form.tradeCode} onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value.toUpperCase() }))}
+                    <label htmlFor="add-wa-trade-code" className="block text-xs text-gray-600 mb-1">Trade Code</label>
+                    <input
+                      id="add-wa-trade-code"
+                      type="text"
+                      value={form.tradeCode}
+                      onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value.toUpperCase() }))}
                       placeholder="e.g. CARP"
                       className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Trade Description</label>
-                    <input type="text" value={form.tradeDescription} onChange={e => setForm(p => ({ ...p, tradeDescription: e.target.value }))}
+                    <label htmlFor="add-wa-trade-desc" className="block text-xs text-gray-600 mb-1">Trade Description</label>
+                    <input
+                      id="add-wa-trade-desc"
+                      type="text"
+                      value={form.tradeDescription}
+                      onChange={e => setForm(p => ({ ...p, tradeDescription: e.target.value }))}
                       placeholder="e.g. Carpenter"
                       className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Labor Type</label>
-                    <select value={form.laborType} onChange={e => setForm(p => ({ ...p, laborType: e.target.value as typeof form.laborType }))}
+                    <label htmlFor="add-wa-labor-type" className="block text-xs text-gray-600 mb-1">Labor Type</label>
+                    <select
+                      id="add-wa-labor-type"
+                      value={form.laborType}
+                      onChange={e => setForm(p => ({ ...p, laborType: e.target.value as typeof form.laborType }))}
                       className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     >
                       {LABOR_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
@@ -1043,8 +1193,13 @@ export function WorkersPage() {
                   </div>
                   {form.laborType === 'apprentice' && (
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
-                      <input type="number" min="0" max="100" value={form.apprenticePercent}
+                      <label htmlFor="add-wa-app-pct" className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
+                      <input
+                        id="add-wa-app-pct"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={form.apprenticePercent}
                         onChange={e => setForm(p => ({ ...p, apprenticePercent: e.target.value }))}
                         placeholder="e.g. 80"
                         className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
@@ -1055,17 +1210,22 @@ export function WorkersPage() {
                     <p className="text-xs font-medium text-blue-800">Washington Prevailing Wage</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Prevailing Rate ($/hr)</label>
+                        <label htmlFor="add-wa-manual-rate" className="block text-xs font-medium text-gray-700 mb-1">Prevailing Rate ($/hr)</label>
                         <input
-                          type="number" step="0.01" min="0" placeholder="e.g. 58.25"
+                          id="add-wa-manual-rate"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g. 58.25"
                           value={form.waManualRate}
                           onChange={(e) => setForm(f => ({ ...f, waManualRate: e.target.value }))}
                           className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">WA Trade Code</label>
+                        <label htmlFor="add-wa-trade-code-select" className="block text-xs font-medium text-gray-700 mb-1">WA Trade Code</label>
                         <select
+                          id="add-wa-trade-code-select"
                           value={form.waTradeCode}
                           onChange={(e) => setForm(f => ({ ...f, waTradeCode: e.target.value }))}
                           className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
@@ -1095,8 +1255,11 @@ export function WorkersPage() {
               ) : hasWd ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-xs text-gray-600 mb-1">Trade</label>
-                    <select value={form.tradeCode} onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value }))}
+                    <label htmlFor="add-trade-select" className="block text-xs text-gray-600 mb-1">Trade</label>
+                    <select
+                      id="add-trade-select"
+                      value={form.tradeCode}
+                      onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value }))}
                       className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     >
                       <option value="">— Select a trade —</option>
@@ -1108,8 +1271,11 @@ export function WorkersPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Labor Type</label>
-                    <select value={form.laborType} onChange={e => setForm(p => ({ ...p, laborType: e.target.value as typeof form.laborType }))}
+                    <label htmlFor="add-labor-type" className="block text-xs text-gray-600 mb-1">Labor Type</label>
+                    <select
+                      id="add-labor-type"
+                      value={form.laborType}
+                      onChange={e => setForm(p => ({ ...p, laborType: e.target.value as typeof form.laborType }))}
                       className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     >
                       {LABOR_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
@@ -1117,8 +1283,13 @@ export function WorkersPage() {
                   </div>
                   {form.laborType === 'apprentice' && (
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
-                      <input type="number" min="0" max="100" value={form.apprenticePercent}
+                      <label htmlFor="add-app-pct" className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
+                      <input
+                        id="add-app-pct"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={form.apprenticePercent}
                         onChange={e => setForm(p => ({ ...p, apprenticePercent: e.target.value }))}
                         placeholder="e.g. 80"
                         className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
@@ -1127,8 +1298,9 @@ export function WorkersPage() {
                   )}
                   {form.laborType === 'apprentice' && (
                     <div className="col-span-2">
-                      <label className="block text-xs text-gray-600 mb-1">DOL Apprenticeship Program Name <span className="text-gray-400">(optional)</span></label>
+                      <label htmlFor="add-program-name" className="block text-xs text-gray-600 mb-1">DOL Apprenticeship Program Name <span className="text-gray-400">(optional)</span></label>
                       <input
+                        id="add-program-name"
                         type="text"
                         placeholder="DOL apprenticeship program name (optional)"
                         value={form.programName}

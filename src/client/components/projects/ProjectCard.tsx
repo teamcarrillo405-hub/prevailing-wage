@@ -77,25 +77,30 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
       </div>
 
       {/* Compliance badge + week stats — DASH-01 / DASH-02 */}
-      {!summaryLoading && (
-        <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
-          {summary?.badge === 'violations' && (
-            <Badge variant="violation">Violations</Badge>
-          )}
-          {summary?.badge === 'clean' && summary.weekCount > 0 && (
-            <Badge variant="compliant">Clean</Badge>
-          )}
-          {(!summary || summary.weekCount === 0) && (
-            <Badge variant="neutral">No payroll</Badge>
-          )}
-          {summary && summary.weekCount > 0 && (
-            <span className="text-xs text-gray-500">
-              {summary.weekCount} week{summary.weekCount !== 1 ? 's' : ''}
-              {summary.lastWeekNumber != null ? `, Week ${summary.lastWeekNumber}` : ''}
-            </span>
-          )}
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
+        {summaryLoading ? (
+          // Neutral skeleton while async fetch is in-flight — prevents flicker
+          <div className="h-5 w-16 rounded-full bg-gray-100 animate-pulse" />
+        ) : (
+          <>
+            {summary?.badge === 'violations' && (
+              <Badge variant="violation">Violations</Badge>
+            )}
+            {summary?.badge === 'clean' && summary.weekCount > 0 && (
+              <Badge variant="compliant">Clean</Badge>
+            )}
+            {(!summary || summary.weekCount === 0) && (
+              <Badge variant="neutral">No payroll</Badge>
+            )}
+            {summary && summary.weekCount > 0 && (
+              <span className="text-xs text-gray-500">
+                {summary.weekCount} week{summary.weekCount !== 1 ? 's' : ''}
+                {summary.lastWeekNumber != null ? `, Week ${summary.lastWeekNumber}` : ''}
+              </span>
+            )}
+          </>
+        )}
+      </div>
 
       <p className="text-xs text-gray-500">
         Award date: {project.awardDate}

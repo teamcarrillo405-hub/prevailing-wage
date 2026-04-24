@@ -1,0 +1,40 @@
+# Security Audit — prevailing-wage
+#
+# Runs automatically every Monday at 9 AM UTC.
+# Can also be triggered manually from the Actions tab (workflow_dispatch).
+#
+# Flags any dependency with a HIGH or CRITICAL severity CVE.
+# Fix advisories with: npm audit fix
+
+name: Security Audit
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 09:00 UTC
+  workflow_dispatch:        # Allow manual trigger from the Actions tab
+
+jobs:
+  audit:
+    name: npm audit (high+)
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Source ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ─────────────────────────────────────────────────────────
+      - name: Setup Node.js 20 (LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── 3. Dependencies ────────────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. Security audit ─────────────────────────────────────────────────
+      # Exits non-zero (fails the job) only for HIGH or CRITICAL advisories.
+      # Moderate/low findings are reported but do not block.
+      - name: Audit dependencies
+        run: npm audit --audit-level=high

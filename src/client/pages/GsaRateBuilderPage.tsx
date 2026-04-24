@@ -4,6 +4,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { GsaRateForm, type GsaRateFormValues } from '../components/GsaRateForm.js';
 import { GsaRateDisplay } from '../components/GsaRateDisplay.js';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Button } from '../components/ui/Button';
 
 interface SavedRate extends GsaRateFormValues {
   id: string;
@@ -64,13 +65,9 @@ export function GsaRateBuilderPage({ projectId }: Props) {
           <GsaRateDisplay />
           {saveError && <p className="text-sm text-red-600">{saveError}</p>}
           <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-[#F5C518] text-black text-sm font-semibold px-4 py-2 rounded hover:bg-yellow-400 disabled:opacity-50"
-            >
+            <Button type="submit" disabled={saving}>
               {saving ? 'Saving...' : 'Save Rate'}
-            </button>
+            </Button>
           </div>
         </form>
       </FormProvider>
@@ -90,7 +87,7 @@ export function GsaRateBuilderPage({ projectId }: Props) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-mono font-semibold text-[#F5C518]">
+                  <div className="font-mono font-semibold text-brand-gold">
                     {rate.billableRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}/hr
                   </div>
                   <div className="text-xs text-gray-500">billable rate</div>

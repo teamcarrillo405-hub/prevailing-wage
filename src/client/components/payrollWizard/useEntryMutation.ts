@@ -4,7 +4,7 @@
 // - flush() drains the dirty set, fires one POST /payroll/entries per row in parallel,
 //   and re-queues any row whose save failed for non-409 reasons.
 // - 409 (week isFinal=true) triggers onLocked() — caller should set wizard state.locked.
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { DirtySet } from './dirtySet';
 import type { RowValues } from './Step2GridRow';
@@ -16,19 +16,25 @@ export interface EntryPayload {
   baseRateSnapshot: number;
   fringeRateSnapshot: number;
   deductions: number;
-  grossWages: number;
-  netPay: number;
+  // grossWages and netPay intentionally omitted from client — server computes these
+  grossWages?: number | null;
+  netPay?: number | null;
 }
 
 export function useEntryMutation(weekId: string | null, onLocked: () => void) {
   const dirty = useRef(new DirtySet());
   const rowData = useRef(new Map<string, EntryPayload>());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving'>('idle');
 
   const flush = useCallback(async () => {
     if (!weekId) return;
     const dirtyRows = dirty.current.drain();
-    if (dirtyRows.length === 0) return;
+    if (dirtyRows.length === 0) {
+      setSaveStatus('idle');
+      return;
+    }
+    setSaveStatus('saving');
     await Promise.all(
       dirtyRows.map(async ({ workerId, classificationId }) => {
         const key = `${workerId}::${classificationId}`;
@@ -46,8 +52,8 @@ export function useEntryMutation(weekId: string | null, onLocked: () => void) {
             baseRateSnapshot: payload.baseRateSnapshot,
             fringeRateSnapshot: payload.fringeRateSnapshot,
             deductions: payload.deductions,
-            grossWages: payload.grossWages,
-            netPay: payload.netPay,
+            grossWages: null,
+            netPay: null,
           });
         } catch (err) {
           const status = (err as Error & { status?: number }).status;
@@ -60,10 +66,12 @@ export function useEntryMutation(weekId: string | null, onLocked: () => void) {
         }
       })
     );
+    setSaveStatus('idle');
   }, [weekId, onLocked]);
 
   const markDirty = useCallback(
     (payload: EntryPayload) => {
+      setSaveStatus('pending');
       const key = `${payload.workerId}::${payload.classificationId}`;
       rowData.current.set(key, payload);
       dirty.current.add(payload.workerId, payload.classificationId);
@@ -84,5 +92,5 @@ export function useEntryMutation(weekId: string | null, onLocked: () => void) {
     return () => window.removeEventListener('beforeunload', beforeUnload);
   }, [flush]);
 
-  return { markDirty, flush };
+  return { markDirty, flush, saveStatus };
 }

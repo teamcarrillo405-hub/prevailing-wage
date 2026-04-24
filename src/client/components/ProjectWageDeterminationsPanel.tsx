@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
+import { useToast } from '../contexts/ToastContext';
 
 interface PinnedWd {
   wageDeterminationId: string;
@@ -23,6 +24,7 @@ async function fetchPins(projectId: string): Promise<{ pins: PinnedWd[] }> {
 
 export function ProjectWageDeterminationsPanel({ projectId, projectState, projectCounty }: Props) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const queryKey = ['project-wds', projectId];
 
   const { data, isLoading, error } = useQuery<{ pins: PinnedWd[] }, Error>({
@@ -36,7 +38,8 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
         method: 'DELETE',
         credentials: 'include',
       }).then((r) => { if (!r.ok) throw new Error('Unpin failed'); }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey }); toast.success('Wage determination unpinned'); },
+    onError: () => toast.error('Could not unpin wage determination'),
   });
 
   const setPrimary = useMutation({
@@ -47,7 +50,8 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPrimary: true }),
       }).then((r) => { if (!r.ok) throw new Error('Set primary failed'); }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey }); toast.success('Primary wage determination updated'); },
+    onError: () => toast.error('Could not set primary wage determination'),
   });
 
   const wageLookupUrl = `/wages?state=${projectState}&county=${encodeURIComponent(projectCounty)}`;
@@ -61,7 +65,7 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
     <Card className="mt-4" padding="default">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-gray-900">Wage Determinations</h3>
-        <a href={wageLookupUrl} className="text-xs text-blue-600 hover:underline">
+        <a href={wageLookupUrl} className="text-xs text-brand-gold hover:underline">
           + Add WD
         </a>
       </div>
@@ -69,7 +73,7 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
       {pins.length === 0 ? (
         <p className="text-sm text-gray-500">
           No wage determinations pinned.{' '}
-          <a href={wageLookupUrl} className="text-blue-600 hover:underline">Look one up</a>.
+          <a href={wageLookupUrl} className="text-brand-gold hover:underline">Look one up</a>.
         </p>
       ) : (
         <table className="w-full text-sm">
@@ -91,7 +95,7 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
                     <Badge variant="compliant">Primary</Badge>
                   ) : (
                     <button
-                      className="text-xs text-blue-600 hover:underline"
+                      className="text-xs text-brand-gold hover:underline"
                       onClick={() => setPrimary.mutate(pin.wageDeterminationId)}
                       disabled={setPrimary.isPending}
                     >

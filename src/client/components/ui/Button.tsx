@@ -7,6 +7,7 @@ type ButtonSize = 'sm' | 'md';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  loading?: boolean;
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
@@ -16,8 +17,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'text-xs px-3 py-1.5',
-  md: 'text-sm px-4 py-2',
+  sm: 'text-xs px-3 py-2.5',
+  md: 'text-sm px-4 py-2.5',
 };
 
 export function Button({
@@ -25,13 +26,18 @@ export function Button({
   size = 'md',
   className,
   children,
+  disabled,
+  loading = false,
   ...props
 }: ButtonProps) {
   return (
     <button
+      disabled={disabled || loading}
+      aria-disabled={disabled || loading}
+      aria-busy={loading}
       className={cn(
         'inline-flex items-center justify-center font-semibold rounded-sm',
-        'transition-colors duration-150',
+        'transition-all duration-150 active:scale-95',
         'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         VARIANT_CLASSES[variant],
@@ -40,6 +46,12 @@ export function Button({
       )}
       {...props}
     >
+      {loading && (
+        <svg className="animate-spin -ml-0.5 mr-2 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      )}
       {children}
     </button>
   );

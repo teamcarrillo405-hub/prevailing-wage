@@ -1,6 +1,7 @@
 // src/client/components/ManualWageEntryForm.tsx
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../contexts/ToastContext';
 import type { WageDetermination } from '../../shared/types.js';
 
 interface ClassificationRow {
@@ -26,6 +27,7 @@ const emptyRow = (): ClassificationRow => ({
 });
 
 export function ManualWageEntryForm({ state, county, onSuccess }: Props) {
+  const { toast } = useToast();
   const [wdNumber, setWdNumber] = useState('');
   const [constructionType, setConstructionType] = useState('');
   const [rows, setRows] = useState<ClassificationRow[]>([emptyRow()]);
@@ -58,7 +60,8 @@ export function ManualWageEntryForm({ state, county, onSuccess }: Props) {
       }
       return res.json() as Promise<{ wd: WageDetermination }>;
     },
-    onSuccess: (data) => onSuccess(data.wd),
+    onSuccess: (data) => { toast.success('Manual wage entry saved'); onSuccess(data.wd); },
+    onError: (err: Error) => toast.error(err.message || 'Could not save wage entry'),
   });
 
   const updateRow = (i: number, field: keyof ClassificationRow, value: string) => {
@@ -109,7 +112,7 @@ export function ManualWageEntryForm({ state, county, onSuccess }: Props) {
         </div>
       </div>
 
-      <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Classifications</h4>
+      <h4 className="text-sm font-semibold text-gray-900 mb-2">Classifications</h4>
       {rows.map((row, i) => (
         <div key={i} className="grid grid-cols-6 gap-2 mb-2 items-center">
           <input
@@ -156,7 +159,7 @@ export function ManualWageEntryForm({ state, county, onSuccess }: Props) {
       <button
         type="button"
         onClick={addRow}
-        className="text-sm text-blue-600 hover:underline mb-4"
+        className="text-sm text-brand-gold hover:underline mb-4"
       >
         + Add Classification
       </button>

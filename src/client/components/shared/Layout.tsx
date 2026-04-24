@@ -1,8 +1,16 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+
+function navCls({ isActive }: { isActive: boolean }) {
+  return `text-sm transition-colors ${
+    isActive
+      ? 'text-brand-gold font-semibold border-b-2 border-brand-gold pb-0.5'
+      : 'text-gray-300 hover:text-brand-gold'
+  }`;
+}
 
 interface LayoutProps {
   children: ReactNode;
@@ -36,29 +44,27 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-brand-gold focus:text-nav-dark focus:font-semibold focus:rounded-sm focus:text-sm"
+      >
+        Skip to main content
+      </a>
       <nav className="bg-nav-dark border-b-4 border-brand-gold">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <Link to="/dashboard" className="font-headline text-xl text-white tracking-wide hover:text-brand-gold transition-colors">
             HCC Prevailing Wage
           </Link>
           <div className="flex items-center gap-4">
-            <Link to="/team" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
-              Team
-            </Link>
+            <NavLink to="/dashboard" className={navCls}>Projects</NavLink>
+            <NavLink to="/wages" className={navCls}>Wage Lookup</NavLink>
+            <NavLink to="/team" className={navCls}>Team</NavLink>
             {isOwner && (
-              <Link to="/billing" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
-                Billing
-              </Link>
+              <>
+                <NavLink to="/billing" className={navCls}>Billing</NavLink>
+                <NavLink to="/admin/coverage" className={navCls}>Coverage</NavLink>
+              </>
             )}
-            <Link to="/wages" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
-              Wage Lookup
-            </Link>
-            <Link to="/cost-estimation" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
-              Cost Estimator
-            </Link>
-            <Link to="/admin/coverage" className="text-sm text-gray-300 hover:text-brand-gold transition-colors">
-              Coverage
-            </Link>
             <button
               onClick={handleLogout}
               className="text-sm text-gray-300 hover:text-white px-3 py-1.5 border border-gray-600 hover:border-gray-400 rounded transition-colors"
@@ -68,7 +74,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
     </div>

@@ -5,6 +5,10 @@ import {
 } from 'recharts';
 import type { WeeklyVarianceRow } from '../../server/services/varianceService.js';
 
+const CHART_GOLD = 'var(--color-brand-gold)';
+const CHART_GRAY = '#6B7280';   // gray-500 — no token equivalent
+const CHART_GRID = '#E5E7EB';   // gray-200 — no token equivalent
+
 interface Props {
   weeks: WeeklyVarianceRow[];
 }
@@ -32,15 +36,15 @@ export function VarianceTrendChart({ weeks }: Props) {
       </h3>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
           <XAxis
             dataKey="weekLabel"
-            tick={{ fontSize: 11, fill: '#6B7280' }}
+            tick={{ fontSize: 11, fill: CHART_GRAY }}
             tickLine={false}
           />
           <YAxis
             tickFormatter={(v) => fmtCurrency(v)}
-            tick={{ fontSize: 10, fill: '#6B7280' }}
+            tick={{ fontSize: 10, fill: CHART_GRAY }}
             tickLine={false}
             axisLine={false}
             width={72}
@@ -54,7 +58,7 @@ export function VarianceTrendChart({ weeks }: Props) {
             type="monotone"
             dataKey="cumulativeActual"
             name="Actual Spend"
-            stroke="#F5C518"
+            stroke={CHART_GOLD}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -63,7 +67,7 @@ export function VarianceTrendChart({ weeks }: Props) {
             type="monotone"
             dataKey="cumulativeBurnRate"
             name="Budget Burn Rate"
-            stroke="#6B7280"
+            stroke={CHART_GRAY}
             strokeWidth={2}
             strokeDasharray="5 5"
             dot={false}

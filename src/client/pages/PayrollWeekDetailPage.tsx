@@ -11,7 +11,11 @@ import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
 import { PageHeader } from '../components/ui/PageHeader';
 
-const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
+const WH347_DEF = "The U.S. Department of Labor's official certified payroll form. Required weekly for federal prevailing wage projects. Submit to your contracting officer within 7 days of the week ending date.";
+const ECPR_XML_DEF = "Electronic Certified Payroll Report — Washington State's digital submission format. Required for public works projects in WA. Exported as an XML file and uploaded to L&I's online system.";
+const PWIA_INTENT_DEF = "Public Works Intent to Pay Prevailing Wages — a Washington State form filed before work begins, declaring the wage rates you intend to pay each trade.";
+const CWHSSA_OT_DEF = "Contract Work Hours and Safety Standards Act overtime — requires 1.5x pay for all hours over 40/week on federal contracts, including fringe benefits at straight time for all hours.";
+const CPR_DEF = "Certified Payroll Report — the weekly record of all workers, hours, wages, and deductions required under the Davis-Bacon Act.";
 
 const PROVIDER_LABELS: Record<string, string> = {
   quickbooks: 'QuickBooks',
@@ -1278,6 +1282,9 @@ export function PayrollWeekDetailPage() {
                       <Badge variant="violation" className="mt-0.5 shrink-0">
                         {violationLabel(v.violationType)}
                       </Badge>
+                      {v.violationType === 'cwhssa-ot' && (
+                        <TermTooltip term="CWHSSA OT" definition={CWHSSA_OT_DEF} className="mt-0.5 shrink-0" />
+                      )}
                       <span>
                         <span className="font-medium">{v.workerName}</span>
                         {': expected $'}{v.expected.toFixed(2)}{', paid $'}{v.actual.toFixed(2)}{' (delta $'}{v.delta.toFixed(2)}{')'}
@@ -1380,7 +1387,7 @@ export function PayrollWeekDetailPage() {
               <div className="px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Badge variant="neutral">Not Submitted</Badge>
-                  <span className="text-sm text-gray-500">WH-347 not yet submitted to agency.</span>
+                  <span className="text-sm text-gray-500 inline-flex items-baseline gap-1"><TermTooltip term="WH-347" definition={WH347_DEF} /> not yet submitted to agency.</span>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => setShowSubmitForm(true)}>
                   Mark as Submitted
@@ -1499,7 +1506,9 @@ export function PayrollWeekDetailPage() {
         {!isLoading && !isError && isWA && (
           <Card className="mt-6">
             <div className="p-4">
-              <h3 className="font-headline text-lg font-semibold mb-1">WA PWIA Submission Guide</h3>
+              <h3 className="font-headline text-lg font-semibold mb-1 flex items-baseline gap-2">
+                WA <TermTooltip term="PWIA Intent" definition={PWIA_INTENT_DEF} /> Submission Guide
+              </h3>
               <p className="text-sm text-gray-500 mb-4">
                 Data-entry reference for the{' '}
                 <a
@@ -1837,8 +1846,8 @@ export function PayrollWeekDetailPage() {
             >
               {ecprStep === 1 ? (
                 <>
-                  <h3 className="text-lg font-headline font-bold text-gray-900">
-                    CA eCPR XML Export — Step 1 of 2
+                  <h3 className="text-lg font-headline font-bold text-gray-900 flex items-baseline gap-1">
+                    CA <TermTooltip term="ECPR XML" definition={ECPR_XML_DEF} /> Export — Step 1 of 2
                   </h3>
                   <p className="mt-1 text-sm text-gray-500">
                     Confirm or enter the fields required for the DIR eCPR portal.
@@ -1932,8 +1941,8 @@ export function PayrollWeekDetailPage() {
                 </>
               ) : (
                 <>
-                  <h3 className="text-lg font-headline font-bold text-gray-900">
-                    CA eCPR XML Export — Step 2 of 2
+                  <h3 className="text-lg font-headline font-bold text-gray-900 flex items-baseline gap-1">
+                    CA <TermTooltip term="ECPR XML" definition={ECPR_XML_DEF} /> Export — Step 2 of 2
                   </h3>
                   <p className="mt-1 text-sm text-green-700 font-medium">
                     XML file downloaded successfully. Now upload it to the DIR eCPR portal.
@@ -2013,7 +2022,7 @@ export function PayrollWeekDetailPage() {
               <h3 className="font-headline text-lg font-semibold mb-3">WA Trade Code Required</h3>
               <p className="mb-4 text-sm text-gray-700">
                 The following workers are missing a WA L&amp;I trade code. All workers must have a
-                trade code assigned before generating WA CPR XML.
+                trade code assigned before generating WA <TermTooltip term="CPR" definition={CPR_DEF} /> XML.
               </p>
               <ul className="list-disc pl-5 mb-4 space-y-1 text-sm">
                 {waCprGateWorkers.map((w) => (
@@ -2047,15 +2056,17 @@ export function PayrollWeekDetailPage() {
             >
               {waCprStep === 1 ? (
                 <>
-                  <h3 className="text-lg font-headline font-bold text-gray-900">WA CPR XML Export</h3>
+                  <h3 className="text-lg font-headline font-bold text-gray-900 flex items-baseline gap-1">
+                    WA <TermTooltip term="CPR" definition={CPR_DEF} /> XML Export
+                  </h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    Generate and download the WA PWIA certified payroll XML for this week.
+                    Generate and download the WA <TermTooltip term="PWIA Intent" definition={PWIA_INTENT_DEF} /> certified payroll XML for this week.
                   </p>
 
                   <div className="mt-4 space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        PWIA Intent ID
+                      <label className="block text-sm font-medium text-gray-700 flex items-baseline gap-1">
+                        <TermTooltip term="PWIA Intent" definition={PWIA_INTENT_DEF} /> ID
                       </label>
                       <p className="text-xs text-gray-400 mt-0.5">
                         Issued by L&amp;I after Statement of Intent approval. Enter the numeric ID from
@@ -2108,8 +2119,8 @@ export function PayrollWeekDetailPage() {
                 </>
               ) : (
                 <>
-                  <h3 className="text-lg font-headline font-bold text-gray-900">
-                    WA CPR XML — Step 2 of 2
+                  <h3 className="text-lg font-headline font-bold text-gray-900 flex items-baseline gap-1">
+                    WA <TermTooltip term="CPR" definition={CPR_DEF} /> XML — Step 2 of 2
                   </h3>
                   <p className="mt-1 text-sm text-green-700 font-medium">
                     XML file downloaded successfully. Now upload it to the My L&amp;I PWIA portal.

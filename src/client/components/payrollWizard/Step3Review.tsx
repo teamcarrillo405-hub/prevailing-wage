@@ -8,7 +8,7 @@ import { LoadingSpinner } from '../shared/LoadingSpinner';
 interface Props {
   projectId: string;
   weekId: string;
-  onBack: () => void;
+  onBack: (violatedWorkerIds?: string[]) => void;
 }
 
 interface ComplianceViolation {
@@ -77,6 +77,13 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
   const totalGross = entries.reduce((sum, e) => sum + (e.entry.grossWages ?? 0), 0);
   const totalNet = entries.reduce((sum, e) => sum + (e.entry.netPay ?? 0), 0);
 
+  const hasViolations = violations.length > 0 || weekViolations.length > 0;
+
+  // Deduplicated list of worker names from entry-level violations
+  const affectedWorkers = violations.length > 0
+    ? [...new Set(violations.map((v) => v.workerName))]
+    : [];
+
   return (
     <div className="space-y-6">
       <section>
@@ -86,17 +93,52 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
             Compliance check couldn't load — you can still save, but violations won't be flagged.
           </p>
         )}
-        {!cError && violations.length === 0 && weekViolations.length === 0 && (
+        {!cError && !hasViolations && (
           <p className="text-sm text-green-700">
             All {entries.length} worker{entries.length === 1 ? '' : 's'} pass federal minimums.
           </p>
+        )}
+        {!cError && hasViolations && (
+          <div className="rounded-sm border border-red-200 bg-red-50 p-3 mb-3 text-sm text-red-700">
+            <p className="font-semibold mb-1">Hours corrections required before you can certify.</p>
+            {affectedWorkers.length > 0 && (
+              <p>
+                Fix the issues below for{' '}
+                {violations
+                  .filter((v, i, arr) => arr.findIndex((x) => x.workerId === v.workerId) === i)
+                  .map((v, i, arr) => (
+                    <span key={v.workerId}>
+                      <button
+                        type="button"
+                        className="font-semibold underline cursor-pointer hover:text-red-900"
+                        onClick={() => onBack([v.workerId])}
+                      >
+                        {v.workerName}
+                      </button>
+                      {i < arr.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                , then use <span className="font-semibold">Back to fix hours</span> to correct their entries in the hours grid.
+              </p>
+            )}
+            {affectedWorkers.length === 0 && (
+              <p>Review the week-level issues below, then go back to correct the hours grid.</p>
+            )}
+          </div>
         )}
         {violations.map((v, i) => (
           <div
             key={`${v.entryId}-${i}`}
             className="rounded-sm border border-red-300 bg-red-50 p-3 mb-2 text-sm"
           >
-            <strong>{v.workerName}</strong> — {v.violationType}: expected ${v.expected.toFixed(2)},
+            <button
+              type="button"
+              className="font-semibold underline cursor-pointer hover:text-red-900"
+              onClick={() => onBack([v.workerId])}
+            >
+              {v.workerName}
+            </button>{' '}
+            — {v.violationType}: expected ${v.expected.toFixed(2)},
             actual ${v.actual.toFixed(2)} (delta ${v.delta.toFixed(2)})
           </div>
         ))}
@@ -151,7 +193,16 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
       </section>
 
       <div className="flex justify-between">
-        <Button variant="secondary" onClick={onBack}>← Back to hours</Button>
+        <Button
+          variant="secondary"
+          onClick={() =>
+            hasViolations
+              ? onBack(violations.map((v) => v.workerId))
+              : onBack()
+          }
+        >
+          {hasViolations ? '← Back to fix hours' : '← Back to hours'}
+        </Button>
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => navigate(`/projects/${projectId}/payroll`)}>
             Save as draft

@@ -2,12 +2,30 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { and, eq, isNull } from 'drizzle-orm';
+import rateLimit from 'express-rate-limit';
 import { getDb } from '../db/index.js';
 import { users, projectMembers, teamInvites } from '../db/schema.js';
 import { hashPassword, verifyPassword, createSessionToken } from '../services/auth.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { validateToken } from '../services/inviteService.js';
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // 10 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  skipSuccessfulRequests: true, // only count failures
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,                    // 5 registrations per hour per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many registration attempts. Please try again later.' },
+});
 
 const authRouter = Router();
 
@@ -32,7 +50,7 @@ const LoginSchema = z.object({
 });
 
 // POST /api/auth/register
-authRouter.post('/register', validate(RegisterSchema), async (req, res) => {
+authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (req, res) => {
   const { email, password, inviteCode } = req.body as z.infer<typeof RegisterSchema>;
 
   if (process.env.INVITE_CODE && inviteCode !== process.env.INVITE_CODE) {
@@ -67,19 +85,20 @@ authRouter.post('/register', validate(RegisterSchema), async (req, res) => {
 });
 
 // POST /api/auth/login
-authRouter.post('/login', validate(LoginSchema), async (req, res) => {
+authRouter.post('/login', loginLimiter, validate(LoginSchema), async (req, res) => {
   const { email, password } = req.body as z.infer<typeof LoginSchema>;
   const db = getDb();
 
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (!user) {
-    res.status(404).json({ error: 'Email not found' });
-    return;
-  }
 
-  const valid = await verifyPassword(user.passwordHash, password);
-  if (!valid) {
-    res.status(401).json({ error: 'Invalid password' });
+  // Always run bcrypt to prevent timing attacks that reveal valid emails
+  const DUMMY_HASH = '$2b$12$dummy.hash.for.timing.consistency.padding00000000000';
+  const valid = user
+    ? await verifyPassword(user.passwordHash, password)
+    : await verifyPassword(DUMMY_HASH, password).then(() => false); // always false for dummy
+
+  if (!user || !valid) {
+    res.status(401).json({ error: 'Invalid email or password' });
     return;
   }
 

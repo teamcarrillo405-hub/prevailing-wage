@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Workflow, Settings, ChevronRight } from 'lucide-react';
+import { Workflow, Settings, ChevronRight, Building2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -17,6 +17,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ProjectWageDeterminationsPanel } from '../components/ProjectWageDeterminationsPanel';
+import { useToast } from '../contexts/ToastContext';
 
 interface Project {
   id: string;
@@ -70,27 +71,31 @@ const FUNDING_TYPE_LABELS: Record<string, string> = {
   mixed: 'Mixed',
 };
 
-function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean }[] }) {
+function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean; to: string }[] }) {
   return (
     <div className="flex items-center gap-0 mb-6 flex-wrap">
       {steps.map((step, i) => (
         <div key={step.label} className="flex items-center">
-          <div className="flex items-center gap-2">
+          <Link
+            to={step.to}
+            className="flex items-center gap-2 group"
+            aria-label={`${step.label}${step.complete ? ' (complete)' : ''}`}
+          >
             <div className={
               step.complete
                 ? 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold bg-status-compliant text-white'
-                : 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold border-2 border-gray-300 text-gray-400 bg-white'
+                : 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold border-2 border-gray-300 text-gray-400 bg-white group-hover:border-brand-gold group-hover:text-brand-gold transition-colors'
             }>
               {step.complete ? '\u2713' : i + 1}
             </div>
             <span className={
               step.complete
                 ? 'text-sm font-medium text-status-compliant'
-                : 'text-sm font-medium text-gray-400'
+                : 'text-sm font-medium text-gray-400 group-hover:text-brand-gold transition-colors'
             }>
               {step.label}
             </span>
-          </div>
+          </Link>
           {i < steps.length - 1 && (
             <div className={
               step.complete
@@ -121,8 +126,13 @@ const EMPTY_CPR_FORM = {
 
 function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [cprForm, setCprForm] = useState({ ...EMPTY_CPR_FORM });
   const [cprError, setCprError] = useState<string | null>(null);
+  const [receivingRowId, setReceivingRowId] = useState<string | null>(null);
+  const [receivedDate, setReceivedDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [cprFilter, setCprFilter] = useState<'all' | 'received-compliant' | 'received-non-compliant' | 'not-received' | 'overdue'>('all');
+  const [undoNonCompliant, setUndoNonCompliant] = useState<{ weekId: string; weekLabel: string } | null>(null);
 
   const { data: cprData, isLoading: cprLoading } = useQuery({
     queryKey: ['cpr-weeks', projectId, subId],
@@ -135,6 +145,7 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
       api.post<{ data: { cprWeek: CprWeek } }>(`/projects/${projectId}/subcontractors/${subId}/cpr-weeks`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cpr-weeks', projectId, subId] });
+      toast.success('CPR week added');
       setCprForm({ ...EMPTY_CPR_FORM });
       setCprError(null);
     },
@@ -151,11 +162,27 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
       api.patch(`/projects/${projectId}/subcontractors/${subId}/cpr-weeks/${weekId}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cpr-weeks', projectId, subId] });
+      toast.success('CPR week updated');
     },
+    onError: () => toast.error('Could not update CPR week'),
+  });
+
+  const revertNonCompliantMutation = useMutation({
+    mutationFn: (weekId: string) =>
+      api.patch(`/projects/${projectId}/subcontractors/${subId}/cpr-weeks/${weekId}`, { isCompliant: null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cpr-weeks', projectId, subId] });
+      toast.success('Non-compliant mark reverted');
+    },
+    onError: () => toast.error('Could not revert non-compliant mark'),
   });
 
   const weeks = cprData?.data?.cprWeeks ?? [];
-  const todayYMD = new Date().toISOString().slice(0, 10);
+
+  const filteredWeeks = weeks.filter(week => {
+    if (cprFilter === 'all') return true;
+    return getCprStatus(week) === cprFilter;
+  });
 
   function handleAddCprWeek() {
     if (!cprForm.weekEndingDate) return;
@@ -171,7 +198,12 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
 
   return (
     <div className="mt-3 border-t border-border-default pt-3">
-      <h4 className="font-headline text-sm text-gray-700 mb-2">CPR Weeks</h4>
+      <h4 className="font-headline text-sm text-gray-700 mb-2">
+        <TermTooltip
+          term="CPR Weeks"
+          definition="Certified Payroll Report weeks — each subcontractor must submit a weekly WH-347 form to the prime contractor. Track receipt and compliance status here."
+        />
+      </h4>
 
       {cprLoading && <p className="text-xs text-gray-500">Loading...</p>}
 
@@ -180,7 +212,39 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
       )}
 
       {weeks.length > 0 && (
-        <div className="overflow-x-auto mb-3">
+        <>
+          {undoNonCompliant && (
+            <div className="mb-3 flex items-center justify-between rounded-sm border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              <span>Marked as non-compliant.</span>
+              <button
+                type="button"
+                onClick={() => { revertNonCompliantMutation.mutate(undoNonCompliant.weekId); setUndoNonCompliant(null); }}
+                className="ml-4 font-semibold underline hover:no-underline"
+              >
+                Undo
+              </button>
+            </div>
+          )}
+          <div className="mb-2 flex items-center gap-2">
+            <label className="text-xs text-gray-500 shrink-0">Filter:</label>
+            <select
+              value={cprFilter}
+              onChange={e => setCprFilter(e.target.value as typeof cprFilter)}
+              className="border border-border-default rounded-sm px-3 py-1.5 text-sm bg-surface-card text-text-primary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
+            >
+              <option value="all">All</option>
+              <option value="received-compliant">Compliant</option>
+              <option value="received-non-compliant">Non-Compliant</option>
+              <option value="not-received">Not Received</option>
+              <option value="overdue">Overdue</option>
+            </select>
+            {cprFilter !== 'all' && (
+              <span className="text-xs text-gray-400">
+                {filteredWeeks.length} of {weeks.length} weeks
+              </span>
+            )}
+          </div>
+          <div className="overflow-x-auto mb-3">
           <table className="w-full text-xs">
             <thead>
               <tr className="text-left text-gray-500 border-b border-border-default">
@@ -192,7 +256,7 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
               </tr>
             </thead>
             <tbody>
-              {weeks.map(week => {
+              {filteredWeeks.map(week => {
                 const status = getCprStatus(week);
                 const badge = STATUS_BADGE[status];
                 return (
@@ -212,15 +276,47 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
                     <td className="py-1.5 pr-3 text-gray-600">{week.receivedDate ?? '—'}</td>
                     <td className="py-1.5 pr-3 text-gray-500 max-w-xs truncate">{week.notes ?? '—'}</td>
                     <td className="py-1.5">
-                      <div className="flex gap-2">
-                        {!week.receivedDate && (
+                      <div className="flex gap-2 flex-wrap items-center">
+                        {!week.receivedDate && receivingRowId !== week.id && (
                           <button
                             className="text-xs font-medium text-brand-gold hover:underline"
-                            onClick={() => updateCprWeekMutation.mutate({ weekId: week.id, body: { receivedDate: todayYMD, isCompliant: null } })}
+                            onClick={() => {
+                              setReceivedDate(new Date().toISOString().slice(0, 10));
+                              setReceivingRowId(week.id);
+                            }}
                             disabled={updateCprWeekMutation.isPending}
                           >
                             Mark Received
                           </button>
+                        )}
+                        {!week.receivedDate && receivingRowId === week.id && (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="date"
+                              className="border border-border-default rounded px-1.5 py-0.5 text-xs bg-surface-page"
+                              value={receivedDate}
+                              onChange={e => setReceivedDate(e.target.value)}
+                            />
+                            <button
+                              className="text-xs font-medium text-brand-gold hover:underline"
+                              onClick={() => {
+                                if (!receivedDate) return;
+                                updateCprWeekMutation.mutate(
+                                  { weekId: week.id, body: { receivedDate, isCompliant: null } },
+                                  { onSettled: () => setReceivingRowId(null) }
+                                );
+                              }}
+                              disabled={!receivedDate || updateCprWeekMutation.isPending}
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              className="text-xs text-gray-500 hover:underline"
+                              onClick={() => setReceivingRowId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         )}
                         {week.receivedDate && week.isCompliant !== 1 && (
                           <button
@@ -234,7 +330,20 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
                         {week.receivedDate && week.isCompliant === 1 && (
                           <button
                             className="text-xs font-medium text-status-violation hover:underline"
-                            onClick={() => updateCprWeekMutation.mutate({ weekId: week.id, body: { isCompliant: 0 } })}
+                            onClick={() => {
+                              if (window.confirm('Mark this week as non-compliant? This will be recorded in the audit log.')) {
+                                updateCprWeekMutation.mutate(
+                                  { weekId: week.id, body: { isCompliant: 0 } },
+                                  {
+                                    onSuccess: () => {
+                                      const label = `Week ending ${week.weekEndingDate}`;
+                                      setUndoNonCompliant({ weekId: week.id, weekLabel: label });
+                                      setTimeout(() => setUndoNonCompliant(null), 8000);
+                                    },
+                                  }
+                                );
+                              }
+                            }}
                             disabled={updateCprWeekMutation.isPending}
                           >
                             Mark Non-Compliant
@@ -248,6 +357,7 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Add CPR Week inline form */}
@@ -309,6 +419,7 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
 
 function SubcontractorsPanel({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [expandedSubId, setExpandedSubId] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
@@ -326,11 +437,13 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
   const addSubMutation = useMutation({
     mutationFn: (body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string }) =>
       api.post<{ data: { subcontractor: Subcontractor } }>(`/projects/${projectId}/subcontractors`, body),
-    onSuccess: () => {
+    onSuccess: (_, body) => {
       queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      toast.success(`Subcontractor "${body.name}" added`);
       setAddingNew(false);
       setAddForm({ ...EMPTY_SUB_FORM });
     },
+    onError: () => toast.error('Could not add subcontractor'),
   });
 
   const editSubMutation = useMutation({
@@ -338,17 +451,21 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
       api.patch(`/projects/${projectId}/subcontractors/${subId}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      toast.success('Subcontractor updated');
       setEditingSubId(null);
     },
+    onError: () => toast.error('Could not update subcontractor'),
   });
 
   const deleteSubMutation = useMutation({
     mutationFn: (subId: string) => api.delete(`/projects/${projectId}/subcontractors/${subId}`),
     onSuccess: (_data, subId) => {
       queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      toast.success('Subcontractor removed');
       setDeletingSubId(null);
       setExpandedSubId(prev => prev === subId ? null : prev);
     },
+    onError: () => toast.error('Could not remove subcontractor'),
   });
 
   function handleAddSub() {
@@ -476,6 +593,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
       {/* Empty state */}
       {!subsLoading && subs.length === 0 && !addingNew && (
         <EmptyState
+          icon={Building2}
           heading="No subcontractors"
           message="Track CPR receipt and compliance status for each subcontractor on this project."
         />
@@ -602,6 +720,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                         className="text-sm font-medium text-gray-700 hover:text-brand-gold transition-colors flex items-center"
                         onClick={() => setExpandedSubId(prev => prev === sub.id ? null : sub.id)}
                         aria-expanded={expandedSubId === sub.id}
+                        aria-label={expandedSubId === sub.id ? 'Collapse CPR weeks' : 'Expand CPR weeks'}
                       >
                         <ChevronRight
                           className={`w-4 h-4 transition-transform ${expandedSubId === sub.id ? 'rotate-90' : ''}`}
@@ -626,7 +745,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['projects', id],
     queryFn: () => api.get<{ data: { project: Project } }>(`/projects/${id}`),
     enabled: !!id,
@@ -648,6 +767,7 @@ export function ProjectDetailPage() {
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [complianceWarning, setComplianceWarning] = useState(false);
@@ -667,20 +787,31 @@ export function ProjectDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['projects', id] });
+      toast.success('Project restored');
     },
+    onError: () => toast.error('Could not restore project'),
   });
 
   const saveNotifMutation = useMutation({
     mutationFn: (prefs: NotifSettings) => {
-      // Send the prefs as a JSON string in projectSettings
-      // Server-side PATCH will merge with existing keys (46-04 Task 1)
       return api.patch(`/projects/${id}`, { projectSettings: JSON.stringify(prefs) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', id] });
+      toast.success('Notification preferences saved');
       setNotifPanelOpen(false);
     },
+    onError: () => toast.error('Could not save notification preferences'),
   });
+
+  useEffect(() => {
+    if (!archiveModalOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setArchiveModalOpen(false);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [archiveModalOpen]);
 
   async function handleArchiveClick() {
     const summary = await queryClient.fetchQuery({
@@ -707,10 +838,10 @@ export function ProjectDetailPage() {
   const weeks = weeksData?.weeks ?? [];
 
   const steps = [
-    { label: 'Create Project', complete: true },
-    { label: 'Add Workers', complete: workers.length > 0 },
-    { label: 'Enter Payroll', complete: weeks.length > 0 },
-    { label: 'Download WH-347', complete: weeks.some(w => w.submittedAt !== null) },
+    { label: 'Create Project', complete: true, to: `/projects/${id}` },
+    { label: 'Add Workers', complete: workers.length > 0, to: `/projects/${id}/workers` },
+    { label: 'Enter Payroll', complete: weeks.length > 0, to: `/projects/${id}/payroll` },
+    { label: 'Download WH-347', complete: weeks.some(w => w.submittedAt !== null), to: `/projects/${id}/payroll` },
   ];
 
   return (
@@ -718,8 +849,14 @@ export function ProjectDetailPage() {
       {isLoading && <LoadingSpinner />}
 
       {isError && (
-        <div className="text-center py-12 text-red-600 text-sm">
-          Project not found or access denied.
+        <div className="text-center py-12">
+          <p className="text-red-600 text-sm mb-4">Project not found or access denied.</p>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-2.5 bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+          >
+            Try Again
+          </button>
         </div>
       )}
 
@@ -739,40 +876,40 @@ export function ProjectDetailPage() {
           <WorkflowProgress steps={steps} />
 
           {/* Project sub-page navigation */}
-          <div className="mt-6 mb-8 flex flex-wrap gap-3">
+          <div className="mb-6 flex flex-wrap gap-3 items-center">
             <Link
               to={`/projects/${project.id}/workers`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
             >
               Workers
             </Link>
             <Link
               to={`/projects/${project.id}/payroll`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
             >
               Payroll Weeks
             </Link>
             <Link
               to={`/projects/${project.id}/ot-scenarios`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
             >
               OT Scenario Planner
             </Link>
             <Link
               to={`/projects/${project.id}/variance`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
             >
               Variance
             </Link>
             <Link
               to={`/projects/${project.id}/reports`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
             >
               Reports
             </Link>
             <Link
               to={`/projects/${project.id}/activity`}
-              className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors duration-150"
+              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-transparent text-text-secondary border border-transparent hover:bg-gray-100 transition-all duration-150"
             >
               Activity
             </Link>
@@ -836,59 +973,109 @@ export function ProjectDetailPage() {
           {notifPanelOpen && (
             <Card className="mt-4 max-w-lg">
               <h3 className="font-headline text-base text-gray-900 mb-4">Notification Preferences</h3>
-              <div className="space-y-4 text-sm font-body">
+              <div className="space-y-5 text-sm font-body">
 
-                <label className="flex items-center justify-between gap-4">
-                  <span className="text-gray-700">Compliance violation alerts</span>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-brand-gold"
-                    checked={notifPrefs.notifyViolations}
-                    onChange={e => setNotifPrefs(p => ({ ...p, notifyViolations: e.target.checked }))}
-                  />
-                </label>
+                {/* Alerts group — instant notifications */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Alerts</h4>
+                  <div className="space-y-3">
 
-                <label className="flex items-center justify-between gap-4">
-                  <span className="text-gray-700">Team activity alerts (non-owner edits)</span>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-brand-gold"
-                    checked={notifPrefs.notifyActivity}
-                    onChange={e => setNotifPrefs(p => ({ ...p, notifyActivity: e.target.checked }))}
-                  />
-                </label>
+                    <label
+                      className="flex items-center justify-between gap-4 cursor-pointer"
+                      title="Fires immediately when a worker's wages fall below the required prevailing wage rate"
+                    >
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">Compliance violation detected</span>
+                        <p className="text-xs text-gray-500 mt-0.5">Instant alert when a worker's wages fall below the required prevailing wage</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-brand-gold shrink-0"
+                        checked={notifPrefs.notifyViolations}
+                        onChange={e => setNotifPrefs(p => ({ ...p, notifyViolations: e.target.checked }))}
+                        title="Fires immediately when a compliance violation is detected"
+                      />
+                    </label>
 
-                <label className="flex items-center justify-between gap-4">
-                  <span className="text-gray-700">Submission confirmation emails</span>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-brand-gold"
-                    checked={notifPrefs.notifySubmission}
-                    onChange={e => setNotifPrefs(p => ({ ...p, notifySubmission: e.target.checked }))}
-                  />
-                </label>
+                    <label
+                      className="flex items-center justify-between gap-4 cursor-pointer"
+                      title="Fires when any team member (other than you) edits or updates this project"
+                    >
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">Team activity</span>
+                        <p className="text-xs text-gray-500 mt-0.5">Instant alert when another team member edits this project</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-brand-gold shrink-0"
+                        checked={notifPrefs.notifyActivity}
+                        onChange={e => setNotifPrefs(p => ({ ...p, notifyActivity: e.target.checked }))}
+                        title="Fires when any team member other than you edits this project"
+                      />
+                    </label>
 
-                <div className="flex items-center justify-between gap-4">
-                  <label className="flex items-center gap-2 text-gray-700">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 accent-brand-gold"
-                      checked={notifPrefs.notifyDueSoon}
-                      onChange={e => setNotifPrefs(p => ({ ...p, notifyDueSoon: e.target.checked }))}
-                    />
-                    Payroll due-soon reminders
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={30}
-                      value={notifPrefs.dueSoonDays}
-                      disabled={!notifPrefs.notifyDueSoon}
-                      className="w-16 border border-border-default rounded px-2 py-1 text-sm disabled:opacity-50 bg-surface-page"
-                      onChange={e => setNotifPrefs(p => ({ ...p, dueSoonDays: Math.max(1, Math.min(30, Number(e.target.value))) }))}
-                    />
-                    <span className="text-gray-500">days before</span>
+                    <label
+                      className="flex items-center justify-between gap-4 cursor-pointer"
+                      title="Fires when a certified payroll report (WH-347) is successfully submitted"
+                    >
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">Payroll submission confirmed</span>
+                        <p className="text-xs text-gray-500 mt-0.5">Instant email confirmation when a WH-347 is submitted</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-brand-gold shrink-0"
+                        checked={notifPrefs.notifySubmission}
+                        onChange={e => setNotifPrefs(p => ({ ...p, notifySubmission: e.target.checked }))}
+                        title="Fires when a certified payroll report is successfully submitted"
+                      />
+                    </label>
+
+                  </div>
+                </div>
+
+                {/* Reminders group — scheduled/upcoming */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Reminders</h4>
+                  <div className="space-y-3">
+
+                    <div className="flex items-start justify-between gap-4">
+                      <label
+                        className="flex items-start gap-2 cursor-pointer"
+                        title="Sends a scheduled reminder email N days before each weekly payroll deadline"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-brand-gold mt-0.5 shrink-0"
+                          checked={notifPrefs.notifyDueSoon}
+                          onChange={e => setNotifPrefs(p => ({ ...p, notifyDueSoon: e.target.checked }))}
+                          title="Enable scheduled reminders before each weekly payroll deadline"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-gray-900">Payroll due-date reminder</span>
+                          <p className="text-xs text-gray-500 mt-0.5">Scheduled email before each weekly payroll deadline</p>
+                        </div>
+                      </label>
+                      <div
+                        className="flex items-center gap-2 shrink-0"
+                        title="Number of days before the payroll deadline to send the reminder"
+                      >
+                        <span className="text-xs text-gray-500 whitespace-nowrap">Notify me</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={notifPrefs.dueSoonDays}
+                          disabled={!notifPrefs.notifyDueSoon}
+                          className="w-14 border border-border-default rounded px-2 py-1 text-sm disabled:opacity-40 bg-surface-page text-center"
+                          onChange={e => setNotifPrefs(p => ({ ...p, dueSoonDays: Math.max(1, Math.min(30, Number(e.target.value))) }))}
+                          title="Days before the payroll deadline to send the reminder (1–30)"
+                          aria-label="Days before payroll is due"
+                        />
+                        <span className="text-xs text-gray-500 whitespace-nowrap">days before payroll is due</span>
+                      </div>
+                    </div>
+
                   </div>
                 </div>
 
@@ -910,8 +1097,13 @@ export function ProjectDetailPage() {
 
           {archiveModalOpen && (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-              <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-                <h3 className="font-headline text-lg text-gray-900 mb-3">
+              <div
+                className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="archive-modal-title"
+              >
+                <h3 id="archive-modal-title" className="font-headline text-lg text-gray-900 mb-3">
                   Archive Project
                 </h3>
                 {complianceWarning && (
@@ -940,14 +1132,18 @@ export function ProjectDetailPage() {
           )}
 
           {/* Subcontractors panel */}
-          <SubcontractorsPanel projectId={project.id} />
+          <div className="mt-8">
+            <SubcontractorsPanel projectId={project.id} />
+          </div>
 
           {/* Wage determinations panel */}
-          <ProjectWageDeterminationsPanel
-            projectId={project.id}
-            projectState={project.state}
-            projectCounty={project.county}
-          />
+          <div className="mt-8">
+            <ProjectWageDeterminationsPanel
+              projectId={project.id}
+              projectState={project.state}
+              projectCounty={project.county}
+            />
+          </div>
         </div>
       )}
     </Layout>
