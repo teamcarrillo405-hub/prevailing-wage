@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/routes/import.ts
 // Express router for payroll CSV import: preview (multipart) + commit (JSON).
 // Phase 35 Plan 02 — Payroll Import Server Pipeline.
@@ -232,7 +233,7 @@ importRouter.post('/commit', async (req, res) => {
         weekEnding: week.weekEndingDate,
       },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 
   res.json({ committed: body.matched.length });
 });

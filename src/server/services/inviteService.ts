@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 import { randomBytes, randomUUID } from 'crypto';
 import { and, eq, isNull, gt } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
@@ -19,7 +20,7 @@ const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'team@hccprevailingwage.com'
 export async function sendInviteEmail(to: string, inviteUrl: string): Promise<void> {
   const resend = await getResend();
   if (!resend) {
-    console.log(`[invite] RESEND_API_KEY not set. Invite URL: ${inviteUrl}`);
+    logger.info(`[invite] RESEND_API_KEY not set. Invite URL: ${inviteUrl}`);
     return;
   }
   const { error } = await resend.emails.send({
@@ -29,7 +30,7 @@ export async function sendInviteEmail(to: string, inviteUrl: string): Promise<vo
     html: `<p>You've been invited to join a team on HCC Prevailing Wage.</p><p>Click the link below to create your account:</p><p><a href="${inviteUrl}">${inviteUrl}</a></p><p>This link expires in 72 hours.</p>`,
   });
   if (error) {
-    console.error('[invite] Resend error:', error);
+    logger.error({ err: error }, '[invite] Resend error:');
     // Non-fatal per D-02 — invite row is created; email failure doesn't block
   }
 }

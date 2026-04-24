@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/services/wdolParser.ts
 // Extracts trade classifications from the plain-text WD document field.
 //
@@ -104,11 +105,9 @@ export function parseWdDocument(document: string): ParsedClassification[] {
 
   // Emit warning if parsing found nothing despite a non-trivial document
   if (results.length === 0 && document.length > 500) {
-    console.warn(
-      '[wdolParser] Zero classifications extracted from %d-byte document. ' +
-      'Leading excerpt: %s',
-      document.length,
-      document.slice(0, 200).replace(/\n/g, ' | '),
+    logger.warn(
+      { docLen: document.length, excerpt: document.slice(0, 200).replace(/\n/g, " | ") },
+      '[wdolParser] Zero classifications extracted',
     );
   }
 

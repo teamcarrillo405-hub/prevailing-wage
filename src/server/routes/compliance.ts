@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/routes/compliance.ts
 // GET /api/compliance/project/:projectId — aggregates compliance for all weeks in a project.
 // GET /api/compliance/:weekId — returns ComplianceResult for a payroll week.
@@ -211,11 +212,11 @@ complianceRouter.get('/:weekId', requireAuth, async (req, res) => {
             projectName,
             weekEndingDate,
             violationSummary,
-          }).catch(err => console.error('[compliance] violation alert email failed:', err));
+          }).catch(err => logger.error({ err: err }, '[compliance] violation alert email failed:'));
         }
       }
     } catch (err) {
-      console.error('[compliance] failed to send violation alert emails:', err);
+      logger.error({ err: err }, '[compliance] failed to send violation alert emails:');
     }
   }
 

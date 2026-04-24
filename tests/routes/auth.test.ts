@@ -102,11 +102,11 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 404 when email not found', async () => {
+  it('returns 401 when email not found (prevents user enumeration)', async () => {
     const res = await supertest(app)
       .post('/api/auth/login')
       .send({ email: `notfound-${Date.now()}@test.com`, password: 'password123' });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
   });
 });
 

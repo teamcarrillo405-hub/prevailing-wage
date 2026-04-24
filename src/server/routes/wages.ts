@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/routes/wages.ts
 // Wage API routes. All lookups go through wageLookup.ts — never call fetchers directly.
 // Registered in index.ts at /api/wages.
@@ -185,6 +186,6 @@ wagesRouter.post('/manual', (req, res) => {
 // Triggers runWageSync() asynchronously — returns 202 immediately.
 // Never await the sync in the request handler.
 wagesRouter.post('/sync', (_req, res) => {
-  void runWageSync().catch((err) => console.error('[wages/sync] Background sync failed:', err));
+  void runWageSync().catch((err) => logger.error({ err: err }, '[wages/sync] Background sync failed:'));
   return res.status(202).json({ message: 'Wage sync started' });
 });

@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 import { Router } from 'express';
 import { eq } from 'drizzle-orm';
 import Stripe from 'stripe';
@@ -178,7 +179,7 @@ router.post('/webhook', async (req, res) => {
         break;
     }
   } catch (err) {
-    console.error('[billing/webhook] DB update failed:', err);
+    logger.error({ err: err }, '[billing/webhook] DB update failed:');
     // Still return 200 to prevent Stripe from retrying; log the error for ops
   }
 

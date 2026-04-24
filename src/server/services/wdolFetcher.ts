@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/services/wdolFetcher.ts
 // Fetches one WD from the SAM.gov WDOL v1 API.
 // No authentication required (confirmed by live inspection).
@@ -35,12 +36,12 @@ export async function fetchWdFromSamGov(
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
-      console.warn(`[wdolFetcher] ${wdNumber}/${revision} returned ${res.status}`);
+      logger.warn(`[wdolFetcher] ${wdNumber}/${revision} returned ${res.status}`);
       return null;
     }
     return res.json() as Promise<WdolResponse>;
   } catch (err) {
-    console.warn(`[wdolFetcher] fetch failed for ${wdNumber}:`, err);
+    logger.warn({ err }, `[wdolFetcher] fetch failed for ${wdNumber}`);
     return null;
   }
 }

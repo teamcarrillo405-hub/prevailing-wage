@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/services/wdChangeDetector.ts
 // WD change detector — scans for expired wageDeterminations cache entries and
 // notifies all active project members whose projects reference those WDs.
@@ -39,7 +40,7 @@ export async function checkWdChanges(): Promise<void> {
     .where(lt(wageDeterminations.cacheExpiresAt, now));
 
   if (rows.length === 0) {
-    console.log('[wd-detector] No expired WD cache entries found (or none with active project members)');
+    logger.info('[wd-detector] No expired WD cache entries found (or none with active project members)');
     return;
   }
 
@@ -60,7 +61,7 @@ export async function checkWdChanges(): Promise<void> {
     }
   }
 
-  console.log(`[wd-detector] Found ${wdMap.size} expired WD cache entries; sending notifications`);
+  logger.info(`[wd-detector] Found ${wdMap.size} expired WD cache entries; sending notifications`);
 
   // Send emails — failure is non-fatal
   for (const [, wd] of wdMap) {
@@ -71,7 +72,7 @@ export async function checkWdChanges(): Promise<void> {
         wdNumber: wd.wdNumber,
         oldRevision: wd.revisionNumber,
         newRevision: wd.revisionNumber, // alerting on cache expiry, not a revision bump
-      }).catch((err) => console.error('[wd-detector] sendWdChangedEmail failed:', err));
+      }).catch((err) => logger.error({ err: err }, '[wd-detector] sendWdChangedEmail failed:'));
     }
   }
 
@@ -86,5 +87,5 @@ export async function checkWdChanges(): Promise<void> {
       .where(eq(wageDeterminations.id, wdId));
   }
 
-  console.log('[wd-detector] Done');
+  logger.info('[wd-detector] Done');
 }

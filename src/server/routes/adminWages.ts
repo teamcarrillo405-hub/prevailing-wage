@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/routes/adminWages.ts
 // Admin import endpoint for state prevailing wage CSV data.
 // Authentication: none in v1 (single-user local tool — see SUMMARY.md decision note).
@@ -120,7 +121,7 @@ adminWagesRouter.post('/import-state', upload.single('file'), (req, res) => {
 
     return res.status(200).json({ inserted, skipped: 0 });
   } catch (err) {
-    console.error('[adminWages] Import error:', err);
+    logger.error({ err: err }, '[adminWages] Import error:');
     return res.status(500).json({ error: 'Import failed: ' + String(err) });
   }
 });

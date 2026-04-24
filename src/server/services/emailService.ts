@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/services/emailService.ts
 // All email notifications for Phase 46. Mirrors inviteService.ts lazy-init pattern exactly.
 // All send functions are non-fatal per NFR-02: catch errors, log, never rethrow.
@@ -84,7 +85,7 @@ export async function sendViolationEmail(
   try {
     const resend = await getResend();
     if (!resend) {
-      console.log('[email] RESEND_API_KEY not set — skipping violation notification');
+      logger.info('[email] RESEND_API_KEY not set — skipping violation notification');
       return;
     }
 
@@ -119,10 +120,10 @@ export async function sendViolationEmail(
       `,
     });
     if (error) {
-      console.error('[email] violation notification Resend error:', error);
+      logger.error({ err: error }, '[email] violation notification Resend error:');
     }
   } catch (err) {
-    console.error('[email] violation notification failed:', err);
+    logger.error({ err: err }, '[email] violation notification failed:');
     // Non-fatal per NFR-02 — never rethrow
   }
 }
@@ -142,7 +143,7 @@ export async function sendDueSoonEmail(
   try {
     const resend = await getResend();
     if (!resend) {
-      console.log('[email] RESEND_API_KEY not set — skipping due-soon notification');
+      logger.info('[email] RESEND_API_KEY not set — skipping due-soon notification');
       return;
     }
 
@@ -159,10 +160,10 @@ export async function sendDueSoonEmail(
       `,
     });
     if (error) {
-      console.error('[email] due-soon notification Resend error:', error);
+      logger.error({ err: error }, '[email] due-soon notification Resend error:');
     }
   } catch (err) {
-    console.error('[email] due-soon notification failed:', err);
+    logger.error({ err: err }, '[email] due-soon notification failed:');
   }
 }
 
@@ -178,7 +179,7 @@ export async function sendActivityEmail(
   try {
     const resend = await getResend();
     if (!resend) {
-      console.log('[email] RESEND_API_KEY not set — skipping activity notification');
+      logger.info('[email] RESEND_API_KEY not set — skipping activity notification');
       return;
     }
 
@@ -207,10 +208,10 @@ export async function sendActivityEmail(
       `,
     });
     if (error) {
-      console.error('[email] activity notification Resend error:', error);
+      logger.error({ err: error }, '[email] activity notification Resend error:');
     }
   } catch (err) {
-    console.error('[email] activity notification failed:', err);
+    logger.error({ err: err }, '[email] activity notification failed:');
   }
 }
 
@@ -226,7 +227,7 @@ export async function sendSubUploadRequestEmail(opts: {
   try {
     const resend = await getResend();
     if (!resend) {
-      console.log('[email] RESEND_API_KEY not set — skipping sub upload request');
+      logger.info('[email] RESEND_API_KEY not set — skipping sub upload request');
       return;
     }
     const { error } = await resend.emails.send({
@@ -240,9 +241,9 @@ export async function sendSubUploadRequestEmail(opts: {
         <p>This link expires in 7 days.</p>
       `,
     });
-    if (error) console.error('[email] sendSubUploadRequestEmail Resend error:', error);
+    if (error) logger.error({ err: error }, '[email] sendSubUploadRequestEmail Resend error:');
   } catch (err) {
-    console.error('[email] sendSubUploadRequestEmail failed:', err);
+    logger.error({ err: err }, '[email] sendSubUploadRequestEmail failed:');
   }
 }
 
@@ -257,7 +258,7 @@ export async function sendSubCprReceivedEmail(opts: {
   try {
     const resend = await getResend();
     if (!resend) {
-      console.log('[email] RESEND_API_KEY not set — skipping sub CPR received notification');
+      logger.info('[email] RESEND_API_KEY not set — skipping sub CPR received notification');
       return;
     }
     const memberRows = await getProjectMemberRows(opts.projectId);
@@ -273,13 +274,13 @@ export async function sendSubCprReceivedEmail(opts: {
             <p><a href="${APP_URL}/projects/${opts.projectId}">Review in dashboard →</a></p>
           `,
         });
-        if (error) console.error('[email] sendSubCprReceivedEmail Resend error:', error);
+        if (error) logger.error({ err: error }, '[email] sendSubCprReceivedEmail Resend error:');
       } catch (err) {
-        console.error('[email] sendSubCprReceivedEmail failed:', err);
+        logger.error({ err: err }, '[email] sendSubCprReceivedEmail failed:');
       }
     }
   } catch (err) {
-    console.error('[email] sendSubCprReceivedEmail outer error:', err);
+    logger.error({ err: err }, '[email] sendSubCprReceivedEmail outer error:');
   }
 }
 
@@ -295,7 +296,7 @@ export async function sendWdChangedEmail(opts: {
   try {
     const resend = await getResend();
     if (!resend) {
-      console.log('[email] RESEND_API_KEY not set — skipping WD change notification');
+      logger.info('[email] RESEND_API_KEY not set — skipping WD change notification');
       return;
     }
     const { error } = await resend.emails.send({
@@ -305,10 +306,10 @@ export async function sendWdChangedEmail(opts: {
       html: `<p>The wage determination <strong>${opts.wdNumber}</strong> for project <strong>${opts.projectName}</strong> has been updated from revision ${opts.oldRevision} to revision ${opts.newRevision}.</p><p>Please review your payroll entries for compliance.</p>`,
     });
     if (error) {
-      console.error('[email] sendWdChangedEmail Resend error:', error);
+      logger.error({ err: error }, '[email] sendWdChangedEmail Resend error:');
     }
   } catch (err) {
-    console.error('[email] sendWdChangedEmail failed:', err);
+    logger.error({ err: err }, '[email] sendWdChangedEmail failed:');
   }
 }
 
@@ -324,7 +325,7 @@ export async function sendViolationAlertEmail(opts: {
   try {
     const resend = await getResend();
     if (!resend) {
-      console.log('[email] RESEND_API_KEY not set — skipping violation alert');
+      logger.info('[email] RESEND_API_KEY not set — skipping violation alert');
       return;
     }
     const { error } = await resend.emails.send({
@@ -334,10 +335,10 @@ export async function sendViolationAlertEmail(opts: {
       html: `<p>A payroll compliance violation was detected for project <strong>${opts.projectName}</strong>, week ending <strong>${opts.weekEndingDate}</strong>.</p><p><strong>Summary:</strong> ${opts.violationSummary}</p><p>Please review and correct the payroll entries.</p>`,
     });
     if (error) {
-      console.error('[email] sendViolationAlertEmail Resend error:', error);
+      logger.error({ err: error }, '[email] sendViolationAlertEmail Resend error:');
     }
   } catch (err) {
-    console.error('[email] sendViolationAlertEmail failed:', err);
+    logger.error({ err: err }, '[email] sendViolationAlertEmail failed:');
     // Non-fatal per NFR-02 — never rethrow
   }
 }
@@ -354,7 +355,7 @@ export async function sendSubmissionConfirmationEmail(
   try {
     const resend = await getResend();
     if (!resend) {
-      console.log('[email] RESEND_API_KEY not set — skipping submission confirmation');
+      logger.info('[email] RESEND_API_KEY not set — skipping submission confirmation');
       return;
     }
 
@@ -370,9 +371,9 @@ export async function sendSubmissionConfirmationEmail(
       `,
     });
     if (error) {
-      console.error('[email] submission confirmation Resend error:', error);
+      logger.error({ err: error }, '[email] submission confirmation Resend error:');
     }
   } catch (err) {
-    console.error('[email] submission confirmation failed:', err);
+    logger.error({ err: err }, '[email] submission confirmation failed:');
   }
 }

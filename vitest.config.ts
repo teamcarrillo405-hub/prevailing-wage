@@ -7,7 +7,7 @@ export default defineConfig({
     setupFiles: ['./tests/helpers/db.ts'],
     // Exclude agent worktree scratch dirs — each contains a full repo copy and
     // causes port conflicts (EADDRINUSE) + noisy FAIL output when discovered.
-    exclude: ['**/node_modules/**', '**/dist/**', '.claude/worktrees/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/worktrees/**', '.worktrees/**'],
     coverage: {
       provider: 'v8',
       include: ['src/server/services/calculations.ts'],

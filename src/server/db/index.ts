@@ -23,3 +23,7 @@ export function getDb() {
 }
 
 export const db = _db;
+
+export function pingDb(): void {
+  sqlite.prepare('SELECT 1').get();
+}

@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/services/dueSoonService.ts
 // NOTIF-02: Daily scan to send payroll due-soon reminders to project owners.
 // Registered as a cron job in index.ts inside app.listen() callback.
@@ -99,13 +100,13 @@ export async function runDueSoonScan(): Promise<void> {
         .set({ projectSettings: JSON.stringify(updatedSettings), updatedAt: now })
         .where(eq(projects.id, project.id));
 
-      console.log(
+      logger.info(
         `[due-soon] Sent reminder for project ${project.id} (${project.name}), ` +
         `week ending ${unsubmitted.weekEndingDate}, ${daysUntilDue} day(s) until due`,
       );
     } catch (projectErr) {
       // Per NFR-02: individual project failures must not abort the full scan
-      console.error(`[due-soon] Error processing project ${project.id}:`, projectErr);
+      logger.error({ err: projectErr }, `[due-soon] Error processing project ${project.id}`);
     }
   }
 }

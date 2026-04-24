@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/services/wdolSync.ts
 // Monthly sync coordinator. Called by the node-cron job in index.ts.
 // Also exported for manual trigger via POST /api/wages/sync (02-02).
@@ -3953,7 +3954,7 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
       upsertClassifications(wd.id, classifications);
       fetched++;
     } catch (err) {
-      console.error(`[wdolSync] Phase 1 error refreshing ${wd.wdNumber}:`, err);
+      logger.error({ err }, `[wdolSync] Phase 1 error refreshing ${wd.wdNumber}`);
       failed++;
     }
   }
@@ -3970,7 +3971,7 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
 
       const response = await fetchWdFromSamGov(seed.wdNumber, seed.revision);
       if (!response) {
-        console.warn(`[wdolSync] ${seed.wdNumber} — fetch returned null`);
+        logger.warn(`[wdolSync] ${seed.wdNumber} — fetch returned null`);
         failed++;
         continue;
       }
@@ -3999,12 +4000,12 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
       if (response.document) {
         const classifications = parseWdDocument(response.document);
         upsertClassifications(wdId, classifications);
-        console.log(`[wdolSync] ${seed.wdNumber} — ${classifications.length} classifications cached`);
+        logger.info(`[wdolSync] ${seed.wdNumber} — ${classifications.length} classifications cached`);
       }
 
       fetched++;
     } catch (err) {
-      console.error(`[wdolSync] Error syncing ${seed.wdNumber}:`, err);
+      logger.error({ err }, `[wdolSync] Error syncing ${seed.wdNumber}`);
       failed++;
     }
   }
@@ -4017,6 +4018,6 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
     .where(eq(wageSyncMeta.id, syncId))
     .run();
 
-  console.log(`[wdolSync] Complete — fetched: ${fetched}, failed: ${failed}, skipped: ${skipped}`);
+  logger.info(`[wdolSync] Complete — fetched: ${fetched}, failed: ${failed}, skipped: ${skipped}`);
   return { fetched, failed };
 }

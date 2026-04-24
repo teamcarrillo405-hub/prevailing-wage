@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
+import { logger } from './logger.js';
+import { pingDb } from './db/index.js';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN, // no-op if undefined — safe to deploy without it
@@ -76,7 +78,14 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_req, res) => {
+  try {
+    pingDb();
+    res.json({ status: 'ok', db: 'ok' });
+  } catch {
+    res.status(503).json({ status: 'degraded', db: 'error' });
+  }
+});
 app.use('/api/sub-upload', subUploadRouter); // public — no auth required
 app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
@@ -112,15 +121,15 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 const server = app.listen(PORT, () => {
-  console.log(`API running on http://localhost:${PORT}`);
+  logger.info({ port: PORT }, 'API running');
   // Register monthly wage sync — MUST be inside listen() callback so getDb() is initialized
   // Cron: 2:00 AM on the 1st of every month
   cron.schedule('0 2 1 * *', async () => {
-    console.log('[wage-sync] Starting monthly sync');
+    logger.info('wage-sync: starting monthly sync');
     try {
       await runWageSync();
     } catch (err) {
-      console.error('[wage-sync] Failed:', err);
+      logger.error({ err }, 'wage-sync: failed');
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'America/New_York' });
@@ -128,11 +137,11 @@ const server = app.listen(PORT, () => {
   // Register daily payroll due-soon scan — NOTIF-02
   // Runs at 7:00 AM Eastern every day
   cron.schedule('0 7 * * *', async () => {
-    console.log('[due-soon] Running daily payroll due-soon scan');
+    logger.info('due-soon: running daily payroll due-soon scan');
     try {
       await runDueSoonScan();
     } catch (err) {
-      console.error('[due-soon] Scan failed:', err);
+      logger.error({ err }, 'due-soon: scan failed');
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'America/New_York' });
@@ -140,11 +149,11 @@ const server = app.listen(PORT, () => {
   // Register daily WD change detector — NOTIF-07
   // Runs at 3:00 AM Eastern every day (after wage sync window)
   cron.schedule('0 3 * * *', async () => {
-    console.log('[wd-detector] Running daily WD change detector');
+    logger.info('wd-detector: running daily WD change detector');
     try {
       await checkWdChanges();
     } catch (err) {
-      console.error('[wd-detector] Failed:', err);
+      logger.error({ err }, 'wd-detector: failed');
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'America/New_York' });
@@ -152,14 +161,14 @@ const server = app.listen(PORT, () => {
 
 // Graceful shutdown — give in-flight requests 10s to complete
 function shutdown(signal: string) {
-  console.log(`[shutdown] ${signal} received — closing server`);
+  logger.info({ signal }, 'shutdown: received signal');
   server.close(() => {
-    console.log('[shutdown] All connections closed. Exiting.');
+    logger.info('shutdown: all connections closed');
     process.exit(0);
   });
   // Force exit after 10s if connections hang
   setTimeout(() => {
-    console.error('[shutdown] Forced exit after timeout');
+    logger.error('shutdown: forced exit after timeout');
     process.exit(1);
   }, 10_000).unref();
 }

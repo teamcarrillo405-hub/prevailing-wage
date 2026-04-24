@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/routes/payroll.ts
 import { Router } from 'express';
 import { z } from 'zod';
@@ -430,7 +431,7 @@ router.patch('/weeks/:id/submit', validate(SubmitWeekSchema), async (req, res) =
       action: 'payroll_week.submitted',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, submittedTo: body.submittedTo },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 
   res.status(200).json({ message: 'Week marked as submitted' });
 });
@@ -473,7 +474,7 @@ router.delete('/weeks/:id/submit', async (req, res) => {
       action: 'payroll_week.unsubmitted',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 
   res.status(200).json({ message: 'Week submission cleared' });
 });
@@ -521,7 +522,7 @@ router.patch('/weeks/:id/ca-submit', validate(AgencySubmitSchema), async (req, r
         action: 'agency_submission.created',
         meta: { agency: 'CA_DIR', payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
       });
-    } catch (auditErr) { console.error('[audit]', auditErr); }
+    } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
   }
 
   // NOTIF-04: submission confirmation email — best-effort, non-fatal (NFR-02)
@@ -537,7 +538,7 @@ router.patch('/weeks/:id/ca-submit', validate(AgencySubmitSchema), async (req, r
         week.projectId,
       );
     } catch (err) {
-      console.error('[email] NOTIF-04 submission confirmation failed:', err);
+      logger.error({ err: err }, '[email] NOTIF-04 submission confirmation failed:');
     }
   }
 
@@ -587,7 +588,7 @@ router.patch('/weeks/:id/wa-submit', validate(AgencySubmitSchema), async (req, r
         action: 'agency_submission.created',
         meta: { agency: 'WA_LNI', payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
       });
-    } catch (auditErr) { console.error('[audit]', auditErr); }
+    } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
   }
 
   // NOTIF-04: submission confirmation email — best-effort, non-fatal (NFR-02)
@@ -603,7 +604,7 @@ router.patch('/weeks/:id/wa-submit', validate(AgencySubmitSchema), async (req, r
         week.projectId,
       );
     } catch (err) {
-      console.error('[email] NOTIF-04 submission confirmation failed:', err);
+      logger.error({ err: err }, '[email] NOTIF-04 submission confirmation failed:');
     }
   }
 
@@ -649,7 +650,7 @@ router.patch('/weeks/:id/ny-submit', async (req, res) => {
       action: 'agency_submission.created',
       meta: { agency: 'NY_MPWR', payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 
   // NOTIF-04: submission confirmation email — best-effort, non-fatal (NFR-02)
   // ny-submit always submits (no toggle), so fire unconditionally
@@ -664,7 +665,7 @@ router.patch('/weeks/:id/ny-submit', async (req, res) => {
       week.projectId,
     );
   } catch (err) {
-    console.error('[email] NOTIF-04 submission confirmation failed:', err);
+    logger.error({ err: err }, '[email] NOTIF-04 submission confirmation failed:');
   }
 
   res.status(200).json(result);
@@ -709,7 +710,7 @@ router.patch('/weeks/:id/il-submit', async (req, res) => {
       action: 'agency_submission.created',
       meta: { agency: 'IL_IDOL', payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 
   // NOTIF-04: submission confirmation email — best-effort, non-fatal (NFR-02)
   // il-submit always submits (no toggle), so fire unconditionally
@@ -724,7 +725,7 @@ router.patch('/weeks/:id/il-submit', async (req, res) => {
       week.projectId,
     );
   } catch (err) {
-    console.error('[email] NOTIF-04 submission confirmation failed:', err);
+    logger.error({ err: err }, '[email] NOTIF-04 submission confirmation failed:');
   }
 
   res.status(200).json(result);

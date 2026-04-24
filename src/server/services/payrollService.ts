@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/services/payrollService.ts
 import { randomUUID } from 'crypto';
 import { eq, desc, max, and, sql, sum, count } from 'drizzle-orm';
@@ -462,7 +463,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         }
       }
     } catch (auditErr) {
-      console.error('[audit] payroll entry audit failed:', auditErr);
+      logger.error({ err: auditErr }, '[audit] payroll entry audit failed:');
     }
   }
 
@@ -488,7 +489,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
       }
     }
   } catch (err) {
-    console.error('[email] NOTIF-01 compliance check/email failed:', err);
+    logger.error({ err: err }, '[email] NOTIF-01 compliance check/email failed:');
     // Non-fatal per NFR-02
   }
 
@@ -509,7 +510,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         );
       }
     } catch (err) {
-      console.error('[email] NOTIF-03 payroll entry activity notification failed:', err);
+      logger.error({ err: err }, '[email] NOTIF-03 payroll entry activity notification failed:');
     }
   }
 
@@ -555,7 +556,7 @@ export async function deletePayrollEntry(input: {
       meta: { payrollNumber: week.payrollNumber },
     });
   } catch (auditErr) {
-    console.error('[audit] payroll entry delete audit failed:', auditErr);
+    logger.error({ err: auditErr }, '[audit] payroll entry delete audit failed:');
   }
 
   return { deleted: true, projectId: week.projectId };

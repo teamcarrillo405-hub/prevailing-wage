@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { randomUUID, randomBytes } from 'crypto';
@@ -115,7 +116,7 @@ router.post('/:id/subcontractors', validate(CreateSubSchema), async (req, res) =
       action: 'subcontractor.created',
       snapshot: { name: body.name },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 
   res.status(201).json({ data: { subcontractor: newSub } });
 });
@@ -207,7 +208,7 @@ router.delete('/:id/subcontractors/:subId', async (req, res) => {
       action: 'subcontractor.removed',
       snapshot: { name: existing.name },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 
   res.json({ data: { deleted: true } });
 });

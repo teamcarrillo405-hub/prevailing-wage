@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { workers, projects } from '../db/schema.js';
@@ -146,7 +147,7 @@ export async function createWorker(
       meta: { workerName: input.name },
     });
   } catch (auditErr) {
-    console.error('[audit] worker.created audit failed:', auditErr);
+    logger.error({ err: auditErr }, '[audit] worker.created audit failed:');
   }
 
   // NOTIF-03: team activity notification — best-effort, non-fatal (NFR-02)
@@ -162,7 +163,7 @@ export async function createWorker(
       `Worker created: ${input.name}`,
     );
   } catch (err) {
-    console.error('[email] NOTIF-03 worker.created activity notification failed:', err);
+    logger.error({ err: err }, '[email] NOTIF-03 worker.created activity notification failed:');
   }
 
   return safeWorker(worker!);
@@ -233,7 +234,7 @@ export async function updateWorker(
       });
     }
   } catch (auditErr) {
-    console.error('[audit] worker.updated audit failed:', auditErr);
+    logger.error({ err: auditErr }, '[audit] worker.updated audit failed:');
   }
 
   // NOTIF-03: team activity notification — best-effort, non-fatal (NFR-02)
@@ -249,7 +250,7 @@ export async function updateWorker(
       `Worker updated: ${updated?.name ?? input.name ?? ''}`,
     );
   } catch (err) {
-    console.error('[email] NOTIF-03 worker.updated activity notification failed:', err);
+    logger.error({ err: err }, '[email] NOTIF-03 worker.updated activity notification failed:');
   }
 
   return safeWorker(updated!);
@@ -280,7 +281,7 @@ export async function deleteWorker(
       meta: { workerName: worker.name },
     });
   } catch (auditErr) {
-    console.error('[audit] worker.deleted audit failed:', auditErr);
+    logger.error({ err: auditErr }, '[audit] worker.deleted audit failed:');
   }
 
   return { deleted: true };

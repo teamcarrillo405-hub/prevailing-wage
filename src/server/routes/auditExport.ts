@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/routes/auditExport.ts
 //
 // GET /api/audit-export/:projectId
@@ -180,7 +181,7 @@ auditExportRouter.get('/:projectId', async (req, res) => {
     try {
       pdfBytes = await fillWh347(wh347Data, templateBytes);
     } catch (err) {
-      console.error(`[audit-export] WH-347 generation failed for week ${week.id}:`, err);
+      logger.error({ err }, `[audit-export] WH-347 generation failed for week ${week.id}`);
       // Add a placeholder text file so the week is still represented
       archive.append(
         `WH-347 generation failed for week ending ${week.weekEndingDate}`,

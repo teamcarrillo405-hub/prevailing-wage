@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 // src/server/routes/export.ts
 // GET /api/export/wh347/:weekId — generate and download a completed WH-347 PDF
 //
@@ -274,7 +275,7 @@ router.get('/wh347/:weekId', async (req, res) => {
       action: 'wh347.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/a1131/:weekId ─────────────────────────────────────────
@@ -398,7 +399,7 @@ router.get('/a1131/:weekId', async (req, res) => {
       action: 'ca_pdf.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/f700/:weekId ─────────────────────────────────────────
@@ -746,7 +747,7 @@ router.get('/ecpr-xml/:weekId', async (req, res) => {
       action: 'ecpr_xml.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'xml' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/wa-cpr-xml/:weekId ───────────────────────────────────────
@@ -922,7 +923,7 @@ router.get('/wa-cpr-xml/:weekId', async (req, res) => {
       action: 'wa_pwia_xml.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'xml' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/pw12/:weekId ──────────────────────────────────────────
@@ -1030,7 +1031,7 @@ router.get('/pw12/:weekId', async (req, res) => {
       action: 'ny_pw12.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/ny-mpwr-xml/:weekId ───────────────────────────────────
@@ -1134,7 +1135,7 @@ router.get('/ny-mpwr-xml/:weekId', async (req, res) => {
       action: 'ny_mpwr_xml.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'xml' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/il-pdf/:weekId ────────────────────────────────────────
@@ -1238,7 +1239,7 @@ router.get('/il-pdf/:weekId', async (req, res) => {
       action: 'il_pdf.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/ma-cpr/:weekId ─────────────────────────────────────────
@@ -1342,7 +1343,7 @@ router.get('/ma-cpr/:weekId', async (req, res) => {
       action: 'ma_pdf.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/nj-mw562/:weekId ────────────────────────────────────────
@@ -1448,7 +1449,7 @@ router.get('/nj-mw562/:weekId', async (req, res) => {
       action: 'nj_pdf.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
-  } catch (auditErr) { console.error('[audit]', auditErr); }
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 });
 
 // ── GET /api/export/compliance-summary ────────────────────────────────────

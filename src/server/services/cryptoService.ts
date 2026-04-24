@@ -1,8 +1,9 @@
+import { logger } from '../logger.js';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 const KEY_HEX = process.env.ENCRYPTION_KEY_V1;
 if (!KEY_HEX || KEY_HEX.length !== 64) {
-  console.error('[startup] ENCRYPTION_KEY_V1 missing or invalid (must be 64-char hex)');
+  logger.error('[startup] ENCRYPTION_KEY_V1 missing or invalid (must be 64-char hex)');
   process.exit(1);
 }
 const KEY = Buffer.from(KEY_HEX, 'hex');
@@ -40,6 +41,6 @@ try {
   const testPt = decryptSsn(testCt);
   if (testPt !== '123456789') throw new Error('round-trip mismatch');
 } catch (err) {
-  console.error('[startup] Encryption self-test failed:', err);
+  logger.error({ err: err }, '[startup] Encryption self-test failed:');
   process.exit(1);
 }
