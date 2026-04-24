@@ -2,6 +2,7 @@ import 'dotenv/config';
 import * as Sentry from '@sentry/node';
 import { logger } from './logger.js';
 import { pingDb } from './db/index.js';
+import pinoHttp from 'pino-http';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN, // no-op if undefined — safe to deploy without it
@@ -54,6 +55,12 @@ mkdirSync(process.env.UPLOAD_DIR || './uploads', { recursive: true });
 const app = express();
 app.set('trust proxy', 1);
 app.use(helmet());
+app.use(pinoHttp({
+  logger,
+  // Skip health checks from access log — too noisy for uptime pings
+  autoLogging: { ignore: (req) => req.url === '/api/health' },
+  customLogLevel: (_req, res) => res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
+}));
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', credentials: true }));
 // Stripe webhook needs raw body — must be before express.json()
 app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
