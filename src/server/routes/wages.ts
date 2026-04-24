@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import crypto from 'crypto';
-import { lookupWageDetermination } from '../services/wageLookup.js';
+import { lookupWageDetermination, fetchAndCacheByWdNumber } from '../services/wageLookup.js';
 import { upsertWageDetermination, upsertClassifications, getWdById, getCachedClassifications } from '../services/wageCache.js';
 import { runWageSync } from '../services/wdolSync.js';
 
@@ -15,6 +15,7 @@ export const wagesRouter = Router();
 const LookupQuerySchema = z.object({
   state: z.string().length(2, 'state must be 2-letter code').toUpperCase(),
   county: z.string().min(1, 'county is required'),
+  constructionType: z.enum(['Building', 'Heavy', 'Highway', 'Residential']).optional(),
 });
 
 const ClassificationInputSchema = z.object({
@@ -43,13 +44,18 @@ wagesRouter.get('/lookup', async (req, res) => {
     return res.status(400).json({ error: 'Invalid query', issues: parsed.error.issues });
   }
 
-  const { state, county } = parsed.data;
+  const { state, county, constructionType } = parsed.data;
   const wd = await lookupWageDetermination(state, county);
   if (!wd) {
     return res.status(404).json({ error: `No wage determination found for ${county}, ${state}` });
   }
 
-  return res.json({ wd, classifications: wd.classifications ?? [] });
+  // Filter by constructionType when provided; a WD with null constructionType matches any filter.
+  if (constructionType && wd.constructionType && wd.constructionType !== constructionType) {
+    return res.status(404).json({ error: `No ${constructionType} wage determination found for ${county}, ${state}` });
+  }
+
+  return res.json({ wds: [wd], classifications: [wd.classifications ?? []] });
 });
 
 // GET /api/wages/coverage
@@ -97,6 +103,21 @@ wagesRouter.get('/coverage', async (_req, res) => {
     totalCounties: byState.reduce((sum: number, r: typeof byState[number]) => sum + r.countyCount, 0),
     latestSync: latestSync ?? null,
   });
+});
+
+// GET /api/wages/fetch?wdNumber=CA20250001
+wagesRouter.get('/fetch', async (req, res) => {
+  const wdNumber = req.query['wdNumber'];
+  if (typeof wdNumber !== 'string' || !wdNumber.trim()) {
+    res.status(400).json({ error: 'wdNumber query param is required' });
+    return;
+  }
+  const wd = await fetchAndCacheByWdNumber(wdNumber.trim().toUpperCase());
+  if (!wd) {
+    res.status(404).json({ error: `WD ${wdNumber} not found on SAM.gov` });
+    return;
+  }
+  res.json({ wd, classifications: wd.classifications ?? [] });
 });
 
 // GET /api/wages/:id

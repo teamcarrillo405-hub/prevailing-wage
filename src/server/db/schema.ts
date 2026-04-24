@@ -176,6 +176,7 @@ export const wageDeterminations = sqliteTable('wage_determinations', {
   cacheExpiresAt: text('cache_expires_at').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  lastFetchedAt: text('last_fetched_at'),
 }, (table) => ({
   wdRevUnique: uniqueIndex('wd_rev_unique').on(table.wdNumber, table.revisionNumber),
 }));
@@ -194,6 +195,22 @@ export const wageClassifications = sqliteTable('wage_classifications', {
   totalRate: real('total_rate').notNull(),
   createdAt: text('created_at').notNull(),
 });
+
+export const projectWageDeterminations = sqliteTable('project_wage_determinations', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  wageDeterminationId: text('wage_determination_id').notNull()
+    .references(() => wageDeterminations.id, { onDelete: 'cascade' }),
+  constructionType: text('construction_type')
+    .$type<'Building' | 'Heavy' | 'Highway' | 'Residential'>(),
+  isPrimary: integer('is_primary', { mode: 'boolean' }).notNull().default(false),
+  pinnedAt: text('pinned_at').notNull(),
+  pinnedByUserId: text('pinned_by_user_id')
+    .references(() => users.id),
+}, (table) => ({
+  projWdUnique: uniqueIndex('idx_proj_wd_unique').on(table.projectId, table.wageDeterminationId),
+}));
 
 export const wageSyncMeta = sqliteTable('wage_sync_meta', {
   id: text('id').primaryKey(),

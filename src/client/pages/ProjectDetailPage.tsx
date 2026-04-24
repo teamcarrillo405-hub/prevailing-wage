@@ -16,6 +16,7 @@ const WH347_DEF = "The Department of Labor's official certified payroll form. Co
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { ProjectWageDeterminationsPanel } from '../components/ProjectWageDeterminationsPanel';
 
 interface Project {
   id: string;
@@ -940,6 +941,13 @@ export function ProjectDetailPage() {
 
           {/* Subcontractors panel */}
           <SubcontractorsPanel projectId={project.id} />
+
+          {/* Wage determinations panel */}
+          <ProjectWageDeterminationsPanel
+            projectId={project.id}
+            projectState={project.state}
+            projectCounty={project.county}
+          />
         </div>
       )}
     </Layout>
