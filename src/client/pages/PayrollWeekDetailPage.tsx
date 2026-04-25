@@ -1002,7 +1002,7 @@ export function PayrollWeekDetailPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto pb-24">
         {/* Hidden anchor for Blob download — must be outside modal so it persists when modal unmounts */}
         <a ref={hiddenAnchorRef} className="hidden" />
 
@@ -1024,7 +1024,9 @@ export function PayrollWeekDetailPage() {
               />
             )}
           </div>
-          <div className="flex items-center gap-2">
+        </div>
+        <div className="sticky bottom-0 z-10 bg-white border-t border-brand-navy/10 px-6 py-3 -mx-6 mt-8">
+          <div className="flex gap-2 flex-wrap items-center">
             {weekId && week && !week.isFinal && (
               <Link
                 to={`/projects/${projectId}/payroll/${weekId}/edit`}
