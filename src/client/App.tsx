@@ -33,6 +33,7 @@ const TeamPage = React.lazy(() => import('./pages/TeamPage.js').then(m => ({ def
 const BillingPage = React.lazy(() => import('./pages/BillingPage').then(m => ({ default: m.BillingPage })));
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage.js').then(m => ({ default: m.AcceptInvitePage })));
 const SubUploadPage = React.lazy(() => import('./pages/SubUploadPage').then(m => ({ default: m.SubUploadPage })));
+const IntegrationsPage = React.lazy(() => import('./pages/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,6 +91,7 @@ export default function App() {
                 <Route path="/projects/:id/activity" element={<ProjectActivityPage />} />
                 <Route path="/team" element={<TeamPage />} />
                 <Route path="/billing" element={<BillingPage />} />
+                <Route path="/settings/integrations" element={<IntegrationsPage />} />
               </Route>
 
               {/* Public accept-invite route — no auth wrapper per D-09 */}

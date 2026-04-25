@@ -60,6 +60,9 @@ export const projects = sqliteTable('projects', {
   njPwcNumber: text('nj_pwc_number'),
   njContractId: text('nj_contract_id'),
   projectSettings: text('project_settings'),
+  // Phase 70 — Apprenticeship ratio enforcement
+  apprenticeshipRequirements: text('apprenticeship_requirements'), // JSON: { "Electrician": { "maxRatio": "1:2" }, ... }
+  isIraIijaProject: integer('is_ira_iija_project', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -120,6 +123,9 @@ export const workers = sqliteTable('workers', {
   oshaTraining: integer('osha_training', { mode: 'boolean' }),
   // Phase 51 — NJ EEO field (legally-required sex, distinct from gender identity)
   workerSex: text('worker_sex'),
+  // Phase 70 — Apprenticeship program identity fields
+  apprenticeshipProgramName: text('apprenticeship_program_name'),
+  rapidsNumber: text('rapids_number'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -464,6 +470,23 @@ export const subcontractorCprWeeks = sqliteTable('subcontractor_cpr_weeks', {
   createdAt: text('created_at').notNull(),
 }, (table) => ({
   subCprWeekUnique: uniqueIndex('sub_cpr_week_unique').on(table.subcontractorId, table.weekEndingDate),
+}));
+
+// ── Phase 68: QuickBooks Online OAuth Tokens ─────────────────────────────
+// Stores encrypted OAuth tokens per user. One row per user (upsert pattern).
+// Tokens encrypted AES-256-GCM via cryptoService — never stored plaintext.
+export const qboTokens = sqliteTable('qbo_tokens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  realmId: text('realm_id').notNull(),
+  accessTokenEncrypted: text('access_token_encrypted').notNull(),
+  refreshTokenEncrypted: text('refresh_token_encrypted').notNull(),
+  accessTokenExpiresAt: text('access_token_expires_at').notNull(),
+  refreshTokenExpiresAt: text('refresh_token_expires_at').notNull(),
+  connectedAt: text('connected_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  idxQboTokensUser: index('idx_qbo_tokens_user').on(table.userId),
 }));
 
 // ── Phase 64: SOC 2 Security Audit Tables ────────────────────────────────

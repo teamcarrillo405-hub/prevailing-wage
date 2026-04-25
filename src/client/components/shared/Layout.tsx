@@ -82,6 +82,7 @@ export function Layout({ children }: LayoutProps) {
             <NavLink to="/dashboard" className={navCls}>Projects</NavLink>
             <NavLink to="/wages" className={navCls}>Wage Lookup</NavLink>
             <NavLink to="/team" className={navCls}>Team</NavLink>
+            <NavLink to="/settings/integrations" className={navCls}>Integrations</NavLink>
             {isOwner && (
               <>
                 <NavLink to="/billing" className={navCls}>Billing</NavLink>
@@ -150,6 +151,13 @@ export function Layout({ children }: LayoutProps) {
                 className={({ isActive }) => mobileNavCls(isActive)}
               >
                 Team
+              </NavLink>
+              <NavLink
+                to="/settings/integrations"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                Integrations
               </NavLink>
               {isOwner && (
                 <>
