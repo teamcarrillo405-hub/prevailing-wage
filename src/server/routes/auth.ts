@@ -9,10 +9,11 @@ import { hashPassword, verifyPassword, createSessionToken } from '../services/au
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { validateToken } from '../services/inviteService.js';
+import { insertSecurityEvent, insertLoginAttempt } from '../db/auditHelpers.js';
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,                   // 10 attempts per window
+  max: () => process.env.NODE_ENV === "test" ? 100_000 : 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
@@ -21,7 +22,7 @@ const loginLimiter = rateLimit({
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,                    // 5 registrations per hour per IP
+  max: () => process.env.NODE_ENV === "test" ? 100_000 : 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many registration attempts. Please try again later.' },
@@ -81,6 +82,8 @@ authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (r
 
   const token = await createSessionToken({ userId: id, email });
   res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
+  void insertLoginAttempt({ email, success: true, ipAddress: req.ip });
+  void insertSecurityEvent({ userId: id, eventType: 'register', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined });
   res.status(201).json({ data: { user: { id, email } } });
 });
 
@@ -98,18 +101,23 @@ authRouter.post('/login', loginLimiter, validate(LoginSchema), async (req, res) 
     : await verifyPassword(DUMMY_HASH, password).then(() => false); // always false for dummy
 
   if (!user || !valid) {
+    void insertLoginAttempt({ email, success: false, ipAddress: req.ip, failureReason: !user ? 'email_not_found' : 'wrong_password' });
+    void insertSecurityEvent({ userId: user?.id ?? null, eventType: 'login_failure', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined });
     res.status(401).json({ error: 'Invalid email or password' });
     return;
   }
 
   const token = await createSessionToken({ userId: user.id, email: user.email });
   res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
+  void insertLoginAttempt({ email, success: true, ipAddress: req.ip });
+  void insertSecurityEvent({ userId: user.id, eventType: 'login_success', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined });
   res.status(200).json({ data: { user: { id: user.id, email: user.email } } });
 });
 
 // POST /api/auth/logout
-authRouter.post('/logout', (_req, res) => {
+authRouter.post('/logout', (req, res) => {
   res.clearCookie(COOKIE_NAME, { path: '/' });
+  void insertSecurityEvent({ userId: null, eventType: 'logout', ipAddress: req.ip });
   res.status(200).json({ data: { message: 'Logged out' } });
 });
 
@@ -187,6 +195,7 @@ authRouter.post('/accept-invite', validate(AcceptInviteSchema), async (req, res)
   // Create session and log in
   const sessionToken = await createSessionToken({ userId: newUserId, email: invite.inviteeEmail });
   res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
+  void insertSecurityEvent({ userId: newUserId, eventType: 'invite_accepted', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined, metadata: { inviteToken: token.slice(0, 8) + '...' } });
   res.status(201).json({ data: { user: { id: newUserId, email: invite.inviteeEmail } } });
 });
 
