@@ -84,7 +84,7 @@ function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean
             <div className={
               step.complete
                 ? 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold bg-status-compliant text-white'
-                : 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold border-2 border-gray-300 text-gray-400 bg-white group-hover:border-brand-gold group-hover:text-brand-gold transition-colors'
+                : 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold border-2 border-brand-navy/30 text-gray-400 bg-white group-hover:border-brand-gold group-hover:text-brand-gold transition-colors'
             }>
               {step.complete ? '\u2713' : i + 1}
             </div>
@@ -915,7 +915,7 @@ export function ProjectDetailPage() {
             </Link>
           </div>
 
-          <Card className="max-w-lg">
+          <Card className="max-w-lg shadow-card-elevated">
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-gray-500">Contract type</dt>
@@ -971,7 +971,7 @@ export function ProjectDetailPage() {
           </div>
 
           {notifPanelOpen && (
-            <Card className="mt-4 max-w-lg">
+            <Card className="mt-4 max-w-lg shadow-card-elevated">
               <h3 className="font-headline text-base text-gray-900 mb-4">Notification Preferences</h3>
               <div className="space-y-5 text-sm font-body">
 
