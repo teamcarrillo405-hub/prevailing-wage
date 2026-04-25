@@ -1,6 +1,6 @@
 CREATE TABLE security_events (
   id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES users(id),
+  user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   event_type TEXT NOT NULL,
   ip_address TEXT,
   user_agent TEXT,

@@ -469,7 +469,7 @@ export const subcontractorCprWeeks = sqliteTable('subcontractor_cpr_weeks', {
 // ── Phase 64: SOC 2 Security Audit Tables ────────────────────────────────
 export const securityEvents = sqliteTable('security_events', {
   id:        text('id').primaryKey(),
-  userId:    text('user_id').references(() => users.id),
+  userId:    text('user_id').references(() => users.id, { onDelete: 'set null' }),
   eventType: text('event_type').notNull(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
