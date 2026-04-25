@@ -1,5 +1,13 @@
 import type { BadgeVariant } from '../components/ui/Badge';
 
+export interface SubcontractorCertSummary {
+  certCount: number;
+  isCertified: boolean;
+  hasExpiredCert: boolean;
+  hasSuspendedCert: boolean;
+  hasPendingCert: boolean;
+}
+
 export interface Subcontractor {
   id: string;
   projectId: string;
@@ -9,6 +17,8 @@ export interface Subcontractor {
   contactEmail: string | null;
   address: string | null;
   createdAt: string;
+  // DBE-05: cert summary attached by GET /subcontractors (populated server-side)
+  certSummary?: SubcontractorCertSummary;
 }
 
 export interface SubcontractorCertification {

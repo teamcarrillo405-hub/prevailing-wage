@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Workflow, Settings, ChevronRight, Building2 } from 'lucide-react';
+import { Workflow, Settings, ChevronRight, Building2, Shield } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -776,6 +776,13 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
 
   const subs = subsData?.data?.subcontractors ?? [];
 
+  // DBE-05: derive participation counts from server-attached certSummary
+  const activeCertifiedCount = subs.filter(
+    s => s.certSummary?.isCertified && !s.certSummary.hasSuspendedCert,
+  ).length;
+  const expiredCount = subs.filter(s => s.certSummary?.hasExpiredCert).length;
+  const pendingCount = subs.filter(s => s.certSummary?.hasPendingCert).length;
+
   const INPUT_CLASSES = 'border border-border-default rounded px-2 py-1 text-sm bg-surface-page';
 
   return (
@@ -788,6 +795,39 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
           </Button>
         )}
       </div>
+
+      {/* DBE-05: DBE Participation Summary card — shown only when there are certified subs */}
+      {subs.length > 0 && subs.some(s => s.certSummary?.isCertified) && (
+        <div className="rounded-xl border border-gray-200 shadow-sm p-5 mb-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-brand-gold" />
+            DBE/MBE/WBE Participation
+          </h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">{activeCertifiedCount}</p>
+              <p className="text-xs text-gray-500">Active Certified</p>
+            </div>
+            <div className="text-center">
+              <p className={`text-2xl font-bold ${expiredCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                {expiredCount}
+              </p>
+              <p className="text-xs text-gray-500">Expired Certs</p>
+            </div>
+            <div className="text-center">
+              <p className={`text-2xl font-bold ${pendingCount > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
+                {pendingCount}
+              </p>
+              <p className="text-xs text-gray-500">DOT IFR Review</p>
+            </div>
+          </div>
+          {(expiredCount > 0 || pendingCount > 0) && (
+            <p className="text-xs text-amber-700 bg-amber-50 rounded p-2 mt-3">
+              Resolve certification issues before the next CPR submission deadline.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Add form */}
       {addingNew && (
