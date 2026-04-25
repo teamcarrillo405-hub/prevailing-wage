@@ -66,7 +66,39 @@ router.get('/:id/subcontractors', async (req, res) => {
     .from(subcontractors)
     .where(eq(subcontractors.projectId, projectId));
 
-  res.json({ data: { subcontractors: rows } });
+  // DBE-05: Attach cert summary to each sub so the participation card can be derived
+  // without additional per-sub round trips.
+  const today = new Date().toISOString().slice(0, 10);
+  const subsWithCertSummary = await Promise.all(
+    rows.map(async (sub: typeof rows[number]) => {
+      const certs = await db
+        .select({
+          expiresDate: subcontractorCertifications.expiresDate,
+          reevaluationStatus: subcontractorCertifications.reevaluationStatus,
+        })
+        .from(subcontractorCertifications)
+        .where(eq(subcontractorCertifications.subcontractorId, sub.id));
+
+      type CertRow = typeof certs[number];
+      const hasExpiredCert = certs.some((c: CertRow) => c.expiresDate && c.expiresDate < today);
+      const hasSuspendedCert = certs.some((c: CertRow) => c.reevaluationStatus === 'suspended');
+      const hasPendingCert = certs.some((c: CertRow) => c.reevaluationStatus === 'pending');
+      const isCertified = certs.length > 0;
+
+      return {
+        ...sub,
+        certSummary: {
+          certCount: certs.length,
+          isCertified,
+          hasExpiredCert,
+          hasSuspendedCert,
+          hasPendingCert,
+        },
+      };
+    }),
+  );
+
+  res.json({ data: { subcontractors: subsWithCertSummary } });
 });
 
 // POST /:id/subcontractors — create a subcontractor
@@ -277,6 +309,30 @@ router.post('/:id/subcontractors/:subId/cpr-weeks', validate(CreateCprWeekSchema
   }
 
   const body = req.body as z.infer<typeof CreateCprWeekSchema>;
+
+  // DBE-04: Block CPR creation if the sub has an expired or suspended certification
+  const subCerts = await db
+    .select({
+      expiresDate: subcontractorCertifications.expiresDate,
+      reevaluationStatus: subcontractorCertifications.reevaluationStatus,
+    })
+    .from(subcontractorCertifications)
+    .where(eq(subcontractorCertifications.subcontractorId, subId));
+
+  const today = new Date().toISOString().slice(0, 10);
+  type SubCertRow = typeof subCerts[number];
+  const hasSuspendedCert = subCerts.some((c: SubCertRow) => c.reevaluationStatus === 'suspended');
+  const hasExpiredCert = subCerts.some((c: SubCertRow) => c.expiresDate && c.expiresDate < today);
+
+  if (hasSuspendedCert || hasExpiredCert) {
+    res.status(422).json({
+      error: hasSuspendedCert
+        ? 'Sub has a suspended DBE certification — resolve before accepting CPR'
+        : 'Sub has an expired certification — renew before accepting CPR',
+      code: 'CERT_EXPIRED_OR_SUSPENDED',
+    });
+    return;
+  }
 
   // Check for duplicate (subcontractorId, weekEndingDate)
   const [existing] = await db

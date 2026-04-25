@@ -4,7 +4,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { eq, and, gt } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { subcontractorCprWeeks, subcontractors, projects } from '../db/schema.js';
+import { subcontractorCprWeeks, subcontractors, projects, subcontractorCertifications } from '../db/schema.js';
 import { sendSubCprReceivedEmail } from '../services/emailService.js';
 
 const router = Router();
@@ -95,6 +95,30 @@ router.post('/:token', (req, res, next) => {
 
   if (row.week.uploadedAt) {
     res.status(409).json({ error: 'A file has already been uploaded for this week' });
+    return;
+  }
+
+  // DBE-04: Block upload if sub has expired or suspended certification
+  const subCerts = await db
+    .select({
+      expiresDate: subcontractorCertifications.expiresDate,
+      reevaluationStatus: subcontractorCertifications.reevaluationStatus,
+    })
+    .from(subcontractorCertifications)
+    .where(eq(subcontractorCertifications.subcontractorId, row.sub.id));
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  type SubCertRow = typeof subCerts[number];
+  const hasSuspendedCert = subCerts.some((c: SubCertRow) => c.reevaluationStatus === 'suspended');
+  const hasExpiredCert = subCerts.some((c: SubCertRow) => c.expiresDate && c.expiresDate < todayStr);
+
+  if (hasSuspendedCert || hasExpiredCert) {
+    res.status(422).json({
+      error: hasSuspendedCert
+        ? 'Sub has a suspended DBE certification — resolve before accepting CPR'
+        : 'Sub has an expired certification — renew before accepting CPR',
+      code: 'CERT_EXPIRED_OR_SUSPENDED',
+    });
     return;
   }
 
