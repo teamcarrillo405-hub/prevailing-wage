@@ -11,6 +11,22 @@ export interface Subcontractor {
   createdAt: string;
 }
 
+export interface SubcontractorCertification {
+  id: string;
+  subcontractorId: string;
+  certTypes: string; // CSV e.g. "DBE,MBE"
+  certifyingAgency: string | null;
+  certNumber: string | null;
+  naicsCodes: string | null;
+  issueDate: string | null;
+  expiresDate: string | null;
+  reevaluationStatus: 'not_required' | 'pending' | 'cleared' | 'suspended';
+  selfCertified: boolean;
+  documentPath: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CprWeek {
   id: string;
   subcontractorId: string;

@@ -472,6 +472,32 @@ export const subcontractorCprWeeks = sqliteTable('subcontractor_cpr_weeks', {
   subCprWeekUnique: uniqueIndex('sub_cpr_week_unique').on(table.subcontractorId, table.weekEndingDate),
 }));
 
+// ── Phase 71: Subcontractor DBE/MBE/WBE Certifications ───────────────────
+// Stores certification records per subcontractor. certTypes is CSV (e.g. "DBE,MBE").
+// reevaluationStatus tracks DOT IFR Oct 2025 compliance status.
+export const subcontractorCertifications = sqliteTable('subcontractor_certifications', {
+  id: text('id').primaryKey(),
+  subcontractorId: text('subcontractor_id').notNull().references(() => subcontractors.id, { onDelete: 'cascade' }),
+  certTypes: text('cert_types').notNull(), // CSV: "DBE,MBE" for multi-type
+  certifyingAgency: text('certifying_agency'),
+  certNumber: text('cert_number'),
+  naicsCodes: text('naics_codes'), // CSV: "236220,238110"
+  issueDate: text('issue_date'), // YYYY-MM-DD
+  expiresDate: text('expires_date'), // YYYY-MM-DD
+  ownerRace: text('owner_race'),
+  ownerGender: text('owner_gender'),
+  personalNetWorthUsd: integer('personal_net_worth_usd'),
+  // DOT IFR Oct 2025: 'not_required' | 'pending' | 'cleared' | 'suspended'
+  reevaluationStatus: text('reevaluation_status').default('not_required'),
+  selfCertified: integer('self_certified', { mode: 'boolean' }).default(false),
+  documentPath: text('document_path'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => [
+  index('idx_sub_certs_sub').on(table.subcontractorId),
+  index('idx_sub_certs_expires').on(table.expiresDate, table.reevaluationStatus),
+]);
+
 // ── Phase 68: QuickBooks Online OAuth Tokens ─────────────────────────────
 // Stores encrypted OAuth tokens per user. One row per user (upsert pattern).
 // Tokens encrypted AES-256-GCM via cryptoService — never stored plaintext.

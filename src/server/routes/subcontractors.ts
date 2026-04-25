@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { randomUUID, randomBytes } from 'crypto';
 import { eq, and, desc } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { subcontractors, subcontractorCprWeeks, projects } from '../db/schema.js';
+import { subcontractors, subcontractorCprWeeks, subcontractorCertifications, projects } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
@@ -333,6 +333,128 @@ router.post('/:id/subcontractors/:subId/cpr-weeks', validate(CreateCprWeekSchema
   }
 
   res.status(201).json({ data: { cprWeek: newWeek } });
+});
+
+// ── Phase 71: DBE/MBE/WBE Certification CRUD ──────────────────────────────
+
+const CreateCertSchema = z.object({
+  certTypes: z.string().min(1),
+  certifyingAgency: z.string().optional(),
+  certNumber: z.string().optional(),
+  naicsCodes: z.string().optional(),
+  issueDate: z.string().optional(),
+  expiresDate: z.string().optional(),
+  reevaluationStatus: z.enum(['not_required', 'pending', 'cleared', 'suspended']).default('not_required'),
+  selfCertified: z.boolean().default(false),
+});
+
+// GET /:id/subcontractors/:subId/certifications — list certs for a sub
+router.get('/:id/subcontractors/:subId/certifications', async (req, res) => {
+  const projectId = req.params.id as string;
+  const subId = req.params.subId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [sub] = await db
+    .select()
+    .from(subcontractors)
+    .where(and(eq(subcontractors.id, subId), eq(subcontractors.projectId, projectId)))
+    .limit(1);
+
+  if (!sub) {
+    res.status(404).json({ error: 'Subcontractor not found' });
+    return;
+  }
+
+  const certs = await db
+    .select()
+    .from(subcontractorCertifications)
+    .where(eq(subcontractorCertifications.subcontractorId, subId))
+    .orderBy(desc(subcontractorCertifications.createdAt));
+
+  res.json({ data: { certifications: certs } });
+});
+
+// POST /:id/subcontractors/:subId/certifications — create a cert
+router.post('/:id/subcontractors/:subId/certifications', validate(CreateCertSchema), async (req, res) => {
+  const projectId = req.params.id as string;
+  const subId = req.params.subId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [sub] = await db
+    .select()
+    .from(subcontractors)
+    .where(and(eq(subcontractors.id, subId), eq(subcontractors.projectId, projectId)))
+    .limit(1);
+
+  if (!sub) {
+    res.status(404).json({ error: 'Subcontractor not found' });
+    return;
+  }
+
+  const body = req.body as z.infer<typeof CreateCertSchema>;
+  const now = new Date().toISOString();
+  const id = randomUUID();
+
+  await db.insert(subcontractorCertifications).values({
+    id,
+    subcontractorId: subId,
+    certTypes: body.certTypes,
+    certifyingAgency: body.certifyingAgency ?? null,
+    certNumber: body.certNumber ?? null,
+    naicsCodes: body.naicsCodes ?? null,
+    issueDate: body.issueDate ?? null,
+    expiresDate: body.expiresDate ?? null,
+    reevaluationStatus: body.reevaluationStatus,
+    selfCertified: body.selfCertified,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const [newCert] = await db
+    .select()
+    .from(subcontractorCertifications)
+    .where(eq(subcontractorCertifications.id, id))
+    .limit(1);
+
+  res.status(201).json({ data: { certification: newCert } });
+});
+
+// DELETE /:id/subcontractors/:subId/certifications/:certId — remove a cert
+router.delete('/:id/subcontractors/:subId/certifications/:certId', async (req, res) => {
+  const projectId = req.params.id as string;
+  const subId = req.params.subId as string;
+  const certId = req.params.certId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  await db
+    .delete(subcontractorCertifications)
+    .where(and(eq(subcontractorCertifications.id, certId), eq(subcontractorCertifications.subcontractorId, subId)));
+
+  res.json({ data: { deleted: true } });
 });
 
 // PATCH /:id/subcontractors/:subId/cpr-weeks/:weekId — update a CPR week record

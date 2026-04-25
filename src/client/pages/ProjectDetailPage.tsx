@@ -11,7 +11,7 @@ import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
 import { EmptyState } from '../components/ui/EmptyState';
 import { getCprStatus, STATUS_BADGE } from '../lib/cprStatus';
-import type { Subcontractor, CprWeek } from '../lib/cprStatus';
+import type { Subcontractor, CprWeek, SubcontractorCertification } from '../lib/cprStatus';
 
 const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
@@ -418,6 +418,276 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
   );
 }
 
+const CERT_TYPE_OPTIONS = ['DBE', 'MBE', 'WBE', 'SBE', 'ACDBE', '8(a)', 'HUBZone'];
+
+const REEVAL_OPTIONS: { value: SubcontractorCertification['reevaluationStatus']; label: string }[] = [
+  { value: 'not_required', label: 'Not subject to IFR review' },
+  { value: 'pending',      label: 'Under DOT Oct 2025 IFR review' },
+  { value: 'cleared',      label: 'Cleared by DOT' },
+  { value: 'suspended',    label: 'Suspended — contact DOT' },
+];
+
+const EMPTY_CERT_FORM = {
+  certTypes: '',
+  certifyingAgency: '',
+  certNumber: '',
+  expiresDate: '',
+  reevaluationStatus: 'not_required' as SubcontractorCertification['reevaluationStatus'],
+};
+
+function CertificationsSection({ projectId, subId }: { projectId: string; subId: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [addCertOpen, setAddCertOpen] = useState(false);
+  const [certForm, setCertForm] = useState({ ...EMPTY_CERT_FORM });
+  const [certError, setCertError] = useState<string | null>(null);
+
+  const { data: certData, isLoading: certLoading } = useQuery({
+    queryKey: ['certifications', projectId, subId],
+    queryFn: () => api.get<{ data: { certifications: SubcontractorCertification[] } }>(
+      `/projects/${projectId}/subcontractors/${subId}/certifications`
+    ),
+    enabled: !!subId,
+  });
+
+  const addCertMutation = useMutation({
+    mutationFn: (body: Omit<typeof EMPTY_CERT_FORM, ''>) =>
+      api.post<{ data: { certification: SubcontractorCertification } }>(
+        `/projects/${projectId}/subcontractors/${subId}/certifications`,
+        body
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['certifications', projectId, subId] });
+      toast.success('Certification added');
+      setAddCertOpen(false);
+      setCertForm({ ...EMPTY_CERT_FORM });
+      setCertError(null);
+    },
+    onError: () => setCertError('Failed to save certification.'),
+  });
+
+  const deleteCertMutation = useMutation({
+    mutationFn: (certId: string) =>
+      api.delete(`/projects/${projectId}/subcontractors/${subId}/certifications/${certId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['certifications', projectId, subId] });
+      toast.success('Certification removed');
+    },
+    onError: () => toast.error('Could not remove certification'),
+  });
+
+  const certs = certData?.data?.certifications ?? [];
+
+  function handleAddCert() {
+    if (!certForm.certTypes.trim()) { setCertError('Cert types are required.'); return; }
+    addCertMutation.mutate({
+      certTypes: certForm.certTypes.trim(),
+      certifyingAgency: certForm.certifyingAgency || undefined,
+      certNumber: certForm.certNumber || undefined,
+      expiresDate: certForm.expiresDate || undefined,
+      reevaluationStatus: certForm.reevaluationStatus,
+    } as any);
+  }
+
+  const INPUT_CLASSES = 'border border-border-default rounded px-2 py-1 text-sm bg-surface-page';
+
+  return (
+    <div className="mt-3 border-t border-border-default pt-3">
+      <h4 className="font-headline text-sm text-gray-700 mb-2">DBE / MBE / WBE Certifications</h4>
+
+      {certLoading && <p className="text-xs text-gray-500">Loading...</p>}
+
+      {/* Cert badges */}
+      {certs.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {certs.map(cert => (
+            <span
+              key={cert.id}
+              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                cert.reevaluationStatus === 'suspended'
+                  ? 'bg-red-100 text-red-700'
+                  : cert.reevaluationStatus === 'pending'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-emerald-100 text-emerald-700'
+              }`}
+            >
+              {cert.certTypes}
+              {cert.reevaluationStatus === 'suspended' && ' (Suspended)'}
+              {cert.reevaluationStatus === 'pending' && ' (DOT Review)'}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Cert table */}
+      {certs.length > 0 && (
+        <div className="overflow-x-auto mb-3">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-gray-500 border-b border-border-default">
+                <th className="pb-1 pr-3 font-medium">Cert Types</th>
+                <th className="pb-1 pr-3 font-medium">Agency</th>
+                <th className="pb-1 pr-3 font-medium">Expires</th>
+                <th className="pb-1 pr-3 font-medium">DOT IFR Status</th>
+                <th className="pb-1 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {certs.map(cert => (
+                <tr key={cert.id} className="border-b border-border-default/50 last:border-0">
+                  <td className="py-1.5 pr-3 font-medium text-gray-900">{cert.certTypes}</td>
+                  <td className="py-1.5 pr-3 text-gray-600">{cert.certifyingAgency ?? '—'}</td>
+                  <td className="py-1.5 pr-3 text-gray-600">{cert.expiresDate ?? '—'}</td>
+                  <td className="py-1.5 pr-3">
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                      cert.reevaluationStatus === 'suspended' ? 'bg-red-100 text-red-700' :
+                      cert.reevaluationStatus === 'pending'   ? 'bg-amber-100 text-amber-700' :
+                      cert.reevaluationStatus === 'cleared'   ? 'bg-emerald-100 text-emerald-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {REEVAL_OPTIONS.find(o => o.value === cert.reevaluationStatus)?.label ?? cert.reevaluationStatus}
+                    </span>
+                  </td>
+                  <td className="py-1.5">
+                    <button
+                      className="text-xs font-medium text-status-violation hover:underline"
+                      onClick={() => {
+                        if (window.confirm('Remove this certification?')) {
+                          deleteCertMutation.mutate(cert.id);
+                        }
+                      }}
+                      disabled={deleteCertMutation.isPending}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!certs.length && !certLoading && (
+        <p className="text-xs text-gray-400 mb-2">No certifications on file.</p>
+      )}
+
+      {/* Add cert button / form */}
+      {!addCertOpen ? (
+        <button
+          onClick={() => setAddCertOpen(true)}
+          className="text-xs text-brand-gold hover:underline"
+        >
+          + Add Certification
+        </button>
+      ) : (
+        <div className="bg-surface-page border border-border-default rounded p-3 space-y-2">
+          <p className="text-xs font-medium text-gray-700 mb-1">Add Certification</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2">
+              <label className="block text-xs text-gray-500 mb-0.5">Cert Types * (comma-separated)</label>
+              <div className="flex flex-wrap gap-1 mb-1">
+                {CERT_TYPE_OPTIONS.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      const current = certForm.certTypes
+                        .split(',').map(s => s.trim()).filter(Boolean);
+                      const next = current.includes(t)
+                        ? current.filter(s => s !== t)
+                        : [...current, t];
+                      setCertForm(f => ({ ...f, certTypes: next.join(',') }));
+                    }}
+                    className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                      certForm.certTypes.split(',').map(s => s.trim()).includes(t)
+                        ? 'bg-brand-gold/90 text-white border-brand-gold'
+                        : 'border-border-default text-gray-600 hover:border-brand-gold'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                className={INPUT_CLASSES + ' w-full'}
+                placeholder="e.g. DBE,MBE"
+                value={certForm.certTypes}
+                onChange={e => setCertForm(f => ({ ...f, certTypes: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">Certifying Agency</label>
+              <input
+                type="text"
+                className={INPUT_CLASSES + ' w-full'}
+                placeholder="Optional"
+                value={certForm.certifyingAgency}
+                onChange={e => setCertForm(f => ({ ...f, certifyingAgency: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">Cert Number</label>
+              <input
+                type="text"
+                className={INPUT_CLASSES + ' w-full'}
+                placeholder="Optional"
+                value={certForm.certNumber}
+                onChange={e => setCertForm(f => ({ ...f, certNumber: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">Expiration Date</label>
+              <input
+                type="date"
+                className={INPUT_CLASSES + ' w-full'}
+                value={certForm.expiresDate}
+                onChange={e => setCertForm(f => ({ ...f, expiresDate: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5 flex items-center gap-1">
+                DOT IFR Status
+                <span
+                  title="The DOT Interim Final Rule (Oct 3, 2025) requires individual reevaluation of all DBE certifications. Suspended status means DBE goals cannot be counted on federal projects."
+                  className="cursor-help text-gray-400 hover:text-gray-600 text-xs border border-gray-300 rounded-full w-4 h-4 inline-flex items-center justify-center font-bold"
+                >
+                  ?
+                </span>
+              </label>
+              <select
+                className={INPUT_CLASSES + ' w-full'}
+                value={certForm.reevaluationStatus}
+                onChange={e => setCertForm(f => ({ ...f, reevaluationStatus: e.target.value as SubcontractorCertification['reevaluationStatus'] }))}
+              >
+                {REEVAL_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {certError && <p className="text-xs text-status-violation">{certError}</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              variant="secondary"
+              onClick={() => { setAddCertOpen(false); setCertForm({ ...EMPTY_CERT_FORM }); setCertError(null); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddCert}
+              disabled={!certForm.certTypes.trim() || addCertMutation.isPending}
+            >
+              {addCertMutation.isPending ? 'Saving...' : 'Save Certification'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SubcontractorsPanel({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -733,7 +1003,10 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
               </div>
 
               {expandedSubId === sub.id && (
-                <CprWeekTable projectId={projectId} subId={sub.id} />
+                <>
+                  <CertificationsSection projectId={projectId} subId={sub.id} />
+                  <CprWeekTable projectId={projectId} subId={sub.id} />
+                </>
               )}
             </div>
           )}
