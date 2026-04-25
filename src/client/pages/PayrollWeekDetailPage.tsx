@@ -502,6 +502,29 @@ export function PayrollWeekDetailPage() {
   });
   const projectWorkers = workersData?.data?.workers ?? [];
 
+  // QB Online connection status — used to conditionally show "Import from QuickBooks" button
+  const { data: qboStatusData } = useQuery({
+    queryKey: ['qbo-status'],
+    queryFn: () => api.get<{ data: { connected: boolean } }>('/integrations/qbo/status'),
+    staleTime: 5 * 60 * 1000, // 5 minutes — token status doesn't change often
+  });
+  const qboConnected = qboStatusData?.data?.connected === true;
+  const [showQboImportModal, setShowQboImportModal] = useState(false);
+  const [qboActivities, setQboActivities] = useState<Array<{
+    qboId: string;
+    employeeRef: string;
+    employeeId: string | null;
+    date: string;
+    hours: number;
+    description: string | null;
+    customerRef: string | null;
+    needsDailySplit: boolean;
+  }> | null>(null);
+  const [qboImportFetching, setQboImportFetching] = useState(false);
+  const [qboImportError, setQboImportError] = useState<string | null>(null);
+  const [qboImportNote, setQboImportNote] = useState<string | null>(null);
+
+
   // Step 2b state: ID mapping for providers that use numeric worker IDs (Phase 45)
   const [idMappings, setIdMappings] = useState<Record<string, string>>({});
   const [idMappingsSaving, setIdMappingsSaving] = useState(false);
@@ -1110,6 +1133,15 @@ export function PayrollWeekDetailPage() {
                 onClick={() => { setImportStep(1); setShowImportModal(true); }}
               >
                 Import from Payroll Provider
+              </Button>
+            )}
+            {weekId && qboConnected && !week?.submittedAt && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowQboImportModal(true)}
+              >
+                Import from QuickBooks
               </Button>
             )}
           </div>
@@ -2466,6 +2498,150 @@ export function PayrollWeekDetailPage() {
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {/* QB Online Time Import Modal (Phase 69) */}
+        {showQboImportModal && (
+          <div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            onClick={(e) => { if (e.target === e.currentTarget) { setShowQboImportModal(false); setQboActivities(null); setQboImportError(null); setQboImportNote(null); } }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setShowQboImportModal(false); setQboActivities(null); setQboImportError(null); setQboImportNote(null); } }}
+            tabIndex={-1}
+          >
+            <Card className="max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <h2 className="text-base font-headline text-gray-900 mb-1">
+                Import from QuickBooks
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Week ending <strong>{week?.weekEndingDate}</strong>
+              </p>
+
+              {qboImportError && (
+                <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {qboImportError}
+                </div>
+              )}
+
+              {qboImportNote && (
+                <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  {qboImportNote}
+                </div>
+              )}
+
+              {!qboActivities && !qboImportFetching && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Fetch time records from QuickBooks Online for this payroll week and route them through
+                    the standard import pipeline.
+                  </p>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={qboImportFetching}
+                    onClick={async () => {
+                      if (!week) return;
+                      setQboImportFetching(true);
+                      setQboImportError(null);
+                      setQboImportNote(null);
+                      try {
+                        // Derive week start date (Mon) from weekEndingDate (Sun)
+                        const endDate = week.weekEndingDate;
+                        const end = new Date(endDate + 'T00:00:00Z');
+                        const start = new Date(end);
+                        start.setUTCDate(end.getUTCDate() - 6);
+                        const startDate = start.toISOString().slice(0, 10);
+
+                        const resp = await api.get<{
+                          data: {
+                            activities: typeof qboActivities;
+                            count: number;
+                            note: string | null;
+                          };
+                        }>(`/integrations/qbo/timeactivities?startDate=${startDate}&endDate=${endDate}`);
+
+                        setQboActivities(resp.data.activities);
+                        if (resp.data.note) setQboImportNote(resp.data.note);
+                      } catch {
+                        setQboImportError('Failed to fetch time records from QuickBooks. Check your connection and try again.');
+                      } finally {
+                        setQboImportFetching(false);
+                      }
+                    }}
+                  >
+                    Fetch time records
+                  </Button>
+                </div>
+              )}
+
+              {qboImportFetching && (
+                <p className="text-sm text-gray-500">Fetching time records from QuickBooks...</p>
+              )}
+
+              {qboActivities && qboActivities.length === 0 && (
+                <p className="text-sm text-gray-500">No time records found for this week in QuickBooks.</p>
+              )}
+
+              {qboActivities && qboActivities.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {qboActivities.length} time {qboActivities.length === 1 ? 'record' : 'records'} found.
+                    Review below, then use <strong>Import from Payroll Provider</strong> with a QB export
+                    file to commit hours through the full matching pipeline.
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-left text-gray-500">
+                          <th className="py-1 pr-3 font-medium">Employee</th>
+                          <th className="py-1 pr-3 font-medium">Date</th>
+                          <th className="py-1 pr-3 font-medium text-right">Hours</th>
+                          <th className="py-1 pr-3 font-medium">Customer / Job</th>
+                          <th className="py-1 font-medium">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {qboActivities.map((act) => (
+                          <tr key={act.qboId} className="border-b border-gray-100 last:border-0">
+                            <td className="py-1 pr-3 text-gray-800">{act.employeeRef}</td>
+                            <td className="py-1 pr-3 text-gray-600">{act.date}</td>
+                            <td className="py-1 pr-3 text-right text-gray-800">
+                              {act.hours.toFixed(2)}
+                              {act.needsDailySplit && (
+                                <span className="ml-1 text-amber-600" title="Needs daily split">*</span>
+                              )}
+                            </td>
+                            <td className="py-1 pr-3 text-gray-500">{act.customerRef ?? '—'}</td>
+                            <td className="py-1 text-gray-400">{act.description ?? '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {qboActivities.some((a) => a.needsDailySplit) && (
+                    <p className="mt-2 text-xs text-amber-700">
+                      * QuickBooks stores weekly totals for these entries. Daily hour split required before
+                      importing — use the QB payroll export CSV with per-day columns.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t border-gray-100 mt-4">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setShowQboImportModal(false);
+                    setQboActivities(null);
+                    setQboImportError(null);
+                    setQboImportNote(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
 

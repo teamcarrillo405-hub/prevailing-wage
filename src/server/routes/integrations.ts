@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { getQboConnection, deleteQboTokens, saveQboTokens } from '../services/qboService.js';
+import { getQboConnection, deleteQboTokens, saveQboTokens, getValidAccessToken } from '../services/qboService.js';
 import { insertSecurityEvent } from '../db/auditHelpers.js';
 import { logger } from '../logger.js';
 
@@ -125,6 +125,135 @@ integrationsRouter.delete('/qbo', requireAuth, async (req, res) => {
   await deleteQboTokens(userId);
   void insertSecurityEvent({ userId, eventType: 'disconnect_qbo' });
   res.json({ data: { disconnected: true } });
+});
+
+// GET /api/integrations/qbo/employees
+// Pulls the Employee roster from QB Online and returns a preview list.
+integrationsRouter.get('/qbo/employees', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+
+  const tokenData = await getValidAccessToken(userId);
+  if (!tokenData) {
+    res.status(401).json({ error: 'QuickBooks not connected' });
+    return;
+  }
+
+  const { accessToken, realmId } = tokenData;
+
+  const qboResp = await fetch(
+    `https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=${encodeURIComponent('SELECT * FROM Employee MAXRESULTS 200')}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json',
+      },
+    },
+  );
+
+  if (!qboResp.ok) {
+    const text = await qboResp.text();
+    logger.error({ status: qboResp.status, body: text.slice(0, 400) }, '[qbo-employees] QB API error');
+    res.status(502).json({ error: 'QB API error', detail: text.slice(0, 200) });
+    return;
+  }
+
+  const data = await qboResp.json() as { QueryResponse?: { Employee?: unknown[] } };
+  const employees = (data.QueryResponse?.Employee ?? []) as Array<Record<string, unknown>>;
+
+  const preview = employees.map((emp) => {
+    const addr = emp['PrimaryAddr'] as Record<string, string> | undefined;
+    const emailObj = emp['PrimaryEmailAddr'] as { Address?: string } | undefined;
+    const ssn = emp['SSN'] as string | undefined;
+    return {
+      qboId: emp['Id'] as string,
+      displayName: (emp['DisplayName'] as string | undefined) ||
+        `${(emp['GivenName'] as string) ?? ''} ${(emp['FamilyName'] as string) ?? ''}`.trim(),
+      email: emailObj?.Address ?? null,
+      address: addr
+        ? [addr['Line1'], addr['City'], addr['CountrySubDivisionCode'], addr['PostalCode']]
+            .filter(Boolean)
+            .join(', ')
+        : null,
+      hasSsn: !!ssn,
+      ssnLast4: ssn ? ssn.slice(-4) : null,
+    };
+  });
+
+  res.json({ data: { employees: preview } });
+});
+
+// GET /api/integrations/qbo/timeactivities?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+// Pulls TimeActivity records from QB Online for the given date range.
+integrationsRouter.get('/qbo/timeactivities', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const { startDate, endDate } = req.query as Record<string, string>;
+
+  if (!startDate || !endDate) {
+    res.status(400).json({ error: 'startDate and endDate are required (YYYY-MM-DD)' });
+    return;
+  }
+
+  const tokenData = await getValidAccessToken(userId);
+  if (!tokenData) {
+    res.status(401).json({ error: 'QuickBooks not connected' });
+    return;
+  }
+
+  const { accessToken, realmId } = tokenData;
+
+  const query = `SELECT * FROM TimeActivity WHERE TxnDate >= '${startDate}' AND TxnDate <= '${endDate}' MAXRESULTS 500`;
+
+  const qboResp = await fetch(
+    `https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json',
+      },
+    },
+  );
+
+  if (!qboResp.ok) {
+    const text = await qboResp.text();
+    logger.error({ status: qboResp.status, body: text.slice(0, 400) }, '[qbo-timeactivities] QB API error');
+    res.status(502).json({ error: 'QB API error', detail: text.slice(0, 200) });
+    return;
+  }
+
+  const data = await qboResp.json() as { QueryResponse?: { TimeActivity?: unknown[] } };
+  const activities = (data.QueryResponse?.TimeActivity ?? []) as Array<Record<string, unknown>>;
+
+  const rows = activities.map((act) => {
+    const hours = (act['Hours'] as number | undefined) ?? 0;
+    const minutes = (act['Minutes'] as number | undefined) ?? 0;
+    const totalHours = hours + minutes / 60;
+    const empRef = act['EmployeeRef'] as { value?: string; name?: string } | undefined;
+    const custRef = act['CustomerRef'] as { name?: string } | undefined;
+
+    return {
+      qboId: act['Id'] as string,
+      employeeRef: empRef?.name ?? (act['NameOf'] as string | undefined) ?? 'Unknown',
+      employeeId: empRef?.value ?? null,
+      date: act['TxnDate'] as string,
+      hours: totalHours,
+      description: (act['Description'] as string | undefined) ?? null,
+      customerRef: custRef?.name ?? null,
+      // QB Online stores per-day breakdowns in Hours_Mon etc. if absent, totals need daily split
+      needsDailySplit: totalHours > 0 && !(act['Hours_Mon'] as number | undefined),
+    };
+  });
+
+  const needsSplitWarning = rows.some((r) => r.needsDailySplit);
+
+  res.json({
+    data: {
+      activities: rows,
+      count: rows.length,
+      note: needsSplitWarning
+        ? 'Some entries need daily hour split confirmation'
+        : null,
+    },
+  });
 });
 
 export { integrationsRouter };
