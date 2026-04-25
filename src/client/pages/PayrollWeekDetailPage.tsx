@@ -1200,7 +1200,7 @@ export function PayrollWeekDetailPage() {
                                     removeOverrideMutation.mutate(row.overrideId);
                                   }
                                 }}
-                                className="text-sm border border-gray-200 rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                                className="text-base border border-gray-200 rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                                 disabled={!!week?.submittedAt}
                               >
                                 <option value="">Default</option>
@@ -1354,7 +1354,7 @@ export function PayrollWeekDetailPage() {
                       type="date"
                       value={submitDate}
                       onChange={(e) => setSubmitDate(e.target.value)}
-                      className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:border-brand-gold focus:outline-none"
+                      className="border border-gray-300 rounded px-2 py-1.5 text-base focus:border-brand-gold focus:outline-none"
                     />
                   </div>
                   <div className="flex-1">
@@ -1864,7 +1864,7 @@ export function PayrollWeekDetailPage() {
                         onChange={(e) => setEcprFein(e.target.value)}
                         placeholder="123456789"
                         maxLength={10}
-                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-base"
                       />
                     </div>
                     <div>
@@ -1878,7 +1878,7 @@ export function PayrollWeekDetailPage() {
                         onChange={(e) => setEcprDirProjectId(e.target.value)}
                         placeholder="DIR portal project number"
                         maxLength={18}
-                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-base"
                       />
                     </div>
                     <div>
@@ -1889,7 +1889,7 @@ export function PayrollWeekDetailPage() {
                         onChange={(e) => setEcprAwardingAgency(e.target.value)}
                         placeholder="e.g., Caltrans, City of Los Angeles"
                         maxLength={56}
-                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-base"
                       />
                     </div>
                     <div>
@@ -1900,7 +1900,7 @@ export function PayrollWeekDetailPage() {
                         onChange={(e) => setEcprContractNumber(e.target.value)}
                         placeholder="Contract or PO number"
                         maxLength={25}
-                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-base"
                       />
                     </div>
                     <div>
@@ -1910,7 +1910,7 @@ export function PayrollWeekDetailPage() {
                         value={ecprCheckNum}
                         onChange={(e) => setEcprCheckNum(e.target.value)}
                         maxLength={20}
-                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-base"
                       />
                       <p className="mt-0.5 text-xs text-gray-400">Applies to all workers this week. Default: DIRECT DEPOSIT</p>
                     </div>
@@ -2082,7 +2082,7 @@ export function PayrollWeekDetailPage() {
                         onChange={(e) => setWaCprIntentId(e.target.value)}
                         placeholder="e.g., 12345"
                         maxLength={20}
-                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-hidden"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
                       />
                     </div>
                   </div>
@@ -2207,7 +2207,7 @@ export function PayrollWeekDetailPage() {
                         value={nyPrcNumber}
                         onChange={(e) => setNyPrcNumber(e.target.value)}
                         placeholder="e.g., PRC-2024-001234"
-                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-none"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-none"
                       />
                     </div>
                     <div>
@@ -2222,7 +2222,7 @@ export function PayrollWeekDetailPage() {
                         value={nysContractorRegNumber}
                         onChange={(e) => setNysContractorRegNumber(e.target.value)}
                         placeholder="e.g., 12345678"
-                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-brand-gold focus:outline-none"
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2601,7 +2601,7 @@ export function PayrollWeekDetailPage() {
                               <td className="px-3 py-2 font-mono text-sm">{provId}</td>
                               <td className="px-3 py-2">
                                 <select
-                                  className="w-full rounded border border-border-default px-2 py-1.5 text-sm"
+                                  className="w-full rounded border border-border-default px-2 py-1.5 text-base"
                                   value={idMappings[provId] ?? ''}
                                   onChange={(e) => setIdMappings((prev) => ({ ...prev, [provId]: e.target.value }))}
                                 >
@@ -2839,7 +2839,7 @@ export function PayrollWeekDetailPage() {
                                 </div>
                                 <div>
                                   <select
-                                    className="rounded border border-gray-300 px-2 py-1 text-sm"
+                                    className="rounded border border-gray-300 px-2 py-1 text-base"
                                     value={selectedWorkerId}
                                     onChange={(e) => setImportRemaps((prev) => ({ ...prev, [i]: e.target.value }))}
                                   >

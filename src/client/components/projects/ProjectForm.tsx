@@ -94,7 +94,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           required
           aria-required="true"
           {...register('name')}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
         />
         {errors.name && <p className="text-red-600 text-xs mt-1">{errors.name.message}</p>}
       </div>
@@ -127,7 +127,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             required
             aria-required="true"
             {...register('county')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
           {errors.county && <p className="text-red-600 text-xs mt-1">{errors.county.message}</p>}
         </div>
@@ -142,7 +142,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           required
           aria-required="true"
           {...register('contractType')}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
         >
           <option value="">Select contract type</option>
           <option value="federal-davis-bacon">Federal Davis-Bacon</option>
@@ -166,7 +166,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             required
             aria-required="true"
             {...register('awardDate')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
           {errors.awardDate && (
             <p className="text-red-600 text-xs mt-1">{errors.awardDate.message}</p>
@@ -182,7 +182,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             required
             aria-required="true"
             {...register('fundingType')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           >
             <option value="">Select funding type</option>
             <option value="federal">Federal</option>
@@ -206,7 +206,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="cslbLicense"
               type="text"
               {...register('cslbLicense')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="e.g. 123456"
             />
           </div>
@@ -218,7 +218,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="wcPolicyNumber"
               type="text"
               {...register('wcPolicyNumber')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="e.g. WC-2026-789"
             />
           </div>
@@ -236,7 +236,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="ubiNumber"
               type="text"
               {...register('ubiNumber')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="9-digit UBI, e.g. 123456789"
             />
           </div>
@@ -248,7 +248,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="lniCertificate"
               type="text"
               {...register('lniCertificate')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="e.g. RAINIC*123AB"
             />
           </div>
@@ -260,7 +260,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="wcAccount"
               type="text"
               {...register('wcAccount')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="L&I industrial insurance account number"
             />
           </div>
@@ -278,7 +278,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="nyprcNumber"
               type="text"
               {...register('nyprcNumber')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
             />
           </div>
           <div>
@@ -289,7 +289,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="nysContractorRegNumber"
               type="text"
               {...register('nysContractorRegNumber')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
             />
           </div>
         </div>
@@ -313,7 +313,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="txdotProjectId"
               type="text"
               {...register('txdotProjectId')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="e.g. STP 2025(123)"
             />
           </div>
@@ -325,7 +325,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="txContractorLicense"
               type="text"
               {...register('txContractorLicense')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="TDLR license number"
             />
           </div>
@@ -337,7 +337,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="txAwardingAgency"
               type="text"
               {...register('txAwardingAgency')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="e.g. Texas Department of Transportation"
             />
           </div>
@@ -352,7 +352,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               MA DLS Project ID
             </label>
             <input id="maDlsProjectId" type="text" {...register('maDlsProjectId')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="DCAMM-assigned project ID" />
           </div>
           <div>
@@ -360,7 +360,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               SIC / Trade Code
             </label>
             <input id="maSicCode" type="text" {...register('maSicCode')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="e.g. 1731" />
           </div>
           <p className="text-xs text-teal-600">
@@ -380,7 +380,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="njPwcNumber"
               type="text"
               {...register('njPwcNumber')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="e.g. 123456"
             />
           </div>
@@ -392,7 +392,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               id="njContractId"
               type="text"
               {...register('njContractId')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-brand-gold focus:outline-none"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
               placeholder="State contract identifier"
             />
           </div>
