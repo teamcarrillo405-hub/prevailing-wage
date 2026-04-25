@@ -7,6 +7,7 @@ import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ReportsSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ReportsEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { TermTooltip } from '../components/ui/TermTooltip';
 
 // ---- Interfaces from Plan 02 shapes ----
@@ -316,6 +317,7 @@ export function ReportsPage() {
 
             {!fringeLoading && !fringeError && fringeRows.length === 0 && (
               <EmptyState
+                illustration={<ReportsEmptyIllustration />}
                 heading="No payroll data yet"
                 message="Enter payroll weeks with worker hours to see fringe benefit totals here. Fringe credits accumulate across all completed payroll weeks."
               />

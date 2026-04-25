@@ -11,6 +11,7 @@ import { PayrollListSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { EmptyState } from '../components/ui/EmptyState';
+import { PayrollEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { TermTooltip } from '../components/ui/TermTooltip';
 
 const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
@@ -241,6 +242,7 @@ export function PayrollListPage() {
 
         {!isLoading && !isError && weeks.length === 0 && (
           <EmptyState
+            illustration={<PayrollEmptyIllustration />}
             icon={FileText}
             heading="No payroll weeks yet"
             message="Start your first payroll week to begin compliance tracking and generate certified payroll reports. You must add workers to the project before entering payroll."

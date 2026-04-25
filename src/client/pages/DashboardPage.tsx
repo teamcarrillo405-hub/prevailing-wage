@@ -10,6 +10,7 @@ import { ProjectForm } from '../components/projects/ProjectForm';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ProjectsEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { ComplianceOverviewCard } from '../components/compliance/ComplianceOverviewCard';
 import { DueSoonPanel } from '../components/dashboard/DueSoonPanel';
@@ -217,6 +218,33 @@ export function DashboardPage() {
         body="Each project tracks a separate federal job. Add workers and enter payroll weekly to keep your certified payroll current and DOL-ready."
       />
 
+      {!isLoading && !isError && projects.length === 0 && (
+        <div className="bg-brand-navy text-white rounded-xl p-8 mb-8">
+          <h2 className="text-2xl font-bold mb-2">Welcome to PrevailingWage</h2>
+          <p className="text-white/80 mb-6">Get your first certified payroll report in under 10 minutes.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+            {[
+              { n: '1', label: 'Create a Project', desc: 'Enter project name, state, and funding type' },
+              { n: '2', label: 'Add Workers', desc: 'Add workers with trade classifications' },
+              { n: '3', label: 'Enter Payroll', desc: 'Enter weekly hours — import from QuickBooks or CSV' },
+              { n: '4', label: 'Download CPR', desc: 'State-certified WH-347 or state-specific form' },
+            ].map(({ n, label, desc }) => (
+              <div key={n} className="bg-white/10 rounded-lg p-4">
+                <div className="w-8 h-8 bg-brand-gold text-brand-navy font-bold rounded-full flex items-center justify-center mb-3 text-sm">{n}</div>
+                <p className="font-semibold text-sm mb-1">{label}</p>
+                <p className="text-white/70 text-xs">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-brand-gold text-brand-navy font-bold px-6 py-3 rounded-lg hover:bg-brand-gold/90 transition-colors"
+          >
+            Create Your First Project &rarr;
+          </button>
+        </div>
+      )}
+
       {showOnboarding && !isLoading && (
         <OnboardingChecklist
           hasProjects={projects.length > 0}
@@ -323,6 +351,7 @@ export function DashboardPage() {
 
       {!isLoading && !isError && projects.length === 0 && (
         <EmptyState
+          illustration={<ProjectsEmptyIllustration />}
           icon={FolderOpen}
           heading="No projects yet"
           message="Create your first project to start tracking certified payroll. You'll need your project location to pull prevailing wage rates from SAM.gov."

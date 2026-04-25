@@ -14,6 +14,7 @@ import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { EmptyState } from '../components/ui/EmptyState';
+import { WorkersEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { TermTooltip } from '../components/ui/TermTooltip';
 
 const DB_DEF = "A federal law requiring contractors on federal or federally funded construction projects to pay workers the locally prevailing wage for their trade. Wages are set by the Department of Labor and published on SAM.gov.";
@@ -427,6 +428,7 @@ export function WorkersPage() {
 
         {!isLoading && !isError && workers.length === 0 && (
           <EmptyState
+            illustration={<WorkersEmptyIllustration />}
             icon={Users}
             heading="No workers on this project yet"
             message={<>Federal law requires all workers to be registered before entering certified payroll. Each worker's trade classification and wage rate determines overtime calculations and DOL compliance — even workers who worked only one day must be logged.</>}

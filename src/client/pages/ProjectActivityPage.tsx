@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ActivityEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 
 // Client-side mirror of server types — DO NOT import from server
 interface AuditLogItem {
@@ -222,6 +223,7 @@ export function ProjectActivityPage() {
 
         {!isLoading && !isError && items.length === 0 && (
           <EmptyState
+            illustration={<ActivityEmptyIllustration />}
             heading="No activity yet"
             message="Actions like adding workers, entering payroll, and downloading reports will appear here."
           />
