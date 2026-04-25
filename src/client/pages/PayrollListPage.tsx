@@ -242,7 +242,7 @@ export function PayrollListPage() {
           <EmptyState
             icon={FileText}
             heading="No payroll weeks yet"
-            message="Create a payroll week to begin entering hours. You'll need to add workers first."
+            message="No payroll weeks yet — start your first week to begin compliance tracking."
             action={
               <Link
                 to={`/projects/${projectId}/payroll/new`}
@@ -255,7 +255,7 @@ export function PayrollListPage() {
         )}
 
         {weeks.length > 0 && (
-          <Card padding="none" className="divide-y divide-gray-100">
+          <Card padding="none" className="divide-y divide-gray-100 shadow-card-elevated">
             {weeks.map((week) => (
               <div key={week.id} className="flex items-center justify-between px-5 py-3">
                 <div>
@@ -266,15 +266,15 @@ export function PayrollListPage() {
                     Payroll #{week.payrollNumber}
                   </span>
                   {week.submittedAt ? (
-                    <Badge variant="compliant" className="ml-2">Submitted</Badge>
+                    <Badge variant="neutral" className="ml-2 bg-amber-100 text-amber-800 border-amber-300 font-medium">Submitted</Badge>
                   ) : week.isFinal ? (
-                    <Badge variant="neutral" className="ml-2">Not Submitted</Badge>
+                    <Badge variant="neutral" className="ml-2 bg-emerald-100 text-emerald-800 border-emerald-300 font-medium">Final</Badge>
                   ) : (
                     <Badge variant="neutral" className="ml-2">Draft</Badge>
                   )}
                   {week.amendmentNumber != null && (
                     <>
-                      <Badge variant="warning" className="ml-2">Amendment {week.amendmentNumber}</Badge>
+                      <Badge variant="neutral" className="ml-2 bg-blue-100 text-blue-800 border-blue-300 font-medium">Amendment {week.amendmentNumber}</Badge>
                       <TermTooltip
                         term="Amendment"
                         definition="A corrected re-filing of a previously submitted certified payroll. Required when you discover errors in a submitted WH-347. The amendment number increments with each correction."
