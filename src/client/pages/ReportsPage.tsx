@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { FileText, TrendingUp, PieChart, Download, Printer } from 'lucide-react';
 import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader';
-import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { ReportsSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { TermTooltip } from '../components/ui/TermTooltip';
@@ -58,12 +58,46 @@ function formatDate(isoDate: string): string {
   return isoDate.slice(0, 10);
 }
 
+// ---- Report card wrapper ----
+
+interface ReportCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+function ReportCard({ icon, title, description, active, onClick }: ReportCardProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left rounded-xl border p-5 shadow-sm hover:shadow-md transition-all duration-150 space-y-2 ${
+        active
+          ? 'border-brand-gold bg-brand-gold/5 shadow-md'
+          : 'border-gray-200 bg-white hover:border-gray-300'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${active ? 'bg-brand-gold/20 text-brand-navy' : 'bg-gray-100 text-gray-500'}`}>
+          {icon}
+        </div>
+        <span className={`font-semibold text-sm ${active ? 'text-brand-navy' : 'text-gray-800'}`}>
+          {title}
+        </span>
+      </div>
+      <p className="text-xs text-gray-500 leading-relaxed">{description}</p>
+    </button>
+  );
+}
+
 // ---- Component ----
 
 export function ReportsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [activeTab, setActiveTab] = useState<'fringe' | 'payHistory' | 'fringeBreakdown'>('fringe');
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>('');
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Workers list for the pay history selector
   const { data: workersData } = useQuery({
@@ -149,12 +183,34 @@ export function ReportsPage() {
 
   const fringeBreakdownRows = fringeBreakdownData?.rows ?? [];
 
-  // ---- Tab button styles ----
-  function tabClass(tab: 'fringe' | 'payHistory' | 'fringeBreakdown') {
-    return activeTab === tab
-      ? 'px-5 py-2 text-sm font-semibold rounded-t border-b-2 border-brand-gold bg-brand-gold text-nav-dark'
-      : 'px-5 py-2 text-sm font-medium rounded-t border-b-2 border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200';
+  function handlePrint() {
+    setIsPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 200);
   }
+
+  const REPORT_CARDS = [
+    {
+      key: 'fringe' as const,
+      icon: <FileText className="w-4 h-4" />,
+      title: 'Fringe Benefit Summary',
+      description: 'Total fringe credits earned per worker across all payroll weeks — ST hours, OT hours, and cumulative fringe totals.',
+    },
+    {
+      key: 'payHistory' as const,
+      icon: <TrendingUp className="w-4 h-4" />,
+      title: 'Pay History',
+      description: 'Week-by-week pay detail for a selected worker: hours, base rate, fringe rate, gross wages, deductions, and net pay.',
+    },
+    {
+      key: 'fringeBreakdown' as const,
+      icon: <PieChart className="w-4 h-4" />,
+      title: 'Fringe Breakdown',
+      description: 'Fringe contributions pivoted by fund type (H&W, Pension, Vacation, Training) and classification level.',
+    },
+  ];
 
   return (
     <>
@@ -188,47 +244,67 @@ export function ReportsPage() {
       <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
 
         {/* Page header */}
-        <PageHeader
-          title="Reports"
-          action={
-            <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 print-hidden">
-              &larr; Project
-            </Link>
-          }
-        />
+        <div className="flex items-center justify-between">
+          <PageHeader
+            title="Reports"
+            action={
+              <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 print-hidden">
+                &larr; Project
+              </Link>
+            }
+          />
+          <button
+            onClick={handlePrint}
+            disabled={isPrinting}
+            className="print-hidden inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-colors disabled:opacity-60 min-h-[44px]"
+            aria-label="Print report"
+          >
+            {isPrinting ? (
+              <span className="inline-block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Printer className="w-4 h-4" />
+            )}
+            {isPrinting ? 'Preparing...' : 'Print'}
+          </button>
+        </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 print-hidden overflow-x-auto">
-          <div className="flex gap-2 min-w-max">
-            <button
-              onClick={() => setActiveTab('fringe')}
-              className={tabClass('fringe')}
-            >
-              Fringe Benefit Summary
-            </button>
-            <button
-              onClick={() => setActiveTab('payHistory')}
-              className={tabClass('payHistory')}
-            >
-              Pay History
-            </button>
-            <button
-              onClick={() => setActiveTab('fringeBreakdown')}
-              className={tabClass('fringeBreakdown')}
-            >
-              Fringe Breakdown
-            </button>
-          </div>
+        {/* Report selector cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print-hidden">
+          {REPORT_CARDS.map(card => (
+            <ReportCard
+              key={card.key}
+              icon={card.icon}
+              title={card.title}
+              description={card.description}
+              active={activeTab === card.key}
+              onClick={() => setActiveTab(card.key)}
+            />
+          ))}
         </div>
 
         {/* ---- Fringe Summary tab (RPT-01) ---- */}
         {activeTab === 'fringe' && (
-          <div>
-            <h2
-              className="text-lg font-semibold text-gray-800 mb-4 font-headline"
-            >
-              Fringe Benefit Summary
-            </h2>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800 font-headline">Fringe Benefit Summary</h2>
+                  <p className="text-xs text-gray-500">All workers — cumulative across payroll weeks</p>
+                </div>
+              </div>
+              {fringeRows.length > 0 && (
+                <button
+                  onClick={handlePrint}
+                  className="print-hidden inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export
+                </button>
+              )}
+            </div>
 
             {fringeLoading && <ReportsSkeleton />}
 
@@ -313,13 +389,17 @@ export function ReportsPage() {
 
         {/* ---- Pay History tab (RPT-02) ---- */}
         {activeTab === 'payHistory' && (
-          <div>
-            <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-              <h2
-                className="text-lg font-semibold text-gray-800 font-headline"
-              >
-                Pay History
-              </h2>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800 font-headline">Pay History</h2>
+                  <p className="text-xs text-gray-500">Week-by-week earnings for selected worker</p>
+                </div>
+              </div>
 
               {/* Worker selector */}
               {workers.length > 0 && (
@@ -331,7 +411,7 @@ export function ReportsPage() {
                     id="worker-select"
                     value={selectedWorkerId}
                     onChange={(e) => setSelectedWorkerId(e.target.value)}
-                    className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                    className="border border-gray-300 rounded px-3 py-1.5 text-base bg-white text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                   >
                     {workers.map((w) => (
                       <option key={w.id} value={w.id}>
@@ -425,10 +505,16 @@ export function ReportsPage() {
 
         {/* ---- Fringe Breakdown tab (RPT-03) ---- */}
         {activeTab === 'fringeBreakdown' && (
-          <div>
-            <h2 className="text-lg font-semibold text-gray-800 mb-4 font-headline">
-              Fringe Breakdown by Fund Type
-            </h2>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+                <PieChart className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 font-headline">Fringe Breakdown by Fund Type</h2>
+                <p className="text-xs text-gray-500">H&amp;W, Pension, Vacation, Training — by union local and classification</p>
+              </div>
+            </div>
 
             {fringeBreakdownLoading && <ReportsSkeleton />}
 
