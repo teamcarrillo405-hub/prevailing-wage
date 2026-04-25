@@ -8,19 +8,21 @@
   --font-body: 'Inter', sans-serif;
 
   /* Brand identity */
-  --color-nav-dark: #1a1a1a;
+  --color-nav-dark: #1d1d1f;
+  --color-brand-navy: #1d1d1f;
 
   /* Surface tokens */
   --color-surface-card: #ffffff;
-  --color-surface-page: #f8f8f8;
+  --color-surface-page: #f5f5f7;
   --color-surface-muted: #f9fafb;
 
   /* Border */
   --color-border-default: #e5e7eb;
+  --color-border-subtle: #f0f0f0;
 
   /* Text */
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
+  --color-text-primary: #1d1d1f;
+  --color-text-secondary: #6e6e73;
 
   /* Status colors */
   --color-status-compliant: #16a34a;
@@ -28,12 +30,13 @@
   --color-status-warning: #d97706;
 
   /* Radius */
-  --radius-card: 0.5rem;
-  --radius-sm: 0.25rem;
+  --radius-card: 0.75rem;
+  --radius-sm: 0.375rem;
 
   /* Shadow */
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
-  --shadow-card-elevated: 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-card-elevated: 0 12px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-card-hover: 0 20px 40px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
 }
 
 @layer base {
@@ -77,6 +80,19 @@
 @media (prefers-reduced-motion: reduce) {
   .wizard-enter-forward,
   .wizard-enter-backward { animation: none; }
+}
+
+/* ── Page route transitions ──────────────────── */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: pageEnter 0.1s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter { animation: none; }
 }
 
 @media print {
