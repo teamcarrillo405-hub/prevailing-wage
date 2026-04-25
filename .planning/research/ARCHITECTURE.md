@@ -1,358 +1,660 @@
-# Architecture Patterns — v5.0 Integration Analysis
+# Architecture Patterns — v6.0 Integration Analysis
 
 **Project:** HCC Prevailing Wage
-**Researched:** 2026-04-07
-**Scope:** How TX/FL/MA/NJ state forms, subcontractor tracking, and enhanced reporting integrate with the existing v4.0 architecture.
-**Phase numbering:** Continues from Phase 46 (next = Phase 47).
+**Researched:** 2026-04-24
+**Scope:** How PWA service worker, QuickBooks OAuth, public REST API, GPS field tools, DBE/MBE tracking, and SOC 2 controls integrate with the existing Express 5 / React 19 / SQLite / Drizzle monolith.
 
 ---
 
-## 1. State Gate Pattern — How It Works Today
+## Existing Architecture Baseline (Do Not Re-Research)
 
-Every state-specific PDF route in `src/server/routes/export.ts` follows an identical 8-step pattern:
-
-```
-1. Load payroll week by weekId
-2. Verify project access via assertProjectAccess(db, week.projectId, userId)
-3. STATE GATE: if (project.state !== 'XX') return 400
-4. Load payroll entries
-5. Map entries to StateWorkRow[]
-6. Build StateData object
-7. Generate PDF (template overlay OR programmatic draw)
-8. Stream response as attachment + best-effort audit log
-```
-
-The state gate is always step 3 — after access check, before any data load. Never check state before assertProjectAccess (that would leak project existence).
-
-**Existing state gates:**
-- `/api/export/a1131/:weekId` — `project.state !== 'CA'` → 400
-- `/api/export/f700/:weekId` — `project.state !== 'WA'` → 400
-- `/api/export/pw12/:weekId` — `project.state !== 'NY'` → 400
-- `/api/export/il-transcript/:weekId` — `project.state !== 'IL'` → 400
-
-**New state gates to add (same pattern):**
-- `/api/export/tx-cpr/:weekId` — `project.state !== 'TX'` → 400
-- `/api/export/fl-cpr/:weekId` — `project.state !== 'FL'` → 400
-- `/api/export/ma-cpr/:weekId` — `project.state !== 'MA'` → 400
-- `/api/export/nj-cpr/:weekId` — `project.state !== 'NJ'` → 400
+- Express 5 monolith, `/api/*` route files per domain, `requireAuth` + `assertProjectAccess` middleware pattern
+- React 19 SPA, Vite, React Router, TanStack Query
+- SQLite WAL mode, Drizzle ORM, add-only migrations, 18 tables
+- AES-256-GCM SSN encryption, session auth via HTTP-only cookie (7-day)
+- Single process on Render.com with persistent disk at `/var/data`
+- 25 pages, 80+ endpoints, `auditLogs` table already exists with `diff`, `snapshot`, `meta` JSONB columns
 
 ---
 
-## 2. State Forms (TX, FL, MA, NJ)
+## 1. PWA Service Worker — Vite + Workbox Integration
 
-### 2a. PDF Generator Strategy — IL is the Best Template
+### Integration Pattern
 
-Two patterns exist in the codebase:
+Use `vite-plugin-pwa` (wraps Workbox's `generateSW` mode). Install:
 
-| Generator | Approach | When to Use |
-|-----------|----------|-------------|
-| `wh347Generator.ts`, `a1131Generator.ts`, `f700Generator.ts` | Template overlay — `pdf-lib` draws text coordinates onto an official PDF template file in `/assets/` | When the state provides an official fillable PDF form |
-| `pw12Generator.ts`, `ilPdfGenerator.ts` | Programmatic draw — `PDFDocument.create()` draws everything from scratch | When the state does NOT provide an official PDF template |
-
-For TX, FL, MA, NJ: these states do not have universally-available official PDF templates the way CA's A-1-131 does. **Use `ilPdfGenerator.ts` as the code template** — it is the most recent programmatic draw generator, has the cleanest structure (header block + worker table + affidavit page 2), and its `IlPdfInput` interface covers all fields any new state form will need.
-
-**Key structural elements from `ilPdfGenerator.ts` to reuse:**
-- `PDFDocument.create()` with letter-portrait dimensions (612 x 792 pt)
-- Page 1: header block + worker table
-- Page 2 (always separate): affidavit / statement of compliance
-- Separate typed input interface per generator (e.g., `TxCprInput`, `FlCprInput`)
-
-Note: if a state does provide a downloadable official PDF template, switch to the template-overlay pattern instead — the state gate route and data-mapping logic remain identical either way.
-
-### 2b. DB Columns Needed Per State
-
-Follow the existing pattern: add nullable state-specific columns to the `projects` table. Pattern confirmed in schema.ts — CA added `cslbLicense`, `wcPolicyNumber`; WA added `ubiNumber`, `lniCertificate`, `wcAccount`; NY added `nyprcNumber`, `nysContractorRegNumber`.
-
-**New projects table columns per state:**
-
-| State | Column | Type | Label in UI |
-|-------|--------|------|-------------|
-| TX | `txdotProjectId` | `text` nullable | TxDOT Project ID |
-| TX | `txContractorLicense` | `text` nullable | TX Contractor License # |
-| FL | `flDbeNumber` | `text` nullable | FL DBE/MBE Number |
-| FL | `flContractId` | `text` nullable | FL Contract ID |
-| MA | `maDlsProjectId` | `text` nullable | MA DLS Project ID |
-| MA | `maSicCode` | `text` nullable | MA SIC/Trade Code |
-| NJ | `njPwcNumber` | `text` nullable | NJ PWC Registration # |
-| NJ | `njContractId` | `text` nullable | NJ Contract ID |
-
-All nullable — a TX project that hasn't filled in TxDOT Project ID still generates a form with a blank field, consistent with how WA's `ubiNumber` works.
-
-**payroll_weeks table columns (submission tracking):**
-
-Each new state gets its own nullable submission timestamp column, matching `caEcprSubmittedAt`, `waLniSubmittedAt`, `nyMpwrSubmittedAt`, `ilIdolSubmittedAt`:
-- `txCprSubmittedAt text` (nullable)
-- `flCprSubmittedAt text` (nullable)
-- `maCprSubmittedAt text` (nullable)
-- `njCprSubmittedAt text` (nullable)
-
-### 2c. Phase Structure — One Phase Per State, Not Shared
-
-**Recommendation: individual phases per state, NOT a shared "multi-state schema" phase.**
-
-Rationale from existing precedent: CA (Phase 24), WA (Phase 25), NY (Phase 40), IL (Phases 42-43) were each individual phases. A shared schema phase followed by 4 form phases creates a sequential dependency that forces the schema migration to land before any of the 4 forms can be built or tested. Individual phases give each state a self-contained deliverable (migration + generator + route + UI trigger + test).
-
-The schema columns for each state are small (2 columns on projects + 1 column on payroll_weeks) and add no risk to other states.
-
----
-
-## 3. Subcontractor Tracking
-
-### 3a. New Tables Required
-
-Two new tables in `src/server/db/schema.ts`:
-
-**`subcontractors` table** — one row per sub added to a project:
-
-```
-id text PK
-projectId text FK → projects.id CASCADE DELETE
-companyName text NOT NULL
-contactName text
-contactEmail text
-licenseNumber text         -- state contractor license if applicable
-fein text                  -- federal employer ID (for form affidavits)
-createdByUserId text FK → users.id
-createdAt text NOT NULL
-updatedAt text NOT NULL
+```bash
+npm install -D vite-plugin-pwa
 ```
 
-This is **per-project, not global**. Rationale: subs have different license numbers and contacts by project; a GC using the same sub on two projects may have different contacts per contract. Also, `assertProjectAccess` scopes all data to project membership — a global subs table would require a separate access layer that doesn't exist.
-
-**`subcontractor_cprs` table** — weekly CPR receipt tracking per sub per payroll week:
-
-```
-id text PK
-subcontractorId text FK → subcontractors.id CASCADE DELETE
-payrollWeekId text FK → payroll_weeks.id CASCADE DELETE
-status text NOT NULL DEFAULT 'pending'  -- 'pending' | 'received' | 'rejected'
-receivedAt text                         -- nullable; set when status = 'received'
-notes text                              -- optional GC notes
-createdByUserId text FK → users.id
-createdAt text NOT NULL
-updatedAt text NOT NULL
-UNIQUE INDEX on (subcontractorId, payrollWeekId)
-```
-
-The IL Certified Transcript affidavit already has a `subcontractors: Array<{ name: string; address: string }>` field in `IlPdfInput` that is currently passed as an empty array — once subs are tracked, this can be populated automatically when generating the IL form.
-
-### 3b. API Routes
-
-New router file: `src/server/routes/subcontractors.ts`
-
-```
-POST   /api/projects/:projectId/subcontractors                      -- add sub to project
-GET    /api/projects/:projectId/subcontractors                      -- list all subs
-DELETE /api/projects/:projectId/subcontractors/:subId               -- remove sub
-
-POST   /api/projects/:projectId/subcontractors/:subId/cprs/:weekId  -- mark CPR received/rejected
-GET    /api/projects/:projectId/subcontractors/:subId/cprs          -- CPR history for a sub
-```
-
-All routes call `assertProjectAccess(db, projectId, userId)` before any data access. Pattern is identical to workers routes.
-
-### 3c. UI Placement — Tab on ProjectDetailPage
-
-Add a new **"Subcontractors" tab on `ProjectDetailPage.tsx`**, not a new top-level page.
-
-Rationale: subcontractor compliance is project-scoped, just like workers and payroll. The existing 4-step workflow progress indicator (Create → Workers → Payroll → WH-347) can grow to include a "Subs" indicator, or the subs panel lives below the existing tabs without modifying the step count.
-
-A standalone page would require new routing, navigation updates, and breadcrumbs — unnecessary complexity for a per-project feature.
-
-The client component is `SubcontractorPanel.tsx` embedded in `ProjectDetailPage.tsx`.
-
-### 3d. Audit Trail Extension
-
-Subcontractor actions write to `audit_logs` following the existing `insertAuditLog()` pattern from `auditService.ts`:
-
-- `subcontractor.created` — meta: `{ companyName, subId }`
-- `subcontractor.removed` — meta: `{ companyName, subId }`
-- `subcontractor_cpr.received` — meta: `{ companyName, weekEnding, payrollNumber }`
-- `subcontractor_cpr.rejected` — meta: `{ companyName, weekEnding, reason }`
-
-Add corresponding `ACTION_LABELS` entries in `ProjectActivityPage.tsx` alongside the existing worker/payroll labels.
-
----
-
-## 4. Enhanced Reporting
-
-### 4a. Audit Log CSV Export
-
-**New route on the existing audit router (`src/server/routes/audit.ts`):**
-
-```
-GET /api/audit/:projectId/csv
-```
-
-This is a new route, not a modification to the existing `GET /api/audit/:projectId` paginator. The paginated route is consumed by `ProjectActivityPage.tsx` for display — adding CSV logic there would give it two responsibilities.
-
-Route behavior:
-1. Same `assertProjectAccess` guard
-2. Accepts the same `from`, `to`, `entityType` query params as the paginator (no page/limit — export all matching rows)
-3. Flattens the JSON `meta` column into columns (createdAt, userEmail, entityType, action, meta flattened)
-4. Streams a UTF-8 BOM CSV (matching the existing pattern in `csvExporter.ts` — BOM for Excel compatibility)
-5. Filename: `activity-log-{projectId}-{date}.csv`
-
-**Register route before the `/:projectId` wildcard** in `audit.ts` — per the established "specific before wildcard" routing rule from project decisions. The path `/api/audit/:projectId/csv` does not conflict because the existing wildcard is `/:projectId` at the router level, but the sub-path `csv` must be registered first in the router.
-
-**Download button location:** `ProjectActivityPage.tsx` page header toolbar, next to the existing filters. Natural placement — the user is already scoped to a project's activity log.
-
-### 4b. Multi-Project Compliance PDF
-
-**New route on the export router (`src/server/routes/export.ts`):**
-
-```
-GET /api/export/compliance-summary
-```
-
-Not a `:weekId` route — this is cross-project, user-scoped. Queries all active projects the user has access to via the `project_members` join (same join used by the dashboard compliance batch endpoint), plus their latest payroll week status and compliance result.
-
-Generator: new `src/server/services/complianceSummaryPdfGenerator.ts` using `PDFDocument.create()` — same programmatic-draw approach as `ilPdfGenerator.ts`.
-
-No state gate needed — this is an account-level report not tied to any specific state form.
-
-**Download button location:** `DashboardPage.tsx` page header as a secondary action ("Download Compliance Summary"). Not on `ReportsPage.tsx` because `ReportsPage` is project-scoped (`useParams projectId`) and this report is account-scoped (all projects).
-
-### 4c. Enhanced Fringe Report
-
-**Modify `src/server/services/reportsService.ts`** — add a new exported function `getEnhancedFringeSummary()` alongside the existing `getFringeSummary()`. Do NOT modify `getFringeSummary()` — its shape is frozen by the existing `ReportsPage.tsx` client interface.
-
-The enhanced function leverages data already stored in the schema:
-- Fund type breakdown: `fringeHealthWelfare`, `fringePension`, `fringeVacation`, `fringeTraining` (already on `payrollEntries`, added in Phase 29)
-- Union local grouping: `workers.unionLocal` (added Phase 39)
-- JW vs apprentice split: `workerClassifications.laborType`
-
-New route: `GET /api/projects/:projectId/reports/fringe-enhanced` — parallel to the existing `GET /api/projects/:projectId/reports/fringe-summary`.
-
-**Download button location:** New third tab `'fringeEnhanced'` on `ReportsPage.tsx` alongside the existing `'fringe'` and `'payHistory'` tabs. The print/CSV download lives within that tab, consistent with how the existing fringe summary works.
-
----
-
-## 5. File Map — New vs Modified
-
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `src/server/services/txCprGenerator.ts` | TX certified payroll PDF (programmatic draw, based on ilPdfGenerator.ts) |
-| `src/server/services/flCprGenerator.ts` | FL certified payroll PDF |
-| `src/server/services/maCprGenerator.ts` | MA certified payroll PDF |
-| `src/server/services/njCprGenerator.ts` | NJ certified payroll PDF |
-| `src/server/services/complianceSummaryPdfGenerator.ts` | Multi-project compliance summary PDF |
-| `src/server/routes/subcontractors.ts` | CRUD + CPR tracking routes for subcontractors |
-| `src/client/components/SubcontractorPanel.tsx` | Panel component for ProjectDetailPage |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `src/server/db/schema.ts` | Add state-specific columns to `projects`; add submission timestamps to `payroll_weeks`; add `subcontractors` and `subcontractor_cprs` tables |
-| `src/server/routes/export.ts` | Add 4 new state PDF routes + compliance-summary route |
-| `src/server/routes/audit.ts` | Add `GET /api/audit/:projectId/csv` route (before `/:projectId` wildcard) |
-| `src/server/services/reportsService.ts` | Add `getEnhancedFringeSummary()` function |
-| `src/client/pages/ProjectDetailPage.tsx` | Add Subcontractors tab / SubcontractorPanel |
-| `src/client/pages/ReportsPage.tsx` | Add fringe-enhanced tab + download button |
-| `src/client/pages/ProjectActivityPage.tsx` | Add CSV download button + new ACTION_LABELS entries for sub events |
-| `src/client/pages/DashboardPage.tsx` | Add compliance-summary PDF download button |
-| `drizzle/meta/_journal.json` | Register each new migration file (manual step per project constraint) |
-
----
-
-## 6. Suggested Phase Build Order (Phase 47–58)
-
-State forms (47-51) are independent of each other and of subcontractor tracking (52-54). Reporting (55-57) depends only on having live data from prior phases. All four state form phases can technically be built in parallel — sequential ordering below reflects single-developer delivery focus.
-
-| Phase | Feature | Key Files | Dependency |
-|-------|---------|-----------|------------|
-| 47 | TX Certified Payroll PDF | schema.ts (TX cols), txCprGenerator.ts, export.ts, PayrollWeekDetailPage.tsx | Phase 46 |
-| 48 | FL Certified Payroll PDF | schema.ts (FL cols), flCprGenerator.ts, export.ts | Phase 46 |
-| 49 | MA Certified Payroll PDF | schema.ts (MA cols), maCprGenerator.ts, export.ts | Phase 46 |
-| 50 | NJ Certified Payroll PDF | schema.ts (NJ cols), njCprGenerator.ts, export.ts | Phase 46 |
-| 51 | CA A-1-131 Gap Close | a1131Generator.ts, export.ts (modify existing route) | Phase 24 gap |
-| 52 | Subcontractor Schema + API | schema.ts (new tables), subcontractors.ts route, auditService.ts | Phase 46 |
-| 53 | Subcontractor UI | SubcontractorPanel.tsx, ProjectDetailPage.tsx | Phase 52 |
-| 54 | Subcontractor → State Form Integration | ilPdfGenerator.ts, tx/fl/ma/njCprGenerator.ts | Phase 53 |
-| 55 | Audit Log CSV Export | audit.ts (new route), ProjectActivityPage.tsx | Phase 46 |
-| 56 | Enhanced Fringe Report | reportsService.ts (new fn), reports route, ReportsPage.tsx | Phase 46 |
-| 57 | Multi-Project Compliance PDF | complianceSummaryPdfGenerator.ts, export.ts, DashboardPage.tsx | Phase 52 (needs sub data) |
-| 58 | v5.0 Integration + Polish | PROJECT.md update, cross-cutting cleanup, final test pass | All prior phases |
-
-**Phase ordering rationale:**
-- TX first (Phase 47): largest prevailing wage construction market; validates the new state form pattern before the other three.
-- State forms (47-50) before sub tracking (52-53): forms are purely additive exports; sub tracking requires a new table join into form generation (Phase 54).
-- CA gap (51) after new states: doesn't block anything; placed to avoid interrupting the state form rhythm.
-- Reporting (55-57) at the end: benefits from all prior data being live in the system; reporting phases have no upstream blockers.
-- Phase 58 as buffer: cross-cutting actions (ACTION_LABELS, audit events, filename consistency) are easier to finalize when all features exist.
-
----
-
-## 7. State Gate Code Template (Phases 47-50)
-
-Copy from the `a1131` route in `export.ts` (lines 253-360). Substitute state code and generator call. The structure is identical for all four new states:
+Add to `vite.config.ts`:
 
 ```typescript
-// ── GET /api/export/tx-cpr/:weekId ──────────────────────────────────────────
-// Texas TxDOT Form 1184 — state-gated to TX projects only
+import { VitePWA } from 'vite-plugin-pwa';
 
-router.get('/tx-cpr/:weekId', async (req, res) => {
-  const weekId = req.params.weekId as string;
-  const userId = req.user!.userId;
+VitePWA({
+  registerType: 'autoUpdate',
+  manifest: {
+    name: 'HCC Prevailing Wage',
+    short_name: 'HCC PW',
+    theme_color: '#1a1a1a',
+    display: 'standalone',
+  },
+  workbox: {
+    // Cache static assets — app shell
+    globPatterns: ['**/*.{js,css,html,ico,png,woff2}'],
+    navigateFallback: '/index.html',
+    navigateFallbackDenylist: [/^\/api\//],   // never intercept API routes with nav fallback
 
-  const week = await getPayrollWeek(weekId);
-  if (!week) {
-    res.status(404).json({ error: 'Payroll week not found' });
-    return;
+    runtimeCaching: [
+      // Wage determination cache — long TTL, stale-while-revalidate
+      {
+        urlPattern: /^\/api\/wage-determinations\/.*/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'wd-cache',
+          expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
+        },
+      },
+      // Offline write queue — GPS clock events and field payroll entries
+      {
+        urlPattern: /^\/api\/clock-events$/i,
+        method: 'POST',
+        handler: 'NetworkOnly',
+        options: {
+          backgroundSync: {
+            name: 'clockEventQueue',
+            options: { maxRetentionTime: 24 * 60 },  // 24 hours in minutes
+          },
+        },
+      },
+      {
+        urlPattern: /^\/api\/payroll-entries$/i,
+        method: 'POST',
+        handler: 'NetworkOnly',
+        options: {
+          backgroundSync: {
+            name: 'payrollEntryQueue',
+            options: { maxRetentionTime: 7 * 24 * 60 },  // 7 days
+          },
+        },
+      },
+    ],
+  },
+})
+```
+
+### Offline Queue Sync Behavior
+
+**How reconnect works:** `BackgroundSyncPlugin` hooks into `fetchDidFail` — it only queues requests that fail due to a real network exception, NOT 4xx/5xx HTTP errors. On reconnect, the browser (Chrome, Edge, Samsung Internet) fires a native `sync` event to the service worker, which replays queued requests. Firefox and Safari fall back to replaying when the SW next starts up (i.e., user opens the app tab).
+
+**Critical limitation:** Requests are stored in IndexedDB under `workbox-background-sync` keyed by queue name. Requests older than `maxRetentionTime` are silently discarded. For payroll entries use 7-day retention. For clock events use 24-hour retention.
+
+**Auth cookies:** HTTP-only session cookies are automatically included in replayed requests — no special handling needed because `NetworkOnly` passes the original request headers through.
+
+**Conflict detection on Express side:** When a queued POST arrives on reconnect, the server must handle idempotency. Add a client-generated `idempotencyKey` (UUID v4 created at form submission) to GPS clock and payroll entry bodies. Express checks the key in DB before inserting:
+
+```typescript
+// Pseudocode — add to clock-events route
+const existing = await db.select().from(clockEvents)
+  .where(eq(clockEvents.idempotencyKey, body.idempotencyKey)).limit(1);
+if (existing.length) { res.json({ data: existing[0] }); return; }
+```
+
+### New Files Needed
+
+- `vite.config.ts` — add `VitePWA()` plugin
+- `src/client/hooks/useOfflineStatus.ts` — wrapper around `navigator.onLine` + `online`/`offline` events
+- `src/client/components/OfflineBanner.tsx` — visible indicator when offline
+- No server changes for SW itself; only endpoint-level idempotency keys
+
+**Confidence: HIGH** — `vite-plugin-pwa` generateSW mode is the documented pattern; Workbox `BackgroundSyncPlugin` behavior verified against Chrome for Developers docs.
+
+---
+
+## 2. QuickBooks Online OAuth 2.0
+
+### Token Lifecycle (Verified)
+
+| Token | Lifetime | Notes |
+|-------|----------|-------|
+| Access token | 3,600 seconds (1 hour) | Use for QBO API calls |
+| Refresh token | 101 days | **Rotates on every refresh call** — always persist the new one |
+
+The refresh token changes on each use. If you don't persist the new value, the connection breaks and the user must re-authorize. This is the single most common QBO integration failure.
+
+### Token Storage — New DB Table
+
+Add to `schema.ts`:
+
+```typescript
+export const qboConnections = sqliteTable('qbo_connections', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  realmId: text('realm_id').notNull(),            // QBO company ID
+  accessToken: text('access_token').notNull(),     // AES-256-GCM encrypted (same key as SSN)
+  refreshToken: text('refresh_token').notNull(),   // AES-256-GCM encrypted
+  accessTokenExpiresAt: text('access_token_expires_at').notNull(),
+  refreshTokenExpiresAt: text('refresh_token_expires_at').notNull(),
+  environment: text('environment').notNull().$type<'sandbox' | 'production'>(),
+  connectedAt: text('connected_at').notNull(),
+  lastRefreshedAt: text('last_refreshed_at'),
+  disconnectedAt: text('disconnected_at'),         // soft-delete; null = active
+}, (table) => ({
+  qboUserUnique: uniqueIndex('qbo_user_unique').on(table.userId, table.realmId),
+}));
+```
+
+**Encrypt both tokens at rest** using the existing `encryptSsn` / `decryptSsn` utility (or a renamed peer) — same AES-256-GCM envelope pattern already established in Phase 31.
+
+### OAuth Flow Architecture
+
+```
+Browser → GET /api/qbo/connect
+  → Server builds Intuit auth URL (client_id, redirect_uri, scope=com.intuit.quickbooks.accounting, state=CSRF token)
+  → Browser redirects to Intuit
+
+Intuit → GET /api/qbo/callback?code=...&realmId=...&state=...
+  → Server validates CSRF state
+  → Server POST to https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer
+  → Encrypt and upsert into qbo_connections
+  → Redirect to /settings?qbo=connected
+```
+
+Library recommendation: `intuit-oauth` (Intuit's official JS client). Avoids manual token exchange.
+
+```bash
+npm install intuit-oauth
+```
+
+### Token Refresh Strategy
+
+Do NOT use a background cron on Render (single-process, no reliable scheduler). Use a **lazy refresh** — check expiry on every QBO API call:
+
+```typescript
+async function getValidQboToken(userId: string) {
+  const conn = await db.select().from(qboConnections)
+    .where(and(eq(qboConnections.userId, userId), isNull(qboConnections.disconnectedAt)))
+    .limit(1);
+  if (!conn.length) throw new Error('QBO not connected');
+
+  const expiresAt = new Date(conn[0].accessTokenExpiresAt).getTime();
+  if (Date.now() > expiresAt - 300_000) {  // refresh 5 min before expiry
+    const newTokens = await oauthClient.refresh();
+    await db.update(qboConnections).set({
+      accessToken: encrypt(newTokens.access_token),
+      refreshToken: encrypt(newTokens.refresh_token),
+      accessTokenExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      refreshTokenExpiresAt: new Date(Date.now() + 101 * 86400_000).toISOString(),
+      lastRefreshedAt: new Date().toISOString(),
+    }).where(eq(qboConnections.userId, userId));
   }
+  return decrypt(conn[0].accessToken);
+}
+```
 
-  const db = getDb();
-  let project: Project;
-  try {
-    project = await assertProjectAccess(db, week.projectId, userId);
-  } catch (err: any) {
-    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
-    return;
-  }
+### Sandbox vs Production
 
-  // State gate — TX CPR is TX-only
-  if (project.state !== 'TX') {
-    res.status(400).json({ error: 'TX Certified Payroll is only available for Texas projects' });
-    return;
-  }
+- `environment: 'sandbox'` uses `https://sandbox-quickbooks.api.intuit.com`
+- `environment: 'production'` uses `https://quickbooks.api.intuit.com`
+- Store per-connection; allow users to switch. Never hard-code the base URL.
 
-  const entries = await getPayrollEntries(weekId);
-  // ... map entries, build TxCprInput using project.txdotProjectId etc.
-  // ... call fillTxCpr()
-  // ... set Content-Type: application/pdf, stream response
-  // ... best-effort audit log with action: 'tx_cpr.downloaded'
+### Webhook Subscription (Payroll Changes)
+
+QBO webhooks notify on entity changes. Register via Intuit Developer Portal (one URL per app, not per company). Your Express endpoint:
+
+```
+POST /api/qbo/webhook
+```
+
+Verification:
+```typescript
+import crypto from 'crypto';
+const sig = req.headers['intuit-signature'] as string;
+const body = req.rawBody;  // need express raw body for webhook route
+const hash = crypto.createHmac('sha256', process.env.QBO_WEBHOOK_VERIFIER_TOKEN!)
+  .update(body).digest('base64');
+if (hash !== sig) { res.status(401).end(); return; }
+```
+
+**Important:** QBO webhooks deliver change notifications, not full payloads. The payload contains `{ eventNotifications: [{ realmId, dataChangeEvent: { entities: [{ name, id, operation, lastUpdated }] } }] }`. You must then call the QBO API to fetch the changed entity.
+
+Relevant entity types for payroll sync: `Employee`, `TimeActivity`, `JournalEntry`.
+
+**New route files needed:**
+- `src/server/routes/qbo.ts` — `/connect`, `/callback`, `/disconnect`, `/webhook`, `/sync`
+
+**Confidence: HIGH** — Token lifetime and rotation confirmed via Intuit developer docs. HMAC verification pattern confirmed via multiple sources.
+
+---
+
+## 3. Public REST API — Design on Top of Existing Routes
+
+### API Key Table Schema
+
+```typescript
+export const apiKeys = sqliteTable('api_keys', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  keyHash: text('key_hash').notNull().unique(),   // SHA-256 of raw key — never store raw
+  keyPrefix: text('key_prefix').notNull(),        // first 8 chars for display (e.g. "hccpw_ab")
+  name: text('name').notNull(),                   // user-given label
+  scopes: text('scopes').notNull(),               // JSON array: ["projects:read","payroll:read"]
+  rateLimitTier: text('rate_limit_tier').notNull().default('standard')
+    .$type<'standard' | 'premium' | 'internal'>(),
+  lastUsedAt: text('last_used_at'),
+  expiresAt: text('expires_at'),                  // null = never
+  revokedAt: text('revoked_at'),                  // null = active
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  idxApiKeyHash: index('idx_api_key_hash').on(table.keyHash),
+}));
+```
+
+Key generation: `hccpw_` prefix + 32 random bytes as hex. Show raw key once at creation; store only the SHA-256 hash.
+
+### Rate Limiting Per Key
+
+Use `express-rate-limit` with a custom `keyGenerator` based on the API key hash rather than IP:
+
+```bash
+npm install express-rate-limit
+```
+
+```typescript
+import rateLimit from 'express-rate-limit';
+
+const apiKeyLimiter = rateLimit({
+  windowMs: 60_000,
+  max: (req) => {
+    const tier = (req as any).apiKeyTier;
+    return tier === 'premium' ? 600 : tier === 'internal' ? 10_000 : 100;
+  },
+  keyGenerator: (req) => (req as any).apiKeyHash ?? req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Rate limit exceeded' },
 });
 ```
 
-For programmatic-draw generators: no `/assets/` template file needed. For any state that does provide an official downloadable PDF template, use the template-overlay pattern from `a1131Generator.ts` instead — the route skeleton stays identical.
+Apply to `/api/v1/*` routes only. Session-authed routes remain on existing `/api/*` paths.
+
+### Versioning Strategy
+
+Mount public API under `/api/v1/` as a separate Express Router. Do not version existing session-based routes — those are internal UI routes, not public contract.
+
+```typescript
+// src/server/routes/publicApi.ts
+const v1Router = Router();
+v1Router.use(authenticateApiKey);   // middleware that hashes key, looks up apiKeys table
+v1Router.use(apiKeyLimiter);
+v1Router.get('/projects', ...);
+v1Router.get('/projects/:id/payroll-weeks', ...);
+// Reuse existing service functions, not route handlers
+app.use('/api/v1', v1Router);
+```
+
+This avoids duplicating business logic — public API calls the same Drizzle queries already backing the UI routes but with API key auth instead of session auth.
+
+### Webhook Delivery Queue (SQLite-Based)
+
+External queue services (SQS, Redis) are overkill for this deployment tier. Use SQLite with a polling loop:
+
+```typescript
+export const webhookSubscriptions = sqliteTable('webhook_subscriptions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  events: text('events').notNull(),               // JSON array: ["payroll.week.submitted","project.created"]
+  signingSecret: text('signing_secret').notNull(), // random 32-byte hex for HMAC
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: text('created_at').notNull(),
+});
+
+export const webhookDeliveries = sqliteTable('webhook_deliveries', {
+  id: text('id').primaryKey(),
+  subscriptionId: text('subscription_id').notNull().references(() => webhookSubscriptions.id),
+  event: text('event').notNull(),
+  payload: text('payload').notNull(),             // JSON
+  status: text('status').notNull().default('pending').$type<'pending' | 'delivered' | 'failed'>(),
+  attemptCount: integer('attempt_count').notNull().default(0),
+  nextAttemptAt: text('next_attempt_at').notNull(),
+  lastAttemptAt: text('last_attempt_at'),
+  lastResponseCode: integer('last_response_code'),
+  lastErrorMessage: text('last_error_message'),
+  deliveredAt: text('delivered_at'),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  idxDeliveryStatus: index('idx_delivery_status').on(table.status, table.nextAttemptAt),
+}));
+```
+
+Delivery worker: `setInterval` every 30 seconds in the Express process (acceptable for Render single-process). Use exponential backoff: attempt 1 = now, attempt 2 = +1 min, attempt 3 = +5 min, attempt 4 = +30 min, attempt 5 = fail permanently. Maximum 5 attempts.
+
+**Confidence: HIGH** for schema design. MEDIUM for SQLite polling approach — works correctly at this scale, but creates a ceiling around ~500 active webhook subscriptions before query latency becomes noticeable. Acceptable for Phase D scope.
 
 ---
 
-## 8. Key Architectural Constraints for v5.0
+## 4. GPS Geolocation — Browser PWA to Server Audit
 
-| Constraint | v5.0 Implication |
-|-----------|-----------------|
-| `assertProjectAccess` before all data access | All new routes (sub CRUD, CSV export, new PDF routes) call this before any DB query — never skip |
-| Add-only schema migrations, never drop columns | All new project/payroll_weeks columns are nullable; subcontractors/subcontractor_cprs are new tables |
-| State gate always after access check, never before | `project.state !== 'XX'` is step 3; `assertProjectAccess` is step 2 — order cannot be swapped |
-| Rate snapshots frozen | No new report reads live wage determinations — always `fringeRateSnapshot`/`baseRateSnapshot` from `payrollEntries` |
-| Design tokens, no hardcoded hex | All new client components use `@theme` token classes |
-| Manual migration journal registration | Each new migration SQL file must be manually added to `drizzle/meta/_journal.json` |
-| `Button` has no `asChild` prop | PDF download links in new pages use secondary button classes on `<a>` elements directly |
-| Route ordering: specific before wildcard | New audit CSV route `/api/audit/:projectId/csv` must register before `/:projectId` in audit router |
+### Accuracy Reality
+
+| Method | Typical Accuracy | Notes |
+|--------|-----------------|-------|
+| GPS (mobile outdoors) | 3–10 meters | Best; requires `enableHighAccuracy: true` |
+| Wi-Fi triangulation | 20–100 meters | Indoor buildings |
+| Cellular | 100–1000 meters | Fallback only |
+
+For job-site clock-in, `enableHighAccuracy: true` is appropriate. Expect 5–15 second warm-up on cold GPS. Accuracy property on `GeolocationCoordinates` represents 95% confidence radius in meters.
+
+### Browser API Pattern
+
+```typescript
+// src/client/hooks/useGeolocation.ts
+export function getHighAccuracyPosition(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 15_000,
+      maximumAge: 0,
+    });
+  });
+}
+```
+
+Return `coords.latitude`, `coords.longitude`, `coords.accuracy` (meters), and `timestamp` to the server.
+
+### Server-Side Storage and Verification
+
+New table:
+
+```typescript
+export const clockEvents = sqliteTable('clock_events', {
+  id: text('id').primaryKey(),
+  workerId: text('worker_id').notNull().references(() => workers.id),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  eventType: text('event_type').notNull().$type<'clock_in' | 'clock_out'>(),
+  // GPS data from client
+  latitude: real('latitude'),
+  longitude: real('longitude'),
+  accuracyMeters: real('accuracy_meters'),
+  clientTimestamp: text('client_timestamp').notNull(),    // ISO 8601 from device
+  serverTimestamp: text('server_timestamp').notNull(),    // server time — authoritative
+  idempotencyKey: text('idempotency_key').notNull().unique(),
+  // Verification fields
+  geofenceResult: text('geofence_result').$type<'inside' | 'outside' | 'low_accuracy' | 'no_gps'>(),
+  geofenceRadiusMeters: real('geofence_radius_meters'),
+  capturedByUserId: text('captured_by_user_id').references(() => users.id),
+  offlineSynced: integer('offline_synced', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  idxClockProject: index('idx_clock_project').on(table.projectId, table.clientTimestamp),
+  idxClockWorker: index('idx_clock_worker').on(table.workerId, table.clientTimestamp),
+}));
+```
+
+### Server-Side Geofence Check
+
+Projects store a `siteLatitude`, `siteLongitude`, `siteRadiusMeters` (add to `projects` table). On clock-in POST, compute Haversine distance server-side:
+
+```typescript
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6_371_000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+```
+
+Accept the event regardless (audit trail matters more than gate-keeping), but set `geofenceResult` accordingly. Flag `outside` events on the compliance dashboard.
+
+**Battery Impact:** `getCurrentPosition` (one-shot) has negligible battery impact. Avoid `watchPosition` (continuous polling) for clock-in use cases — just call once at tap.
+
+**Confidence: MEDIUM** — Geolocation API behavior verified via MDN and Chrome docs. Accuracy values are real-world estimates from multiple sources.
+
+---
+
+## 5. DBE/MBE/WBE Certification Tracking
+
+### Regulatory Context (2025)
+
+An Intuit Interim Final Rule (October 2025) changed federal DBE certification to require individualized demonstrations — no longer race/sex presumption-based. Annual renewal required. This means expiration tracking is now more operationally critical than before.
+
+### Table Schema
+
+Attach to existing `subcontractors` table (project-scoped). The subcontractor entity already exists — add a companion `subcontractorCertifications` table rather than cramming columns into the wide `subcontractors` row:
+
+```typescript
+export const subcontractorCertifications = sqliteTable('subcontractor_certifications', {
+  id: text('id').primaryKey(),
+  subcontractorId: text('subcontractor_id').notNull()
+    .references(() => subcontractors.id, { onDelete: 'cascade' }),
+  certType: text('cert_type').notNull()
+    .$type<'DBE' | 'MBE' | 'WBE' | 'ACDBE' | 'SBE' | 'DVBE' | 'HUBZone' | 'other'>(),
+  certNumber: text('cert_number'),
+  certifyingAgency: text('certifying_agency').notNull(),   // e.g. "CA CUCP", "USDOT", "NYC SBS"
+  issuedDate: text('issued_date'),
+  expiresDate: text('expires_date'),                       // null = perpetual (rare)
+  verificationUrl: text('verification_url'),               // link to public registry
+  verifiedAt: text('verified_at'),                         // when we last confirmed via registry
+  verifiedByUserId: text('verified_by_user_id').references(() => users.id),
+  status: text('status').notNull().default('active')
+    .$type<'active' | 'expired' | 'suspended' | 'revoked' | 'pending_renewal'>(),
+  documentPath: text('document_path'),                     // uploaded certificate file path
+  notes: text('notes'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  idxCertSub: index('idx_cert_sub').on(table.subcontractorId, table.certType),
+  idxCertExpiry: index('idx_cert_expiry').on(table.expiresDate, table.status),
+}));
+```
+
+### Expiration Warning Workflow
+
+- `idxCertExpiry` index enables efficient query: `WHERE expires_date BETWEEN today AND today+30 AND status='active'`
+- Dashboard badge: "3 certifications expiring within 30 days" — reuse existing `Badge` primitive
+- Email notification via existing nodemailer infrastructure: trigger on nightly check (or lazy on page load if Render cron not available)
+- `status` field transitions: `active` → `pending_renewal` (at 30-day warning) → `expired` (past `expiresDate`) — update via server-side check, not trigger
+
+### Integration with Existing subcontractors Table
+
+`subcontractors` is already project-scoped. `subcontractorCertifications` references `subcontractors.id` — no schema change to `subcontractors` needed. The sub detail page gains a "Certifications" tab.
+
+**Confidence: HIGH** for schema design. MEDIUM for regulatory context (federal rule confirmed via search, specific state variations require additional research per state).
+
+---
+
+## 6. SOC 2 Type II Controls Architecture
+
+### Gap Analysis Against Existing `auditLogs` Table
+
+The existing table is structurally good (`userId`, `userEmail`, `ipAddress`, `entityType`, `action`, `diff`, `snapshot`, `meta`). SOC 2 Type II requires:
+
+1. **Tamper-evidence** — existing rows can be updated or deleted by anyone with DB access
+2. **Authentication events** — login, logout, failed login must be logged (check if currently written)
+3. **Access control changes** — team member add/remove, role change (check coverage)
+4. **Data export events** — every WH-347 PDF, CSV, XML export must be logged
+5. **Retention policy** — logs must be retained for minimum 1 year (SOC 2 standard)
+6. **Monitoring** — anomaly detection on `failed_login` frequency
+
+### Additional Tables Needed
+
+**Security events table** (separate from `auditLogs` to avoid schema pollution):
+
+```typescript
+export const securityEvents = sqliteTable('security_events', {
+  id: text('id').primaryKey(),
+  eventType: text('event_type').notNull()
+    .$type<
+      | 'login_success' | 'login_failure' | 'logout'
+      | 'password_change' | 'invite_sent' | 'invite_accepted'
+      | 'member_removed' | 'role_changed' | 'ownership_transferred'
+      | 'api_key_created' | 'api_key_revoked'
+      | 'qbo_connected' | 'qbo_disconnected'
+      | 'export_wh347' | 'export_csv' | 'export_xml'
+      | 'ssn_decrypted'                              // each time full SSN accessed server-side
+    >(),
+  userId: text('user_id').references(() => users.id),
+  userEmail: text('user_email'),
+  ipAddress: text('ip_address').notNull(),
+  userAgent: text('user_agent'),
+  projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  entityType: text('entity_type'),
+  entityId: text('entity_id'),
+  outcome: text('outcome').notNull().$type<'success' | 'failure' | 'blocked'>(),
+  meta: text('meta'),                                // JSON — additional context
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  idxSecEventType: index('idx_sec_event_type').on(table.eventType, table.createdAt),
+  idxSecUser: index('idx_sec_user').on(table.userId, table.createdAt),
+  idxSecIp: index('idx_sec_ip').on(table.ipAddress, table.createdAt),
+}));
+```
+
+**Tamper-evidence via hash chain** (append to `auditLogs`):
+
+Add two columns to `auditLogs` via migration:
+
+```sql
+ALTER TABLE audit_logs ADD COLUMN prev_hash TEXT;
+ALTER TABLE audit_logs ADD COLUMN row_hash TEXT;
+```
+
+On insert, compute:
+```
+row_hash = SHA-256(id + created_at + entity_type + entity_id + action + prev_hash_of_last_row)
+```
+
+This makes deletion or modification detectable. Store `prev_hash` of the last-inserted row. A periodic integrity check job can walk the chain.
+
+**Rate limit / brute force table** (for SOC 2 CC6.1 — logical access):
+
+```typescript
+export const loginAttempts = sqliteTable('login_attempts', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull(),
+  ipAddress: text('ip_address').notNull(),
+  success: integer('success', { mode: 'boolean' }).notNull(),
+  attemptedAt: text('attempted_at').notNull(),
+}, (table) => ({
+  idxAttemptIp: index('idx_attempt_ip').on(table.ipAddress, table.attemptedAt),
+  idxAttemptEmail: index('idx_attempt_email').on(table.email, table.attemptedAt),
+}));
+```
+
+Gate login: if 5+ failures from same IP in 15 minutes, return 429 before checking password.
+
+### Controls Coverage Map
+
+| SOC 2 Criterion | Control | Implementation |
+|----------------|---------|---------------|
+| CC6.1 Logical access | Password hash (bcrypt), HTTP-only session cookie | Already done |
+| CC6.1 Brute force | `loginAttempts` table + 429 gate | New — `loginAttempts` table |
+| CC6.2 Access provisioning | Team invite flow with token | Already done |
+| CC6.3 Access removal | `removedAt` on `projectMembers` | Already done |
+| CC7.2 Anomaly monitoring | `securityEvents` query for failed_login spikes | New — `securityEvents` table |
+| CC8.1 Change management | Drizzle migrations in version control | Already done |
+| A1.2 Data retention | Explicit 1-year retention policy on `audit_logs` | New — scheduled purge after 1 year |
+| C1.1 Confidentiality | AES-256-GCM SSN encryption | Already done |
+| C1.1 API token confidentiality | SHA-256 hash of API keys, encrypted QBO tokens | New — `apiKeys` + `qboConnections` tables |
+| PI1.4 Completeness | Export events in `securityEvents` | New |
+
+### Log What Is Currently Missing
+
+Based on the existing route code pattern, these events likely need explicit `auditLogs` / `securityEvents` writes added:
+
+- Every `POST /api/auth/login` (success + failure)
+- Every `POST /api/auth/logout`
+- Every PDF/CSV/XML generation endpoint
+- Every SSN decryption (already flagged above as `ssn_decrypted`)
+- Every team invite send, accept, revoke
+
+**Confidence: MEDIUM** — SOC 2 control requirements verified across multiple authoritative sources (AICPA Trust Services Criteria). Hash-chain tamper-evidence pattern verified via SQLite forum and security engineering sources. Specific auditor interpretation may vary.
+
+---
+
+## New DB Tables Summary
+
+| Table | Phase | Purpose |
+|-------|-------|---------|
+| `qbo_connections` | B | QBO OAuth token storage (encrypted) |
+| `clock_events` | C | GPS clock-in/out with geofence results |
+| `subcontractor_certifications` | B | DBE/MBE/WBE cert tracking with expiry |
+| `api_keys` | D | Public API key auth |
+| `webhook_subscriptions` | D | Webhook endpoint registrations |
+| `webhook_deliveries` | D | Webhook delivery queue and retry log |
+| `security_events` | D | SOC 2 security event audit trail |
+| `login_attempts` | D | Brute-force rate limiting log |
+
+**Columns to add to existing tables:**
+
+| Table | New Columns | Phase |
+|-------|-------------|-------|
+| `projects` | `siteLatitude`, `siteLongitude`, `siteRadiusMeters` | C |
+| `audit_logs` | `prev_hash`, `row_hash` | D |
+
+---
+
+## New Route Files Summary
+
+| File | Routes | Phase |
+|------|--------|-------|
+| `src/server/routes/qbo.ts` | `/connect`, `/callback`, `/disconnect`, `/webhook`, `/sync` | B |
+| `src/server/routes/clock-events.ts` | `POST /`, `GET /?workerId=` | C |
+| `src/server/routes/subcontractor-certifications.ts` | CRUD on certs, expiry query | B |
+| `src/server/routes/api-keys.ts` | Create, list, revoke | D |
+| `src/server/routes/webhook-subscriptions.ts` | CRUD + delivery log | D |
+| `src/server/routes/public-api.ts` | V1 public router | D |
+
+---
+
+## Build Order Recommendation (Phases A–D)
+
+**Phase A — UI Polish:** No new tables or routes. Pure React + CSS work.
+
+**Phase B — Power Features:**
+1. `subcontractor_certifications` table + route (no external dependency — safe to ship first)
+2. `qbo_connections` table + QBO OAuth routes (requires Intuit Developer app registration)
+3. Apprenticeship ratio enforcement extends existing `payrollEntries` compliance engine
+
+**Phase C — Mobile/Field PWA:**
+1. Add `vite-plugin-pwa` + manifest (isolated to `vite.config.ts` — zero server risk)
+2. `OfflineBanner` component + `useOfflineStatus` hook
+3. `clock_events` table + route + GPS hook
+4. Wire offline queue (Workbox backgroundSync config)
+
+**Phase D — Market Credibility:**
+1. `login_attempts` + brute-force gate (security prerequisite for SOC 2)
+2. `security_events` table + instrument existing auth routes
+3. Hash chain on `audit_logs`
+4. `api_keys` table + public API router
+5. `webhook_subscriptions` + `webhook_deliveries` + delivery worker
+
+---
+
+## Critical Integration Constraints
+
+1. **No new auth model** — API key auth is a new middleware path (`authenticateApiKey`) parallel to session auth (`requireAuth`), not a replacement.
+2. **Encrypt QBO tokens** — Use the same AES-256-GCM encrypt/decrypt utility from Phase 31. Never store plaintext OAuth tokens.
+3. **Refresh token rotation** — On every QBO API call, check `accessTokenExpiresAt`; if within 5 minutes of expiry, refresh and persist the new refresh token immediately. Failure to do this causes irreversible disconnection after 101 days.
+4. **Idempotency on offline sync** — GPS clock events and any payroll entry submitted via offline queue must include client-generated `idempotencyKey` (UUID v4). Express checks before inserting.
+5. **BackgroundSync only queues network failures** — 4xx/5xx responses are NOT retried. Server validation errors must be surfaced before offline queue submission (validate client-side first).
+6. **SQLite single-writer constraint** — Webhook delivery worker runs in the same process. Use `setInterval` not a spawned child process. WAL mode already mitigates reader/writer contention.
+7. **Render.com single-process** — No background cron available. Token refresh is lazy (per-request). Webhook delivery loop is `setInterval`. This is the correct pattern for this hosting tier.
 
 ---
 
 ## Sources
 
-- Direct code analysis: `src/server/routes/export.ts` — full state gate pattern, all existing state routes
-- Direct code analysis: `src/server/db/schema.ts` — existing state-specific columns, table structure, audit_logs shape
-- Direct code analysis: `src/server/services/ilPdfGenerator.ts`, `pw12Generator.ts` — programmatic draw pattern
-- Direct code analysis: `src/server/routes/audit.ts` — paginated audit log structure, query param handling
-- Direct code analysis: `src/server/services/reportsService.ts` — getFringeSummary function shape and joins
-- Direct code analysis: `src/client/pages/ReportsPage.tsx` — tab pattern, query hooks
-- Direct code analysis: `src/client/pages/ProjectActivityPage.tsx` — ACTION_LABELS pattern, audit log display
-- `C:/Users/glcar/prevailing-wage/.planning/PROJECT.md` — v5.0 feature targets, phase history, architectural decisions table
+- [Workbox BackgroundSyncPlugin — Chrome for Developers](https://developer.chrome.com/docs/workbox/modules/workbox-background-sync)
+- [vite-plugin-pwa generateSW docs](https://vite-pwa-org.netlify.app/workbox/generate-sw)
+- [QBO OAuth 2.0 token expiration handling — Intuit Help](https://help.developer.intuit.com/s/article/Handling-OAuth-token-expiration)
+- [QBO OAuth 2.0 FAQ — Intuit Developer](https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/faq)
+- [QuickBooks Webhooks — Coefficient](https://coefficient.io/quickbooks-api/quickbooks-webhooks)
+- [express-rate-limit npm](https://www.npmjs.com/package/express-rate-limit)
+- [GeolocationCoordinates.accuracy — MDN](https://developer.mozilla.org/en-US/docs/Web/API/GeolocationCoordinates/accuracy)
+- [Immutability for SOC 2 — hoop.dev](https://hoop.dev/blog/immutability-for-soc-2-how-to-protect-evidence-logs-and-records-permanently/)
+- [SOC 2 Compliance for Database Security — Liquibase](https://www.liquibase.com/resources/guides/soc-2-compliance-for-database-security-trust-services-criteria-best-practices)
+- [DBE Federal Rule Oct 2025 — BidFinds](https://bidfinds.com/blog/small-business-dbe-mbe-certification-guide)
