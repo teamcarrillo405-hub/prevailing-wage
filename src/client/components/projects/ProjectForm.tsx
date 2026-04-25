@@ -41,9 +41,16 @@ const CreateProjectSchema = z.object({
   // Phase 51 — New Jersey-specific fields
   njPwcNumber: z.string().max(50).optional(),
   njContractId: z.string().max(100).optional(),
+  // Phase 70 — Apprenticeship enforcement (IRA/IIJA flag only; ratio table is managed separately)
+  isIraIijaProject: z.boolean().optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
+
+interface TradeRatioRow {
+  trade: string;
+  ratio: string;
+}
 
 interface ProjectFormProps {
   onSuccess: () => void;
@@ -53,6 +60,7 @@ interface ProjectFormProps {
 export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
+  const [tradeRatios, setTradeRatios] = useState<TradeRatioRow[]>([]);
 
   const {
     register,
@@ -62,6 +70,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   } = useForm<ProjectFields>({ resolver: zodResolver(CreateProjectSchema) });
 
   const stateValue = watch('state');
+  const fundingTypeValue = watch('fundingType');
   const isCA = stateValue?.toUpperCase() === 'CA';
   const isWA = stateValue?.toUpperCase() === 'WA';
   const isNY = stateValue?.toUpperCase() === 'NY';
@@ -70,16 +79,40 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const isFL = stateValue?.toUpperCase() === 'FL';
   const isMA = stateValue?.toUpperCase() === 'MA';
   const isNJ = stateValue?.toUpperCase() === 'NJ';
+  const isFederalOrState = fundingTypeValue === 'federal' || fundingTypeValue === 'state';
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
     try {
-      await api.post('/projects', data);
+      // Serialize the trade ratio table into the apprenticeshipRequirements JSON field
+      const apprenticeshipRequirements = tradeRatios.length > 0
+        ? JSON.stringify(
+            Object.fromEntries(
+              tradeRatios
+                .filter(r => r.trade.trim() && r.ratio.trim())
+                .map(r => [r.trade.trim(), { maxRatio: r.ratio.trim() }]),
+            ),
+          )
+        : undefined;
+
+      await api.post('/projects', { ...data, apprenticeshipRequirements });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
       onSuccess();
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Failed to create project');
     }
+  }
+
+  function addTradeRatio() {
+    setTradeRatios(prev => [...prev, { trade: '', ratio: '' }]);
+  }
+
+  function updateTradeRatio(idx: number, field: 'trade' | 'ratio', value: string) {
+    setTradeRatios(prev => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  }
+
+  function removeTradeRatio(idx: number) {
+    setTradeRatios(prev => prev.filter((_, i) => i !== idx));
   }
 
   return (
@@ -399,6 +432,62 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           <p className="text-xs text-indigo-600">
             NJ MW-562 certified payroll download will be available on payroll weeks.
           </p>
+        </div>
+      )}
+
+      {isFederalOrState && (
+        <div className="space-y-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+          <p className="text-sm font-medium text-yellow-800">Apprenticeship Requirements</p>
+
+          <div className="flex items-center gap-3">
+            <input
+              id="isIraIijaProject"
+              type="checkbox"
+              {...register('isIraIijaProject')}
+              className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+            />
+            <label htmlFor="isIraIijaProject" className="text-sm text-gray-700">
+              IRA/IIJA Clean Energy Project — requires 15% apprenticeship hours
+            </label>
+          </div>
+
+          <div>
+            <p className="text-xs text-yellow-700 mb-2">
+              Per-trade apprenticeship ratio limits (e.g., "1:2" = 1 apprentice per 2 journeyworkers)
+            </p>
+            {tradeRatios.map((row, idx) => (
+              <div key={idx} className="flex gap-2 mb-2 items-center">
+                <input
+                  type="text"
+                  placeholder="Trade (e.g. Electrician)"
+                  value={row.trade}
+                  onChange={e => updateTradeRatio(idx, 'trade', e.target.value)}
+                  className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-gold"
+                />
+                <input
+                  type="text"
+                  placeholder="Max ratio (e.g. 1:2)"
+                  value={row.ratio}
+                  onChange={e => updateTradeRatio(idx, 'ratio', e.target.value)}
+                  className="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-gold"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeTradeRatio(idx)}
+                  className="text-red-500 hover:text-red-700 text-sm px-1"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addTradeRatio}
+              className="text-sm text-brand-gold underline hover:opacity-80"
+            >
+              + Add Trade Ratio
+            </button>
+          </div>
         </div>
       )}
 

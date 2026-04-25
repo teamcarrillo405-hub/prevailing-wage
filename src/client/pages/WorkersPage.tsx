@@ -65,6 +65,8 @@ interface Worker {
   isMinority: boolean | null;
   oshaTraining: boolean | null;
   workerSex: string | null;
+  apprenticeshipProgramName: string | null;
+  rapidsNumber: string | null;
   classifications: Classification[];
 }
 
@@ -103,6 +105,8 @@ function blankWorkerForm() {
     gender: '',
     veteranStatus: '',
     skillLevel: '',
+    apprenticeshipProgramName: '',
+    rapidsNumber: '',
     tradeCode: '',
     tradeDescription: '',
     laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman',
@@ -136,6 +140,8 @@ function workerToEditForm(w: Worker) {
     isMinority: w.isMinority ?? null,
     oshaTraining: w.oshaTraining ?? null,
     workerSex: w.workerSex ?? null,
+    apprenticeshipProgramName: w.apprenticeshipProgramName ?? '',
+    rapidsNumber: w.rapidsNumber ?? '',
   };
 }
 
@@ -171,7 +177,7 @@ export function WorkersPage() {
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false, race: '', ethnicity: '', gender: '', veteranStatus: '', skillLevel: '', isWoman: null as boolean | null, isMinority: null as boolean | null, oshaTraining: null as boolean | null, workerSex: null as string | null });
+  const [editForm, setEditForm] = useState({ name: '', ssn: '', tradeUnion: '', addressStreet: '', addressCity: '', addressState: '', addressZip: '', unionLocal: '', unionBookNumber: '', apprenticeshipCommittee: '', apprenticeshipRegNumber: '', nysRegisteredApprentice: false, race: '', ethnicity: '', gender: '', veteranStatus: '', skillLevel: '', isWoman: null as boolean | null, isMinority: null as boolean | null, oshaTraining: null as boolean | null, workerSex: null as string | null, apprenticeshipProgramName: '', rapidsNumber: '' });
   const [editError, setEditError] = useState('');
 
   // Add-extra-classification state
@@ -238,6 +244,8 @@ export function WorkersPage() {
         ...(f.apprenticeshipCommittee.trim() ? { apprenticeshipCommittee: f.apprenticeshipCommittee.trim() } : {}),
         ...(f.apprenticeshipRegNumber.trim() ? { apprenticeshipRegNumber: f.apprenticeshipRegNumber.trim() } : {}),
         nysRegisteredApprentice: f.nysRegisteredApprentice,
+        ...(f.laborType === 'apprentice' && f.apprenticeshipProgramName?.trim() ? { apprenticeshipProgramName: f.apprenticeshipProgramName.trim() } : {}),
+        ...(f.laborType === 'apprentice' && f.rapidsNumber?.trim() ? { rapidsNumber: f.rapidsNumber.trim() } : {}),
         ...(isIL ? {
           race: f.race || undefined,
           ethnicity: f.ethnicity || undefined,
@@ -286,6 +294,8 @@ export function WorkersPage() {
         apprenticeshipCommittee: data.apprenticeshipCommittee.trim() || undefined,
         apprenticeshipRegNumber: data.apprenticeshipRegNumber.trim() || undefined,
         nysRegisteredApprentice: data.nysRegisteredApprentice,
+        apprenticeshipProgramName: data.apprenticeshipProgramName?.trim() || null,
+        rapidsNumber: data.rapidsNumber?.trim() || null,
         ...(isIL ? {
           race: data.race || null,
           ethnicity: data.ethnicity || null,
@@ -634,6 +644,37 @@ export function WorkersPage() {
                               className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                             />
                           </div>
+                        </div>
+                      </div>
+                    )}
+                    {w.classifications.some(c => c.laborType === 'apprentice') && (
+                      <div className="mt-4 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                        <p className="text-xs font-semibold text-amber-800">Apprenticeship Program (Phase 70)</p>
+                        <div>
+                          <label htmlFor={`edit-app-program-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">
+                            Apprenticeship Program Name
+                          </label>
+                          <input
+                            id={`edit-app-program-${w.id}`}
+                            type="text"
+                            placeholder="e.g. IBEW Apprenticeship Training"
+                            value={editForm.apprenticeshipProgramName ?? ''}
+                            onChange={e => setEditForm(p => ({ ...p, apprenticeshipProgramName: e.target.value }))}
+                            className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor={`edit-rapids-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">
+                            RAPIDS Number
+                          </label>
+                          <input
+                            id={`edit-rapids-${w.id}`}
+                            type="text"
+                            placeholder="DOL RAPIDS registration number"
+                            value={editForm.rapidsNumber ?? ''}
+                            onChange={e => setEditForm(p => ({ ...p, rapidsNumber: e.target.value }))}
+                            className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                          />
                         </div>
                       </div>
                     )}
@@ -1380,6 +1421,36 @@ export function WorkersPage() {
                         placeholder="DOL apprenticeship program name (optional)"
                         value={form.programName}
                         onChange={e => setForm(f => ({ ...f, programName: e.target.value }))}
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                      />
+                    </div>
+                  )}
+                  {form.laborType === 'apprentice' && (
+                    <div>
+                      <label htmlFor="add-apprenticeship-program-name" className="block text-xs text-gray-600 mb-1">
+                        Apprenticeship Program Name <span className="text-gray-400">(optional)</span>
+                      </label>
+                      <input
+                        id="add-apprenticeship-program-name"
+                        type="text"
+                        placeholder="e.g. IBEW Apprenticeship Training"
+                        value={form.apprenticeshipProgramName}
+                        onChange={e => setForm(f => ({ ...f, apprenticeshipProgramName: e.target.value }))}
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                      />
+                    </div>
+                  )}
+                  {form.laborType === 'apprentice' && (
+                    <div>
+                      <label htmlFor="add-rapids-number" className="block text-xs text-gray-600 mb-1">
+                        RAPIDS Number <span className="text-gray-400">(optional)</span>
+                      </label>
+                      <input
+                        id="add-rapids-number"
+                        type="text"
+                        placeholder="DOL RAPIDS registration number"
+                        value={form.rapidsNumber}
+                        onChange={e => setForm(f => ({ ...f, rapidsNumber: e.target.value }))}
                         className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
                       />
                     </div>

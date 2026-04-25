@@ -27,11 +27,18 @@ export interface ComplianceViolation {
 }
 
 export interface WeekViolation {
-  violationType: 'apprentice-ratio';
+  violationType: 'apprentice-ratio' | 'apprentice-trade-ratio' | 'ira-iija-apprentice-pct';
   detail: string;
   apprenticeHours: number;
   journeyworkerHours: number;
   maxAllowedApprenticeHours: number;
+  // COMP-04 extra fields (per-trade ratio)
+  trade?: string;
+  excessHours?: number;
+  estimatedLiabilityUsd?: number;
+  // COMP-05 extra fields (IRA/IIJA 15% requirement)
+  totalHours?: number;
+  actualPct?: number;
 }
 
 export interface ComplianceResult {
@@ -232,6 +239,131 @@ export async function computeCompliance(
     }
   }
 
+  // COMP-04: Per-trade daily apprenticeship ratio violation
+  // Runs when project.apprenticeshipRequirements is configured (JSON map of trade → maxRatio).
+  // Aggregates JW and apprentice hours by trade description for the week, then checks
+  // each configured trade against its configured ratio.
+  if (project?.apprenticeshipRequirements) {
+    let ratioConfig: Record<string, { maxRatio: string }> = {};
+    try {
+      ratioConfig = JSON.parse(project.apprenticeshipRequirements);
+    } catch {
+      ratioConfig = {};
+    }
+
+    if (Object.keys(ratioConfig).length > 0) {
+      // Aggregate hours per trade and labor type
+      const tradeJwHours = new Map<string, number>();
+      const tradeAppHours = new Map<string, number>();
+      // Also track average apprentice and JW rates per trade for liability estimate
+      const tradeAppRateSum = new Map<string, number>();
+      const tradeAppCount = new Map<string, number>();
+      const tradeJwRateSum = new Map<string, number>();
+      const tradeJwCount = new Map<string, number>();
+
+      for (const row of rows) {
+        const e = row.entry;
+        const trade = row.tradeDescription;
+        const totalHoursRow =
+          (e.monSt ?? 0) + (e.tueSt ?? 0) + (e.wedSt ?? 0) +
+          (e.thuSt ?? 0) + (e.friSt ?? 0) + (e.satSt ?? 0) + (e.sunSt ?? 0) +
+          (e.monOt ?? 0) + (e.tueOt ?? 0) + (e.wedOt ?? 0) +
+          (e.thuOt ?? 0) + (e.friOt ?? 0) + (e.satOt ?? 0) + (e.sunOt ?? 0);
+
+        if (row.laborType === 'apprentice') {
+          tradeAppHours.set(trade, (tradeAppHours.get(trade) ?? 0) + totalHoursRow);
+          tradeAppRateSum.set(trade, (tradeAppRateSum.get(trade) ?? 0) + e.baseRateSnapshot);
+          tradeAppCount.set(trade, (tradeAppCount.get(trade) ?? 0) + 1);
+        } else if (row.laborType === 'journeyworker' || row.laborType === 'foreman') {
+          tradeJwHours.set(trade, (tradeJwHours.get(trade) ?? 0) + totalHoursRow);
+          tradeJwRateSum.set(trade, (tradeJwRateSum.get(trade) ?? 0) + e.baseRateSnapshot);
+          tradeJwCount.set(trade, (tradeJwCount.get(trade) ?? 0) + 1);
+        }
+      }
+
+      for (const [configTrade, { maxRatio }] of Object.entries(ratioConfig)) {
+        // Match configured trade against trade descriptions (case-insensitive partial match)
+        const matchKey = [...tradeJwHours.keys()].find(
+          k => k.toLowerCase().includes(configTrade.toLowerCase()) ||
+               configTrade.toLowerCase().includes(k.toLowerCase()),
+        ) ?? configTrade;
+
+        const jwHours = tradeJwHours.get(matchKey) ?? 0;
+        const appHours = tradeAppHours.get(matchKey) ?? 0;
+
+        if (jwHours === 0 || appHours === 0) continue;
+
+        // Parse ratio string e.g. "1:2" → numerator=1, denominator=2
+        const parts = maxRatio.split(':').map(Number);
+        const ratioNumerator = parts[0] ?? 1;
+        const ratioDenominator = parts[1] ?? 1;
+        const maxAllowedApp = jwHours * (ratioNumerator / ratioDenominator);
+
+        if (appHours > maxAllowedApp + 0.001) {
+          const excessHours = appHours - maxAllowedApp;
+
+          // Estimated liability = excess apprentice hours × (JW rate − apprentice rate)
+          const avgJwRate = tradeJwCount.get(matchKey)
+            ? (tradeJwRateSum.get(matchKey) ?? 0) / tradeJwCount.get(matchKey)!
+            : 0;
+          const avgAppRate = tradeAppCount.get(matchKey)
+            ? (tradeAppRateSum.get(matchKey) ?? 0) / tradeAppCount.get(matchKey)!
+            : 0;
+          const rateDiff = Math.max(0, avgJwRate - avgAppRate);
+          const estimatedLiabilityUsd = Math.round(excessHours * rateDiff * 100) / 100;
+
+          weekViolations.push({
+            violationType: 'apprentice-trade-ratio',
+            detail: `Trade: ${configTrade} — ${appHours.toFixed(1)} apprentice hrs vs ${jwHours.toFixed(1)} JW hrs (max ratio ${maxRatio}). Excess: ${excessHours.toFixed(1)} hrs. Est. wage adjustment: $${estimatedLiabilityUsd.toFixed(2)}`,
+            apprenticeHours: appHours,
+            journeyworkerHours: jwHours,
+            maxAllowedApprenticeHours: maxAllowedApp,
+            trade: configTrade,
+            excessHours,
+            estimatedLiabilityUsd,
+          });
+        }
+      }
+    }
+  }
+
+  // COMP-05: IRA/IIJA 15% apprenticeship requirement
+  // If project is an IRA/IIJA clean energy project, total apprentice hours must be
+  // at least 15% of all hours to qualify for enhanced tax credits.
+  if (project?.isIraIijaProject) {
+    let totalAllHours = 0;
+    let totalAppHours = 0;
+
+    for (const row of rows) {
+      const e = row.entry;
+      const totalHoursRow =
+        (e.monSt ?? 0) + (e.tueSt ?? 0) + (e.wedSt ?? 0) +
+        (e.thuSt ?? 0) + (e.friSt ?? 0) + (e.satSt ?? 0) + (e.sunSt ?? 0) +
+        (e.monOt ?? 0) + (e.tueOt ?? 0) + (e.wedOt ?? 0) +
+        (e.thuOt ?? 0) + (e.friOt ?? 0) + (e.satOt ?? 0) + (e.sunOt ?? 0);
+
+      totalAllHours += totalHoursRow;
+      if (row.laborType === 'apprentice') {
+        totalAppHours += totalHoursRow;
+      }
+    }
+
+    if (totalAllHours > 0) {
+      const actualPct = totalAppHours / totalAllHours;
+      if (actualPct < 0.15) {
+        weekViolations.push({
+          violationType: 'ira-iija-apprentice-pct',
+          detail: `IRA/IIJA: Apprentice hours are ${(actualPct * 100).toFixed(1)}% of total — below 15% requirement for tax credit eligibility.`,
+          apprenticeHours: totalAppHours,
+          journeyworkerHours: totalAllHours - totalAppHours,
+          maxAllowedApprenticeHours: 0,
+          totalHours: totalAllHours,
+          actualPct,
+        });
+      }
+    }
+  }
+
   return {
     weekId,
     projectId: week.projectId,
@@ -295,7 +427,7 @@ export interface WorkerViolationHistoryEntry {
   weekId: string;
   weekEndingDate: string;
   payrollNumber: number;
-  violationType: 'under-wage' | 'cwhssa-ot' | 'ca-daily-ot' | 'ca-daily-dt' | 'apprentice-ratio';
+  violationType: 'under-wage' | 'cwhssa-ot' | 'ca-daily-ot' | 'ca-daily-dt' | 'apprentice-ratio' | 'apprentice-trade-ratio' | 'ira-iija-apprentice-pct';
   detail?: string;
   expected?: number;
   actual?: number;

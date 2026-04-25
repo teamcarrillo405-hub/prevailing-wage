@@ -42,6 +42,9 @@ const CreateProjectSchema = z.object({
   njPwcNumber: z.string().max(50).optional(),
   njContractId: z.string().max(100).optional(),
   projectSettings: z.string().optional(),
+  // Phase 70 — Apprenticeship ratio enforcement
+  apprenticeshipRequirements: z.string().optional(), // JSON string
+  isIraIijaProject: z.boolean().optional(),
 });
 
 // Fields that MUST be rejected in PATCH — immutable by design (WD version lock)
@@ -69,6 +72,9 @@ const UpdateProjectSchema = z.object({
   njPwcNumber: z.string().max(50).optional().nullable(),
   njContractId: z.string().max(100).optional().nullable(),
   projectSettings: z.string().optional(),
+  // Phase 70 — Apprenticeship ratio enforcement
+  apprenticeshipRequirements: z.string().optional().nullable(),
+  isIraIijaProject: z.boolean().optional(),
 });
 
 // POST /api/projects — create a project
@@ -104,6 +110,8 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
     njPwcNumber: body.njPwcNumber ?? null,
     njContractId: body.njContractId ?? null,
     projectSettings: body.projectSettings ?? null,
+    apprenticeshipRequirements: body.apprenticeshipRequirements ?? null,
+    isIraIijaProject: body.isIraIijaProject ?? false,
     createdAt: now,
     updatedAt: now,
   });

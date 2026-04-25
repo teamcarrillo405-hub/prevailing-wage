@@ -89,11 +89,16 @@ interface ComplianceViolation {
 }
 
 interface WeekViolation {
-  violationType: 'apprentice-ratio';
+  violationType: 'apprentice-ratio' | 'apprentice-trade-ratio' | 'ira-iija-apprentice-pct';
   detail: string;
   apprenticeHours: number;
   journeyworkerHours: number;
   maxAllowedApprenticeHours: number;
+  trade?: string;
+  excessHours?: number;
+  estimatedLiabilityUsd?: number;
+  totalHours?: number;
+  actualPct?: number;
 }
 
 interface ComplianceResult {
@@ -1296,7 +1301,9 @@ export function PayrollWeekDetailPage() {
                   {complianceData.weekViolations?.map((wv, i) => (
                     <li key={`week-${i}`} className="flex items-start gap-2 text-sm text-gray-700">
                       <Badge variant="violation" className="mt-0.5 shrink-0">
-                        Apprentice Ratio
+                        {wv.violationType === 'apprentice-trade-ratio' ? 'Trade Ratio' :
+                         wv.violationType === 'ira-iija-apprentice-pct' ? 'IRA/IIJA' :
+                         'Apprentice Ratio'}
                       </Badge>
                       <span>{wv.detail}</span>
                     </li>
@@ -2497,7 +2504,9 @@ export function PayrollWeekDetailPage() {
                 {complianceData!.weekViolations?.map((wv, i) => (
                   <li key={`week-${i}`} className="flex items-start gap-2 text-sm text-gray-700">
                     <Badge variant="violation" className="mt-0.5 shrink-0">
-                      Apprentice Ratio
+                      {wv.violationType === 'apprentice-trade-ratio' ? 'Trade Ratio' :
+                       wv.violationType === 'ira-iija-apprentice-pct' ? 'IRA/IIJA' :
+                       'Apprentice Ratio'}
                     </Badge>
                     <span>{wv.detail}</span>
                   </li>

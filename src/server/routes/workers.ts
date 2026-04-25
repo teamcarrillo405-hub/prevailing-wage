@@ -44,6 +44,9 @@ const CreateWorkerSchema = z.object({
   oshaTraining: z.boolean().optional(),
   // Phase 51 — NJ EEO sex field (M/F/N, legally distinct from gender identity)
   workerSex: z.enum(['M', 'F', 'N']).optional(),
+  // Phase 70 — Apprenticeship program identity
+  apprenticeshipProgramName: z.string().max(200).optional(),
+  rapidsNumber: z.string().max(100).optional(),
 });
 
 const UpdateWorkerSchema = z.object({
@@ -73,6 +76,9 @@ const UpdateWorkerSchema = z.object({
   oshaTraining: z.boolean().optional().nullable(),
   // Phase 51 — NJ EEO sex field (M/F/N, legally distinct from gender identity)
   workerSex: z.enum(['M', 'F', 'N']).optional().nullable(),
+  // Phase 70 — Apprenticeship program identity
+  apprenticeshipProgramName: z.string().max(200).optional().nullable(),
+  rapidsNumber: z.string().max(100).optional().nullable(),
 });
 
 const CreateClassificationSchema = z.object({
@@ -222,6 +228,8 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
     isMinority: body.isMinority,
     oshaTraining: body.oshaTraining,
     workerSex: body.workerSex,
+    apprenticeshipProgramName: body.apprenticeshipProgramName,
+    rapidsNumber: body.rapidsNumber,
   });
   res.status(201).json({ data: { worker: result } });
 });
@@ -269,6 +277,8 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
       isMinority: body.isMinority,
       oshaTraining: body.oshaTraining,
       workerSex: body.workerSex,
+      apprenticeshipProgramName: body.apprenticeshipProgramName,
+      rapidsNumber: body.rapidsNumber,
     });
     res.json({ data: { worker: result } });
   } catch (err: any) {
