@@ -253,6 +253,13 @@
       "when": 1745625600000,
       "tag": "0039_project_wd_pins",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1745712000000,
+      "tag": "0040_security_events_login_attempts",
+      "breakpoints": true
     }
   ]
 }

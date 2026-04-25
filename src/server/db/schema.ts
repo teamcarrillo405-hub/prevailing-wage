@@ -465,3 +465,27 @@ export const subcontractorCprWeeks = sqliteTable('subcontractor_cpr_weeks', {
 }, (table) => ({
   subCprWeekUnique: uniqueIndex('sub_cpr_week_unique').on(table.subcontractorId, table.weekEndingDate),
 }));
+
+// ── Phase 64: SOC 2 Security Audit Tables ────────────────────────────────
+export const securityEvents = sqliteTable('security_events', {
+  id:        text('id').primaryKey(),
+  userId:    text('user_id').references(() => users.id),
+  eventType: text('event_type').notNull(),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  metadata:  text('metadata'),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  idxSecEventsUserTime: index('idx_sec_events_user_time').on(table.userId, table.createdAt),
+}));
+
+export const loginAttempts = sqliteTable('login_attempts', {
+  id:            text('id').primaryKey(),
+  email:         text('email').notNull(),
+  success:       integer('success', { mode: 'boolean' }).notNull().default(false),
+  ipAddress:     text('ip_address'),
+  createdAt:     text('created_at').notNull(),
+  failureReason: text('failure_reason'),
+}, (table) => ({
+  idxLoginAttemptsEmailTime: index('idx_login_attempts_email_time').on(table.email, table.createdAt),
+}));
