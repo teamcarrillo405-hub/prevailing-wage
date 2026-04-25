@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { ReportsSkeleton } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 import { TermTooltip } from '../components/ui/TermTooltip';
 
 // ---- Interfaces from Plan 02 shapes ----
@@ -196,8 +198,8 @@ export function ReportsPage() {
         />
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 print-hidden">
-          <div className="flex gap-2">
+        <div className="border-b border-gray-200 print-hidden overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
             <button
               onClick={() => setActiveTab('fringe')}
               className={tabClass('fringe')}
@@ -228,7 +230,7 @@ export function ReportsPage() {
               Fringe Benefit Summary
             </h2>
 
-            {fringeLoading && <LoadingSpinner />}
+            {fringeLoading && <ReportsSkeleton />}
 
             {fringeError && (
               <p className="text-sm text-red-600">
@@ -237,9 +239,10 @@ export function ReportsPage() {
             )}
 
             {!fringeLoading && !fringeError && fringeRows.length === 0 && (
-              <p className="text-sm text-gray-500">
-                No payroll entries found for this project.
-              </p>
+              <EmptyState
+                heading="No payroll data yet"
+                message="Enter payroll weeks with worker hours to see fringe benefit totals here. Fringe credits accumulate across all completed payroll weeks."
+              />
             )}
 
             {!fringeLoading && !fringeError && fringeRows.length > 0 && (
@@ -341,10 +344,13 @@ export function ReportsPage() {
             </div>
 
             {!selectedWorkerId && workers.length === 0 && (
-              <p className="text-sm text-gray-500">No workers found for this project.</p>
+              <EmptyState
+                heading="No workers on this project"
+                message="Add workers to the project before viewing pay history. Each worker's weekly hours and wages will appear here after payroll entries are saved."
+              />
             )}
 
-            {payHistoryLoading && <LoadingSpinner />}
+            {payHistoryLoading && <ReportsSkeleton />}
 
             {payHistoryError && (
               <p className="text-sm text-red-600">
@@ -353,7 +359,10 @@ export function ReportsPage() {
             )}
 
             {!payHistoryLoading && !payHistoryError && selectedWorkerId && payHistoryRows.length === 0 && (
-              <p className="text-sm text-gray-500">No pay history found for this worker.</p>
+              <EmptyState
+                heading="No pay history for this worker"
+                message="This worker has no payroll entries yet. Enter hours in a payroll week to see their pay history here."
+              />
             )}
 
             {!payHistoryLoading && !payHistoryError && payHistoryRows.length > 0 && (
@@ -421,16 +430,17 @@ export function ReportsPage() {
               Fringe Breakdown by Fund Type
             </h2>
 
-            {fringeBreakdownLoading && <LoadingSpinner />}
+            {fringeBreakdownLoading && <ReportsSkeleton />}
 
             {fringeBreakdownError && (
               <p className="text-sm text-red-600">Failed to load fringe breakdown. Please try again.</p>
             )}
 
             {!fringeBreakdownLoading && !fringeBreakdownError && fringeBreakdownRows.length === 0 && (
-              <p className="text-sm text-gray-500">
-                Enter CA fringe items (H&W, Pension, Vacation, Training) in your payroll entries to see this breakdown.
-              </p>
+              <EmptyState
+                heading="No fringe data yet"
+                message="Enter fringe benefit amounts (H&W, Pension, Vacation, Training) in your payroll entries to see the breakdown by fund type and classification here."
+              />
             )}
 
             {!fringeBreakdownLoading && !fringeBreakdownError && fringeBreakdownRows.length > 0 && (() => {

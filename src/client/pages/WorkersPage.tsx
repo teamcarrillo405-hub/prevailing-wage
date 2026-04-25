@@ -7,6 +7,7 @@ import { Users } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { WorkersSkeleton } from '../components/ui/Skeleton';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -384,7 +385,7 @@ export function WorkersPage() {
           </div>
         )}
 
-        {isLoading && <LoadingSpinner />}
+        {isLoading && <WorkersSkeleton />}
         {isError && (
           <div className="text-center py-12">
             <p className="text-red-600 text-sm mb-4">Failed to load workers.</p>
@@ -434,8 +435,8 @@ export function WorkersPage() {
                   /* ── Inline edit form ── */
                   <div>
                     <p className="text-sm font-semibold text-gray-900 mb-3">Edit Worker</p>
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div className="col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <div className="col-span-1 sm:col-span-2">
                         <label htmlFor={`edit-name-${w.id}`} className="block text-xs text-gray-600 mb-1">Full Name *</label>
                         <input
                           id={`edit-name-${w.id}`}
@@ -723,7 +724,7 @@ export function WorkersPage() {
                 ) : (
                   /* ── Normal worker card view ── */
                   <>
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                       <div>
                         <p className="font-medium text-gray-900">{w.name}</p>
                         <p className="text-xs text-gray-500 mt-0.5">
@@ -749,16 +750,16 @@ export function WorkersPage() {
                           <p className="text-xs text-indigo-700 mt-1">Sex: {w.workerSex}</p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Link
                           to={`/projects/${projectId}/workers/${w.id}/compliance-history`}
-                          className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                          className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 hover:bg-gray-50 transition-colors flex items-center"
                         >
                           Compliance History
                         </Link>
                         <button
                           onClick={() => { setEditingId(w.id); setEditForm(workerToEditForm(w)); setAddingClassFor(null); }}
-                          className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                          className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 hover:bg-gray-50 transition-colors"
                           aria-label={`Edit ${w.name}`}
                         >
                           Edit
@@ -766,7 +767,7 @@ export function WorkersPage() {
                         {(hasWd || isWA) && (
                           <button
                             onClick={() => { setAddingClassFor(addingClassFor === w.id ? null : w.id); setExtraError(''); setExtraClass({ tradeCode: '', tradeDescription: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' }); setEditingId(null); }}
-                            className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                            className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 hover:bg-gray-50 transition-colors"
                             aria-label={`Add trade for ${w.name}`}
                           >
                             + Trade
@@ -774,7 +775,7 @@ export function WorkersPage() {
                         )}
                         <button
                           onClick={() => { setConfirmDeleteId(w.id); setEditingId(null); setAddingClassFor(null); }}
-                          className="text-xs text-red-400 border border-red-200 rounded px-3 py-1.5 hover:bg-red-50 transition-colors"
+                          className="text-xs text-red-400 border border-red-200 rounded px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 hover:bg-red-50 transition-colors"
                           aria-label={`Remove ${w.name}`}
                         >
                           Remove
@@ -978,7 +979,7 @@ export function WorkersPage() {
 
           <div className="space-y-4">
             {/* Name + SSN + Union */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label htmlFor="add-worker-name" className="block text-xs text-gray-600 mb-1">Full Name *</label>
                 <input

@@ -5,6 +5,7 @@ import { Workflow, Settings, ChevronRight, Building2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { ProjectDetailSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
@@ -846,7 +847,7 @@ export function ProjectDetailPage() {
 
   return (
     <Layout>
-      {isLoading && <LoadingSpinner />}
+      {isLoading && <ProjectDetailSkeleton />}
 
       {isError && (
         <div className="text-center py-12">

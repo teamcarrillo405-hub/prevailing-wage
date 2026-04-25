@@ -160,41 +160,56 @@ export function DashboardPage() {
   return (
     <Layout>
 
-      {/* Dashboard photo background strip — DES-02 D-04 */}
+      {/* Premium dark hero — replaces photo background strip */}
       <div
-        className="dashboard-bg relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 -mt-8 pt-8 pb-6 mb-6"
-        style={{
-          backgroundImage: "url('/images/dashboard-bg.webp')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
+        className="dashboard-bg relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 -mt-8 pt-10 pb-10 mb-8 overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1a2235 55%, #111827 100%)' }}
       >
-        <div className="absolute inset-0 bg-nav-dark/85" aria-hidden="true" />
-        <div className="relative z-10">
-          <PageHeader
-            title="Projects"
-            className="mb-0 text-white [&_h1]:text-white"
-            action={
-              <Button onClick={() => setShowForm(true)}>
-                New Project
-              </Button>
-            }
-          />
+        {/* Dot-grid texture */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)',
+            backgroundSize: '24px 24px',
+          }}
+          aria-hidden="true"
+        />
+        {/* Gold ambient glow */}
+        <div
+          className="absolute -top-20 right-1/3 w-96 h-96 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(245,197,24,0.08) 0%, transparent 70%)' }}
+          aria-hidden="true"
+        />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-brand-gold uppercase tracking-widest mb-3">
+              HCC Prevailing Wage
+            </p>
+            <h1 className="font-headline text-4xl sm:text-5xl text-white mb-2 leading-tight">
+              Projects
+            </h1>
+            <p className="text-sm text-gray-400 max-w-xs">
+              Certified payroll tracking &amp; DOL compliance
+            </p>
+          </div>
+          <div className="flex flex-col items-start sm:items-end gap-3">
+            <Button onClick={() => setShowForm(true)}>
+              New Project
+            </Button>
+            {!isLoading && projects.length > 0 && (
+              <a
+                href="/api/export/compliance-summary"
+                download="compliance-summary.pdf"
+                className="text-xs text-gray-400 hover:text-brand-gold transition-colors"
+              >
+                Download Summary PDF
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Compliance summary download — Phase 59 — hidden until at least one project exists */}
-      {!isLoading && projects.length > 0 && (
-        <div className="flex justify-end mb-4">
-          <a
-            href="/api/export/compliance-summary"
-            download="compliance-summary.pdf"
-            className="inline-flex items-center gap-1.5 text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary hover:border-brand-gold hover:text-brand-gold transition-colors"
-          >
-            Download Compliance Summary
-          </a>
-        </div>
-      )}
 
       <HelpCallout
         icon={LayoutDashboard}
@@ -224,11 +239,27 @@ export function DashboardPage() {
       {/* Due-soon / overdue payroll weeks across all projects */}
       <DueSoonPanel />
 
-      {/* Filter bar — only rendered when there is at least one project or archived view is active */}
+      {/* Filter bar */}
       {(!isLoading && (projects.length > 0 || showArchived)) && (
         <div className="space-y-3 mb-6">
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={handleSearchChange}
+              placeholder="Search projects..."
+              className="text-sm border border-border-default rounded-xl px-3.5 py-2 bg-white text-text-primary placeholder:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold w-56 shadow-card"
+            />
+            <select
+              value={fundingFilter}
+              onChange={handleFundingChange}
+              className="text-sm border border-border-default rounded-xl px-3.5 py-2 bg-white text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold shadow-card"
+            >
+              {FUNDING_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none ml-auto">
               <input
                 type="checkbox"
                 checked={showArchived}
@@ -239,37 +270,17 @@ export function DashboardPage() {
             </label>
           </div>
 
-          {/* Search + funding filter bar — DASH-03 / DASH-04 */}
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={handleSearchChange}
-              placeholder="Search projects..."
-              className="text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary placeholder:text-text-secondary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold w-56"
-            />
-            <select
-              value={fundingFilter}
-              onChange={handleFundingChange}
-              className="text-sm border border-border-default rounded-sm px-3 py-1.5 bg-surface-card text-text-primary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
-            >
-              {FUNDING_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Compliance filter chips — DASH-05 */}
+          {/* Compliance filter chips */}
           <div className="flex flex-wrap items-center gap-2">
             {COMPLIANCE_FILTER_OPTIONS.map(opt => (
               <button
                 key={opt.value}
                 onClick={() => handleComplianceFilterChange(opt.value)}
                 aria-pressed={complianceFilter === opt.value}
-                className={`text-sm px-3 py-2 rounded border transition-all duration-100 active:scale-95 ${
+                className={`text-sm px-3.5 py-1.5 rounded-xl border transition-all duration-150 active:scale-95 ${
                   complianceFilter === opt.value
-                    ? 'bg-brand-gold text-white border-brand-gold'
-                    : 'bg-surface-card text-text-primary border-border-default hover:border-brand-gold'
+                    ? 'bg-brand-gold text-nav-dark border-brand-gold font-medium shadow-sm'
+                    : 'bg-white text-text-secondary border-border-default hover:border-brand-gold hover:text-text-primary shadow-card'
                 }`}
               >
                 {opt.label}
@@ -280,14 +291,14 @@ export function DashboardPage() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div
-            className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6"
+            className="bg-white rounded-2xl shadow-card-hover w-full max-w-lg p-7"
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-project-modal-title"
           >
-            <h3 id="new-project-modal-title" className="font-headline text-xl text-gray-900 mb-5">New Project</h3>
+            <h3 id="new-project-modal-title" className="font-headline text-2xl text-text-primary mb-6">New Project</h3>
             <ProjectForm
               onSuccess={() => setShowForm(false)}
               onCancel={() => setShowForm(false)}
@@ -332,9 +343,9 @@ export function DashboardPage() {
       )}
 
       {!isLoading && !isError && filteredProjects.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} className="shadow-card-elevated" />
+            <ProjectCard key={project.id} project={project} />
           ))}
         </div>
       )}

@@ -7,6 +7,7 @@ import { FileCheck, FileText } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { PayrollListSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -224,7 +225,7 @@ export function PayrollListPage() {
           body={<>Each week records your workers' hours and pay. Create a new payroll week for each reporting period. Download the <TermTooltip term="WH-347" definition={WH347_DEF} /> when all entries are complete.</>}
         />
 
-        {isLoading && <LoadingSpinner />}
+        {isLoading && <PayrollListSkeleton />}
 
         {isError && (
           <div className="text-center py-12">
@@ -242,7 +243,7 @@ export function PayrollListPage() {
           <EmptyState
             icon={FileText}
             heading="No payroll weeks yet"
-            message="No payroll weeks yet — start your first week to begin compliance tracking."
+            message="Start your first payroll week to begin compliance tracking and generate certified payroll reports. You must add workers to the project before entering payroll."
             action={
               <Link
                 to={`/projects/${projectId}/payroll/new`}
@@ -257,7 +258,7 @@ export function PayrollListPage() {
         {weeks.length > 0 && (
           <Card padding="none" className="divide-y divide-gray-100 shadow-card-elevated">
             {weeks.map((week) => (
-              <div key={week.id} className="flex items-center justify-between px-5 py-3">
+              <div key={week.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-5 py-3 gap-3">
                 <div>
                   <span className="text-sm font-medium text-gray-900">
                     Week Ending {week.weekEndingDate}
@@ -290,17 +291,17 @@ export function PayrollListPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-shrink-0">
                   <a
                     href={`/api/export/wh347/${week.id}`}
-                    className="inline-flex items-center justify-center text-xs px-3 py-2 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
+                    className="inline-flex items-center justify-center text-xs px-3 py-2 min-h-[44px] sm:min-h-0 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
                     onClick={() => toast.success('WH-347 downloading — submit to your contracting officer within 7 days of the week ending date.')}
                   >
                     Download WH-347
                   </a>
                   <Link
                     to={`/projects/${projectId}/payroll/${week.id}`}
-                    className="text-xs text-gray-500 hover:text-gray-900 underline"
+                    className="text-xs text-gray-500 hover:text-gray-900 underline min-h-[44px] sm:min-h-0 flex items-center"
                   >
                     View
                   </Link>
