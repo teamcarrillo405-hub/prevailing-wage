@@ -17,6 +17,9 @@ interface Project {
 interface ProjectCardProps {
   project: Project;
   className?: string;
+  /** Optional pre-fetched violation count from batch summary (DASH-04). When provided,
+   *  overrides the per-card compliance badge with a precise count badge. */
+  violationCount?: number;
 }
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
@@ -32,7 +35,7 @@ const FUNDING_TYPE_LABELS: Record<string, string> = {
   mixed: 'Mixed',
 };
 
-export function ProjectCard({ project, className }: ProjectCardProps) {
+export function ProjectCard({ project, className, violationCount }: ProjectCardProps) {
   const navigate = useNavigate();
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -49,26 +52,39 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
     <button
       onClick={() => navigate(`/projects/${project.id}`)}
       className={cn(
-        'w-full text-left bg-white border border-gray-200 rounded-lg p-5 hover:border-brand-gold transition-all group',
-        project.status === 'closed' && 'opacity-70',
+        'group w-full text-left bg-white rounded-2xl p-5 transition-all duration-200 relative overflow-hidden',
+        'border border-border-default hover:border-brand-gold/40',
+        'shadow-card hover:shadow-card-hover',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2',
+        project.status === 'closed' && 'opacity-60',
         className
       )}
     >
+      {/* Gold top-bar reveal on hover */}
+      <div
+        className="absolute inset-x-0 top-0 h-0.5 bg-brand-gold origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out rounded-t-2xl"
+        aria-hidden="true"
+      />
+
       {project.status === 'closed' && (
         <div className="mb-2">
           <Badge variant="neutral">Archived</Badge>
         </div>
       )}
-      <h3 className="font-headline text-lg text-gray-900 mb-3 group-hover:text-gray-800 truncate">
+
+      {/* Project name */}
+      <h3 className="font-headline text-lg text-text-primary mb-1.5 truncate group-hover:text-brand-gold/90 transition-colors duration-200">
         {project.name}
       </h3>
 
-      <p className="text-sm text-gray-600 mb-3">
+      {/* Location */}
+      <p className="text-sm text-text-secondary mb-3">
         {project.state} — {project.county}
       </p>
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        <span className="inline-block text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-700 rounded">
+      {/* Tags */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        <span className="inline-block text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md">
           {CONTRACT_TYPE_LABELS[project.contractType] ?? project.contractType}
         </span>
         <Badge variant="neutral">
@@ -76,24 +92,38 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
         </Badge>
       </div>
 
-      {/* Compliance badge + week stats — DASH-01 / DASH-02 */}
-      <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
+      {/* Compliance status */}
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         {summaryLoading ? (
-          // Neutral skeleton while async fetch is in-flight — prevents flicker
           <div className="h-5 w-16 rounded-full bg-gray-100 animate-pulse" />
         ) : (
           <>
-            {summary?.badge === 'violations' && (
-              <Badge variant="violation">Violations</Badge>
-            )}
-            {summary?.badge === 'clean' && summary.weekCount > 0 && (
-              <Badge variant="compliant">Clean</Badge>
-            )}
-            {(!summary || summary.weekCount === 0) && (
-              <Badge variant="neutral">No payroll</Badge>
+            {/* DASH-04: show violation count badge when batch data provides count */}
+            {violationCount !== undefined ? (
+              violationCount > 0 ? (
+                <Badge variant="violation">
+                  {violationCount} violation{violationCount !== 1 ? 's' : ''}
+                </Badge>
+              ) : (
+                summary?.weekCount && summary.weekCount > 0
+                  ? <Badge variant="compliant">Clean</Badge>
+                  : <Badge variant="neutral">No payroll</Badge>
+              )
+            ) : (
+              <>
+                {summary?.badge === 'violations' && (
+                  <Badge variant="violation">Violations</Badge>
+                )}
+                {summary?.badge === 'clean' && summary.weekCount > 0 && (
+                  <Badge variant="compliant">Clean</Badge>
+                )}
+                {(!summary || summary.weekCount === 0) && (
+                  <Badge variant="neutral">No payroll</Badge>
+                )}
+              </>
             )}
             {summary && summary.weekCount > 0 && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-text-secondary">
                 {summary.weekCount} week{summary.weekCount !== 1 ? 's' : ''}
                 {summary.lastWeekNumber != null ? `, Week ${summary.lastWeekNumber}` : ''}
               </span>
@@ -102,8 +132,9 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
         )}
       </div>
 
-      <p className="text-xs text-gray-500">
-        Award date: {project.awardDate}
+      {/* Award date */}
+      <p className="text-xs text-text-secondary mt-auto">
+        Award: {project.awardDate}
       </p>
     </button>
   );

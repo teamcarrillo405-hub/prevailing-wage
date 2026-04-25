@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, AlertTriangle } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { SkeletonGrid } from '../components/ui/SkeletonCard';
@@ -77,9 +78,16 @@ export function DashboardPage() {
     ),
   });
 
+  interface ProjectSummaryItem {
+    id: string;
+    status: string;
+    violationCount: number;
+    unsubmittedWeekEndingDates: string[];
+  }
+
   const { data: summaryData } = useQuery({
     queryKey: ['compliance-summary-batch'],
-    queryFn: () => api.get<{ projects: Array<{ id: string; status: string }> }>(
+    queryFn: () => api.get<{ projects: ProjectSummaryItem[] }>(
       '/compliance/projects/summary'
     ),
     staleTime: 60_000,
@@ -87,13 +95,108 @@ export function DashboardPage() {
 
   const projects = data?.data?.projects ?? [];
 
-  const summaryMap = useMemo(() => {
-    const map = new Map<string, string>();
+  // Map from project id → full summary item (status + violationCount + unsubmitted dates)
+  const summaryItemMap = useMemo(() => {
+    const map = new Map<string, ProjectSummaryItem>();
     for (const item of (summaryData?.projects ?? [])) {
-      map.set(item.id, item.status);
+      map.set(item.id, item);
     }
     return map;
   }, [summaryData]);
+
+  // Legacy map of id → status string (still needed by ComplianceOverviewCard)
+  const summaryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [id, item] of summaryItemMap.entries()) {
+      map.set(id, item.status);
+    }
+    return map;
+  }, [summaryItemMap]);
+
+  // ── DASH-01 hero stat computations ──────────────────────────────────────
+  const activeProjectCount = useMemo(
+    () => projects.filter(p => p.status === 'active').length,
+    [projects],
+  );
+
+  const totalViolations = useMemo(() => {
+    let total = 0;
+    for (const item of summaryItemMap.values()) {
+      total += item.violationCount;
+    }
+    return total;
+  }, [summaryItemMap]);
+
+  const dueSoonCount = useMemo(() => {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const todayStr = now.toISOString().slice(0, 10);
+    const limitStr = sevenDaysFromNow.toISOString().slice(0, 10);
+    let count = 0;
+    for (const item of summaryItemMap.values()) {
+      const hasWeekDueSoon = item.unsubmittedWeekEndingDates.some(
+        date => date >= todayStr && date <= limitStr,
+      );
+      if (hasWeekDueSoon) count++;
+    }
+    return count;
+  }, [summaryItemMap]);
+
+  // ── DASH-02 trend data: violation counts for last 12 weeks ───────────────
+  const trendData = useMemo(() => {
+    // Build a map of week-ending-date → weekly violation label
+    // We use the unsubmittedWeekEndingDates as a proxy for week boundaries,
+    // plus derive approximate week labels from current date
+    const now = new Date();
+    const weeks: { week: string; weekEnd: string; violations: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i * 7);
+      const weekEnd = d.toISOString().slice(0, 10);
+      const weekStart = new Date(d.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      weeks.push({ week: label, weekEnd, violations: 0 });
+    }
+
+    // For each project's violations status, attribute violations to the most recent
+    // applicable week bucket based on available data.
+    // Since we don't have per-week violation timestamps from the batch endpoint,
+    // we distribute violation counts evenly across weeks that have unsubmitted dates
+    // that fall within the 12-week window — this is an approximation.
+    // Projects with violations contribute their total count to their most recent week bucket.
+    for (const item of summaryItemMap.values()) {
+      if (item.violationCount === 0) continue;
+      // Find the latest unsubmitted week date within our 12-week window
+      const windowStart = weeks[0]?.weekEnd ?? '';
+      const relevantDates = item.unsubmittedWeekEndingDates.filter(d => d >= windowStart);
+      const latestDate = relevantDates.sort().pop() ?? '';
+      if (!latestDate) continue;
+      // Find the closest week bucket
+      let bestIdx = 0;
+      let bestDiff = Infinity;
+      for (let i = 0; i < weeks.length; i++) {
+        const diff = Math.abs(
+          new Date(latestDate).getTime() - new Date(weeks[i].weekEnd).getTime()
+        );
+        if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+      }
+      weeks[bestIdx].violations += item.violationCount;
+    }
+
+    return weeks.map(({ week, violations }) => ({ week, violations }));
+  }, [summaryItemMap]);
+
+  // ── DASH-03 at-risk projects ─────────────────────────────────────────────
+  const atRiskProjects = useMemo(() => {
+    return projects
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        violationCount: summaryItemMap.get(p.id)?.violationCount ?? 0,
+      }))
+      .filter(p => p.violationCount > 0)
+      .sort((a, b) => b.violationCount - a.violationCount);
+  }, [projects, summaryItemMap]);
 
   const filteredProjects = useMemo(() => {
     let result = projects;
@@ -255,6 +358,68 @@ export function DashboardPage() {
         />
       )}
 
+      {/* DASH-01: Hero stat row — active projects, open violations, due this week */}
+      {projects.length > 0 && (
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          {[
+            { label: 'Active Projects', value: activeProjectCount, color: 'text-gray-900' },
+            { label: 'Open Violations', value: totalViolations, color: totalViolations > 0 ? 'text-red-600' : 'text-emerald-600' },
+            { label: 'Due This Week', value: dueSoonCount, color: dueSoonCount > 0 ? 'text-amber-600' : 'text-gray-900' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
+              <p className={`text-3xl font-bold mb-1 ${color}`}>{value}</p>
+              <p className="text-sm text-gray-500">{label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* DASH-02: 12-week violation trend chart */}
+      {trendData.length > 0 && projects.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-8">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Compliance Trend — Last 12 Weeks</h3>
+          <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={trendData}>
+              <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="violations"
+                stroke="#DC2626"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* DASH-03: Projects-at-risk panel */}
+      {atRiskProjects.length > 0 && (
+        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-5 mb-8">
+          <h3 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Projects Needing Attention ({atRiskProjects.length})
+          </h3>
+          <div className="space-y-2">
+            {atRiskProjects.slice(0, 5).map(project => (
+              <div key={project.id} className="flex items-center justify-between">
+                <span className="text-sm text-gray-900">{project.name}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-red-600 font-medium">
+                    {project.violationCount} violation{project.violationCount !== 1 ? 's' : ''}
+                  </span>
+                  <Link to={`/projects/${project.id}`} className="text-xs text-brand-gold hover:underline">
+                    Resolve &rarr;
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* At-a-glance compliance summary — shows counts + status bar before the grid. */}
       {projects.length > 0 && (
         <ComplianceOverviewCard
@@ -374,7 +539,11 @@ export function DashboardPage() {
       {!isLoading && !isError && filteredProjects.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              violationCount={summaryItemMap.get(project.id)?.violationCount}
+            />
           ))}
         </div>
       )}

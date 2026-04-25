@@ -377,10 +377,18 @@ export async function computeCompliance(
 
 // ── Batch Project Compliance (DASH-05) ───────────────────────────────────
 
+export interface BatchProjectSummary {
+  status: 'archived' | 'violations' | 'compliant' | 'no-payroll';
+  /** Total violation count across all weeks (worker + week-level violations) */
+  violationCount: number;
+  /** ISO 8601 week ending dates for unsubmitted weeks (for due-this-week calc) */
+  unsubmittedWeekEndingDates: string[];
+}
+
 export async function getBatchProjectCompliance(
   db: BetterSQLite3Database<typeof schema>,
   userId: string,
-): Promise<Map<string, 'archived' | 'violations' | 'compliant' | 'no-payroll'>> {
+): Promise<Map<string, BatchProjectSummary>> {
   const membershipRows = await db
     .select({ project: schema.projects })
     .from(schema.projectMembers)
@@ -389,31 +397,43 @@ export async function getBatchProjectCompliance(
 
   const allProjects = membershipRows.map(r => r.project);
 
-  const result = new Map<string, 'archived' | 'violations' | 'compliant' | 'no-payroll'>();
+  const result = new Map<string, BatchProjectSummary>();
 
   for (const project of allProjects) {
     if (project.status === 'closed') {
-      result.set(project.id, 'archived');
+      result.set(project.id, { status: 'archived', violationCount: 0, unsubmittedWeekEndingDates: [] });
       continue;
     }
 
     const weeks = await listPayrollWeeks(project.id);
 
     if (weeks.length === 0) {
-      result.set(project.id, 'no-payroll');
+      result.set(project.id, { status: 'no-payroll', violationCount: 0, unsubmittedWeekEndingDates: [] });
       continue;
     }
 
     let hasViolations = false;
+    let violationCount = 0;
+    const unsubmittedWeekEndingDates: string[] = [];
+
     for (const week of weeks) {
+      // Track unsubmitted week ending dates for due-this-week computation
+      if (!week.submittedAt) {
+        unsubmittedWeekEndingDates.push(week.weekEndingDate);
+      }
+
       const compliance = await computeCompliance(db, week.id);
       if (compliance?.hasViolations === true) {
         hasViolations = true;
-        break;
+        violationCount += compliance.violations.length + compliance.weekViolations.length;
       }
     }
 
-    result.set(project.id, hasViolations ? 'violations' : 'compliant');
+    result.set(project.id, {
+      status: hasViolations ? 'violations' : 'compliant',
+      violationCount,
+      unsubmittedWeekEndingDates,
+    });
   }
 
   return result;

@@ -78,8 +78,13 @@ complianceRouter.get('/worker/:workerId/history', requireAuth, async (req, res) 
 complianceRouter.get('/projects/summary', requireAuth, async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
-  const statusMap = await getBatchProjectCompliance(db, userId);
-  const projects = Array.from(statusMap.entries()).map(([id, status]) => ({ id, status }));
+  const summaryMap = await getBatchProjectCompliance(db, userId);
+  const projects = Array.from(summaryMap.entries()).map(([id, summary]) => ({
+    id,
+    status: summary.status,
+    violationCount: summary.violationCount,
+    unsubmittedWeekEndingDates: summary.unsubmittedWeekEndingDates,
+  }));
   res.json({ projects });
 });
 
