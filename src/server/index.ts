@@ -42,6 +42,7 @@ import { integrationsRouter } from './routes/integrations.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
+import { runCertificationExpiryAlerts } from './jobs/certificationExpiryAlerts.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
 import { fileURLToPath } from 'url';
@@ -163,6 +164,18 @@ const server = app.listen(PORT, () => {
       await checkWdChanges();
     } catch (err) {
       logger.error({ err }, 'wd-detector: failed');
+      // Never rethrow — cron failures must not crash Express
+    }
+  }, { timezone: 'America/New_York' });
+
+  // Register daily certification expiry alerts — DBE-03
+  // Runs at 8:00 AM Eastern every day
+  cron.schedule('0 8 * * *', async () => {
+    logger.info('cert-expiry: running daily certification expiry alert scan');
+    try {
+      await runCertificationExpiryAlerts();
+    } catch (err) {
+      logger.error({ err }, 'cert-expiry: scan failed');
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'America/New_York' });
