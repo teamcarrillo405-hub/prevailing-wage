@@ -169,8 +169,8 @@ export function SecurityPolicyPage() {
           <div className="space-y-4 text-gray-600">
             <p>
               If you discover a security vulnerability in PrevWage, please report it to our
-              security team. We commit to acknowledging your report within 48 hours and providing
-              a remediation timeline within 7 business days.
+              security team. We commit to acknowledging your report within 72 hours and providing
+              a remediation timeline within 14 calendar days.
             </p>
             <p>
               Please do not publicly disclose vulnerabilities before we have had a reasonable
@@ -178,8 +178,8 @@ export function SecurityPolicyPage() {
             </p>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <p className="text-sm font-semibold text-gray-900 mb-1">Security Contact</p>
-              <a href="mailto:security@prevwage.app" className="text-blue-600 hover:underline text-sm">
-                security@prevwage.app
+              <a href="mailto:security@prevailingwage.app" className="text-blue-600 hover:underline text-sm">
+                security@prevailingwage.app
               </a>
             </div>
           </div>
@@ -204,7 +204,7 @@ export function SecurityPolicyPage() {
         {/* Last updated */}
         <p className="text-xs text-gray-400 border-t border-gray-100 pt-8">
           Last updated: April 2026. To request a copy of our full security documentation, contact{' '}
-          <a href="mailto:security@prevwage.app" className="underline">security@prevwage.app</a>.
+          <a href="mailto:security@prevailingwage.app" className="underline">security@prevailingwage.app</a>.
         </p>
 
       </div>
