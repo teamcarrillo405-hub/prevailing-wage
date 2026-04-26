@@ -113,6 +113,12 @@ app.use(pinoHttp({
   customLogLevel: (_req, res) => res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
 }));
 
+// Phase 83 SEC-07 — non-fatal startup warning if external log drain not configured.
+// Mirrors RESEND_API_KEY / SENTRY_DSN handling: app continues to run, logs stay on stdout.
+if (process.env.NODE_ENV !== 'test' && !process.env.LOGTAIL_TOKEN) {
+  logger.warn('LOGTAIL_TOKEN not set — logs will not be sent to external drain (Better Stack). App will continue with stdout logging.');
+}
+
 // Phase 80 — CORS tightening (SEC-05). Single allow-listed origin from env.
 // CORS_ORIGIN (preferred) and ALLOWED_ORIGIN are both honored to avoid
 // breaking existing deployments while migrating to the SOC 2 nomenclature.
