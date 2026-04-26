@@ -1804,3 +1804,124 @@ Plans:
 | 80. Public REST API + API Keys | v6.0 | 0/3 | Not started | - |
 | 81. Webhooks | v6.0 | 0/2 | Not started | - |
 | 82. Market Credibility + Phase D Gate | v6.0 | 0/3 | Not started | - |
+
+---
+
+## v7.0 Industry Leadership (Phases 83–106) — Target: 9.2+/10
+
+**Milestone goal:** Close the final gaps to become the undisputed #1 prevailing wage platform. Beat LCPtracker on API openness and AI innovation; earn SOC 2 Type I; live SAM.gov wage lookups; Procore marketplace listing.
+
+**Competitive baseline (v6.0):** 8.31/10 — B2Gnow 7.0, Knowify 6.1, LCPtracker (dominant, FedRAMP ATO).
+
+---
+
+### Phase A — Foundation + Security (Phases 83–87)
+
+**Goal:** Close all SOC 2 Type I evidence gaps; ship full-text search and scheduled reports.
+
+- [ ] **Phase 83: External Log Drain + Security Policy** — Logtail/Better Stack Pino transport, HTTPS drain, SECURITY_POLICY.md at /security (SEC-07, SEC-08)
+- [ ] **Phase 84: Dependabot + Uptime Monitoring** — Dependabot npm weekly PRs, Uptime Robot + Instatus status page, public status badge on landing (SEC-09, SEC-10)
+- [ ] **Phase 85: Full-Text Search** — SQLite FTS5 virtual tables for workers + projects, debounced search UI, highlighted matches (PERF-01, PERF-02)
+- [ ] **Phase 86: Scheduled Report Emails** — daily/weekly/monthly compliance summaries via nodemailer cron, user-configurable delivery prefs, unsubscribe token (NOTIF-05, NOTIF-06)
+- [ ] **Phase 87: Phase A Watchdog Gate** — SOC 2 evidence package review (CC6–CC9 coverage), score target 8.55+
+
+**Acceptance criteria:**
+- Pino HTTP logs flowing to external drain; verifiable by auditor
+- SECURITY_POLICY.md published and linked from footer
+- FTS5 search returns workers/projects in < 50ms on 10K-row dataset
+- At least 1 scheduled report email delivered to test inbox
+
+WATCHDOG GATE: Score ≥ 8.55/10 required before Phase 88 begins.
+
+---
+
+### Phase B — Data + Integrations (Phases 88–93)
+
+**Goal:** Live SAM.gov/DOL wage determination fetch; Procore timesheet sync; 2 new state forms.
+
+- [ ] **Phase 88: Live SAM.gov WD Fetch** — SAM.gov API key, weekly cron against `/api/prod/wdol/v1/wd/{WD}/{REV}/download`, stale-WD banner on project detail, revision diff log (COMP-06, COMP-07)
+- [ ] **Phase 89: DOL 2024 Rule Updates** — WH-347 updated to Jan 2025 form, 30% rule compliance notice on wage determinations, civil penalty display ($13,508/violation) (COMP-08)
+- [ ] **Phase 90: Procore Timesheet Sync** — Procore OAuth2 connect, timesheet import bridge → payroll entries preview, Integrations page tile (INT-01, INT-02)
+- [ ] **Phase 91: Minnesota Certified Payroll** — MN DLI form, STATE_FORMS registry entry, migration (STATE-14)
+- [ ] **Phase 92: Virginia Certified Payroll** — VA DOLI form, STATE_FORMS registry entry, migration (STATE-15)
+- [ ] **Phase 93: Phase B Watchdog Gate** — live WD fetch verified against known WD number, score target 8.75+
+
+**Acceptance criteria:**
+- WD refresh cron runs weekly; project shows "WD updated X days ago"
+- Procore OAuth connect/disconnect works end-to-end; test project timesheet imports cleanly
+- MN + VA forms pass visual inspection against official form templates
+
+WATCHDOG GATE: Score ≥ 8.75/10 required before Phase 94 begins.
+
+---
+
+### Phase C — Mobile + Field Polish (Phases 94–99)
+
+**Goal:** Offline payroll entry durability; photo verification; background sync.
+
+- [ ] **Phase 94: Offline Payroll Entry Queue** — full payroll form serialization to IndexedDB, optimistic UI, replay-on-reconnect with conflict resolution (MOB-16, MOB-17)
+- [ ] **Phase 95: Background Sync** — Service Worker Background Sync API for clock-in queue + offline payroll flush, sync status indicator (MOB-18)
+- [ ] **Phase 96: Photo Verification** — contractor digital signature capture (canvas), site photo gallery on ProjectDetailPage, EXIF geotag display (MOB-19, MOB-20)
+- [ ] **Phase 97: Mobile Nav Redesign** — bottom tab bar for field workers (Field / Payroll / Projects / More), swipe gesture routing (MOB-21)
+- [ ] **Phase 98: Offline Compliance Checklists** — pre-inspection checklist stored in IDB, offline accessible, syncs when connected (MOB-22)
+- [ ] **Phase 99: Phase C Watchdog Gate** — offline payroll submit verified end-to-end with network throttle, score target 8.90+
+
+**Acceptance criteria:**
+- Payroll entry created offline successfully syncs to server on reconnect
+- Background sync fires within 30s of connectivity restoration
+- Signature capture produces verifiable PNG blob stored with payroll week
+
+WATCHDOG GATE: Score ≥ 8.90/10 required before Phase 100 begins.
+
+---
+
+### Phase D — Market + Enterprise (Phases 100–106)
+
+**Goal:** ROI calculator; customer testimonials; AI classification assist; SSO for enterprise; v7.0 ship.
+
+- [ ] **Phase 100: ROI Calculator Page** — /roi route, pre-filled by project count + worker count, hours-saved estimate, email capture CTA (TRUST-04)
+- [ ] **Phase 101: Customer Testimonials + Video** — 3 contractor quotes with photos, video embed, PDF case study download (TRUST-05, TRUST-06)
+- [ ] **Phase 102: Enterprise Pricing + SSO Foundation** — enterprise tier on PricingPage, SAML SSO schema (sso_configs table), Okta/Azure AD connect UI stub (ENT-01, ENT-02)
+- [ ] **Phase 103: AI Classification Assist** — Claude API integration, job description → Davis-Bacon classification suggestion, confidence score, audit trail entry, IL AI Act disclosure (AI-01, AI-02)
+- [ ] **Phase 104: Advanced Audit Analytics** — pivot-table hours by trade/classification/week, CSV + PDF export, drill-down (REPT-06)
+- [ ] **Phase 105: Growth Dashboard (Admin)** — admin metrics: active users, submission rate, compliance score trends, MRR (internal only) (OPS-01)
+- [ ] **Phase 106: Phase D Watchdog Gate + v7.0 Ship** — final competitive score ≥ 9.2/10, LCPtracker feature gap audit
+
+**Acceptance criteria:**
+- AI classification returns suggestion in < 3s with audit log entry
+- ROI calculator renders server-side-safe with email capture working
+- SSO connect flow completes with Okta dev account
+- Final Watchdog average ≥ 9.2/10
+
+WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
+
+---
+
+## v7.0 Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 83. External Log Drain + Security Policy | v7.0 | 0/2 | Not started | - |
+| 84. Dependabot + Uptime Monitoring | v7.0 | 0/2 | Not started | - |
+| 85. Full-Text Search | v7.0 | 0/2 | Not started | - |
+| 86. Scheduled Report Emails | v7.0 | 0/2 | Not started | - |
+| 87. Phase A Watchdog Gate | v7.0 | 0/1 | Not started | - |
+| 88. Live SAM.gov WD Fetch | v7.0 | 0/3 | Not started | - |
+| 89. DOL 2024 Rule Updates | v7.0 | 0/2 | Not started | - |
+| 90. Procore Timesheet Sync | v7.0 | 0/3 | Not started | - |
+| 91. Minnesota Certified Payroll | v7.0 | 0/2 | Not started | - |
+| 92. Virginia Certified Payroll | v7.0 | 0/2 | Not started | - |
+| 93. Phase B Watchdog Gate | v7.0 | 0/1 | Not started | - |
+| 94. Offline Payroll Entry Queue | v7.0 | 0/2 | Not started | - |
+| 95. Background Sync | v7.0 | 0/2 | Not started | - |
+| 96. Photo Verification | v7.0 | 0/2 | Not started | - |
+| 97. Mobile Nav Redesign | v7.0 | 0/2 | Not started | - |
+| 98. Offline Compliance Checklists | v7.0 | 0/2 | Not started | - |
+| 99. Phase C Watchdog Gate | v7.0 | 0/1 | Not started | - |
+| 100. ROI Calculator Page | v7.0 | 0/2 | Not started | - |
+| 101. Customer Testimonials + Video | v7.0 | 0/2 | Not started | - |
+| 102. Enterprise Pricing + SSO Foundation | v7.0 | 0/2 | Not started | - |
+| 103. AI Classification Assist | v7.0 | 0/3 | Not started | - |
+| 104. Advanced Audit Analytics | v7.0 | 0/2 | Not started | - |
+| 105. Growth Dashboard (Admin) | v7.0 | 0/2 | Not started | - |
+| 106. Phase D Watchdog Gate + v7.0 Ship | v7.0 | 0/1 | Not started | - |
