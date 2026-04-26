@@ -1819,7 +1819,7 @@ Plans:
 
 **Goal:** Close all SOC 2 Type I evidence gaps; ship full-text search and scheduled reports.
 
-- [ ] **Phase 83: External Log Drain + Security Policy** — Logtail/Better Stack Pino transport, HTTPS drain, SECURITY_POLICY.md at /security (SEC-07, SEC-08)
+- [x] **Phase 83: External Log Drain + Security Policy** — Logtail/Better Stack Pino transport, HTTPS drain, SECURITY_POLICY.md at /security (SEC-07, SEC-08) (completed 2026-04-26)
 - [ ] **Phase 84: Dependabot + Uptime Monitoring** — Dependabot npm weekly PRs, Uptime Robot + Instatus status page, public status badge on landing (SEC-09, SEC-10)
 - [ ] **Phase 85: Full-Text Search** — SQLite FTS5 virtual tables for workers + projects, debounced search UI, highlighted matches (PERF-01, PERF-02)
 - [ ] **Phase 86: Scheduled Report Emails** — daily/weekly/monthly compliance summaries via nodemailer cron, user-configurable delivery prefs, unsubscribe token (NOTIF-05, NOTIF-06)
@@ -1901,7 +1901,7 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 83. External Log Drain + Security Policy | v7.0 | 1/2 | In Progress|  |
+| 83. External Log Drain + Security Policy | v7.0 | 2/2 | Complete   | 2026-04-26 |
 | 84. Dependabot + Uptime Monitoring | v7.0 | 0/2 | Not started | - |
 | 85. Full-Text Search | v7.0 | 0/2 | Not started | - |
 | 86. Scheduled Report Emails | v7.0 | 0/2 | Not started | - |
@@ -1948,7 +1948,7 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 
 Plans:
 - [x] 83-01-PLAN.md -- Pino HTTPS transport to external log drain (Logtail/Better Stack); HTTP request middleware; ENV guard; test mock
-- [ ] 83-02-PLAN.md -- SECURITY_POLICY.md at repo root; /security static route; footer link; .env.example documentation
+- [x] 83-02-PLAN.md -- SECURITY_POLICY.md at repo root; /security static route; footer link; .env.example documentation
 
 **UI hint**: no
 
