@@ -1,8 +1,19 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import supertest from 'supertest';
 import { SignJWT } from 'jose';
+
+// Mock the DB so checkSessionVersion always finds the user with sv=0
+vi.mock('../../src/server/db/index.js', () => ({
+  getDb: vi.fn(() => ({
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([{ sv: 0 }]),
+  })),
+}));
+
 import { requireAuth, optionalAuth } from '../../src/server/middleware/auth.js';
 
 const JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
