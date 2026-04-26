@@ -6,21 +6,21 @@
 
 
 
-- â **v1.0** Foundation + Wage Engine + Payroll + Differentiators â Phases 1-5 (shipped 2026-03-19)
+- ✅ **v1.0** Foundation + Wage Engine + Payroll + Differentiators — Phases 1-5 (shipped 2026-03-19)
 
-- â **v2.0** Contractor UX Overhaul + Compliance â Phases 6-9 (shipped 2026-03-20)
+- ✅ **v2.0** Contractor UX Overhaul + Compliance — Phases 6-9 (shipped 2026-03-20)
 
-- â **v2.1** Design Polish + Landing Page â Phases 10-14 (shipped 2026-03-22)
+- ✅ **v2.1** Design Polish + Landing Page — Phases 10-14 (shipped 2026-03-22)
 
-- â **v2.2** UX Completion + Compliance Hardening â Phases 15-16 (shipped 2026-03-23)
+- ✅ **v2.2** UX Completion + Compliance Hardening — Phases 15-16 (shipped 2026-03-23)
 
-- â **v2.3** Contractor Workflow Efficiency + Audit Readiness â Phases 17-22 (shipped 2026-03-24)
+- ✅ **v2.3** Contractor Workflow Efficiency + Audit Readiness — Phases 17-22 (shipped 2026-03-24)
 
-- â **v2.4** Ship-Ready + Design Elevation â Phases 23-28 (shipped 2026-03-27)
+- ✅ **v2.4** Ship-Ready + Design Elevation — Phases 23-28 (shipped 2026-03-27)
 
-- â **v2.5** State Portal Integration â Phases 29-30 (shipped 2026-03-27)
+- ✅ **v2.5** State Portal Integration — Phases 29-30 (shipped 2026-03-27)
 
-- â **v3.0** Team & Integration â Phases 31-36 (shipped 2026-03-31)
+- ✅ **v3.0** Team & Integration — Phases 31-36 (shipped 2026-03-31)
 
 
 
@@ -30,7 +30,7 @@
 
 <details>
 
-<summary>â v1.0 Foundation + Wage Engine + Payroll + Differentiators (Phases 1-5) â SHIPPED 2026-03-19</summary>
+<summary>✅ v1.0 Foundation + Wage Engine + Payroll + Differentiators (Phases 1-5) — SHIPPED 2026-03-19</summary>
 
 
 
@@ -38,7 +38,7 @@ Auth, project creation, SAM.gov wage determination fetch and cache, workers/clas
 
 
 
-Plans are not archived here â built before GSD structure. See MILESTONES.md.
+Plans are not archived here — built before GSD structure. See MILESTONES.md.
 
 
 
@@ -48,17 +48,17 @@ Plans are not archived here â built before GSD structure. See MILESTONES.md
 
 <details>
 
-<summary>â v2.0 Contractor UX Overhaul + Compliance (Phases 6-9) â SHIPPED 2026-03-20</summary>
+<summary>✅ v2.0 Contractor UX Overhaul + Compliance (Phases 6-9) — SHIPPED 2026-03-20</summary>
 
 
 
-- [x] **Phase 6: WH-347 2025 Compliance Foundation** â programName/J/RA field, multi-page WH-347, certApprentices boolean from real data (4/4 plans â 2026-03-20)
+- [x] **Phase 6: WH-347 2025 Compliance Foundation** — programName/J/RA field, multi-page WH-347, certApprentices boolean from real data (4/4 plans — 2026-03-20)
 
-- [x] **Phase 7: Compliance Engine + Payroll Week View** â under-wage/CWHSSA OT detection, PayrollWeekDetailPage, one-click WH-347 (4/4 plans â 2026-03-20)
+- [x] **Phase 7: Compliance Engine + Payroll Week View** — under-wage/CWHSSA OT detection, PayrollWeekDetailPage, one-click WH-347 (4/4 plans — 2026-03-20)
 
-- [x] **Phase 8: Dashboard + UX Polish** â compliance badges on project cards, nav links, missing-data warnings, WH-347 per row (4/4 plans â 2026-03-20)
+- [x] **Phase 8: Dashboard + UX Polish** — compliance badges on project cards, nav links, missing-data warnings, WH-347 per row (4/4 plans — 2026-03-20)
 
-- [x] **Phase 9: Reports** â fringe benefit summary and worker pay history reports (4/4 plans â 2026-03-20)
+- [x] **Phase 9: Reports** — fringe benefit summary and worker pay history reports (4/4 plans — 2026-03-20)
 
 
 
@@ -72,19 +72,19 @@ Archive: `.planning/milestones/v2.0-ROADMAP.md`
 
 <details>
 
-<summary>â v2.1 Design Polish + Landing Page (Phases 10-14) â SHIPPED 2026-03-22</summary>
+<summary>✅ v2.1 Design Polish + Landing Page (Phases 10-14) — SHIPPED 2026-03-22</summary>
 
 
 
-- [x] **Phase 10: CSS Design Token Foundation** â HCC brand tokens in @theme, Google Fonts, inline style migration, focus utility fix (3/3 plans â 2026-03-20)
+- [x] **Phase 10: CSS Design Token Foundation** — HCC brand tokens in @theme, Google Fonts, inline style migration, focus utility fix (3/3 plans — 2026-03-20)
 
-- [x] **Phase 11: UI Primitives** â Card, Button, Badge, PageHeader, EmptyState reusable components (2/2 plans â 2026-03-20)
+- [x] **Phase 11: UI Primitives** — Card, Button, Badge, PageHeader, EmptyState reusable components (2/2 plans — 2026-03-20)
 
-- [x] **Phase 12: App Shell + Global Layout** â dark nav on all protected pages, typography hierarchy, consistent card spacing (3/3 plans â 2026-03-20)
+- [x] **Phase 12: App Shell + Global Layout** — dark nav on all protected pages, typography hierarchy, consistent card spacing (3/3 plans — 2026-03-20)
 
-- [x] **Phase 13: Landing Page + Routing** â full marketing homepage at public route "/", auth-aware routing (3/3 plans â 2026-03-20)
+- [x] **Phase 13: Landing Page + Routing** — full marketing homepage at public route "/", auth-aware routing (3/3 plans — 2026-03-20)
 
-- [x] **Phase 14: Page-by-Page Polish** â Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register (3/3 plans â 2026-03-22)
+- [x] **Phase 14: Page-by-Page Polish** — Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail, Reports, Login/Register (3/3 plans — 2026-03-22)
 
 
 
@@ -98,13 +98,13 @@ Archive: `.planning/milestones/v2.1-ROADMAP.md`
 
 <details>
 
-<summary>â v2.2 UX Completion + Compliance Hardening (Phases 15-16) â SHIPPED 2026-03-23</summary>
+<summary>✅ v2.2 UX Completion + Compliance Hardening (Phases 15-16) — SHIPPED 2026-03-23</summary>
 
 
 
-- [x] **Phase 15: Compliance Engine Hardening + Independent Frontend** â Apprentice ratio check in computeCompliance(), workflow progress indicator on Project Detail, print CSS for both reports (3/3 plans â 2026-03-22)
+- [x] **Phase 15: Compliance Engine Hardening + Independent Frontend** — Apprentice ratio check in computeCompliance(), workflow progress indicator on Project Detail, print CSS for both reports (3/3 plans — 2026-03-22)
 
-- [x] **Phase 16: WH-347 Submission UX** â Preflight modal with violation summary + confirmation, fetch-driven download with generating state and double-click guard (1/1 plans â 2026-03-22)
+- [x] **Phase 16: WH-347 Submission UX** — Preflight modal with violation summary + confirmation, fetch-driven download with generating state and double-click guard (1/1 plans — 2026-03-22)
 
 
 
@@ -118,21 +118,21 @@ Archive: `.planning/milestones/v2.2-ROADMAP.md`
 
 <details>
 
-<summary>â v2.3 Contractor Workflow Efficiency + Audit Readiness (Phases 17-22) â SHIPPED 2026-03-24</summary>
+<summary>✅ v2.3 Contractor Workflow Efficiency + Audit Readiness (Phases 17-22) — SHIPPED 2026-03-24</summary>
 
 
 
-- [x] **Phase 17: DB Migration + Project Archive** â 4-column payrollWeeks migration, project archive/restore, archived badge, compliance pre-check before archive (2/2 plans â 2026-03-23)
+- [x] **Phase 17: DB Migration + Project Archive** — 4-column payrollWeeks migration, project archive/restore, archived badge, compliance pre-check before archive (2/2 plans — 2026-03-23)
 
-- [x] **Phase 18: Dashboard Search + Filter** â name search, funding type filter, URL-persisted filter state, zero-results empty state (1/1 plans â 2026-03-23)
+- [x] **Phase 18: Dashboard Search + Filter** — name search, funding type filter, URL-persisted filter state, zero-results empty state (1/1 plans — 2026-03-23)
 
-- [x] **Phase 19: WH-347 Submission Tracking** â mark weeks submitted with date/agency, server-side edit lock, un-submit, submitted badges on payroll list (2/2 plans â 2026-03-23)
+- [x] **Phase 19: WH-347 Submission Tracking** — mark weeks submitted with date/agency, server-side edit lock, un-submit, submitted badges on payroll list (2/2 plans — 2026-03-23)
 
-- [x] **Phase 20: Copy Previous Payroll Week** â copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning (2/2 plans â 2026-03-23)
+- [x] **Phase 20: Copy Previous Payroll Week** — copy week to pre-fill new entry, live rate re-fetch per classification, skipped-entries warning (2/2 plans — 2026-03-23)
 
-- [x] **Phase 21: Payroll Amendment Workflow** â amend submitted week as new row, "N (AMENDED M)" WH-347 label, pre-filled entries from original (2/2 plans â 2026-03-23)
+- [x] **Phase 21: Payroll Amendment Workflow** — amend submitted week as new row, "N (AMENDED M)" WH-347 label, pre-filled entries from original (2/2 plans — 2026-03-23)
 
-- [x] **Phase 22: Per-Worker Compliance History** â cross-project violation history page, compliance history link per worker row (2/2 plans â 2026-03-24)
+- [x] **Phase 22: Per-Worker Compliance History** — cross-project violation history page, compliance history link per worker row (2/2 plans — 2026-03-24)
 
 
 
@@ -146,7 +146,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 <details>
 
-<summary>â v2.4 Ship-Ready + Design Elevation (Phases 23-28) â SHIPPED 2026-03-27</summary>
+<summary>✅ v2.4 Ship-Ready + Design Elevation (Phases 23-28) — SHIPPED 2026-03-27</summary>
 
 
 
@@ -168,7 +168,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 
 
-### v2.5 State Portal Integration (Phases 29-30) â SHIPPED 2026-03-27
+### v2.5 State Portal Integration (Phases 29-30) — SHIPPED 2026-03-27
 
 
 
@@ -181,7 +181,7 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 <details>
 
-<summary>â v3.0 Team & Integration (Phases 31-36) â SHIPPED 2026-03-31</summary>
+<summary>✅ v3.0 Team & Integration (Phases 31-36) — SHIPPED 2026-03-31</summary>
 
 
 
@@ -193,9 +193,9 @@ Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 34: Agency Submission Status Tracking** - caEcprSubmittedAt + waLniSubmittedAt columns, SubmissionStatusBadge, "Mark as Submitted" UI in CA/WA export modals (AS-01, AS-02) (completed 2026-03-30)
 
-- [x] **Phase 35: Payroll Import â Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02) (completed 2026-03-31)
+- [x] **Phase 35: Payroll Import — Server Pipeline** - importService.ts with provider auto-detection, qbMapper.ts + adpMapper.ts, preview + commit routes, payroll_imports audit table (PI-01, PI-02) (completed 2026-03-31)
 
-- [x] **Phase 36: Payroll Import â React UI** - PayrollImportModal with file picker, preview table, unmatched worker review & match screen, confirm-commit flow (PI-03) (completed 2026-03-31)
+- [x] **Phase 36: Payroll Import — React UI** - PayrollImportModal with file picker, preview table, unmatched worker review & match screen, confirm-commit flow (PI-03) (completed 2026-03-31)
 
 
 
@@ -233,9 +233,9 @@ Archive: `.planning/milestones/v3.0-ROADMAP.md`
 
 Plans:
 
-- [x] 17-01-PLAN.md â DB migration (4 payrollWeeks columns) + status-filtered GET /api/projects route + tests
+- [x] 17-01-PLAN.md — DB migration (4 payrollWeeks columns) + status-filtered GET /api/projects route + tests
 
-- [x] 17-02-PLAN.md â Archive/Restore UI (ProjectDetailPage buttons, compliance advisory modal, ProjectCard badge, DashboardPage toggle)
+- [x] 17-02-PLAN.md — Archive/Restore UI (ProjectDetailPage buttons, compliance advisory modal, ProjectCard badge, DashboardPage toggle)
 
 
 
@@ -261,7 +261,7 @@ Plans:
 
 Plans:
 
-- [x] 18-01-PLAN.md â Search input + funding dropdown + useMemo filtered list + URL-persisted params + empty state (DashboardPage.tsx only)
+- [x] 18-01-PLAN.md — Search input + funding dropdown + useMemo filtered list + URL-persisted params + empty state (DashboardPage.tsx only)
 
 
 
@@ -277,7 +277,7 @@ Plans:
 
   1. User can mark a payroll week as submitted by entering a submission date and agency name, and the week shows a submitted badge
 
-  2. Attempting to edit payroll entries on a submitted week is rejected â both in the UI and at the API level
+  2. Attempting to edit payroll entries on a submitted week is rejected — both in the UI and at the API level
 
   3. User can un-submit a week to clear its submission status and re-enable editing
 
@@ -287,9 +287,9 @@ Plans:
 
 Plans:
 
-- [x] 19-01-PLAN.md â Wave 0 tests + PATCH/DELETE submit routes + assertWeekNotSubmitted lock guard in both entry write routes
+- [x] 19-01-PLAN.md — Wave 0 tests + PATCH/DELETE submit routes + assertWeekNotSubmitted lock guard in both entry write routes
 
-- [ ] 19-02-PLAN.md â PayrollListPage submission badges + PayrollWeekDetailPage submit form + lock UI + WorkflowProgress step 4 fix
+- [ ] 19-02-PLAN.md — PayrollListPage submission badges + PayrollWeekDetailPage submit form + lock UI + WorkflowProgress step 4 fix
 
 
 
@@ -315,9 +315,9 @@ Plans:
 
 Plans:
 
-- [x] 20-01-PLAN.md â copyPayrollWeek() service + POST /api/payroll/weeks/copy route (preview + commit modes) + integration tests
+- [x] 20-01-PLAN.md — copyPayrollWeek() service + POST /api/payroll/weeks/copy route (preview + commit modes) + integration tests
 
-- [x] 20-02-PLAN.md â Copy modal UI on PayrollListPage (source week selector, preview warning, confirm/cancel) + browser verification
+- [x] 20-02-PLAN.md — Copy modal UI on PayrollListPage (source week selector, preview warning, confirm/cancel) + browser verification
 
 
 
@@ -343,15 +343,15 @@ Plans:
 
 Plans:
 
-- [x] 21-01-PLAN.md â amendPayrollWeek() service + POST /weeks/amend route + "N (AMENDED M)" PDF label + integration tests
+- [x] 21-01-PLAN.md — amendPayrollWeek() service + POST /weeks/amend route + "N (AMENDED M)" PDF label + integration tests
 
-- [x] 21-02-PLAN.md â "Amend This Week" button on PayrollWeekDetailPage + amendment badge on PayrollListPage + browser verification
+- [x] 21-02-PLAN.md — "Amend This Week" button on PayrollWeekDetailPage + amendment badge on PayrollListPage + browser verification
 
 
 
 ### Phase 22: Per-Worker Compliance History
 
-**Goal**: Contractors can see a single page showing all compliance violations for a specific worker across every project and payroll week â ready for audit response
+**Goal**: Contractors can see a single page showing all compliance violations for a specific worker across every project and payroll week — ready for audit response
 
 **Depends on**: Nothing (read-only reporting; fully independent of Phases 17-21)
 
@@ -371,9 +371,9 @@ Plans:
 
 Plans:
 
-- [ ] 22-01-PLAN.md â getWorkerComplianceHistory() service + GET /worker/:workerId/history endpoint + multi-project integration tests (TDD)
+- [ ] 22-01-PLAN.md — getWorkerComplianceHistory() service + GET /worker/:workerId/history endpoint + multi-project integration tests (TDD)
 
-- [x] 22-02-PLAN.md â WorkerComplianceHistoryPage + "Compliance History" link on WorkersPage + route registration + browser verification
+- [x] 22-02-PLAN.md — WorkerComplianceHistoryPage + "Compliance History" link on WorkersPage + route registration + browser verification
 
 
 
@@ -401,9 +401,9 @@ Plans:
 
 Plans:
 
-- [x] 23-01-PLAN.md â Batch compliance summary endpoint + CSV export route + csv-stringify install + integration tests
+- [x] 23-01-PLAN.md — Batch compliance summary endpoint + CSV export route + csv-stringify install + integration tests
 
-- [x] 23-02-PLAN.md â Dashboard filter chips UI + CSV download button + browser verification
+- [x] 23-02-PLAN.md — Dashboard filter chips UI + CSV download button + browser verification
 
 
 
@@ -425,17 +425,17 @@ Plans:
 
   4. The CA download preflight modal includes a persistent disclosure that electronic submission requires the DIR eCPR portal at efiling.dir.ca.gov/eCPR
 
-  5. A WA or federal-only project has no CA form download button â the button is state-gated
+  5. A WA or federal-only project has no CA form download button — the button is state-gated
 
 **Plans**: 3 plans
 
 Plans:
 
-- [x] 24-01-PLAN.md â PDF download + DB migrations (DT columns + CA project fields) + schema.ts + server Zod schemas + test stubs
+- [x] 24-01-PLAN.md — PDF download + DB migrations (DT columns + CA project fields) + schema.ts + server Zod schemas + test stubs
 
-- [x] 24-02-PLAN.md â CA-conditional project fields in ProjectForm + DT columns in PayrollWeekForm + turn CAL-01/CAL-03 tests GREEN
+- [x] 24-02-PLAN.md — CA-conditional project fields in ProjectForm + DT columns in PayrollWeekForm + turn CAL-01/CAL-03 tests GREEN
 
-- [ ] 24-03-PLAN.md â A-1-131 PDF generator + export route + state-gated download button + eCPR preflight modal + browser verification
+- [ ] 24-03-PLAN.md — A-1-131 PDF generator + export route + state-gated download button + eCPR preflight modal + browser verification
 
 
 
@@ -457,7 +457,7 @@ Plans:
 
   4. WA trade codes not automatically matched show a dropdown allowing the contractor to select the correct L&I code per worker
 
-  5. A CA or federal-only project has no WA form download button â the button is state-gated
+  5. A CA or federal-only project has no WA form download button — the button is state-gated
 
 **Plans**: 2 plans
 
@@ -467,7 +467,7 @@ Plans:
 
 **Goal**: First-time contractors understand what to do at every step of the workflow without needing external documentation
 
-**Depends on**: Phase 27 (HelpText primitive uses design tokens that Phase 27 finalizes â sequence after design tokens are locked; however if design tokens are locked early, Phase 26 can run before Phase 27)
+**Depends on**: Phase 27 (HelpText primitive uses design tokens that Phase 27 finalizes — sequence after design tokens are locked; however if design tokens are locked early, Phase 26 can run before Phase 27)
 
 **Requirements**: UX-05, UX-06, UX-07, UX-08
 
@@ -477,23 +477,23 @@ Plans:
 
   2. Each major page (Dashboard, Project Detail, Workers, Payroll Entry, Payroll Week Detail) shows a contextual help callout explaining what to do at that step and why it matters for compliance
 
-  3. Empty states on all pages give specific next-step instructions â a contractor who lands on an empty Workers page knows exactly what to do next, not just that there are no workers
+  3. Empty states on all pages give specific next-step instructions — a contractor who lands on an empty Workers page knows exactly what to do next, not just that there are no workers
 
-  4. Clicking or tapping a "?" icon next to terms like "Davis-Bacon," "WH-347," "prevailing wage," "CWHSSA," and "WD" shows a plain-English definition â works on both desktop hover and iPad tap
+  4. Clicking or tapping a "?" icon next to terms like "Davis-Bacon," "WH-347," "prevailing wage," "CWHSSA," and "WD" shows a plain-English definition — works on both desktop hover and iPad tap
 
 **Plans**: 2 plans
 
 Plans:
 
-- [x] 26-01-PLAN.md â HelpCallout + TermTooltip primitives, landing page 4-step rewrite, HelpCallout on all 5 pages + PayrollListPage migration
+- [x] 26-01-PLAN.md — HelpCallout + TermTooltip primitives, landing page 4-step rewrite, HelpCallout on all 5 pages + PayrollListPage migration
 
-- [x] 26-02-PLAN.md â Empty state content updates with action buttons + TermTooltip inline placement across all pages
+- [x] 26-02-PLAN.md — Empty state content updates with action buttons + TermTooltip inline placement across all pages
 
 
 
 ### Phase 27: Design Elevation
 
-**Goal**: The app visual design matches HCC website quality â construction photography, dark gold gradients, and elevated card depth that distinguishes HCC from generic compliance software
+**Goal**: The app visual design matches HCC website quality — construction photography, dark gold gradients, and elevated card depth that distinguishes HCC from generic compliance software
 
 **Depends on**: Phase 23 (independent of form generation work; can begin any time after v2.3 baseline)
 
@@ -505,7 +505,7 @@ Plans:
 
   2. Dashboard project cards use an elevated shadow variant (0 8px 24px rgba(0,0,0,0.12)) visually distinct from the flat card used in v2.3
 
-  3. All pages use tighter Oswald letter-spacing and improved vertical rhythm matching HCC website typography â no page uses a raw h1/h2 outside the PageHeader primitive
+  3. All pages use tighter Oswald letter-spacing and improved vertical rhythm matching HCC website typography — no page uses a raw h1/h2 outside the PageHeader primitive
 
   4. Photography assets are WebP format, under 200KB each, loaded via CSS background-image (not Vite import), with a print media override preventing dark overlays from printing on white paper
 
@@ -513,9 +513,9 @@ Plans:
 
 Plans:
 
-- [x] 27-01-PLAN.md â Shadow-card-elevated token + print CSS + PageHeader tracking-tight + ProjectCard className prop + HelpCallout shadow + h1 migration (7 pages)
+- [x] 27-01-PLAN.md — Shadow-card-elevated token + print CSS + PageHeader tracking-tight + ProjectCard className prop + HelpCallout shadow + h1 migration (7 pages)
 
-- [x] 27-02-PLAN.md â Placeholder WebP photos + hero section rewrite (photo overlay, floating nav, clamp headline) + dashboard photo background strip + visual checkpoint
+- [x] 27-02-PLAN.md — Placeholder WebP photos + hero section rewrite (photo overlay, floating nav, clamp headline) + dashboard photo background strip + visual checkpoint
 
 
 
@@ -531,11 +531,11 @@ Plans:
 
   1. App is reachable at a public HTTPS URL and the landing page loads without errors
 
-  2. A project created after the first deploy survives a second redeploy â confirming the SQLite database is on the persistent disk at /var/data and not the ephemeral container filesystem
+  2. A project created after the first deploy survives a second redeploy — confirming the SQLite database is on the persistent disk at /var/data and not the ephemeral container filesystem
 
-  3. Attempting to register without a valid invitation code returns a clear error â open registration is disabled
+  3. Attempting to register without a valid invitation code returns a clear error — open registration is disabled
 
-  4. All secrets (SAM.gov API key, JWT secret, database path) are set as Render runtime environment variables and are absent from the deployed JavaScript bundle â no VITE_-prefixed secrets exist
+  4. All secrets (SAM.gov API key, JWT secret, database path) are set as Render runtime environment variables and are absent from the deployed JavaScript bundle — no VITE_-prefixed secrets exist
 
   5. The Vite production build is served as static files by Express, and all React routes resolve correctly on hard refresh (SPA catch-all in place)
 
@@ -543,9 +543,9 @@ Plans:
 
 Plans:
 
-- [x] 28-01-PLAN.md â Wave 0 invite code tests + tsconfig.server.json + build script + db mkdirSync fix + static file serving + invite code gate + .env.example + render.yaml
+- [x] 28-01-PLAN.md — Wave 0 invite code tests + tsconfig.server.json + build script + db mkdirSync fix + static file serving + invite code gate + .env.example + render.yaml
 
-- [x] 28-02-PLAN.md â RegisterForm invite code field + brand token fix + Render deploy smoke test checkpoint
+- [x] 28-02-PLAN.md — RegisterForm invite code field + brand token fix + Render deploy smoke test checkpoint
 
 
 
@@ -559,25 +559,25 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
 
-  1. Payroll entry for a CA project shows four separate fringe contribution fields â health/welfare, pension, vacation, and training â each stored as its own DB column per entry
+  1. Payroll entry for a CA project shows four separate fringe contribution fields — health/welfare, pension, vacation, and training — each stored as its own DB column per entry
 
   2. User can click a CA eCPR XML export button on a CA project's payroll week; if contractor FEIN, DIR project ID, awarding agency, or contract number are absent, a pre-generation modal collects them before the file is generated
 
   3. After the XML file downloads, the app displays a step-by-step portal upload checklist informing the contractor how to submit to the CA DIR eCPR portal, including the disclosure that SSNs must be entered directly in the portal
 
-  4. When the payroll week is an amendment (created via the v2.3 amendment workflow), the exported XML carries the correct amendment/resubmit marker â a non-amendment week produces no amendment marker
+  4. When the payroll week is an amendment (created via the v2.3 amendment workflow), the exported XML carries the correct amendment/resubmit marker — a non-amendment week produces no amendment marker
 
-  5. A WA or federal-only project has no CA eCPR XML export button â the export is state-gated to CA projects only
+  5. A WA or federal-only project has no CA eCPR XML export button — the export is state-gated to CA projects only
 
 **Plans**: 3 plans
 
 Plans:
 
-- [x] 29-01-PLAN.md â xmlbuilder2 install + DB migration (8 columns) + schema + extended payroll join + CA fringe entry UI
+- [x] 29-01-PLAN.md — xmlbuilder2 install + DB migration (8 columns) + schema + extended payroll join + CA fringe entry UI
 
-- [x] 29-02-PLAN.md â ecprXmlGenerator.ts (CPR.xsd v1.3 XML) + unit tests + GET /api/export/ecpr-xml/:weekId route
+- [x] 29-02-PLAN.md — ecprXmlGenerator.ts (CPR.xsd v1.3 XML) + unit tests + GET /api/export/ecpr-xml/:weekId route
 
-- [x] 29-03-PLAN.md â CA eCPR XML download button + 2-step pre-generation modal + post-download portal checklist
+- [x] 29-03-PLAN.md — CA eCPR XML download button + 2-step pre-generation modal + post-download portal checklist
 
 
 
@@ -597,16 +597,16 @@ Plans:
 
   3. User can download a WA L&I CPR XML file for a WA project's payroll week; the file is gated to WA projects only
 
-  4. User can view a WA submission assist summary panel â pre-populated with trade codes, hours by day, rates, and gross pay per worker â formatted as a reference for manual entry into the PWIA portal's Intent to Pay and Affidavit of Wages forms
+  4. User can view a WA submission assist summary panel — pre-populated with trade codes, hours by day, rates, and gross pay per worker — formatted as a reference for manual entry into the PWIA portal's Intent to Pay and Affidavit of Wages forms
 
   5. The submission assist panel is clearly labeled as a data-entry guide, not a submission mechanism; no HTTP calls are made to PWIA portal domains from the app backend
 
 **Plans**: 3 plans
 
 Plans:
-- [x] 30-01-PLAN.md â DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
-- [x] 30-02-PLAN.md â waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
-- [x] 30-03-PLAN.md â PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
+- [x] 30-01-PLAN.md — DB migration (pwia_intent_id column) + Wave 0 test stubs (RED)
+- [x] 30-02-PLAN.md — waCprXmlGenerator.ts pure function + GET /api/export/wa-cpr-xml/:weekId route + tests GREEN
+- [x] 30-03-PLAN.md — PayrollWeekDetailPage UI: trade code gate + intentId modal + WA CPR XML download + WAL-04 submission summary panel
 
 **UI hint**: yes
 
@@ -630,8 +630,8 @@ _v3.0 phase details archived to `.planning/milestones/v3.0-ROADMAP.md`_
 **Plans**: 2 plans
 
 Plans:
-- [x] 37-01-PLAN.md â Schema + migration: audit_logs table, 3 indexes, journal entry (2026-04-01)
-- [x] 37-02-PLAN.md â auditService.ts + tests: insertAuditLog(), diffObjects(), SSN redaction
+- [x] 37-01-PLAN.md — Schema + migration: audit_logs table, 3 indexes, journal entry (2026-04-01)
+- [x] 37-02-PLAN.md — auditService.ts + tests: insertAuditLog(), diffObjects(), SSN redaction
 
 ---
 
@@ -653,9 +653,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [x] 38-01-PLAN.md â Service wiring: workerService.ts + payroll entry audit + export/submission/import audit + trust proxy
-- [x] 38-02-PLAN.md â GET /api/audit/:projectId route with assertProjectAccess, pagination, date filter
-- [x] 38-03-PLAN.md â ProjectActivityPage React component + route wiring + ProjectDetailPage nav link
+- [x] 38-01-PLAN.md — Service wiring: workerService.ts + payroll entry audit + export/submission/import audit + trust proxy
+- [x] 38-02-PLAN.md — GET /api/audit/:projectId route with assertProjectAccess, pagination, date filter
+- [x] 38-03-PLAN.md — ProjectActivityPage React component + route wiring + ProjectDetailPage nav link
 **UI hint**: yes
 
 ---
@@ -1153,7 +1153,7 @@ Plans:
 
 |-------|-----------|----------------|--------|-----------|
 
-| 1-5. Foundation â Differentiators | v1.0 | All | Complete | 2026-03-19 |
+| 1-5. Foundation — Differentiators | v1.0 | All | Complete | 2026-03-19 |
 
 | 6. WH-347 2025 Compliance Foundation | v2.0 | 4/4 | Complete | 2026-03-20 |
 
@@ -1213,9 +1213,9 @@ Plans:
 
 | 34. Agency Submission Status Tracking | v3.0 | 2/2 | Complete    | 2026-03-30 |
 
-| 35. Payroll Import â Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
+| 35. Payroll Import — Server Pipeline | v3.0 | 2/2 | Complete    | 2026-03-31 |
 
-| 36. Payroll Import â React UI | v3.0 | 3/3 | Complete    | 2026-04-01 |
+| 36. Payroll Import — React UI | v3.0 | 3/3 | Complete    | 2026-04-01 |
 
 
 ---
@@ -1266,11 +1266,541 @@ Plans:
 - [x] **Phase 53: CA A-1-131 Gap Close** — Browser verification of existing A-1-131 PDF field coordinates; document and apply any coordinate corrections; confirm UI flow end-to-end (not started)
  (completed 2026-04-14)
 - [x] **Phase 54: Subcontractor Schema + Migrations** — subcontractors and subcontractor_cpr_weeks tables, Drizzle schema, migrations with journal registration (not started) (completed 2026-04-14)
-- [x] **Phase 55: Subcontractor API Routes** — CRUD routes for subs + CPR tracking routes on new subcontractors.ts router, assertProjectAccess on all routes, audit log entries for sub events (not started) (completed 2026-04-14)
-- [x] **Phase 56: Subcontractor UI Panel** — SubcontractorPanel.tsx on ProjectDetailPage: add/edit/remove subs, per-sub CPR week table with Received/Non-Compliant/Not Received/Overdue badges (not started) (completed 2026-04-14)
-- [x] **Phase 57: Audit Log CSV Export** — GET /api/audit/:projectId/csv route, UTF-8 BOM output, formula injection sanitization, download button on ProjectActivityPage (not started) (completed 2026-04-14)
-- [x] **Phase 58: Enhanced Fringe Report** — getFringeBreakdown() in reportsService.ts grouped by fund type/union local/J-RA, GET /api/projects/:id/reports/fringe-enhanced, new Fringe Breakdown tab on ReportsPage (not started) (completed 2026-04-14)
-- [x] **Phase 59: Multi-Project Compliance PDF** — complianceSummaryPdfGenerator.ts programmatic table, GET /api/export/compliance-summary, download button on DashboardPage (not started) (completed 2026-04-14)
+- [x] **Phase 55: Subcontractor API Routes** — CRUD routes for subs + CPR tracking routes on new subcontractors.ts router, assertProjectAccess on all routes, audit log entries for sub events (not started) (completed 2026-04-14)
+- [x] **Phase 56: Subcontractor UI Panel** — SubcontractorPanel.tsx on ProjectDetailPage: add/edit/remove subs, per-sub CPR week table with Received/Non-Compliant/Not Received/Overdue badges (not started) (completed 2026-04-14)
+- [x] **Phase 57: Audit Log CSV Export** — GET /api/audit/:projectId/csv route, UTF-8 BOM output, formula injection sanitization, download button on ProjectActivityPage (not started) (completed 2026-04-14)
+- [x] **Phase 58: Enhanced Fringe Report** — getFringeBreakdown() in reportsService.ts grouped by fund type/union local/J-RA, GET /api/projects/:id/reports/fringe-enhanced, new Fringe Breakdown tab on ReportsPage (not started) (completed 2026-04-14)
+- [x] **Phase 59: Multi-Project Compliance PDF** — complianceSummaryPdfGenerator.ts programmatic table, GET /api/export/compliance-summary, download button on DashboardPage (not started) (completed 2026-04-14)
 
 ---
 
+### v6.0 Competitive Industry Leadership (Phases 64-82)
+
+- [ ] **Phase 64: SOC 2 Logging Foundation + Page Polish Batch 1** -- security_events + login_attempts tables wired to auth routes; premium design treatment on ProjectDetailPage, PayrollListPage, PayrollWeekDetailPage (UI-01, UI-02, UI-03, UI-17)
+- [ ] **Phase 65: Mobile Responsive Audit + Skeleton + Empty States** -- full 375/768/1024px audit on all 25 pages; skeleton loading states on 5 data pages; contextual empty states on all list views (UI-07, UI-10, UI-11)
+- [ ] **Phase 66: Landing Page Overhaul** -- hero photography, social proof section, How It Works 4-step visual, 50-state SVG map, pricing time-saved calculator (UI-12, UI-13, UI-14, UI-15, UI-16)
+- [ ] **Phase 67: Animations + Nav Drawer + Form Touch + Phase A Watchdog Gate** -- framer-motion route transitions, mobile sidebar drawer, touch-optimized form inputs, nav mobile drawer (UI-04, UI-05, UI-06, UI-08, UI-09) -- WATCHDOG GATE
+- [ ] **Phase 68: QuickBooks OAuth Foundation** -- IntegrationsPage, PKCE OAuth flow, AES-256-GCM token storage, connection status badge, disconnect + revoke (QB-01, QB-04, QB-05)
+- [ ] **Phase 69: QuickBooks Data Sync** -- QB employee pull into Workers, TimeActivity pull into importService pipeline (QB-02, QB-03)
+- [ ] **Phase 70: Apprenticeship Ratio Enforcement** -- per-trade ratio config on projects, COMP-04 daily ratio check, COMP-05 IRA/IIJA 15% tracker, violation detail panel (APP-01, APP-02, APP-03, APP-04, APP-05)
+- [ ] **Phase 71: DBE/MBE/WBE Schema + Certification CRUD** -- subcontractor_certifications table, certification add/edit/delete in SubcontractorPanel, DOT IFR 2025 reevaluation status field (DBE-01, DBE-02, DBE-06)
+- [ ] **Phase 72: DBE Alerts + CPR Gate + Participation Summary** -- 90/60/30-day expiration emails, expired-cert CPR upload block, DBE participation card on ProjectDetailPage (DBE-03, DBE-04, DBE-05)
+- [ ] **Phase 73: Real-Time Compliance Dashboard + Phase B Watchdog Gate** -- hero stat row, 12-week trend chart, projects-at-risk panel, violation count badges on project cards (DASH-01, DASH-02, DASH-03, DASH-04) -- WATCHDOG GATE
+- [ ] **Phase 74: PWA Foundation** -- vite-plugin-pwa + workbox, app shell caching, offline queue with IndexedDB + idempotency keys, offline banner, 30s draft auto-save (MOB-01, MOB-02, MOB-03, MOB-04, MOB-05)
+- [ ] **Phase 75: GPS Clock-In/Clock-Out** -- time_punches table, GPS project settings, clock-in UI with accuracy badge, server-side haversine geofence, admin Field Activity tab (MOB-06, MOB-07, MOB-08, MOB-09, MOB-10)
+- [ ] **Phase 76: Payroll Integration + Photo Capture** -- "Import from Clock-In Records" button, week_photos table, photo gallery on PayrollWeekDetailPage, clock-in photo capture (MOB-11, MOB-12, MOB-13, MOB-14)
+- [ ] **Phase 77: Mobile Sub CPR Upload + Phase C Watchdog Gate** -- 375px audit of public /upload/:token page, 44px tap targets, "Tap to upload or take photo" CTA, upload progress + success confirmation (MOB-15) -- WATCHDOG GATE
+- [ ] **Phase 78: SOC 2 Controls -- MFA + Log Aggregation + Hash Chain** -- TOTP MFA for owner accounts (otplib + QR enrollment + backup codes), Pino/Logtail log drain, SHA-256 hash chain on audit_logs (SEC-01, SEC-02, SEC-03)
+- [ ] **Phase 79: SOC 2 Infrastructure -- Uptime + Dependabot + Security Policy** -- Uptime Robot + Instatus status page, Dependabot npm weekly + OWASP ZAP in CI, SECURITY_POLICY.md (SEC-04, SEC-05, SEC-06)
+- [ ] **Phase 80: Public REST API + API Keys** -- api_keys table, key management UI, GET /api/v1 read endpoints (projects, payroll weeks, compliance), OpenAPI 3.1 spec + Swagger UI (API-01, API-02, API-03)
+- [ ] **Phase 81: Webhooks** -- webhooks table, SSRF-protected URL validation, HMAC-SHA-256 signing, delivery queue with exponential backoff, delivery log UI (API-04, API-05)
+- [ ] **Phase 82: Market Credibility + Phase D Watchdog Gate** -- HCC case study page at /case-studies/hcc, Economic Impact dashboard tab, About page update (TRUST-01, TRUST-02, TRUST-03) -- WATCHDOG GATE
+
+---
+
+## Phase Details (v6.0)
+
+### Phase 64: SOC 2 Logging Foundation + Page Polish Batch 1
+
+**Goal**: The SOC 2 observation clock starts with two security audit tables wired to all auth routes, and the three highest-traffic internal pages receive the same premium design treatment as the landing page
+
+**Depends on**: Phase 63 (v5.0 complete)
+
+**Requirements**: UI-01, UI-02, UI-03, UI-17
+
+**Success Criteria** (what must be TRUE):
+  1. Every login attempt (successful or failed) writes a row to login_attempts with email, success boolean, ip_address, and failure_reason -- verifiable by querying the table after a test login
+  2. Every security-relevant action (login, logout, team invite, ownership transfer) writes a row to security_events with event_type, user_id, ip_address, user_agent, and metadata JSON
+  3. ProjectDetailPage uses elevated card treatment (shadow-card-elevated), section headers, and token-consistent action buttons -- visually indistinguishable from landing page card quality
+  4. PayrollListPage week rows use card elevation with status badges in design tokens: compliant = emerald, violations = crimson, submitted = gold -- no raw div + inline style rows remain
+  5. PayrollWeekDetailPage worker rows use alternating row tint, violation callouts use amber/crimson inline alerts, and download buttons are grouped in a sticky bottom action bar readable at 375px
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 64-01-PLAN.md -- DB migration: security_events + login_attempts tables + Drizzle schema + journal entry
+- [ ] 64-02-PLAN.md -- Auth route wiring: insertSecurityEvent() + insertLoginAttempt() on all auth handlers
+- [ ] 64-03-PLAN.md -- ProjectDetailPage + PayrollListPage + PayrollWeekDetailPage premium design treatment
+
+**UI hint**: yes
+
+---
+
+### Phase 65: Mobile Responsive Audit + Skeleton + Empty States
+
+**Goal**: Every page in the app is usable at 375px with no horizontal scroll and no blank-white loading moments -- field workers on phones can navigate the full app without pinching or waiting on spinners
+
+**Depends on**: Phase 64 (design tokens locked; premium card components established)
+
+**Requirements**: UI-07, UI-10, UI-11
+
+**Success Criteria** (what must be TRUE):
+  1. All 25 app pages render without horizontal scroll at 375px viewport width -- all tables convert to card-stacked layout and all action buttons meet 44px minimum tap target
+  2. DashboardPage, ProjectDetailPage, PayrollListPage, WorkersPage, and ReportsPage each show a skeleton loading state that matches the shape of the loaded content -- no page shows a blank white area during data fetch
+  3. All list views (projects, workers, payroll weeks, reports) show a contextual empty state with an SVG illustration, a specific action-oriented headline, and a CTA button -- Dashboard empty, Workers empty, and PayrollList empty each have distinct messaging
+  4. Skeleton states are verified at 375px, 768px, and 1024px breakpoints -- no layout shift occurs when data loads in over the skeleton
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 65-01-PLAN.md -- Mobile responsive audit: 25-page breakpoint review, table-to-card conversions, tap target fixes
+- [ ] 65-02-PLAN.md -- Skeleton loading components for DashboardPage, ProjectDetailPage, PayrollListPage, WorkersPage, ReportsPage
+- [ ] 65-03-PLAN.md -- Contextual empty state components for all list views
+
+**UI hint**: yes
+
+---
+
+### Phase 66: Landing Page Overhaul
+
+**Goal**: A prospect who lands on the homepage in under 30 seconds understands the product value, sees social proof from a real customer, sees which states are live, and can calculate how many hours per month they would save
+
+**Depends on**: Phase 65 (mobile responsive foundation must be solid before landing page is re-audited at 375px)
+
+**Requirements**: UI-12, UI-13, UI-14, UI-15, UI-16
+
+**Success Criteria** (what must be TRUE):
+  1. The hero section displays real construction site photography (WebP, under 200KB) with a subheadline naming "8 states, bank-grade SSN encryption, pricing you can see in 5 seconds" and a CTA labeled "Start Free -- No Credit Card"
+  2. A social proof section shows the HCC logo, a pull-quote testimonial, and at least two customer logos (real or labeled placeholder) -- the section is present and not hidden behind a scroll
+  3. A "How it Works" section renders four steps with numbered icons: Add Project, Enter Payroll, Check Compliance, Download CPR -- replacing the current text-only section
+  4. A US map grid SVG shows 8 active states filled in gold and remaining states outlined with a "Coming Soon" tooltip on hover -- no Mapbox dependency
+  5. The pricing page has a time-saved calculator above the tier table: inputs for payroll weeks/month and workers/project produce "Save X hours/month" -- calculation is client-side only with no backend call
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 66-01-PLAN.md -- Hero photography + subheadline + social proof section (HCC logo, testimonial, customer logos)
+- [ ] 66-02-PLAN.md -- "How it Works" 4-step flow + US state SVG map (8 active states)
+- [ ] 66-03-PLAN.md -- Pricing page time-saved calculator widget
+
+**UI hint**: yes
+
+---
+
+### Phase 67: Animations + Nav Drawer + Form Touch + Phase A Watchdog Gate
+
+**Goal**: Protected-route navigation feels polished with fade-slide transitions, the mobile sidebar is a proper drawer at under 768px, and all form inputs are touch-safe on iOS -- completing every Phase A UI requirement before the Watchdog grades Phase A
+
+**Depends on**: Phase 66 (all Phase A UI features must be implemented before the Watchdog gate)
+
+**Requirements**: UI-04, UI-05, UI-06, UI-08, UI-09
+
+**Success Criteria** (what must be TRUE):
+  1. Navigating between any two protected routes produces a 100ms ease-out fade-slide animation using framer-motion AnimatePresence -- form submit actions do not trigger animation
+  2. WorkersPage worker cards show avatar initials, role badge, and union local chip; a filter chip row allows filtering by trade classification; the empty state has a "Add your first worker" CTA
+  3. ReportsPage shows report cards with icon, description, and "Generate" CTA; a PDF preview loading skeleton appears while generation runs; the success state shows a download link and timestamp
+  4. The sidebar collapses to a hamburger icon at under 768px viewport width; tapping it opens a slide-in drawer with a backdrop; all nav links are reachable without horizontal scroll; the active route is highlighted in the drawer
+  5. All form inputs across the app use font-size 16px minimum (confirmed by iOS Safari no-zoom behavior); date pickers, select menus, and file inputs are touch-optimized
+
+WATCHDOG GATE: Both Watchdog Alpha (B2Gnow) and Watchdog Beta (Knowify) must grade Phase A before Phase 68 begins.
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 67-01-PLAN.md -- framer-motion AnimatePresence route transitions on all protected pages
+- [ ] 67-02-PLAN.md -- Mobile nav drawer (hamburger + slide-in panel + backdrop + active route highlight)
+- [ ] 67-03-PLAN.md -- WorkersPage + ReportsPage premium treatment; iOS form font-size 16px audit
+
+**UI hint**: yes
+
+---
+
+### Phase 68: QuickBooks OAuth Foundation
+
+**Goal**: Contractors can connect their QuickBooks Online account to the app, see live connection status, and safely disconnect -- the OAuth token lifecycle is fully managed server-side with AES-256-GCM storage
+
+**Depends on**: Phase 67 (Phase A complete; IntegrationsPage is a new Settings sub-page)
+
+**Requirements**: QB-01, QB-04, QB-05
+
+**Success Criteria** (what must be TRUE):
+  1. A new IntegrationsPage under Settings shows a "Connect to QuickBooks" button that initiates a PKCE OAuth 2.0 flow with com.intuit.quickbooks.accounting scope
+  2. After completing OAuth, the connection status badge shows green with the QuickBooks realm name and token expiry date -- the access token and refresh token are stored AES-256-GCM encrypted and never appear in plaintext in the database or logs
+  3. A near-expiry token (within 7 days of the 100-day refresh cliff) shows an amber "Reconnect" CTA -- the app never silently allows the refresh token to expire
+  4. Clicking "Disconnect" revokes the token via the Intuit API, deletes stored tokens from the database, and writes a qbo.disconnected audit log entry
+  5. Connect and disconnect events each write a security_events row with the QuickBooks realm ID in metadata
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 68-01-PLAN.md -- qbo_tokens DB table + Drizzle schema + AES-256-GCM token storage service
+- [ ] 68-02-PLAN.md -- PKCE OAuth flow: /api/integrations/qbo/connect + /api/integrations/qbo/callback routes + token refresh logic
+- [ ] 68-03-PLAN.md -- IntegrationsPage UI: connection status badge + Connect/Reconnect/Disconnect actions
+
+**UI hint**: yes
+
+---
+
+### Phase 69: QuickBooks Data Sync
+
+**Goal**: Contractors connected to QuickBooks can pull their employee list and time activity records directly into the app -- eliminating the CSV export/import step for QB Online users
+
+**Depends on**: Phase 68 (OAuth tokens must exist before any QB API calls are made)
+
+**Requirements**: QB-02, QB-03
+
+**Success Criteria** (what must be TRUE):
+  1. A "Pull Employees from QuickBooks" action on the IntegrationsPage fetches the QB Online Employee list and displays a preview table showing DisplayName, mapped worker name, and SSN presence indicator -- the user selects which employees to import before committing
+  2. On PayrollWeekDetailPage, an "Import from QuickBooks Time" button fetches TimeActivity records for the week's date range and routes them through the existing importService.ts pipeline (worker matching, conflict detection, preview table, confirm-commit flow)
+  3. When QB stores only weekly totals for a worker with no daily breakdown, the import shows a confirmation prompt asking the user to confirm the daily split before committing -- no silent data assumptions
+  4. Any SSN present in the QB Employee payload is encrypted using the existing cryptoService before being stored -- it never touches the database in plaintext
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 69-01-PLAN.md -- GET /api/integrations/qbo/employees: QB API fetch + preview table route
+- [ ] 69-02-PLAN.md -- GET /api/integrations/qbo/timeactivities: TimeActivity fetch + importService pipeline integration + PayrollWeekDetailPage "Import from QuickBooks Time" button
+
+**UI hint**: yes
+
+---
+
+### Phase 70: Apprenticeship Ratio Enforcement
+
+**Goal**: Contractors on federal/state-funded projects can configure per-trade apprenticeship ratios per project and the compliance engine flags daily ratio violations with dollar-denominated wage liability estimates
+
+**Depends on**: Phase 69 (Phase B feature sequence; apprenticeship data model extends the worker profile established in prior phases)
+
+**Requirements**: APP-01, APP-02, APP-03, APP-04, APP-05
+
+**Success Criteria** (what must be TRUE):
+  1. The project form shows an "Apprenticeship Ratios" section for federal/state-funded projects where the contractor can add per-trade ratio entries (e.g., Electricians 1:2) -- multiple trades supported per project
+  2. Workers with labor type "apprentice" show apprenticeship_program_name and rapids_number fields on WorkersPage -- these fields are absent for journeyworker-classified workers
+  3. Saving a payroll week fires a COMP-04 compliance check: for each trade present in the week, if apprentice hours exceed journeyworker hours times the configured ratio on any day, a COMP-04 violation is recorded with trade, day, excess hours, and estimated additional wage liability
+  4. IRA/IIJA projects show an "Apprentice Hours %" indicator on the dashboard alongside the 15% threshold -- a COMP-05 violation fires if the percentage drops below 15% in any week
+  5. PayrollWeekDetailPage violation panel shows per-trade detail for ratio violations: "Electricians: 4 apprentice hrs, 2 JW hrs (max: 2). Excess: 2 hrs. Est. wage adjustment: $XX" -- not a generic flag
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 70-01-PLAN.md -- DB migration: apprenticeship_requirements JSON on projects + rapids_number/program_name on workers + Drizzle schema
+- [ ] 70-02-PLAN.md -- COMP-04 daily ratio check + COMP-05 IRA/IIJA % check in computeCompliance() + integration tests
+- [ ] 70-03-PLAN.md -- ProjectForm apprenticeship ratios UI + WorkersPage apprentice fields + PayrollWeekDetailPage per-trade violation detail panel
+
+**UI hint**: yes
+
+---
+
+### Phase 71: DBE/MBE/WBE Schema + Certification CRUD
+
+**Goal**: Subcontractors can hold multiple DBE/MBE/WBE certifications with full DOT IFR 2025 reevaluation status tracking -- the certification data model is the foundation for expiration alerts and CPR gating in Phase 72
+
+**Depends on**: Phase 70 (Phase B sequence; subcontractors table established in v5.0 Phase 54)
+
+**Requirements**: DBE-01, DBE-02, DBE-06
+
+**Success Criteria** (what must be TRUE):
+  1. The subcontractor_certifications table exists with all required columns including cert_type (DBE/MBE/WBE/SBE/ACDBE/8a/HUBZone), certifying_agency, cert_number, naics_codes, issue_date, expires_date, reevaluation_status (not_required/pending/cleared/suspended), self_certified boolean, and document_path
+  2. SubcontractorPanel shows a "+ Add Certification" form per subcontractor with all fields from the schema -- a single subcontractor can hold both a DBE and a WBE certification simultaneously
+  3. The reevaluation_status field is labeled "DOT Oct 2025 IFR Status" in the UI with a tooltip explaining the rule change -- certifications created before Oct 3, 2025 default to pending with an advisory to verify current status
+  4. Existing certifications can be edited and deleted within the SubcontractorPanel without navigating away from ProjectDetailPage
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 71-01-PLAN.md -- DB migration: subcontractor_certifications table + Drizzle schema + CRUD API routes with assertProjectAccess
+- [ ] 71-02-PLAN.md -- SubcontractorPanel "+ Add Certification" form + edit/delete inline + DOT IFR status label + tooltip
+
+**UI hint**: yes
+
+---
+
+### Phase 72: DBE Alerts + CPR Upload Gate + Participation Summary
+
+**Goal**: Project owners are automatically notified before DBE certifications expire, expired certs block CPR acceptance, and the project detail page shows a live DBE participation summary card
+
+**Depends on**: Phase 71 (subcontractor_certifications table must exist for expiration date queries and CPR gate logic)
+
+**Requirements**: DBE-03, DBE-04, DBE-05
+
+**Success Criteria** (what must be TRUE):
+  1. At 90, 60, and 30 days before a certification expires_date, the project owner receives a Resend email naming the subcontractor, certification type, and exact days remaining -- the check runs via the existing scheduled check pattern
+  2. When a subcontractor's active certification is expired or has reevaluation_status = 'suspended', their CPR upload row in SubcontractorPanel shows an inline warning "Sub's DBE certification expired -- resolve before accepting CPR" and the Mark Received action is disabled
+  3. The same expired-cert warning appears on the public token-gated /upload/:token portal -- the subcontractor sees it before attempting upload
+  4. ProjectDetailPage shows a "DBE/MBE/WBE Participation" card with three counts: active certified subs, expired cert warnings, and subs under DOT reevaluation -- clicking opens the subcontractor certification detail view
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 72-01-PLAN.md -- Expiration alert scheduled check (90/60/30 days) + Resend email templates
+- [ ] 72-02-PLAN.md -- CPR upload gate (SubcontractorPanel + public upload portal) + DBE participation summary card on ProjectDetailPage
+
+**UI hint**: yes
+
+---
+
+### Phase 73: Real-Time Compliance Dashboard + Phase B Watchdog Gate
+
+**Goal**: The dashboard gives any contractor an instant portfolio-level compliance snapshot -- project count, open violation count, weeks due this week, a 12-week trend, top at-risk projects, and per-card violation counts -- without any manual calculation
+
+**Depends on**: Phase 72 (all Phase B features must be implemented before the Watchdog grades Phase B)
+
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04
+
+**Success Criteria** (what must be TRUE):
+  1. The dashboard hero row shows three live stats: active project count, total open violations, and payroll weeks due this week -- all computed from the batch compliance summary endpoint, refreshed on page load with React Query staleTime 60s
+  2. A line chart below the stat row shows weekly violation counts over the last 12 weeks using recharts or equivalent -- trend direction is visually obvious at a glance
+  3. A "Projects at Risk" panel lists the top 5 projects with open violations older than 7 days, sorted by violation count, each with a project name, count, and "Resolve" link to PayrollWeekDetailPage
+  4. Each project card on the dashboard shows a specific violation count badge in crimson (e.g., "3 violations") rather than a generic "Has Violations" label -- zero-violation projects show no badge
+
+WATCHDOG GATE: Both Watchdog Alpha (B2Gnow) and Watchdog Beta (Knowify) must grade Phase B before Phase 74 begins.
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 73-01-PLAN.md -- Extend batch compliance summary endpoint: due-this-week count + violations-older-than-7-days per project
+- [ ] 73-02-PLAN.md -- Dashboard hero stat row + 12-week trend chart
+- [ ] 73-03-PLAN.md -- Projects-at-risk panel + per-card violation count badges
+
+**UI hint**: yes
+
+---
+
+### Phase 74: PWA Foundation
+
+**Goal**: The app is installable on iOS and Android home screens, works offline for payroll entry, queues mutations while offline and syncs them when reconnected, and auto-saves draft form state every 30 seconds
+
+**Depends on**: Phase 73 (Phase B complete; PWA foundation is Phase C entry point)
+
+**Requirements**: MOB-01, MOB-02, MOB-03, MOB-04, MOB-05
+
+**Success Criteria** (what must be TRUE):
+  1. The app passes Chrome's PWA installability checklist: Web App Manifest with name, short_name, display standalone, brand gold theme_color, and 192x192 + 512x512 maskable icons -- "Add to Home Screen" prompt appears on Android and iOS
+  2. The service worker caches the app shell (HTML + JS + CSS) and static assets using Workbox StaleWhileRevalidate -- the app loads its shell from cache on a flaky connection; API writes are never cached
+  3. When offline, a POST to any payroll entry route is captured in an IndexedDB queue store with an idempotencyKey UUID; on reconnect, Background Sync flushes the queue and the server deduplicates by idempotencyKey
+  4. A sticky offline banner "You're offline -- entries will sync when connected" appears when navigator.onLine is false and dismisses automatically on reconnect -- it never blocks navigation
+  5. Unsaved payroll entry form state is written to IndexedDB every 30 seconds; on returning to the form, if the draft is newer than the server copy, a "Restore Draft" prompt appears
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 74-01-PLAN.md -- vite-plugin-pwa install + Web App Manifest + service worker (app shell cache + StaleWhileRevalidate)
+- [ ] 74-02-PLAN.md -- Offline mutation queue (IndexedDB + idempotencyKey + Background Sync flush + If-Unmodified-Since)
+- [ ] 74-03-PLAN.md -- Offline banner component + 30s draft auto-save to IndexedDB + Restore Draft prompt
+
+**UI hint**: yes
+
+---
+
+### Phase 75: GPS Clock-In/Clock-Out
+
+**Goal**: Field workers can clock in and out on mobile with a single tap, the app records their GPS position and geofence status without ever blocking clock-in on poor signal, and GCs can review all punches in an admin tab
+
+**Depends on**: Phase 74 (PWA foundation must be live so clock-in works offline)
+
+**Requirements**: MOB-06, MOB-07, MOB-08, MOB-09, MOB-10
+
+**Success Criteria** (what must be TRUE):
+  1. The time_punches table exists with columns: id, project_id FK, worker_id FK, punch_type (clock_in/clock_out), punched_at UTC, lat, lng, accuracy_meters, geofence_status (inside/outside/unavailable), photo_path nullable, created_by_user_id, created_at
+  2. The project form shows a GPS Settings section (when GPS clock-in is enabled): site latitude, longitude, and radius in meters -- GPS clock-in is opt-in per project and disabled by default
+  3. The /projects/:id/clockin route shows a large "Clock In" button; on tap it calls navigator.geolocation.getCurrentPosition() one time and displays an accuracy badge (green under 50m, amber 50-200m, red over 200m) -- clock-in is never blocked by poor accuracy or permission denial
+  4. The server haversine check records geofence_status as inside, outside, or unavailable but never rejects the punch -- outside-fence punches are stored and flagged for GC review
+  5. ProjectDetailPage has a "Field Activity" tab showing all time_punches in reverse chronological order with worker name, in/out, time, GPS accuracy, and fence status -- outside-fence rows are highlighted in amber and the tab exports to CSV
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 75-01-PLAN.md -- DB migration: time_punches table + projects GPS columns + Drizzle schema + API routes (POST punch, GET punches per project)
+- [ ] 75-02-PLAN.md -- /projects/:id/clockin mobile UI: clock-in/out button + one-shot geolocation + accuracy badge + offline queue integration
+- [ ] 75-03-PLAN.md -- ProjectDetailPage "Field Activity" tab + punch list with fence status highlighting + CSV export
+
+**UI hint**: yes
+
+---
+
+### Phase 76: Payroll Integration + Photo Capture
+
+**Goal**: GCs can populate a payroll week from GPS clock-in records with one click, and field photos are captured and stored at both payroll week and individual punch level for DOL audit defense
+
+**Depends on**: Phase 75 (time_punches table must exist for payroll integration; photo capture extends the clock-in flow)
+
+**Requirements**: MOB-11, MOB-12, MOB-13, MOB-14
+
+**Success Criteria** (what must be TRUE):
+  1. PayrollWeekDetailPage shows an "Import from Clock-In Records" button that aggregates daily hours from time_punches for the week, applies existing ST/OT/DT compliance rules per worker per day, shows a preview table, and commits only on confirmation -- it never overwrites existing payroll entries, only merges additive
+  2. On PayrollWeekDetailPage on mobile, an "Add Photo" button opens the device camera via input type file with accept image/* and capture environment -- photos are stored on Render persistent disk at /var/data/photos/{projectId}/{weekId}/ and metadata is recorded in a week_photos table
+  3. A thumbnail grid of all week photos is shown on PayrollWeekDetailPage in capture-time order; each photo can be viewed full-size and deleted with a confirmation
+  4. During the clock-in flow on mobile, an optional "Take Photo" step appears; the captured photo is stored at time_punches.photo_path and is visible alongside the punch record in the Field Activity admin tab
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 76-01-PLAN.md -- "Import from Clock-In Records": hours aggregation + ST/OT/DT split + preview + additive merge commit
+- [ ] 76-02-PLAN.md -- DB migration: week_photos table + photo upload route (multer, /var/data/photos) + Drizzle schema
+- [ ] 76-03-PLAN.md -- PayrollWeekDetailPage photo gallery (thumbnail grid + full-size + delete) + clock-in optional photo capture step
+
+**UI hint**: yes
+
+---
+
+### Phase 77: Mobile Sub CPR Upload + Phase C Watchdog Gate
+
+**Goal**: Subcontractors submitting CPRs from a phone have a frictionless upload experience on the public portal -- large tap targets, camera capture option, upload progress, and a clear success confirmation
+
+**Depends on**: Phase 76 (all Phase C mobile features must be implemented before the Watchdog grades Phase C)
+
+**Requirements**: MOB-15
+
+**Success Criteria** (what must be TRUE):
+  1. The public token-gated /upload/:token page renders without horizontal scroll at 375px viewport width
+  2. All file input touch targets are at minimum 44px -- the "Choose File" label is replaced with "Tap to upload or take photo" on mobile user agents
+  3. After file selection, an upload progress indicator appears and remains visible until the server confirms receipt
+  4. On successful upload, the page shows a success confirmation with the submission timestamp -- the subcontractor has clear evidence their CPR was received
+
+WATCHDOG GATE: Both Watchdog Alpha (B2Gnow) and Watchdog Beta (Knowify) must grade Phase C before Phase 78 begins.
+
+**Plans**: 1 plan
+
+Plans:
+- [ ] 77-01-PLAN.md -- /upload/:token 375px responsive audit + 44px tap targets + camera capture label + upload progress + success confirmation
+
+**UI hint**: yes
+
+---
+
+### Phase 78: SOC 2 Controls -- MFA + Log Aggregation + Hash Chain
+
+**Goal**: Owner accounts are protected by TOTP MFA, all security events flow to an immutable external log drain, and the audit log is tamper-evident via SHA-256 hash chaining -- the three hardest SOC 2 technical controls are in place
+
+**Depends on**: Phase 77 (Phase C complete; Phase D security work begins here)
+
+**Requirements**: SEC-01, SEC-02, SEC-03
+
+**Success Criteria** (what must be TRUE):
+  1. Owner-role users are prompted to enroll TOTP MFA on next login after this phase ships -- a QR code enrollment page generates the secret via otplib, encrypts it AES-256-GCM alongside the SSN envelope, and provides 10 one-time backup recovery codes (bcrypt-hashed); MFA is required for login, ownership transfer, and team invite revocation
+  2. Pino JSON output is piped to Logtail/Better Stack via HTTPS drain -- all security_events and login_attempts rows are also forwarded; logs are immutable at the destination and have 90-day minimum retention; the log drain URL is a Render environment variable
+  3. The audit_logs table gains prev_hash and row_hash columns; on every insertAuditLog() call, row_hash = SHA-256(id + action + diff + prev_hash) -- an auditor can verify the chain has not been modified; a migration adds the columns and a backfill script hashes existing rows in chronological order
+  4. A TOTP MFA enrollment page is accessible at /settings/security for owner accounts; non-owner accounts see the page but enrollment is not required
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 78-01-PLAN.md -- otplib + qrcode install + TOTP secret encryption + QR enrollment page + backup recovery codes
+- [ ] 78-02-PLAN.md -- MFA enforcement on login/ownership transfer/invite revocation + MFA bypass for recovery codes
+- [ ] 78-03-PLAN.md -- Pino/Logtail log drain config + security_events forwarding + audit_logs hash chain migration + backfill script
+
+**UI hint**: yes
+
+---
+
+### Phase 79: SOC 2 Infrastructure -- Uptime + Dependabot + Security Policy
+
+**Goal**: The production deployment has external uptime monitoring with a public status page, automated dependency vulnerability scanning, and a written security policy in the repository
+
+**Depends on**: Phase 78 (SOC 2 technical controls must be in place before infrastructure evidence is gathered)
+
+**Requirements**: SEC-04, SEC-05, SEC-06
+
+**Success Criteria** (what must be TRUE):
+  1. Uptime Robot monitors the production URL on a 5-minute interval and is configured before this phase closes; an Instatus public status page at status.prevailingwage.app is live and linked in the app footer
+  2. A dependabot.yml file in the repo root configures weekly npm security update PRs; the file is committed and Dependabot alerts are active in the GitHub repo settings
+  3. An OWASP ZAP baseline scan runs in GitHub Actions CI on every PR; the ZAP report is saved as a workflow artifact; any HIGH or CRITICAL finding fails the merge check
+  4. SECURITY_POLICY.md exists in the repo root with sections covering Data Classification (PII/sensitive/internal), Acceptable Use, Access Control, Incident Response, and Vendor Security (Render, Resend, Stripe, Sentry SOC 2 status)
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 79-01-PLAN.md -- Uptime Robot monitor setup + Instatus status page creation + app footer status page link
+- [ ] 79-02-PLAN.md -- dependabot.yml + OWASP ZAP GitHub Actions step + SECURITY_POLICY.md
+
+---
+
+### Phase 80: Public REST API + API Keys
+
+**Goal**: Developers and integration partners can authenticate with an API key and query projects, payroll weeks, and compliance results via a versioned REST API with a live Swagger UI
+
+**Depends on**: Phase 79 (SOC 2 infrastructure must be in place before a public API is opened to external callers)
+
+**Requirements**: API-01, API-02, API-03
+
+**Success Criteria** (what must be TRUE):
+  1. The api_keys table exists; POST /api/keys creates a key shown exactly once (raw key not stored -- only SHA-256 hash); GET /api/keys returns key name and last 4 characters only; DELETE /api/keys/:id revokes a key -- rate limit is 100 requests per minute per key hash
+  2. GET /api/v1/projects returns a paginated list of the caller's projects; GET /api/v1/projects/:id returns project detail; GET /api/v1/projects/:id/payroll-weeks lists payroll weeks; GET /api/v1/projects/:id/payroll-weeks/:weekId/compliance returns the compliance result -- all endpoints require Bearer token auth and write audit log entries
+  3. GET /api/docs returns the OpenAPI 3.1 JSON spec auto-generated from route definitions; GET /api/docs/html renders Swagger UI -- the spec includes all v1 endpoints, request/response schemas, and authentication description
+  4. An API key management page is accessible at Settings -> API Keys showing active keys (name + last 4 + last used date) with a "Generate New Key" action and a revoke button per key
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 80-01-PLAN.md -- DB migration: api_keys table + Drizzle schema + key hashing + CRUD routes + rate limiter middleware
+- [ ] 80-02-PLAN.md -- GET /api/v1 read endpoints (projects + payroll weeks + compliance) + Bearer auth middleware + audit logging
+- [ ] 80-03-PLAN.md -- OpenAPI 3.1 spec generation + GET /api/docs + Swagger UI at /api/docs/html + Settings API Keys page
+
+**UI hint**: yes
+
+---
+
+### Phase 81: Webhooks
+
+**Goal**: Integration partners can register webhook endpoints to receive signed event payloads for payroll and compliance lifecycle events -- with SSRF protection, HMAC signing, exponential backoff delivery, and a delivery log UI
+
+**Depends on**: Phase 80 (API key auth pattern must exist; webhook events reference the same data as the v1 REST API)
+
+**Requirements**: API-04, API-05
+
+**Success Criteria** (what must be TRUE):
+  1. POST /api/webhooks registers a webhook URL: before saving, the server DNS pre-resolves the hostname and blocks RFC 1918 ranges (10.x, 172.16-31.x, 192.168.x) -- SSRF-protected; GET /api/webhooks lists active endpoints; DELETE /api/webhooks/:id removes one
+  2. Event payloads for payroll_week.created, payroll_week.submitted, and compliance.violation_detected are delivered to registered URLs with an X-PW-Signature HMAC-SHA-256 header computed from the shared secret
+  3. Failed deliveries retry with exponential backoff up to 5 attempts; after 5 failures the delivery status is set to 'failed' -- the delivery log in Settings -> Webhooks shows last error and retry count per delivery
+  4. A "Retry" button on failed deliveries triggers an immediate re-attempt without waiting for the next polling interval
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 81-01-PLAN.md -- DB migration: webhooks + webhook_deliveries tables + Drizzle schema + CRUD routes + SSRF DNS pre-resolve + HMAC signing
+- [ ] 81-02-PLAN.md -- Delivery queue polling (setInterval 30s) + exponential backoff + Settings Webhooks delivery log UI + manual Retry button
+
+**UI hint**: yes
+
+---
+
+### Phase 82: Market Credibility + Phase D Watchdog Gate
+
+**Goal**: The app has a published government case study, an economic impact dashboard tab, and an updated About page -- giving procurement offices the narrative and data evidence they need to evaluate vendor credibility
+
+**Depends on**: Phase 81 (all Phase D features must be implemented before the Watchdog grades Phase D)
+
+**Requirements**: TRUST-01, TRUST-02, TRUST-03
+
+**Success Criteria** (what must be TRUE):
+  1. A case study page at /case-studies/hcc is publicly accessible (no auth required) and describes the HCC project: project type, prevailing wage obligation, states covered, and key benefit statement ("eliminated 8 hours/week of manual CPR preparation") -- no sensitive project data is included; the page is linked from the landing page "Trusted by" section
+  2. DashboardPage has an "Impact" tab showing 8 economic metrics computed from existing data: total gross wages paid, total prevailing wage hours, JW vs. apprentice hour split, local hire %, compliance rate %, certified subs count, DBE/MBE/WBE participation count, and states covered -- the tab includes an Export to PDF button using the existing PDF generation pattern
+  3. The /about page is updated with a company mission statement, team section (placeholder if no real team photos), and tech stack transparency statement ("AES-256-GCM SSN encryption, SOC 2 in progress, 8 states covered")
+  4. Local hire % on the Impact tab is computed by comparing worker home zip code to project zip code -- both fields are already collected in the existing schema
+
+WATCHDOG GATE: Both Watchdog Alpha (B2Gnow) and Watchdog Beta (Knowify) must grade Phase D before v6.0 is marked complete.
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 82-01-PLAN.md -- /case-studies/hcc public page + landing page "Trusted by" link
+- [ ] 82-02-PLAN.md -- Economic impact metrics query (8 metrics including local hire % zip comparison) + Impact tab on DashboardPage + Export to PDF
+- [ ] 82-03-PLAN.md -- /about page update (mission + team + tech stack transparency)
+
+**UI hint**: yes
+
+---
+
+## v6.0 Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 64. SOC 2 Logging Foundation + Page Polish Batch 1 | v6.0 | 0/3 | Not started | - |
+| 65. Mobile Responsive Audit + Skeleton + Empty States | v6.0 | 0/3 | Not started | - |
+| 66. Landing Page Overhaul | v6.0 | 0/3 | Not started | - |
+| 67. Animations + Nav Drawer + Form Touch + Phase A Gate | v6.0 | 0/3 | Not started | - |
+| 68. QuickBooks OAuth Foundation | v6.0 | 0/3 | Not started | - |
+| 69. QuickBooks Data Sync | v6.0 | 0/2 | Not started | - |
+| 70. Apprenticeship Ratio Enforcement | v6.0 | 0/3 | Not started | - |
+| 71. DBE/MBE/WBE Schema + Certification CRUD | v6.0 | 0/2 | Not started | - |
+| 72. DBE Alerts + CPR Gate + Participation Summary | v6.0 | 0/2 | Not started | - |
+| 73. Real-Time Compliance Dashboard + Phase B Gate | v6.0 | 0/3 | Not started | - |
+| 74. PWA Foundation | v6.0 | 0/3 | Not started | - |
+| 75. GPS Clock-In/Clock-Out | v6.0 | 0/3 | Not started | - |
+| 76. Payroll Integration + Photo Capture | v6.0 | 0/3 | Not started | - |
+| 77. Mobile Sub CPR Upload + Phase C Gate | v6.0 | 0/1 | Not started | - |
+| 78. SOC 2 Controls -- MFA + Log Aggregation + Hash Chain | v6.0 | 0/3 | Not started | - |
+| 79. SOC 2 Infrastructure -- Uptime + Dependabot + Policy | v6.0 | 0/2 | Not started | - |
+| 80. Public REST API + API Keys | v6.0 | 0/3 | Not started | - |
+| 81. Webhooks | v6.0 | 0/2 | Not started | - |
+| 82. Market Credibility + Phase D Gate | v6.0 | 0/3 | Not started | - |

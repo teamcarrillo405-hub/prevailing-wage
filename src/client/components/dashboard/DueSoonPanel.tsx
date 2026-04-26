@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { AlertCircle, Clock, CalendarCheck } from 'lucide-react';
+import { AlertCircle, Clock, CalendarCheck, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface DueSoonItem {
@@ -21,8 +21,8 @@ async function fetchDueSoon(): Promise<DueSoonItem[]> {
 
 function daysLabel(days: number): string {
   if (days < 0) return `${Math.abs(days)}d overdue`;
-  if (days === 0) return 'due today';
-  return `due in ${days}d`;
+  if (days === 0) return 'Due today';
+  return `${days}d`;
 }
 
 export function DueSoonPanel() {
@@ -34,10 +34,10 @@ export function DueSoonPanel() {
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4 mb-6 animate-pulse">
-        <div className="h-4 w-40 bg-gray-200 rounded mb-3" />
+      <div className="rounded-2xl border border-amber-200/60 bg-white p-5 mb-6 animate-pulse shadow-card">
+        <div className="h-4 w-40 bg-gray-100 rounded mb-3" />
         <div className="space-y-2">
-          {[0, 1, 2].map((i) => <div key={i} className="h-9 bg-gray-100 rounded" />)}
+          {[0, 1, 2].map((i) => <div key={i} className="h-10 bg-gray-50 rounded-xl" />)}
         </div>
       </div>
     );
@@ -49,28 +49,37 @@ export function DueSoonPanel() {
   const upcoming = data.filter((d) => d.status !== 'overdue');
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <AlertCircle className="size-4 text-amber-600 shrink-0" />
-        <h3 className="text-sm font-semibold text-amber-900">
-          Payroll Action Needed
-          <span className="ml-2 text-xs font-normal text-amber-700">
-            {data.length} week{data.length !== 1 ? 's' : ''} pending
-          </span>
-        </h3>
+    <div className="rounded-2xl border border-amber-200/80 bg-white p-5 mb-6 shadow-card">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-50">
+            <AlertCircle className="size-4 text-amber-500" aria-hidden="true" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Payroll Action Needed</h3>
+          </div>
+        </div>
+        <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
+          {data.length} week{data.length !== 1 ? 's' : ''} pending
+        </span>
       </div>
 
       <div className="space-y-1.5">
         {overdue.length > 0 && (
           <>
-            <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Overdue</div>
+            <div className="text-[11px] font-semibold text-red-500 uppercase tracking-widest px-1 mb-1.5">
+              Overdue
+            </div>
             {overdue.map((item) => <DueSoonRow key={item.weekId} item={item} />)}
           </>
         )}
         {upcoming.length > 0 && (
           <>
-            {overdue.length > 0 && <div className="pt-1" />}
-            <div className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-1">Due This Week</div>
+            {overdue.length > 0 && <div className="pt-2" />}
+            <div className="text-[11px] font-semibold text-amber-600 uppercase tracking-widest px-1 mb-1.5">
+              Due This Week
+            </div>
             {upcoming.map((item) => <DueSoonRow key={item.weekId} item={item} />)}
           </>
         )}
@@ -87,28 +96,33 @@ function DueSoonRow({ item }: { item: DueSoonItem }) {
     <Link
       to={`/projects/${item.projectId}/payroll`}
       className={cn(
-        'flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors',
-        'hover:bg-white/80',
-        isOverdue ? 'bg-red-50 border border-red-200' : 'bg-white border border-amber-200',
+        'group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm transition-all duration-150',
+        'hover:shadow-sm',
+        isOverdue
+          ? 'bg-red-50 border border-red-100 hover:border-red-200'
+          : 'bg-gray-50 border border-gray-100 hover:border-amber-200 hover:bg-amber-50/40',
       )}
     >
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
         {isOverdue
-          ? <AlertCircle className="size-3.5 text-red-500 shrink-0" />
+          ? <AlertCircle className="size-3.5 text-red-500 shrink-0" aria-hidden="true" />
           : isToday
-            ? <CalendarCheck className="size-3.5 text-amber-600 shrink-0" />
-            : <Clock className="size-3.5 text-amber-500 shrink-0" />
+            ? <CalendarCheck className="size-3.5 text-amber-500 shrink-0" aria-hidden="true" />
+            : <Clock className="size-3.5 text-amber-400 shrink-0" aria-hidden="true" />
         }
-        <span className="truncate font-medium text-gray-900">{item.projectName}</span>
-        <span className="text-gray-400 shrink-0">·</span>
-        <span className="text-gray-500 shrink-0">Week #{item.payrollNumber}</span>
+        <span className="font-medium text-gray-900 truncate">{item.projectName}</span>
+        <span className="text-gray-300 shrink-0" aria-hidden="true">·</span>
+        <span className="text-gray-500 shrink-0 text-xs">Week #{item.payrollNumber}</span>
       </div>
-      <span className={cn(
-        'text-xs font-medium shrink-0 ml-3',
-        isOverdue ? 'text-red-600' : isToday ? 'text-amber-700' : 'text-amber-600',
-      )}>
-        {daysLabel(item.daysUntil)}
-      </span>
+      <div className="flex items-center gap-1.5 shrink-0 ml-3">
+        <span className={cn(
+          'text-xs font-semibold',
+          isOverdue ? 'text-red-600' : isToday ? 'text-amber-600' : 'text-amber-500',
+        )}>
+          {daysLabel(item.daysUntil)}
+        </span>
+        <ChevronRight className="size-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" aria-hidden="true" />
+      </div>
     </Link>
   );
 }

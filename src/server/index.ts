@@ -33,12 +33,21 @@ import { teamRouter } from './routes/team.js';
 import { importRouter } from './routes/import.js';
 import { billingRouter } from './routes/billing.js';
 import { auditRouter } from './routes/audit.js';
+import mfaRouter from './routes/mfa.js';
 import { payrollWeekClassificationsRouter } from './routes/payrollWeekClassifications.js';
 import subcontractorsRouter from './routes/subcontractors.js';
 import subUploadRouter from './routes/subUpload.js';
 import { auditExportRouter } from './routes/auditExport.js';
 import { projectWdRouter } from './routes/projectWageDeterminations.js';
 import { integrationsRouter } from './routes/integrations.js';
+import timePunchesRouter, { fillFromPunchesRouter } from './routes/timePunches.js';
+import photosRouter, { photoFileRouter } from './routes/photos.js';
+import apiKeysRouter from './routes/apiKeys.js';
+import webhooksRouter from './routes/webhooks.js';
+import publicApiRouter from './routes/publicApi.js';
+import { dashboardRouter } from './routes/dashboard.js';
+import samGovRouter from './routes/samGov.js';
+import securityRouter from './routes/security.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
@@ -51,25 +60,72 @@ import { mkdirSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Ensure upload directory exists at startup
+// Ensure upload and photos directories exist at startup
 mkdirSync(process.env.UPLOAD_DIR || './uploads', { recursive: true });
+mkdirSync(process.env.PHOTOS_DIR || './var/data/photos', { recursive: true });
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(helmet());
+
+// Phase 80 — Helmet hardening (SOC 2 SEC-05).
+// CSP is explicit because Helmet's default blocks inline styles (Tailwind
+// runtime injects a few) and blob: URLs (camera preview + service worker).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'"],
+      styleSrc:   ["'self'", "'unsafe-inline'"],            // Tailwind runtime needs inline styles
+      imgSrc:     ["'self'", 'data:', 'blob:'],             // camera preview + favicons
+      connectSrc: ["'self'"],
+      mediaSrc:   ["'self'", 'blob:'],                      // getUserMedia uses blob URLs
+      workerSrc:  ["'self'"],                               // PWA service worker
+      objectSrc:  ["'none'"],
+      frameAncestors: ["'none'"],                           // anti-clickjacking
+      baseUri:    ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
+  hsts: { maxAge: 31_536_000, includeSubDomains: true, preload: true },
+  referrerPolicy: { policy: 'same-origin' },
+  crossOriginOpenerPolicy: { policy: 'same-origin' },
+  crossOriginResourcePolicy: { policy: 'same-origin' },
+}));
+
+// Phase 80 — security.txt (SEC-06). Served before helmet's noSniff would
+// override the content-type so that the well-known path renders as text.
+app.get('/.well-known/security.txt', (_req, res) => {
+  res.type('text/plain').send(
+    [
+      'Contact: mailto:security@prevailingwage.app',
+      'Expires: 2027-01-01T00:00:00.000Z',
+      'Preferred-Languages: en',
+      'Policy: https://prevailingwage.app/security-policy',
+      '',
+    ].join('\n'),
+  );
+});
+
 app.use(pinoHttp({
   logger,
   // Skip health checks from access log — too noisy for uptime pings
   autoLogging: { ignore: (req) => req.url === '/api/health' },
   customLogLevel: (_req, res) => res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
 }));
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', credentials: true }));
+
+// Phase 80 — CORS tightening (SEC-05). Single allow-listed origin from env.
+// CORS_ORIGIN (preferred) and ALLOWED_ORIGIN are both honored to avoid
+// breaking existing deployments while migrating to the SOC 2 nomenclature.
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:4200',
+  credentials: true,
+}));
 // Stripe webhook needs raw body — must be before express.json()
 app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
 
-const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:4200';
 
 app.use((req, res, next) => {
   // Only check mutating methods — GET/HEAD/OPTIONS are safe
@@ -78,6 +134,8 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/billing/webhook')) return next();
   // Skip health check
   if (req.path === '/api/health') return next();
+  // Skip public REST API — uses Bearer token auth, no browser origin
+  if (req.path.startsWith('/v1/')) return next();
 
   const origin = req.headers.origin;
   if (origin && origin !== ALLOWED_ORIGIN) {
@@ -97,6 +155,7 @@ app.get('/api/health', (_req, res) => {
 });
 app.use('/api/sub-upload', subUploadRouter); // public — no auth required
 app.use('/api/auth', authRouter);
+app.use('/api/mfa', mfaRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/projects', workersRouter);
 app.use('/api/wages', wagesRouter);
@@ -118,6 +177,18 @@ app.use('/api/billing', billingRouter);
 app.use('/api/audit-export', auditExportRouter);
 app.use('/api/projects/:projectId/wage-determinations', projectWdRouter);
 app.use('/api/integrations', integrationsRouter);
+app.use('/api/time-punches', timePunchesRouter);
+app.use('/api/projects', photosRouter);
+app.use('/api/photos', photoFileRouter);
+app.use('/api/projects', fillFromPunchesRouter);
+app.use('/api/keys', apiKeysRouter);
+app.use('/api/webhooks', webhooksRouter);
+app.use('/api/dashboard', dashboardRouter);
+// Phase 82 (Gap-2) — SAM.gov DBE verification proxy + SOC 2 user security dashboard
+app.use('/api/sam-gov', samGovRouter);
+app.use('/api/security', securityRouter);
+// /v1 — public REST API, Bearer token auth (no CSRF check needed — API key, no browser origin)
+app.use('/v1', publicApiRouter);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {

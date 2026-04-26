@@ -27,6 +27,7 @@ const WorkersPage = React.lazy(() => import('./pages/WorkersPage.js').then(m => 
 const PayrollWeekDetailPage = React.lazy(() => import('./pages/PayrollWeekDetailPage.js').then(m => ({ default: m.PayrollWeekDetailPage })));
 const VarianceReportPageRoute = React.lazy(() => import('./pages/VarianceReportPageRoute').then(m => ({ default: m.VarianceReportPageRoute })));
 const ReportsPage = React.lazy(() => import('./pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const GlobalReportsPage = React.lazy(() => import('./pages/GlobalReportsPage').then(m => ({ default: m.GlobalReportsPage })));
 const WorkerComplianceHistoryPage = React.lazy(() => import('./pages/WorkerComplianceHistoryPage').then(m => ({ default: m.WorkerComplianceHistoryPage })));
 const ProjectActivityPage = React.lazy(() => import('./pages/ProjectActivityPage').then(m => ({ default: m.ProjectActivityPage })));
 const TeamPage = React.lazy(() => import('./pages/TeamPage.js').then(m => ({ default: m.TeamPage })));
@@ -34,6 +35,21 @@ const BillingPage = React.lazy(() => import('./pages/BillingPage').then(m => ({ 
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage.js').then(m => ({ default: m.AcceptInvitePage })));
 const SubUploadPage = React.lazy(() => import('./pages/SubUploadPage').then(m => ({ default: m.SubUploadPage })));
 const IntegrationsPage = React.lazy(() => import('./pages/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })));
+const FieldClockPage = React.lazy(() => import('./pages/FieldClockPage').then(m => ({ default: m.FieldClockPage })));
+const ProjectSettingsPage = React.lazy(() => import('./pages/ProjectSettingsPage').then(m => ({ default: m.ProjectSettingsPage })));
+const MfaSetupPage = React.lazy(() => import('./pages/MfaSetupPage').then(m => ({ default: m.MfaSetupPage })));
+const SecurityDashboardPage = React.lazy(() => import('./pages/SecurityDashboardPage').then(m => ({ default: m.SecurityDashboardPage })));
+const ApiDocsPage = React.lazy(() => import('./pages/ApiDocsPage').then(m => ({ default: m.ApiDocsPage })));
+const ApiKeysPage = React.lazy(() => import('./pages/ApiKeysPage').then(m => ({ default: m.ApiKeysPage })));
+const WebhooksPage = React.lazy(() => import('./pages/WebhooksPage').then(m => ({ default: m.WebhooksPage })));
+const CaseStudyPage = React.lazy(() => import('./pages/CaseStudyPage').then(m => ({ default: m.CaseStudyPage })));
+const CaseStudyWaDotPage = React.lazy(() => import('./pages/CaseStudyWaDotPage').then(m => ({ default: m.CaseStudyWaDotPage })));
+const CaseStudiesPage = React.lazy(() => import('./pages/CaseStudiesPage').then(m => ({ default: m.CaseStudiesPage })));
+const ContactPage = React.lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const SecurityPolicyPage = React.lazy(() => import('./pages/SecurityPolicyPage').then(m => ({ default: m.SecurityPolicyPage })));
+const PricingPage = React.lazy(() => import('./pages/PricingPage').then(m => ({ default: m.PricingPage })));
+const FieldHubPage = React.lazy(() => import('./pages/FieldHubPage').then(m => ({ default: m.FieldHubPage })));
+const GovernmentPage = React.lazy(() => import('./pages/GovernmentPage').then(m => ({ default: m.GovernmentPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,7 +108,25 @@ export default function App() {
                 <Route path="/team" element={<TeamPage />} />
                 <Route path="/billing" element={<BillingPage />} />
                 <Route path="/settings/integrations" element={<IntegrationsPage />} />
+                <Route path="/settings/mfa" element={<MfaSetupPage />} />
+                <Route path="/settings/security" element={<SecurityDashboardPage />} />
+                <Route path="/settings/api-keys" element={<ApiKeysPage />} />
+                <Route path="/settings/webhooks" element={<WebhooksPage />} />
+                <Route path="/projects/:projectId/field" element={<FieldClockPage />} />
+                <Route path="/projects/:projectId/settings" element={<ProjectSettingsPage />} />
+                <Route path="/reports" element={<GlobalReportsPage />} />
+                <Route path="/field" element={<FieldHubPage />} />
               </Route>
+
+              {/* Public pages — no auth required */}
+              <Route path="/api-docs" element={<ApiDocsPage />} />
+              <Route path="/case-studies" element={<CaseStudiesPage />} />
+              <Route path="/case-studies/hcc" element={<CaseStudyPage />} />
+              <Route path="/case-studies/wa-dot" element={<CaseStudyWaDotPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/security" element={<SecurityPolicyPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/government" element={<GovernmentPage />} />
 
               {/* Public accept-invite route — no auth wrapper per D-09 */}
               <Route path="/accept-invite" element={<AcceptInvitePage />} />

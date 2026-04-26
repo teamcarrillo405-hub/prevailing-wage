@@ -1,9 +1,34 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: '.',
+      filename: 'sw.ts',
+      registerType: 'prompt',
+      injectManifest: {
+        swSrc: 'src/client/sw.ts',
+        swDest: 'sw.js',
+      },
+      manifest: {
+        name: 'PrevailingWage',
+        short_name: 'PrevWage',
+        theme_color: '#1E3A5F',
+        background_color: '#ffffff',
+        display: 'standalone',
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      },
+    }),
+  ],
   root: 'src/client',
   build: { outDir: '../../dist/client' },
   server: {

@@ -10,6 +10,16 @@ export const users = sqliteTable('users', {
   stripeCustomerId: text('stripe_customer_id'),
   stripeSubscriptionId: text('stripe_subscription_id'),
   stripeSubscriptionStatus: text('stripe_subscription_status'),
+  // ── Phase 78: TOTP MFA (SOC 2 — SEC-01..03) ────────────────────────────
+  // totpSecret stored as AES-256-GCM envelope via encryptSsn/decryptSsn.
+  // totpBackupCodes stored as JSON array of AES-256-GCM envelopes (one per code).
+  totpSecret: text('totp_secret'),
+  totpEnabled: integer('totp_enabled', { mode: 'boolean' }).default(false),
+  totpBackupCodes: text('totp_backup_codes'),
+  // ── Phase 82 (Gap-2): Session invalidation (SOC 2 SEC-02 — revoke all sessions) ──
+  // Incremented when the user invokes "Revoke all sessions". JWTs carry an `sv`
+  // claim; mismatched JWTs are rejected by the auth middleware. Default 0.
+  sessionVersion: integer('session_version').notNull().default(0),
 });
 
 export const projects = sqliteTable('projects', {
@@ -63,6 +73,11 @@ export const projects = sqliteTable('projects', {
   // Phase 70 — Apprenticeship ratio enforcement
   apprenticeshipRequirements: text('apprenticeship_requirements'), // JSON: { "Electrician": { "maxRatio": "1:2" }, ... }
   isIraIijaProject: integer('is_ira_iija_project', { mode: 'boolean' }).default(false),
+  // Phase 75 — GPS clock-in settings
+  gpsClockInEnabled: integer('gps_clock_in_enabled', { mode: 'boolean' }).default(false),
+  gpsLatitude: real('gps_latitude'),   // job site center lat
+  gpsLongitude: real('gps_longitude'), // job site center lng
+  gpsRadiusMeters: real('gps_radius_meters').default(500),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -433,6 +448,15 @@ export const auditLogs = sqliteTable('audit_logs', {
   diff:        text('diff'),
   snapshot:    text('snapshot'),
   meta:        text('meta'),
+
+  // ── Phase 79: Hash-chain audit integrity (SOC 2 — SEC-04) ──────────────
+  // previousHash = entryHash of the immediately preceding row (NULL for genesis).
+  // entryHash    = SHA-256(id|action|previousHash|createdAt) computed at insert
+  //                time. Both fields are nullable for backfill-safe deploy; new
+  //                rows always populate both. integrity-check endpoint walks the
+  //                chain and re-computes entryHash to detect tampering.
+  previousHash: text('previous_hash'),
+  entryHash:    text('entry_hash'),
 }, (table) => ({
   idxAuditProject: index('idx_audit_project_time').on(table.projectId, table.createdAt),
   idxAuditEntity:  index('idx_audit_entity').on(table.entityType, table.entityId, table.createdAt),
@@ -491,6 +515,11 @@ export const subcontractorCertifications = sqliteTable('subcontractor_certificat
   reevaluationStatus: text('reevaluation_status').default('not_required'),
   selfCertified: integer('self_certified', { mode: 'boolean' }).default(false),
   documentPath: text('document_path'),
+  // ── Phase 82 (Gap-2): SAM.gov entity verification fields ─────────────────
+  uei: text('uei'),                                      // SAM.gov Unique Entity Identifier (12-char alphanumeric)
+  cageCode: text('cage_code'),                            // CAGE / NCAGE code (5-char)
+  samRegistrationStatus: text('sam_registration_status'), // 'Active' | 'Inactive' | 'Submitted' | etc.
+  samLastVerifiedAt: text('sam_last_verified_at'),        // ISO 8601 timestamp of last SAM.gov lookup
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, (table) => [
@@ -538,3 +567,79 @@ export const loginAttempts = sqliteTable('login_attempts', {
 }, (table) => ({
   idxLoginAttemptsEmailTime: index('idx_login_attempts_email_time').on(table.email, table.createdAt),
 }));
+
+// ── Phase 76: Field Photo Capture ────────────────────────────────────────
+// Photos are linked to a project + payroll week. filePath is relative to
+// PHOTOS_DIR env var (persisted disk on Render, local subfolder in dev).
+export const weekPhotos = sqliteTable('week_photos', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  payrollWeekId: text('payroll_week_id').notNull().references(() => payrollWeeks.id, { onDelete: 'cascade' }),
+  uploadedBy: text('uploaded_by').notNull().references(() => users.id),
+  filePath: text('file_path').notNull(),   // relative to PHOTOS_DIR
+  caption: text('caption'),
+  takenAt: text('taken_at').notNull(),     // ISO 8601 from EXIF or Date.now()
+  latitude: real('latitude'),
+  longitude: real('longitude'),
+  createdAt: text('created_at').notNull(),
+});
+
+// ── Phase 75: GPS Clock-In / Clock-Out ────────────────────────────────────
+// Records individual clock-in and clock-out punches per worker per project.
+// GPS fields are nullable — GPS is opt-in per project and may fail gracefully.
+// CA AB 1355: location data is used only for job site verification, never for
+// continuous tracking.
+export const timePunches = sqliteTable('time_punches', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  workerId: text('worker_id').notNull().references(() => workers.id, { onDelete: 'cascade' }),
+  punchType: text('punch_type').notNull().$type<'in' | 'out'>(),
+  punchedAt: text('punched_at').notNull(), // ISO 8601
+  // GPS fields — nullable because GPS is opt-in and may fail gracefully
+  latitude: real('latitude'),
+  longitude: real('longitude'),
+  accuracyMeters: real('accuracy_meters'),
+  // Audit
+  createdBy: text('created_by').notNull().references(() => users.id),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  projectWorkerIdx: index('time_punch_project_worker_idx').on(table.projectId, table.workerId),
+}));
+
+// ── Phase 81: API Keys + Webhooks ────────────────────────────────────────
+export const apiKeys = sqliteTable('api_keys', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  keyHash: text('key_hash').notNull(),
+  keyPrefix: text('key_prefix').notNull(),
+  scopes: text('scopes').notNull(), // JSON array: ['projects:read','payroll:read','workers:read']
+  lastUsedAt: text('last_used_at'),
+  expiresAt: text('expires_at'),
+  createdAt: text('created_at').notNull(),
+  revokedAt: text('revoked_at'),
+});
+
+export const webhooks = sqliteTable('webhooks', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  secret: text('secret').notNull(), // HMAC signing secret (encrypted with encryptSsn)
+  events: text('events').notNull(), // JSON array: ['payroll.submitted','violation.detected']
+  active: integer('active', { mode: 'boolean' }).default(true),
+  failureCount: integer('failure_count').default(0),
+  lastDeliveredAt: text('last_delivered_at'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const webhookDeliveries = sqliteTable('webhook_deliveries', {
+  id: text('id').primaryKey(),
+  webhookId: text('webhook_id').notNull().references(() => webhooks.id, { onDelete: 'cascade' }),
+  event: text('event').notNull(),
+  payload: text('payload').notNull(), // JSON
+  statusCode: integer('status_code'),
+  responseBody: text('response_body'),
+  deliveredAt: text('delivered_at'),
+  failedAt: text('failed_at'),
+  retryCount: integer('retry_count').default(0),
+});

@@ -5,10 +5,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileCheck, ExternalLink, Info } from 'lucide-react';
 import { api } from '../lib/api';
+import { enqueueRequest } from '../lib/offlineQueue';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
+import { Tooltip } from '../components/ui/Tooltip';
 import { PageHeader } from '../components/ui/PageHeader';
 
 const WH347_DEF = "The U.S. Department of Labor's official certified payroll form. Required weekly for federal prevailing wage projects. Submit to your contracting officer within 7 days of the week ending date.";
@@ -28,6 +30,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { PhotoCapture } from '../components/field/PhotoCapture';
 
 interface PayrollWeek {
   id: string;
@@ -225,6 +228,11 @@ export function PayrollWeekDetailPage() {
   const generatingRef = useRef(false);
   const amendingRef = useRef(false);
   const hiddenAnchorRef = useRef<HTMLAnchorElement>(null);
+
+  // isDirty: true when local changes (classification overrides, or any unsaved state) exist
+  // and the user is offline — drives the 30-second auto-save indicator
+  const [isDirty, setIsDirty] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
 
   // CA-specific state
   const [showCaDisclosure, setShowCaDisclosure] = useState(false);
@@ -524,6 +532,157 @@ export function PayrollWeekDetailPage() {
   const [qboImportError, setQboImportError] = useState<string | null>(null);
   const [qboImportNote, setQboImportNote] = useState<string | null>(null);
 
+  // ── QB native sync state (Fix 1) ─────────────────────────────────────────
+  interface QboSyncEntry {
+    date: string;
+    hours: number;
+    dayKey: string;
+  }
+  interface QboSyncMatchedWorker {
+    workerId: string;
+    workerName: string;
+    qboEmployeeRef: string;
+    entries: QboSyncEntry[];
+  }
+  interface QboSyncResult {
+    weekId: string;
+    startDate: string;
+    endDate: string;
+    matched: QboSyncMatchedWorker[];
+    unmatched: Array<{ employeeRef: string; totalHours: number }>;
+  }
+  const [showQboSyncModal, setShowQboSyncModal] = useState(false);
+  const [qboSyncFetching, setQboSyncFetching] = useState(false);
+  const [qboSyncError, setQboSyncError] = useState<string | null>(null);
+  const [qboSyncResult, setQboSyncResult] = useState<QboSyncResult | null>(null);
+  const [qboSyncChecked, setQboSyncChecked] = useState<Record<number, boolean>>({});
+  const [qboSyncPushing, setQboSyncPushing] = useState(false);
+  const [qboSyncSuccess, setQboSyncSuccess] = useState<string | null>(null);
+
+  async function handleQboSync() {
+    if (!projectId || !weekId) return;
+    setQboSyncFetching(true);
+    setQboSyncError(null);
+    setQboSyncResult(null);
+    try {
+      const resp = await fetch(
+        `/api/integrations/qbo/sync-time?weekId=${weekId}&projectId=${projectId}`,
+        { method: 'POST', credentials: 'include' },
+      );
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error || `Request failed: ${resp.status}`);
+      }
+      const body = await resp.json() as { data: QboSyncResult };
+      setQboSyncResult(body.data);
+      // Pre-check all matched workers
+      const initial: Record<number, boolean> = {};
+      body.data.matched.forEach((_, i) => { initial[i] = true; });
+      setQboSyncChecked(initial);
+      setShowQboSyncModal(true);
+    } catch (err) {
+      setQboSyncError(err instanceof Error ? err.message : 'Failed to sync from QuickBooks.');
+    } finally {
+      setQboSyncFetching(false);
+    }
+  }
+
+  async function handleQboSyncPush() {
+    if (!qboSyncResult || !projectId || !weekId) return;
+    setQboSyncPushing(true);
+    setQboSyncError(null);
+    try {
+      // Collect selected matched workers; look up classificationId from projectWorkers
+      const entries: Array<{ workerId: string; classificationId: string; date: string; hours: number }> = [];
+      qboSyncResult.matched.forEach((match, i) => {
+        if (!qboSyncChecked[i]) return;
+        const worker = projectWorkers.find((w) => w.id === match.workerId);
+        const cls = worker?.classifications?.[0];
+        if (!cls) return;
+        match.entries.forEach((e) => {
+          entries.push({ workerId: match.workerId, classificationId: cls.id, date: e.date, hours: e.hours });
+        });
+      });
+      if (entries.length === 0) {
+        setQboSyncError('No entries selected to push.');
+        setQboSyncPushing(false);
+        return;
+      }
+      const resp = await fetch('/api/integrations/qbo/push-approved-hours', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekId, projectId, entries }),
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error || `Push failed: ${resp.status}`);
+      }
+      const body = await resp.json() as { data: { committed: number } };
+      setShowQboSyncModal(false);
+      setQboSyncResult(null);
+      setQboSyncSuccess(`Synced ${body.data.committed} payroll entr${body.data.committed === 1 ? 'y' : 'ies'} from QuickBooks.`);
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+    } catch (err) {
+      setQboSyncError(err instanceof Error ? err.message : 'Failed to push hours.');
+    } finally {
+      setQboSyncPushing(false);
+    }
+  }
+
+  // ── Phase 76: Fill from Field Clock state ─────────────────────────────────
+  const [showFillModal, setShowFillModal] = useState(false);
+  const [fillFetching, setFillFetching] = useState(false);
+  const [fillError, setFillError] = useState<string | null>(null);
+
+  interface FillSuggestedEntry {
+    date: string;
+    dayKey: 'monSt' | 'tueSt' | 'wedSt' | 'thuSt' | 'friSt' | 'satSt' | 'sunSt';
+    regularHours: number;
+  }
+
+  interface FillWorkerSuggestion {
+    workerId: string;
+    workerName: string;
+    entries: FillSuggestedEntry[];
+    totalHours: number;
+    punchPairs: number;
+  }
+
+  interface FillResult {
+    weekId: string;
+    weekStart: string;
+    weekEnd: string;
+    suggestions: FillWorkerSuggestion[];
+    workerCount: number;
+    totalPunchPairs: number;
+  }
+
+  const [fillResult, setFillResult] = useState<FillResult | null>(null);
+
+  async function handleFillFromPunches() {
+    if (!projectId || !weekId) return;
+    setFillFetching(true);
+    setFillError(null);
+    try {
+      const res = await fetch(
+        `/api/projects/${projectId}/weeks/${weekId}/fill-from-punches`,
+        { method: 'POST', credentials: 'include' },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error || `Request failed: ${res.status}`);
+      }
+      const body = await res.json() as { data: FillResult };
+      setFillResult(body.data);
+      setShowFillModal(true);
+    } catch (err) {
+      setFillError(err instanceof Error ? err.message : 'Failed to load punch data.');
+    } finally {
+      setFillFetching(false);
+    }
+  }
+
 
   // Step 2b state: ID mapping for providers that use numeric worker IDs (Phase 45)
   const [idMappings, setIdMappings] = useState<Record<string, string>>({});
@@ -639,6 +798,76 @@ export function PayrollWeekDetailPage() {
       setNysContractorRegNumber(projectData.data.project.nysContractorRegNumber || '');
     }
   }, [projectData?.data?.project]);
+
+  // Mark dirty whenever weekData entries load while offline — ensures the snapshot is preserved
+  useEffect(() => {
+    if (weekData && weekData.entries.length > 0 && !navigator.onLine) {
+      setIsDirty(true);
+    }
+  }, [weekData]);
+
+  // ── 30-second offline draft auto-save (MOB-01 / MOB-04) ──────────────────
+  // Only fires when navigator.onLine === false and isDirty to avoid spamming the server.
+  // Uses If-Unmodified-Since to prevent stale overwrites.
+  useEffect(() => {
+    if (!weekId || !weekData) return;
+
+    const intervalId = setInterval(() => {
+      if (navigator.onLine) {
+        // Back online — reset dirty flag and auto-saving indicator
+        if (autoSaving) setAutoSaving(false);
+        return;
+      }
+      if (!isDirty) return; // nothing to save
+
+      const week = weekData.week;
+      const entries = weekData.entries;
+
+      setAutoSaving(true);
+
+      // Build a minimal snapshot of the current payroll state
+      const snapshot = {
+        weekId: week.id,
+        payrollNumber: week.payrollNumber,
+        isFinal: week.isFinal,
+        entries: entries.map((row) => ({
+          id: row.entry.id,
+          workerId: row.entry.workerId,
+          monSt: row.entry.monSt, tueSt: row.entry.tueSt,
+          wedSt: row.entry.wedSt, thuSt: row.entry.thuSt,
+          friSt: row.entry.friSt, satSt: row.entry.satSt,
+          sunSt: row.entry.sunSt, monOt: row.entry.monOt,
+          tueOt: row.entry.tueOt, wedOt: row.entry.wedOt,
+          thuOt: row.entry.thuOt, friOt: row.entry.friOt,
+          satOt: row.entry.satOt, sunOt: row.entry.sunOt,
+          baseRateSnapshot: row.entry.baseRateSnapshot,
+          fringeRateSnapshot: row.entry.fringeRateSnapshot,
+          grossWages: row.entry.grossWages,
+          deductions: row.entry.deductions,
+          netPay: row.entry.netPay,
+        })),
+      };
+
+      enqueueRequest(
+        `/api/payroll/weeks/${weekId}/draft`,
+        'PUT',
+        snapshot,
+        {
+          'Content-Type': 'application/json',
+          // Prevent stale overwrites — server should reject if week was modified after this timestamp
+          'If-Unmodified-Since': new Date(week.createdAt).toUTCString(),
+        },
+      ).then(() => {
+        setIsDirty(false);
+        setTimeout(() => setAutoSaving(false), 1500);
+      }).catch((err) => {
+        console.warn('[PayrollWeekDetailPage] auto-save enqueue failed', err);
+        setAutoSaving(false);
+      });
+    }, 30_000);
+
+    return () => clearInterval(intervalId);
+  }, [weekId, weekData, isDirty, autoSaving]);
 
   const isLoading = weekLoading || complianceLoading;
   const isError = weekError || complianceError;
@@ -1036,7 +1265,7 @@ export function PayrollWeekDetailPage() {
 
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <button
               onClick={() => navigate(`/projects/${projectId}/payroll`)}
               className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
@@ -1052,26 +1281,50 @@ export function PayrollWeekDetailPage() {
               />
             )}
           </div>
+          {/* Offline auto-save indicator */}
+          {autoSaving && !navigator.onLine && (
+            <span className="text-xs text-amber-600 font-medium shrink-0">Auto-saving...</span>
+          )}
         </div>
-        <div className="sticky bottom-0 z-10 bg-white border-t border-brand-navy/10 px-6 py-3 -mx-6 mt-8">
+        {/* MOB-13: sticky download bar with iOS safe-area padding */}
+        <div
+          className="sticky bottom-0 z-10 bg-white border-t border-brand-navy/10 px-4 sm:px-6 pt-3 -mx-4 sm:-mx-6 mt-8"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0.75rem)' }}
+        >
+          {/* MOB-13: "Fill from Field Clock" — full-width on mobile, inline on sm+ */}
+          {weekId && !week?.submittedAt && (
+            <div className="mb-2 sm:hidden">
+              <Button
+                variant="secondary"
+                disabled={fillFetching}
+                onClick={handleFillFromPunches}
+                className="w-full min-h-[44px]"
+              >
+                {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
+              </Button>
+            </div>
+          )}
           <div className="flex gap-2 flex-wrap items-center">
             {weekId && week && !week.isFinal && (
               <Link
                 to={`/projects/${projectId}/payroll/${weekId}/edit`}
-                className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 transition-colors"
+                className="inline-flex items-center justify-center text-xs px-3 py-2.5 min-h-[44px] font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 transition-colors"
               >
                 Edit hours
               </Link>
             )}
             {weekId && (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={generating}
-                onClick={handleDownloadClick}
-              >
-                {generating ? 'Generating...' : 'Download WH-347'}
-              </Button>
+              <span className="inline-flex items-center gap-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={generating}
+                  onClick={handleDownloadClick}
+                >
+                  {generating ? 'Generating...' : 'Download WH-347'}
+                </Button>
+                <Tooltip content="Federal Certified Payroll Report required for Davis-Bacon Act projects. The January 2025 revision is the only version accepted by the Department of Labor." />
+              </span>
             )}
             {/* STATE_FORMS registry-driven primary download button (STATE-12, NFR-06) */}
             {stateFormConfig && weekId && (
@@ -1089,13 +1342,16 @@ export function PayrollWeekDetailPage() {
               </Button>
             )}
             {isCA && weekId && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => { setEcprStep(1); setShowEcprModal(true); }}
-              >
-                Download CA eCPR XML
-              </Button>
+              <span className="inline-flex items-center gap-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => { setEcprStep(1); setShowEcprModal(true); }}
+                >
+                  Download CA eCPR XML
+                </Button>
+                <Tooltip content="California's electronic certified payroll submission format required for public works projects. Export as XML and upload to DIR's eCPR portal at efiling.dir.ca.gov/eCPR." />
+              </span>
             )}
             {isWA && weekId && (
               <Button
@@ -1135,6 +1391,19 @@ export function PayrollWeekDetailPage() {
                 Import from Payroll Provider
               </Button>
             )}
+            {/* Hidden on mobile — shown full-width above this row instead */}
+            {weekId && !week?.submittedAt && (
+              <span className="hidden sm:contents">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={fillFetching}
+                  onClick={handleFillFromPunches}
+                >
+                  {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
+                </Button>
+              </span>
+            )}
             {weekId && qboConnected && !week?.submittedAt && (
               <Button
                 variant="secondary"
@@ -1142,6 +1411,16 @@ export function PayrollWeekDetailPage() {
                 onClick={() => setShowQboImportModal(true)}
               >
                 Import from QuickBooks
+              </Button>
+            )}
+            {weekId && qboConnected && !week?.submittedAt && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={qboSyncFetching}
+                onClick={handleQboSync}
+              >
+                {qboSyncFetching ? 'Syncing...' : 'Sync from QB'}
               </Button>
             )}
           </div>
@@ -1156,6 +1435,24 @@ export function PayrollWeekDetailPage() {
         {importSuccessBanner && (
           <div className="mb-4 rounded-sm border border-status-compliant/30 bg-status-compliant/10 px-4 py-2 text-sm text-status-compliant">
             {importSuccessBanner}
+          </div>
+        )}
+
+        {qboSyncSuccess && (
+          <div className="mb-4 rounded-sm border border-status-compliant/30 bg-status-compliant/10 px-4 py-2 text-sm text-status-compliant">
+            {qboSyncSuccess}
+          </div>
+        )}
+
+        {qboSyncError && !showQboSyncModal && (
+          <div className="mb-4 rounded-sm border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+            {qboSyncError}
+          </div>
+        )}
+
+        {fillError && (
+          <div className="mb-4 rounded-sm border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+            {fillError}
           </div>
         )}
 
@@ -1177,13 +1474,64 @@ export function PayrollWeekDetailPage() {
           </Card>
         )}
 
-        {/* Entries table */}
+        {/* lg: two-column layout — entries (left) + compliance/submission sidebar (right) */}
+        <div className="lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
+        <div className="lg:col-span-2">
+
+        {/* Entries — MOB-13: card view on mobile, table on sm+ */}
         {!isLoading && !isError && entries.length > 0 && (
           <Card padding="none" className="mb-6">
             <div className="px-5 py-3 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Payroll Entries</h2>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobile card list (< sm) */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {entries.map((row) => {
+                const e = row.entry;
+                const totalSt = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
+                const totalOt = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
+                const violation = violationsByEntryId.get(e.id);
+                return (
+                  <div key={e.id} className="px-4 py-4 min-h-[56px]">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{row.workerName}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{row.tradeDescription}</p>
+                      </div>
+                      <div className="shrink-0">
+                        {violation ? (
+                          <Badge variant="violation">{violationLabel(violation.violationType)}</Badge>
+                        ) : (
+                          <Badge variant="compliant">OK</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                      <div>
+                        <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-0.5">Hours</p>
+                        <p>{totalSt} ST / {totalOt} OT</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-0.5">Base / Fringe</p>
+                        <p>${e.baseRateSnapshot.toFixed(2)} / ${e.fringeRateSnapshot.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-0.5">Net Pay</p>
+                        <p className="font-semibold text-gray-900">{e.netPay !== null ? `$${e.netPay.toFixed(2)}` : '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="px-4 py-3 bg-gray-50 text-xs font-semibold text-gray-700 flex justify-between">
+                <span>Total Net Pay</span>
+                <span>${entries.reduce((s, r) => s + (r.entry.netPay ?? 0), 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Desktop table (sm+) */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
@@ -1227,6 +1575,7 @@ export function PayrollWeekDetailPage() {
                                 value={row.overrideClassificationId ?? ''}
                                 onChange={ev => {
                                   const val = ev.target.value;
+                                  setIsDirty(true);
                                   if (val) {
                                     overrideMutation.mutate({
                                       payrollWeekId: e.payrollWeekId,
@@ -1295,7 +1644,7 @@ export function PayrollWeekDetailPage() {
                   </tr>
                 </tfoot>
               </table>
-            </div>
+            </div>{/* end sm:block */}
           </Card>
         )}
 
@@ -1305,6 +1654,9 @@ export function PayrollWeekDetailPage() {
             <p className="text-sm text-gray-500">No payroll entries for this week.</p>
           </Card>
         )}
+
+        </div>{/* end lg:col-span-2 */}
+        <div className="lg:col-span-1 space-y-6">
 
         {/* Compliance violations panel */}
         {!isLoading && !isError && (
@@ -1543,6 +1895,9 @@ export function PayrollWeekDetailPage() {
           </Card>
         )}
 
+        </div>{/* end lg:col-span-1 sidebar */}
+        </div>{/* end lg:grid */}
+
         {/* WAL-04 WA PWIA Submission Guide panel */}
         {!isLoading && !isError && isWA && (
           <Card className="mt-6">
@@ -1771,6 +2126,113 @@ export function PayrollWeekDetailPage() {
             title="Florida — Federal WH-347 Applies"
             body="Florida has no state-specific certified payroll form. Federal Davis-Bacon WH-347 applies to all Florida public works projects. Florida repealed its state prevailing wage law in 1979; HB 705 (July 2024) preempted all local wage ordinances."
           />
+        )}
+
+        {/* Phase 76 — Job-Site Photos section */}
+        {!isLoading && !isError && weekId && projectId && (
+          <Card padding="none" className="mt-6">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Job-Site Photos</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Photos uploaded by field workers for this payroll week.
+              </p>
+            </div>
+            <div className="px-5 py-4">
+              <PhotoCapture projectId={projectId} weekId={weekId} />
+            </div>
+          </Card>
+        )}
+
+        {/* Phase 76 — Fill from Field Clock confirmation modal */}
+        {showFillModal && fillResult && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setShowFillModal(false)}
+          >
+            <div
+              className="mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl max-h-[85vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-headline font-bold text-gray-900">
+                Field Clock — Suggested Hours
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Found {fillResult.workerCount} worker{fillResult.workerCount !== 1 ? 's' : ''},{' '}
+                {fillResult.totalPunchPairs} punch pair{fillResult.totalPunchPairs !== 1 ? 's' : ''}{' '}
+                covering {fillResult.weekStart} to {fillResult.weekEnd}.
+              </p>
+
+              {fillResult.suggestions.length === 0 ? (
+                <p className="mt-4 text-sm text-gray-500">
+                  No complete clock-in/clock-out pairs found for this week.
+                  Make sure workers have clocked both in and out.
+                </p>
+              ) : (
+                <div className="mt-4 overflow-y-auto flex-1 space-y-4">
+                  {fillResult.suggestions.map((s) => (
+                    <div key={s.workerId} className="rounded border border-gray-200 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-sm text-gray-900">{s.workerName}</span>
+                        <span className="text-xs text-gray-500">
+                          {s.totalHours}h total from {s.punchPairs} pair{s.punchPairs !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-gray-500 text-left">
+                            <th className="pb-1">Date</th>
+                            <th className="pb-1">Day</th>
+                            <th className="pb-1 text-right">Regular Hours</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {s.entries.map((entry) => (
+                            <tr key={entry.date}>
+                              <td className="py-1 text-gray-700">{entry.date}</td>
+                              <td className="py-1 text-gray-500">
+                                {entry.dayKey.slice(0, 3).toUpperCase()}
+                              </td>
+                              <td className="py-1 text-right font-medium text-gray-900">
+                                {entry.regularHours}h
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 pt-4 border-t border-gray-100 flex items-start gap-3">
+                <div className="flex-1">
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded p-2">
+                    These are suggested hours only. You must create or edit payroll entries manually — use these values as a reference when editing hours for each worker.
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => setShowFillModal(false)}
+                    className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                  {weekId && !week?.submittedAt && (
+                    <button
+                      onClick={() => {
+                        setShowFillModal(false);
+                        // Navigate to edit page where user can apply the hours
+                        window.location.href = `/projects/${projectId}/payroll/${weekId}/edit`;
+                      }}
+                      className="rounded bg-brand-gold text-nav-dark text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90"
+                    >
+                      Go to Edit Hours
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* CA eCPR disclosure modal — persistent, shown on every CA download click */}
@@ -2498,6 +2960,105 @@ export function PayrollWeekDetailPage() {
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {/* QB Native Sync Modal (Fix 1) */}
+        {showQboSyncModal && qboSyncResult && (
+          <div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            onClick={(e) => { if (e.target === e.currentTarget) { setShowQboSyncModal(false); setQboSyncResult(null); setQboSyncError(null); } }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setShowQboSyncModal(false); setQboSyncResult(null); setQboSyncError(null); } }}
+            tabIndex={-1}
+          >
+            <Card className="max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <h2 className="text-base font-headline text-gray-900 mb-1">Sync from QuickBooks</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Week {qboSyncResult.startDate} — {qboSyncResult.endDate}. Check the workers to import,
+                then confirm. Hours are grouped by worker and pushed to payroll entries.
+              </p>
+
+              {qboSyncError && (
+                <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {qboSyncError}
+                </div>
+              )}
+
+              {qboSyncResult.matched.length === 0 && (
+                <p className="text-sm text-gray-500 mb-4">
+                  No QB employees could be matched to workers on this project. Check the
+                  Employee Mapping on the Integrations page.
+                </p>
+              )}
+
+              {qboSyncResult.matched.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Matched workers ({qboSyncResult.matched.length})
+                  </p>
+                  <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+                    {qboSyncResult.matched.map((match, i) => {
+                      const totalHours = match.entries.reduce((s, e) => s + e.hours, 0);
+                      return (
+                        <label key={i} className="flex items-center gap-3 px-4 py-2.5 bg-white cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!qboSyncChecked[i]}
+                            onChange={() => setQboSyncChecked((prev) => ({ ...prev, [i]: !prev[i] }))}
+                            className="rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">{match.workerName}</p>
+                            <p className="text-xs text-gray-400">QB: {match.qboEmployeeRef} — {match.entries.length} record{match.entries.length !== 1 ? 's' : ''}</p>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-800 shrink-0">
+                            {totalHours.toFixed(2)} hrs
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {qboSyncResult.unmatched.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Unmatched QB employees ({qboSyncResult.unmatched.length}) — not imported
+                  </p>
+                  <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+                    {qboSyncResult.unmatched.map((u, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-2 bg-gray-50">
+                        <p className="text-sm text-gray-600 flex-1">{u.employeeRef}</p>
+                        <span className="text-xs text-gray-400">{u.totalHours.toFixed(2)} hrs</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    Map these employees on the Integrations page, then sync again.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => { setShowQboSyncModal(false); setQboSyncResult(null); setQboSyncError(null); }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={qboSyncPushing || qboSyncResult.matched.length === 0 || Object.values(qboSyncChecked).every((v) => !v)}
+                  onClick={handleQboSyncPush}
+                  loading={qboSyncPushing}
+                >
+                  {qboSyncPushing ? 'Pushing...' : 'Confirm and Push Hours'}
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
 

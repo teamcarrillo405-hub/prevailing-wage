@@ -10,6 +10,8 @@ import {
   getPendingInvite, revokeInvite, getTeamMemberCount,
 } from '../services/inviteService.js';
 import { getMemberLimit, type PlanTier } from '../utils/planLimits.js';
+import { verifyPassword } from '../services/auth.js';
+import { insertSecurityEvent } from '../db/auditHelpers.js';
 
 const router = Router();
 
@@ -284,6 +286,111 @@ router.post('/transfer', validate(TransferSchema), async (req, res) => {
   }
 
   res.json({ data: { message: 'Ownership transferred' } });
+});
+
+// ── POST /api/team/:projectId/transfer-ownership ─────────────────────────────
+// Transfer project ownership to a current project member, with password confirmation.
+// Body: { newOwnerId: string, confirmPassword: string }
+// Rules:
+//   1. Caller must be the current project owner
+//   2. Password re-verified against stored hash
+//   3. newOwnerId must be an active member of the project
+//   4. Role swap: current owner → 'member', newOwnerId → 'owner'
+//   5. Security event recorded
+
+const TransferOwnershipSchema = z.object({
+  newOwnerId: z.string().uuid(),
+  confirmPassword: z.string().min(1),
+});
+
+router.post('/:projectId/transfer-ownership', validate(TransferOwnershipSchema), async (req, res) => {
+  const userId = req.user!.userId;
+  const { projectId } = req.params as { projectId: string };
+  const { newOwnerId, confirmPassword } = req.body as z.infer<typeof TransferOwnershipSchema>;
+
+  if (newOwnerId === userId) {
+    res.status(400).json({ error: 'You are already the owner of this project' });
+    return;
+  }
+
+  const db = getDb();
+
+  // 1. Verify caller is the owner of this specific project
+  const [ownerRow] = await db
+    .select({ id: projectMembers.id })
+    .from(projectMembers)
+    .where(
+      and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, userId),
+        eq(projectMembers.role, 'owner'),
+        isNull(projectMembers.removedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!ownerRow) {
+    res.status(403).json({ error: 'Owner access required for this project' });
+    return;
+  }
+
+  // 2. Verify password
+  const [userRow] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!userRow) {
+    res.status(500).json({ error: 'User account not found' });
+    return;
+  }
+
+  const passwordOk = await verifyPassword(userRow.passwordHash, confirmPassword);
+  if (!passwordOk) {
+    res.status(401).json({ error: 'Incorrect password' });
+    return;
+  }
+
+  // 3. Verify newOwnerId is an active member of this project
+  const [targetMemberRow] = await db
+    .select({ id: projectMembers.id })
+    .from(projectMembers)
+    .where(
+      and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, newOwnerId),
+        isNull(projectMembers.removedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!targetMemberRow) {
+    res.status(400).json({ error: 'New owner must be an existing active member of this project' });
+    return;
+  }
+
+  // 4. Swap roles
+  await db
+    .update(projectMembers)
+    .set({ role: 'member' })
+    .where(eq(projectMembers.id, ownerRow.id));
+
+  await db
+    .update(projectMembers)
+    .set({ role: 'owner' })
+    .where(eq(projectMembers.id, targetMemberRow.id));
+
+  // 5. Record security event (fire-and-forget)
+  void insertSecurityEvent({
+    userId,
+    eventType: 'ownership_transferred',
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'] as string | undefined,
+    metadata: { projectId, newOwnerId },
+  });
+
+  res.json({ data: { message: 'Ownership transferred successfully' } });
 });
 
 export { router as teamRouter };

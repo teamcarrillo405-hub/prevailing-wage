@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { useToast } from '../contexts/ToastContext';
+import { Tooltip } from './ui/Tooltip';
 
 interface PinnedWd {
   wageDeterminationId: string;
@@ -64,7 +65,10 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
   return (
     <Card className="mt-4" padding="default">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900">Wage Determinations</h3>
+        <h3 className="text-sm font-semibold text-gray-900 inline-flex items-center">
+          Wage Determinations
+          <Tooltip content="A DOL document specifying prevailing wage rates for your project's location and trade classifications. Each project is assigned a WD number tied to its county on SAM.gov." />
+        </h3>
         <a href={wageLookupUrl} className="text-xs text-brand-gold hover:underline">
           + Add WD
         </a>

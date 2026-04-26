@@ -68,6 +68,10 @@ import {
   type ComplianceSummaryInput,
   type ComplianceSummaryProjectRow,
 } from '../services/complianceSummaryPdfGenerator.js';
+import {
+  generateTxCprPdf,
+  type TxCprInput,
+} from '../services/txCprPdfGenerator.js';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
 
@@ -1548,6 +1552,93 @@ router.get('/compliance-summary', async (req, res) => {
 
   res.set('Content-Type', 'application/pdf');
   res.set('Content-Disposition', 'attachment; filename="compliance-summary.pdf"');
+  res.send(Buffer.from(pdfBytes));
+});
+
+// ── GET /api/export/tx-cpr/:weekId ───────────────────────────────────────────
+// Texas DOT Certified Payroll Report (PWC-1) — state-gated to TX projects only
+// Phase 83: programmatic PDF using pdf-lib (no fillable template required)
+
+router.get('/tx-cpr/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  // 1. Load payroll week
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  // 2. Verify project access
+  const db = getDb();
+  let project: Project;
+  try {
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // 3. State gate — TX CPR is TX-only
+  if (project.state?.toUpperCase() !== 'TX') {
+    res.status(400).json({ error: 'TX CPR is only available for Texas projects' });
+    return;
+  }
+
+  // 4. Load payroll entries with worker details
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+
+  // 5. Build TxCprInput
+  const txData: TxCprInput = {
+    contractor: {
+      name: project.name,
+      fein: (project as any).contractorFein ?? '',
+      address: `${project.county || ''}, ${project.state || ''}`,
+      txContractorLicense: (project as any).txContractorLicense ?? null,
+    },
+    project: {
+      name: project.name,
+      txdotProjectId: (project as any).txdotProjectId ?? null,
+      txAwardingAgency: (project as any).txAwardingAgency ?? null,
+      location: `${project.county || ''}, TX`,
+    },
+    week: {
+      weekEndingDate: week.weekEndingDate,
+      payrollNumber: week.amendmentNumber != null && week.originalWeekId != null
+        ? `${week.payrollNumber} (AMENDED ${week.amendmentNumber})`
+        : String(week.payrollNumber),
+    },
+    entries: entries.map((e: any) => ({
+      workerName: e.workerName ?? '',
+      workerSsnLast4: e.workerSsnLast4 ?? null,
+      classification: e.tradeDescription ?? '',
+      monSt: e.entry?.monSt ?? 0,
+      tueSt: e.entry?.tueSt ?? 0,
+      wedSt: e.entry?.wedSt ?? 0,
+      thuSt: e.entry?.thuSt ?? 0,
+      friSt: e.entry?.friSt ?? 0,
+      satSt: e.entry?.satSt ?? 0,
+      sunSt: e.entry?.sunSt ?? 0,
+      monOt: e.entry?.monOt ?? 0,
+      tueOt: e.entry?.tueOt ?? 0,
+      wedOt: e.entry?.wedOt ?? 0,
+      thuOt: e.entry?.thuOt ?? 0,
+      friOt: e.entry?.friOt ?? 0,
+      satOt: e.entry?.satOt ?? 0,
+      sunOt: e.entry?.sunOt ?? 0,
+      baseRate: e.entry?.baseRateSnapshot ?? 0,
+      grossWages: e.entry?.grossWages ?? null,
+      deductions: e.entry?.deductions ?? 0,
+      netPay: e.entry?.netPay ?? null,
+    })),
+  };
+
+  // 6. Generate PDF
+  const pdfBytes = await generateTxCprPdf(txData);
+
+  res.set('Content-Type', 'application/pdf');
+  res.set('Content-Disposition', `attachment; filename="tx-cpr-${weekId}.pdf"`);
   res.send(Buffer.from(pdfBytes));
 });
 

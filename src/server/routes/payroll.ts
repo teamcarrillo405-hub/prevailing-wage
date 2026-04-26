@@ -1,5 +1,5 @@
-import { logger } from '../logger.js';
 // src/server/routes/payroll.ts
+import { logger } from '../logger.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
@@ -9,6 +9,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { sendSubmissionConfirmationEmail } from '../services/emailService.js';
+import { deliverWebhook, WEBHOOK_EVENT_PAYROLL_WEEK_CREATED } from '../services/webhookService.js';
 import {
   createPayrollWeek,
   getPayrollWeek,
@@ -135,6 +136,16 @@ router.post('/weeks', validate(CreateWeekSchema), async (req, res) => {
   }
 
   const result = await createPayrollWeek(body);
+
+  // Fire webhook (non-blocking)
+  void deliverWebhook(userId, WEBHOOK_EVENT_PAYROLL_WEEK_CREATED, {
+    event: WEBHOOK_EVENT_PAYROLL_WEEK_CREATED,
+    weekId: result.id,
+    projectId: body.projectId,
+    weekEndingDate: body.weekEndingDate,
+    payrollNumber: result.payrollNumber,
+  });
+
   res.status(201).json(result);
 });
 
@@ -432,6 +443,19 @@ router.patch('/weeks/:id/submit', validate(SubmitWeekSchema), async (req, res) =
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, submittedTo: body.submittedTo },
     });
   } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
+
+  // Best-effort webhook delivery — API-01
+  try {
+    const { deliverWebhook } = await import('../services/webhookService.js');
+    await deliverWebhook(userId, 'payroll.submitted', {
+      projectId: week.projectId,
+      weekId,
+      payrollNumber: week.payrollNumber,
+      weekEndingDate: week.weekEndingDate,
+      submittedAt: body.submittedAt,
+      submittedTo: body.submittedTo,
+    });
+  } catch (whErr) { logger.error({ err: whErr }, '[webhook] payroll.submitted'); }
 
   res.status(200).json({ message: 'Week marked as submitted' });
 });

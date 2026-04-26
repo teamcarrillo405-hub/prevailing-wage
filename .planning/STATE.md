@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.5
-milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 59-01-PLAN.md
-last_updated: "2026-04-14T10:28:45.263Z"
+milestone: v6.0
+milestone_name: Competitive Industry Leadership
+status: Defining requirements
+stopped_at: ~
+last_updated: "2026-04-25T00:00:00.000Z"
 progress:
-  total_phases: 37
-  completed_phases: 34
-  total_plans: 81
-  completed_plans: 83
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # State

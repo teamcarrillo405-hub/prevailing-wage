@@ -2,8 +2,10 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { OfflineBanner, OfflineBadge } from '../ui/OfflineBanner';
+import { PwaInstallBanner } from '../ui/PwaInstallBanner';
 
 function navCls({ isActive }: { isActive: boolean }) {
   return `text-sm font-medium transition-colors ${
@@ -54,6 +56,8 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-surface-page">
+      <OfflineBanner />
+      <PwaInstallBanner />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-brand-gold focus:text-nav-dark focus:font-semibold focus:rounded focus:text-sm"
@@ -80,9 +84,19 @@ export function Layout({ children }: LayoutProps) {
           {/* Desktop nav links */}
           <div className="hidden sm:flex items-center gap-6">
             <NavLink to="/dashboard" className={navCls}>Projects</NavLink>
+            <NavLink to="/field" className={({ isActive }) =>
+              `flex items-center gap-1.5 text-sm font-medium transition-colors ${isActive ? 'text-brand-gold' : 'text-gray-400 hover:text-white'}`
+            }>
+              <Clock className="w-3.5 h-3.5" />
+              Field
+            </NavLink>
             <NavLink to="/wages" className={navCls}>Wage Lookup</NavLink>
+            <NavLink to="/reports" className={navCls}>Reports</NavLink>
             <NavLink to="/team" className={navCls}>Team</NavLink>
             <NavLink to="/settings/integrations" className={navCls}>Integrations</NavLink>
+            <NavLink to="/settings/security" className={navCls}>Security</NavLink>
+            <NavLink to="/settings/api-keys" className={navCls}>API Keys</NavLink>
+            <NavLink to="/settings/webhooks" className={navCls}>Webhooks</NavLink>
             {isOwner && (
               <>
                 <NavLink to="/billing" className={navCls}>Billing</NavLink>
@@ -90,6 +104,7 @@ export function Layout({ children }: LayoutProps) {
               </>
             )}
             <div className="w-px h-4 bg-white/15" aria-hidden="true" />
+            <OfflineBadge />
             <button
               onClick={handleLogout}
               className="text-sm text-gray-400 hover:text-white transition-colors"
@@ -139,11 +154,26 @@ export function Layout({ children }: LayoutProps) {
                 Projects
               </NavLink>
               <NavLink
+                to="/field"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                <Clock className="w-4 h-4" />
+                Field Clock
+              </NavLink>
+              <NavLink
                 to="/wages"
                 onClick={() => setDrawerOpen(false)}
                 className={({ isActive }) => mobileNavCls(isActive)}
               >
                 Wage Lookup
+              </NavLink>
+              <NavLink
+                to="/reports"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                Reports
               </NavLink>
               <NavLink
                 to="/team"
@@ -158,6 +188,27 @@ export function Layout({ children }: LayoutProps) {
                 className={({ isActive }) => mobileNavCls(isActive)}
               >
                 Integrations
+              </NavLink>
+              <NavLink
+                to="/settings/security"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                Security
+              </NavLink>
+              <NavLink
+                to="/settings/api-keys"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                API Keys
+              </NavLink>
+              <NavLink
+                to="/settings/webhooks"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                Webhooks
               </NavLink>
               {isOwner && (
                 <>
@@ -193,6 +244,22 @@ export function Layout({ children }: LayoutProps) {
       <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 page-enter">
         {children}
       </main>
+
+      {/* Footer — public links */}
+      <footer className="border-t border-gray-200 mt-12 py-6 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
+          <p className="text-xs text-gray-400">&copy; 2026 PrevWage</p>
+          <div className="flex flex-wrap gap-5">
+            <Link to="/case-studies" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Case Studies</Link>
+            <Link to="/government" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Government</Link>
+            <Link to="/contact" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Contact</Link>
+            <Link to="/reviews" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Reviews</Link>
+            <Link to="/security" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Security Policy</Link>
+            <Link to="/pricing" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Pricing</Link>
+            <Link to="/api-docs" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">API Docs</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

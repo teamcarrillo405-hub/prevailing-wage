@@ -93,3 +93,37 @@ export function ReportsSkeleton() {
     </div>
   );
 }
+
+export function IntegrationsSkeleton() {
+  return (
+    <div className="space-y-6 p-0">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="rounded-xl border border-gray-200 p-6 space-y-4 bg-white">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <SkeletonBlock className="h-5 w-48" />
+              <SkeletonBlock className="h-4 w-72" />
+            </div>
+            <SkeletonBlock className="h-6 w-20 rounded-full" />
+          </div>
+          <SkeletonBlock className="h-9 w-40" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SettingsSkeleton() {
+  return (
+    <div className="space-y-6 p-6">
+      <SkeletonBlock className="h-8 w-40" />
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="space-y-2">
+          <SkeletonBlock className="h-4 w-32" />
+          <SkeletonBlock className="h-10 w-full rounded-lg" />
+        </div>
+      ))}
+      <SkeletonBlock className="h-10 w-28 rounded-lg" />
+    </div>
+  );
+}

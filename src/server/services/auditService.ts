@@ -1,6 +1,23 @@
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
+import { desc, eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { auditLogs } from '../db/schema.js';
+
+/**
+ * Phase 79 — Hash-chain entry hash (SOC 2 SEC-04).
+ * SHA-256 of the canonical join id|action|previousHash|createdAt.
+ * Exported for the integrity-check endpoint to recompute and compare.
+ */
+export function computeAuditEntryHash(
+  id: string,
+  action: string,
+  previousHash: string | null,
+  createdAt: string,
+): string {
+  return createHash('sha256')
+    .update(`${id}|${action}|${previousHash ?? ''}|${createdAt}`, 'utf8')
+    .digest('hex');
+}
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -63,6 +80,16 @@ export async function insertAuditLog(input: InsertAuditLogInput): Promise<void> 
   const id = randomUUID();
   const createdAt = new Date().toISOString();
 
+  // Phase 79: Pull the most recent entry's hash for chaining. NULL means
+  // genesis (or all prior rows are pre-Phase-79 backfill — also OK).
+  const [prev] = await db
+    .select({ entryHash: auditLogs.entryHash })
+    .from(auditLogs)
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(1);
+  const previousHash: string | null = prev?.entryHash ?? null;
+  const entryHash = computeAuditEntryHash(id, input.action, previousHash, createdAt);
+
   // Detect SSN presence for meta enrichment (NFR-04)
   let ssnDetected = false;
 
@@ -106,5 +133,88 @@ export async function insertAuditLog(input: InsertAuditLogInput): Promise<void> 
     diff:       diffPayload,
     snapshot:   snapshotPayload,
     meta:       metaPayload,
+    previousHash,
+    entryHash,
   });
+}
+
+// ── Phase 79: Hash-chain integrity walk ─────────────────────────────────
+
+export interface IntegrityCheckResult {
+  valid: boolean;
+  scanned: number;
+  brokenAt?: { id: string; createdAt: string; reason: string };
+}
+
+/**
+ * Walk the audit_logs chain (optionally scoped to a project) in chronological
+ * order, recomputing each entryHash and verifying it matches what was stored
+ * AND that previousHash references the prior row's entryHash.
+ *
+ * Pre-Phase-79 rows (entryHash IS NULL) are skipped — the chain starts at the
+ * first row that carries an entryHash.
+ */
+export async function verifyAuditChain(
+  projectId?: string | null,
+  limit = 1000,
+): Promise<IntegrityCheckResult> {
+  const db = getDb();
+  const baseQuery = db.select().from(auditLogs);
+  const rows = projectId
+    ? await baseQuery
+        .where(eq(auditLogs.projectId, projectId))
+        // Use ascending createdAt so the chain replays in insertion order.
+        .orderBy(auditLogs.createdAt)
+        .limit(limit)
+    : await baseQuery.orderBy(auditLogs.createdAt).limit(limit);
+
+  let lastHash: string | null = null;
+  let scanned = 0;
+  let chainStarted = false;
+
+  for (const row of rows as Array<typeof auditLogs.$inferSelect>) {
+    if (!row.entryHash) {
+      // Pre-Phase-79 backfill row — skip, but DO NOT advance lastHash.
+      continue;
+    }
+    scanned++;
+
+    if (!chainStarted) {
+      // First chained row — its previousHash should be null OR match the
+      // entryHash of the most recent pre-chain row (which we did not track
+      // here). We only enforce internal consistency from this point onward.
+      chainStarted = true;
+    } else if (row.previousHash !== lastHash) {
+      return {
+        valid: false,
+        scanned,
+        brokenAt: {
+          id: row.id,
+          createdAt: row.createdAt,
+          reason: 'previous_hash_mismatch',
+        },
+      };
+    }
+
+    const recomputed = computeAuditEntryHash(
+      row.id,
+      row.action,
+      row.previousHash,
+      row.createdAt,
+    );
+    if (recomputed !== row.entryHash) {
+      return {
+        valid: false,
+        scanned,
+        brokenAt: {
+          id: row.id,
+          createdAt: row.createdAt,
+          reason: 'entry_hash_mismatch',
+        },
+      };
+    }
+    lastHash = row.entryHash;
+  }
+
+  return { valid: true, scanned };
 }

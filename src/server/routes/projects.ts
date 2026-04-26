@@ -75,6 +75,11 @@ const UpdateProjectSchema = z.object({
   // Phase 70 — Apprenticeship ratio enforcement
   apprenticeshipRequirements: z.string().optional().nullable(),
   isIraIijaProject: z.boolean().optional(),
+  // Phase 75 — GPS clock-in settings
+  gpsClockInEnabled: z.boolean().optional(),
+  gpsLatitude: z.number().min(-90).max(90).optional().nullable(),
+  gpsLongitude: z.number().min(-180).max(180).optional().nullable(),
+  gpsRadiusMeters: z.number().min(50).max(10000).optional(),
 });
 
 // POST /api/projects — create a project
@@ -232,6 +237,11 @@ router.patch('/:id', async (req, res) => {
       ...(updates.njPwcNumber !== undefined && { njPwcNumber: updates.njPwcNumber }),
       ...(updates.njContractId !== undefined && { njContractId: updates.njContractId }),
       ...(resolvedProjectSettings !== undefined && { projectSettings: resolvedProjectSettings }),
+      // Phase 75 — GPS clock-in settings
+      ...(updates.gpsClockInEnabled !== undefined && { gpsClockInEnabled: updates.gpsClockInEnabled }),
+      ...(updates.gpsLatitude !== undefined && { gpsLatitude: updates.gpsLatitude }),
+      ...(updates.gpsLongitude !== undefined && { gpsLongitude: updates.gpsLongitude }),
+      ...(updates.gpsRadiusMeters !== undefined && { gpsRadiusMeters: updates.gpsRadiusMeters }),
       updatedAt: now,
     })
     .where(eq(projects.id, req.params.id));

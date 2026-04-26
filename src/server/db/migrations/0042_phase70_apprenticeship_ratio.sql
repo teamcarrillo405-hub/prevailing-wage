@@ -1,4 +1,3 @@
-ALTER TABLE `projects` ADD `apprenticeship_requirements` text;--> statement-breakpoint
-ALTER TABLE `projects` ADD `is_ira_iija_project` integer DEFAULT false;--> statement-breakpoint
-ALTER TABLE `workers` ADD `apprenticeship_program_name` text;--> statement-breakpoint
-ALTER TABLE `workers` ADD `rapids_number` text;
+-- Phase 70 apprenticeship columns were already included in 0041_qbo_tokens.sql.
+-- This migration is intentionally a no-op to avoid duplicate column errors.
+SELECT 1;

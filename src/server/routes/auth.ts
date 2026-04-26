@@ -10,6 +10,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { validateToken } from '../services/inviteService.js';
 import { insertSecurityEvent, insertLoginAttempt } from '../db/auditHelpers.js';
+import { verifyTotpToken, consumeBackupCode } from '../services/mfaService.js';
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -80,7 +81,8 @@ authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (r
     updatedAt: now,
   });
 
-  const token = await createSessionToken({ userId: id, email });
+  // sessionVersion defaults to 0 on insert
+  const token = await createSessionToken({ userId: id, email, sv: 0 });
   res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
   void insertLoginAttempt({ email, success: true, ipAddress: req.ip });
   void insertSecurityEvent({ userId: id, eventType: 'register', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined });
@@ -107,10 +109,94 @@ authRouter.post('/login', loginLimiter, validate(LoginSchema), async (req, res) 
     return;
   }
 
-  const token = await createSessionToken({ userId: user.id, email: user.email });
+  // Phase 78: If MFA is enabled, do NOT issue a JWT yet. Tell the client to
+  // collect a TOTP code (or backup code) and call /api/auth/mfa-login.
+  if (user.totpEnabled) {
+    void insertSecurityEvent({
+      userId: user.id,
+      eventType: 'login_password_ok_mfa_required',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string | undefined,
+    });
+    res.status(200).json({ data: { requiresMfa: true, userId: user.id } });
+    return;
+  }
+
+  const token = await createSessionToken({ userId: user.id, email: user.email, sv: user.sessionVersion ?? 0 });
   res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
   void insertLoginAttempt({ email, success: true, ipAddress: req.ip });
   void insertSecurityEvent({ userId: user.id, eventType: 'login_success', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined });
+  res.status(200).json({ data: { user: { id: user.id, email: user.email } } });
+});
+
+// ── POST /api/auth/mfa-login ──────────────────────────────────────────────
+// Second-factor step. Body: { userId, token } where `token` is either a
+// 6-digit TOTP or an 8-char backup code. Issues the session JWT on success.
+const MfaLoginSchema = z.object({
+  userId: z.string().min(1),
+  token:  z.string().min(6).max(64),
+});
+
+const mfaLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: () => process.env.NODE_ENV === 'test' ? 100_000 : 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many MFA attempts. Please try again in 15 minutes.' },
+});
+
+authRouter.post('/mfa-login', mfaLoginLimiter, validate(MfaLoginSchema), async (req, res) => {
+  const { userId, token: mfaToken } = req.body as z.infer<typeof MfaLoginSchema>;
+  const db = getDb();
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user || !user.totpEnabled || !user.totpSecret) {
+    res.status(400).json({ error: 'MFA is not enabled for this user' });
+    return;
+  }
+
+  // Try TOTP first, then backup code (one-time consume).
+  let method: 'totp' | 'backup_code' | null = null;
+  if (verifyTotpToken(user.totpSecret, mfaToken)) {
+    method = 'totp';
+  } else {
+    const backupResult = consumeBackupCode(user.totpBackupCodes ?? null, mfaToken);
+    if (backupResult.valid) {
+      method = 'backup_code';
+      await db
+        .update(users)
+        .set({ totpBackupCodes: backupResult.remaining, updatedAt: new Date().toISOString() })
+        .where(eq(users.id, userId));
+    }
+  }
+
+  if (!method) {
+    void insertLoginAttempt({
+      email: user.email,
+      success: false,
+      ipAddress: req.ip,
+      failureReason: 'mfa_invalid',
+    });
+    void insertSecurityEvent({
+      userId,
+      eventType: 'mfa_login_failure',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string | undefined,
+    });
+    res.status(401).json({ error: 'Invalid verification code' });
+    return;
+  }
+
+  const sessionToken = await createSessionToken({ userId: user.id, email: user.email, sv: user.sessionVersion ?? 0 });
+  res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
+  void insertLoginAttempt({ email: user.email, success: true, ipAddress: req.ip });
+  void insertSecurityEvent({
+    userId,
+    eventType: 'login_success',
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'] as string | undefined,
+    metadata: { mfaMethod: method },
+  });
   res.status(200).json({ data: { user: { id: user.id, email: user.email } } });
 });
 
@@ -192,8 +278,8 @@ authRouter.post('/accept-invite', validate(AcceptInviteSchema), async (req, res)
     .set({ acceptedAt: now })
     .where(eq(teamInvites.id, invite.id));
 
-  // Create session and log in
-  const sessionToken = await createSessionToken({ userId: newUserId, email: invite.inviteeEmail });
+  // Create session and log in (sessionVersion defaults to 0 on insert)
+  const sessionToken = await createSessionToken({ userId: newUserId, email: invite.inviteeEmail, sv: 0 });
   res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
   void insertSecurityEvent({ userId: newUserId, eventType: 'invite_accepted', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined, metadata: { inviteToken: token.slice(0, 8) + '...' } });
   res.status(201).json({ data: { user: { id: newUserId, email: invite.inviteeEmail } } });

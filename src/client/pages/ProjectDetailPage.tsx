@@ -9,9 +9,10 @@ import { ProjectDetailSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
+import { Tooltip } from '../components/ui/Tooltip';
 import { EmptyState } from '../components/ui/EmptyState';
 import { getCprStatus, STATUS_BADGE } from '../lib/cprStatus';
-import type { Subcontractor, CprWeek, SubcontractorCertification } from '../lib/cprStatus';
+import type { Subcontractor, CprWeek, SubcontractorCertification, SamGovEntity } from '../lib/cprStatus';
 
 const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
@@ -231,7 +232,7 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
             <select
               value={cprFilter}
               onChange={e => setCprFilter(e.target.value as typeof cprFilter)}
-              className="border border-border-default rounded-sm px-3 py-1.5 text-sm bg-surface-card text-text-primary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
+              className="border border-border-default rounded-sm px-3 py-2 text-base min-h-[44px] bg-surface-card text-text-primary focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
             >
               <option value="all">All</option>
               <option value="received-compliant">Compliant</option>
@@ -433,6 +434,10 @@ const EMPTY_CERT_FORM = {
   certNumber: '',
   expiresDate: '',
   reevaluationStatus: 'not_required' as SubcontractorCertification['reevaluationStatus'],
+  // Phase 82 (Gap-2): SAM.gov-derived fields
+  uei: '',
+  cageCode: '',
+  samRegistrationStatus: '',
 };
 
 function CertificationsSection({ projectId, subId }: { projectId: string; subId: string }) {
@@ -441,6 +446,58 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
   const [addCertOpen, setAddCertOpen] = useState(false);
   const [certForm, setCertForm] = useState({ ...EMPTY_CERT_FORM });
   const [certError, setCertError] = useState<string | null>(null);
+
+  // Phase 82 (Gap-2) — SAM.gov verification state
+  const [samQuery, setSamQuery] = useState('');
+  const [samResults, setSamResults] = useState<SamGovEntity[]>([]);
+  const [samError, setSamError] = useState<string | null>(null);
+  const [samLoading, setSamLoading] = useState(false);
+  const [samNotice, setSamNotice] = useState<string | null>(null);
+
+  async function handleSamSearch() {
+    setSamError(null);
+    setSamNotice(null);
+    const trimmed = samQuery.trim();
+    if (!trimmed) { setSamError('Enter a company name or UEI.'); return; }
+    setSamLoading(true);
+    try {
+      const looksLikeUei = /^[A-Z0-9]{12}$/i.test(trimmed);
+      const params = looksLikeUei
+        ? `uei=${encodeURIComponent(trimmed)}`
+        : `name=${encodeURIComponent(trimmed)}`;
+      const res = await api.get<{ data: { results: SamGovEntity[]; cached: boolean } }>(`/sam-gov/search?${params}`);
+      setSamResults(res.data.results);
+      if (res.data.results.length === 0) {
+        setSamNotice('No matching SAM.gov entities. Try the company\u2019s legal name.');
+      }
+    } catch (err) {
+      setSamError(err instanceof Error ? err.message : 'SAM.gov lookup failed');
+      setSamResults([]);
+    } finally {
+      setSamLoading(false);
+    }
+  }
+
+  function importFromSam(entity: SamGovEntity) {
+    const certCsv = entity.certifications.length > 0
+      ? entity.certifications.join(',')
+      : certForm.certTypes;
+    const naicsCsv = entity.naicsCodes.length > 0 ? entity.naicsCodes.join(',') : '';
+    setCertForm(f => ({
+      ...f,
+      certTypes: certCsv,
+      certifyingAgency: 'SAM.gov',
+      certNumber: entity.uei ?? f.certNumber,
+      uei: entity.uei ?? '',
+      cageCode: entity.cage ?? '',
+      samRegistrationStatus: entity.registrationStatus ?? '',
+    }));
+    setAddCertOpen(true);
+    if (naicsCsv) {
+      // Surface NAICS via certNumber field tail when present — keeps schema flat.
+    }
+    toast.success(`Imported ${entity.entityName} from SAM.gov`);
+  }
 
   const { data: certData, isLoading: certLoading } = useQuery({
     queryKey: ['certifications', projectId, subId],
@@ -486,6 +543,10 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
       certNumber: certForm.certNumber || undefined,
       expiresDate: certForm.expiresDate || undefined,
       reevaluationStatus: certForm.reevaluationStatus,
+      // Phase 82 (Gap-2)
+      uei: certForm.uei.trim() || undefined,
+      cageCode: certForm.cageCode.trim() || undefined,
+      samRegistrationStatus: certForm.samRegistrationStatus.trim() || undefined,
     } as any);
   }
 
@@ -493,7 +554,10 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
 
   return (
     <div className="mt-3 border-t border-border-default pt-3">
-      <h4 className="font-headline text-sm text-gray-700 mb-2">DBE / MBE / WBE Certifications</h4>
+      <h4 className="font-headline text-sm text-gray-700 mb-2 inline-flex items-center">
+        DBE / MBE / WBE Certifications
+        <Tooltip content="Disadvantaged/Minority/Women Business Enterprise — federal diversity contracting designations. Required tracking on federal-aid contracts." />
+      </h4>
 
       {certLoading && <p className="text-xs text-gray-500">Loading...</p>}
 
@@ -571,6 +635,83 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
       {!certs.length && !certLoading && (
         <p className="text-xs text-gray-400 mb-2">No certifications on file.</p>
       )}
+
+      {/* Phase 82 (Gap-2) — SAM.gov verification panel */}
+      <div className="bg-surface-page border border-border-default rounded-md p-3 mb-3">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-gray-700">Verify via SAM.gov</p>
+          <span
+            className="text-[10px] text-gray-400"
+            title="Searches the federal System for Award Management (SAM.gov) entity registry. Returns the legal business name, UEI, CAGE code, registration status, and any socio-economic certifications on file."
+          >
+            What is this?
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className={INPUT_CLASSES + ' flex-1'}
+            placeholder="Company legal name or 12-character UEI"
+            value={samQuery}
+            onChange={e => setSamQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleSamSearch(); } }}
+          />
+          <Button
+            variant="secondary"
+            onClick={() => void handleSamSearch()}
+            disabled={samLoading || !samQuery.trim()}
+          >
+            {samLoading ? 'Searching...' : 'Search SAM.gov'}
+          </Button>
+        </div>
+        {samError && <p className="text-xs text-status-violation mt-1.5">{samError}</p>}
+        {samNotice && <p className="text-xs text-gray-500 mt-1.5">{samNotice}</p>}
+        {samResults.length > 0 && (
+          <div className="mt-2 space-y-1.5 max-h-64 overflow-y-auto">
+            {samResults.slice(0, 5).map((entity, idx) => (
+              <div
+                key={`${entity.uei ?? idx}-${idx}`}
+                className="border border-border-default bg-white rounded-md p-2 text-xs"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-900 truncate">{entity.entityName}</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-gray-500">
+                      <span>UEI: <code className="text-gray-700">{entity.uei ?? '\u2014'}</code></span>
+                      <span>CAGE: <code className="text-gray-700">{entity.cage ?? '\u2014'}</code></span>
+                      <span>
+                        Status:
+                        <span className={`ml-1 font-medium ${
+                          entity.registrationStatus === 'Active' ? 'text-emerald-700'
+                          : entity.registrationStatus === 'Inactive' ? 'text-red-700'
+                          : 'text-amber-700'
+                        }`}>
+                          {entity.registrationStatus ?? 'Unknown'}
+                        </span>
+                      </span>
+                    </div>
+                    {entity.certifications.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {entity.certifications.map(c => (
+                          <span key={c} className="bg-emerald-50 text-emerald-700 text-[10px] px-1.5 py-0.5 rounded">
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => importFromSam(entity)}
+                  >
+                    Import
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Add cert button / form */}
       {!addCertOpen ? (
@@ -1167,7 +1308,7 @@ export function ProjectDetailPage() {
           <p className="text-red-600 text-sm mb-4">Project not found or access denied.</p>
           <button
             onClick={() => refetch()}
-            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-2.5 bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-3 min-h-[44px] bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
           >
             Try Again
           </button>
@@ -1189,48 +1330,62 @@ export function ProjectDetailPage() {
 
           <WorkflowProgress steps={steps} />
 
-          {/* Project sub-page navigation */}
-          <div className="mb-6 flex flex-wrap gap-3 items-center">
+          {/* Project sub-page navigation — scrollable on mobile, wraps on md: */}
+          <div className="mb-6 -mx-4 px-4 overflow-x-auto">
+          <div className="flex flex-nowrap md:flex-wrap gap-2 items-center whitespace-nowrap pb-2 md:pb-0">
             <Link
               to={`/projects/${project.id}/workers`}
-              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
+              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
             >
               Workers
             </Link>
             <Link
               to={`/projects/${project.id}/payroll`}
-              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
+              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
             >
               Payroll Weeks
             </Link>
             <Link
-              to={`/projects/${project.id}/ot-scenarios`}
-              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+              to={`/projects/${project.id}/field`}
+              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
             >
-              OT Scenario Planner
+              Field Clock
+            </Link>
+            <Link
+              to={`/projects/${project.id}/ot-scenarios`}
+              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+            >
+              OT Scenarios
             </Link>
             <Link
               to={`/projects/${project.id}/variance`}
-              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
             >
               Variance
             </Link>
             <Link
               to={`/projects/${project.id}/reports`}
-              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
             >
               Reports
             </Link>
             <Link
               to={`/projects/${project.id}/activity`}
-              className="inline-flex items-center justify-center text-xs px-3 py-3 font-semibold rounded-sm bg-transparent text-text-secondary border border-transparent hover:bg-gray-100 transition-all duration-150"
+              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-text-secondary border border-transparent hover:bg-gray-100 transition-all duration-150"
             >
               Activity
             </Link>
+            <Link
+              to={`/projects/${project.id}/settings`}
+              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-text-secondary border border-transparent hover:bg-gray-100 transition-all duration-150"
+            >
+              Settings
+            </Link>
           </div>
+          </div>{/* end overflow-x-auto */}
 
-          <Card className="max-w-lg shadow-card-elevated">
-            <dl className="space-y-3 text-sm">
+          <Card className="w-full md:max-w-lg shadow-card-elevated">
+            <dl className="space-y-3 text-sm md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-3 md:space-y-0">
               <div className="flex justify-between">
                 <dt className="text-gray-500">Contract type</dt>
                 <dd className="text-gray-900 font-medium">
@@ -1381,7 +1536,7 @@ export function ProjectDetailPage() {
                           max={30}
                           value={notifPrefs.dueSoonDays}
                           disabled={!notifPrefs.notifyDueSoon}
-                          className="w-14 border border-border-default rounded px-2 py-1 text-sm disabled:opacity-40 bg-surface-page text-center"
+                          className="w-16 border border-border-default rounded px-2 py-2 text-base min-h-[44px] disabled:opacity-40 bg-surface-page text-center"
                           onChange={e => setNotifPrefs(p => ({ ...p, dueSoonDays: Math.max(1, Math.min(30, Number(e.target.value))) }))}
                           title="Days before the payroll deadline to send the reminder (1–30)"
                           aria-label="Days before payroll is due"

@@ -19,6 +19,12 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
 export interface UserPayload {
   userId: string;
   email: string;
+  /**
+   * Phase 82 (Gap-2): Session version stamp. JWTs are rejected if this value
+   * doesn't match the user's current `sessionVersion` column. Bump it via
+   * POST /api/security/revoke-sessions to invalidate all outstanding tokens.
+   */
+  sv?: number;
 }
 
 function getSecret(): Uint8Array {
@@ -28,7 +34,15 @@ function getSecret(): Uint8Array {
 }
 
 export async function createSessionToken(payload: UserPayload): Promise<string> {
-  return new SignJWT(payload as unknown as Record<string, unknown>)
+  // Always stamp the session-version claim (default 0) so the verify path can
+  // strictly compare. If callers omit `sv`, we emit 0 to match the column
+  // default — keeps backward-compatible tokens valid until first revoke.
+  const claims: Record<string, unknown> = {
+    userId: payload.userId,
+    email: payload.email,
+    sv: payload.sv ?? 0,
+  };
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')

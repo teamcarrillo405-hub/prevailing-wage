@@ -281,6 +281,41 @@
       "when": 1777144804597,
       "tag": "0039_same_the_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1777146622469,
+      "tag": "0040_low_pretty_boy",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1745971200000,
+      "tag": "0041_week_photos",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1777372800000,
+      "tag": "0042_phase78_mfa_audit_chain",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1745971300000,
+      "tag": "0043_api_keys_webhooks",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1746057600000,
+      "tag": "0053_session_version_sam_gov",
+      "breakpoints": true
     }
   ]
 }

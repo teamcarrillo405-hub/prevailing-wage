@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { MfaChallenge } from './MfaChallenge';
 
 const LoginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -18,6 +19,9 @@ export function LoginForm() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
+  // Phase 78 — when the server responds with requiresMfa we render the
+  // MfaChallenge component inline instead of redirecting.
+  const [mfaUserId, setMfaUserId] = useState<string | null>(null);
 
   const {
     register,
@@ -28,11 +32,25 @@ export function LoginForm() {
   async function onSubmit(data: LoginFields) {
     setApiError(null);
     try {
-      await login(data.email, data.password);
+      const result = await login(data.email, data.password);
+      if (result.status === 'mfa_required') {
+        setMfaUserId(result.userId);
+        return;
+      }
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Login failed');
     }
+  }
+
+  if (mfaUserId) {
+    return (
+      <MfaChallenge
+        userId={mfaUserId}
+        onSuccess={() => navigate('/dashboard', { replace: true })}
+        onCancel={() => { setMfaUserId(null); setApiError(null); }}
+      />
+    );
   }
 
   return (

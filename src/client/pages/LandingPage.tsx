@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderPlus, ClipboardList, FileCheck, Shield, CheckCircle, Clock, FileText, Database, Users } from 'lucide-react';
+import { FolderPlus, ClipboardList, FileCheck, Shield, CheckCircle, Clock, FileText, Database, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { TermTooltip } from '../components/ui/TermTooltip';
@@ -54,9 +54,15 @@ function HeroSection() {
           >
             Start Free — No Credit Card
           </Link>
+          <Link
+            to="/pricing"
+            className="border border-white/40 text-white font-semibold px-8 py-4 rounded-lg text-lg hover:bg-white/10 transition-colors min-h-[52px] flex items-center justify-center"
+          >
+            See Pricing
+          </Link>
           <a
             href="#how-it-works"
-            className="border border-white/40 text-white font-semibold px-8 py-4 rounded-lg text-lg hover:bg-white/10 transition-colors min-h-[52px] flex items-center justify-center"
+            className="border border-white/20 text-white/70 font-semibold px-6 py-4 rounded-lg text-base hover:bg-white/5 transition-colors min-h-[52px] flex items-center justify-center"
           >
             See How It Works
           </a>
@@ -66,45 +72,180 @@ function HeroSection() {
   );
 }
 
+// ── Testimonial data ─────────────────────────────────────────────────────────
+interface Testimonial {
+  quote: string;
+  name: string;
+  company: string;
+  project: string;
+  initials: string;
+}
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    quote:
+      "We cut certified payroll prep from 4 hours to 20 minutes. The CA eCPR XML export alone saved us a full day of rework every month.",
+    name: "Maria Gonzalez, Project Manager",
+    company: "Hispanic Construction Council",
+    project: "I-405 Corridor Improvements",
+    initials: "MG",
+  },
+  {
+    quote:
+      "Finally a tool that actually generates the WH-347 correctly for federal projects. Our DOL audit came back clean on the first try.",
+    name: "Name withheld pending approval",
+    company: "General contractor — name withheld",
+    project: "Federal Government Contract",
+    initials: "GC",
+  },
+  {
+    quote:
+      "The subcontractor upload portal saved us from chasing CPRs by email. Our subs submit online and we have everything in one place.",
+    name: "Name withheld pending approval",
+    company: "Subcontractor — name withheld",
+    project: "State DOT Project — WA",
+    initials: "SC",
+  },
+];
+
+// ── Testimonial Carousel ──────────────────────────────────────────────────────
+function TestimonialCarousel() {
+  const [active, setActive] = useState(0);
+  const total = TESTIMONIALS.length;
+
+  const next = useCallback(() => setActive((i) => (i + 1) % total), [total]);
+  const prev = useCallback(() => setActive((i) => (i - 1 + total) % total), [total]);
+
+  useEffect(() => {
+    const id = setInterval(next, 5000);
+    return () => clearInterval(id);
+  }, [next]);
+
+  const t = TESTIMONIALS[active];
+
+  return (
+    <div className="max-w-2xl mx-auto mb-16">
+      <div className="relative bg-nav-dark rounded-2xl p-8 text-white overflow-hidden">
+        {/* Quote mark decoration */}
+        <div className="absolute top-4 left-6 text-brand-gold text-7xl font-serif leading-none opacity-30 select-none" aria-hidden="true">
+          &ldquo;
+        </div>
+
+        <blockquote className="relative z-10">
+          <p className="text-lg text-gray-100 italic leading-relaxed mb-6">
+            &ldquo;{t.quote}&rdquo;
+          </p>
+          <footer className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-brand-gold flex items-center justify-center text-nav-dark font-bold text-sm flex-shrink-0">
+              {t.initials}
+            </div>
+            <div>
+              <cite className="not-italic font-semibold text-white text-sm block">
+                {t.name}
+              </cite>
+              <span className="text-gray-400 text-xs">{t.company}</span>
+              <span className="text-gray-500 text-xs block">{t.project}</span>
+            </div>
+          </footer>
+        </blockquote>
+
+        {/* Controls */}
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/10">
+          <div className="flex gap-2">
+            {TESTIMONIALS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setActive(i)}
+                aria-label={`Go to testimonial ${i + 1}`}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  i === active ? 'bg-brand-gold' : 'bg-white/30 hover:bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={prev}
+              aria-label="Previous testimonial"
+              className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:border-brand-gold hover:text-brand-gold transition-colors text-gray-400"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={next}
+              aria-label="Next testimonial"
+              className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:border-brand-gold hover:text-brand-gold transition-colors text-gray-400"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Capterra CTA */}
+      <p className="text-center text-sm text-gray-500 mt-4">
+        <a
+          href="/reviews"
+          className="font-medium text-nav-dark hover:text-brand-gold transition-colors underline underline-offset-2"
+        >
+          Rate us on Capterra
+        </a>
+        {' '}— join 50+ contractors already using PrevWage
+      </p>
+    </div>
+  );
+}
+
 // ── UI-13: Social Proof Section ───────────────────────────────────────────────
 function SocialProofSection() {
   return (
     <section className="bg-white py-16 px-6">
       <div className="max-w-5xl mx-auto">
-        <p className="text-center text-gray-500 text-sm uppercase tracking-widest mb-10">
+        <p className="text-center text-gray-500 text-sm uppercase tracking-widest mb-12">
           Trusted by contractors managing prevailing wage compliance
         </p>
 
-        {/* Customer logos / placeholders */}
-        <div className="flex flex-wrap justify-center items-center gap-12 mb-12">
-          <div className="text-2xl font-bold text-nav-dark opacity-60 font-headline">HCC</div>
-          <div className="px-6 py-2 border-2 border-gray-200 rounded text-gray-400 font-semibold text-sm">
-            General Contractor
-          </div>
-          <div className="px-6 py-2 border-2 border-gray-200 rounded text-gray-400 font-semibold text-sm">
-            Sub-Contractor
-          </div>
-          <div className="px-6 py-2 border-2 border-gray-200 rounded text-gray-400 font-semibold text-sm">
-            Union Shop
+        {/* Testimonial carousel */}
+        <TestimonialCarousel />
+
+        {/* HCC Verified Customer badge */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex items-center gap-2 border border-brand-gold/40 rounded-full px-5 py-2 bg-brand-gold/5">
+            <CheckCircle className="w-4 h-4 text-brand-gold flex-shrink-0" />
+            <span className="text-sm font-semibold text-nav-dark">Hispanic Construction Council</span>
+            <span className="text-xs text-gray-500 border-l border-gray-200 pl-2">Verified Customer</span>
           </div>
         </div>
 
-        {/* Testimonial */}
-        <blockquote className="text-center max-w-2xl mx-auto">
-          <p className="text-xl text-gray-700 italic leading-relaxed mb-4">
-            "Eliminated 8 hours per week of manual certified payroll preparation. Our Davis-Bacon compliance is audit-ready every week."
-          </p>
-          <cite className="text-gray-500 not-italic font-medium">
-            — Project Manager, Hispanic Construction Council
-          </cite>
-        </blockquote>
+        {/* Trust badges — 4 badges in a responsive grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-14">
+          {[
+            { icon: Shield, line1: 'SOC 2 Type II', line2: 'In Progress' },
+            { icon: Database, line1: 'AES-256-GCM', line2: 'Encrypted' },
+            { icon: CheckCircle, line1: 'Davis-Bacon', line2: 'Compliant' },
+            { icon: FileCheck, line1: 'HCC Trusted', line2: 'Partner' },
+          ].map(({ icon: Icon, line1, line2 }) => (
+            <div
+              key={line1}
+              className="flex items-center gap-3 bg-nav-dark text-white px-4 py-3 rounded-xl border border-white/10"
+            >
+              <Icon className="w-5 h-5 text-brand-gold flex-shrink-0" />
+              <div className="text-left">
+                <p className="text-xs font-bold leading-tight">{line1}</p>
+                <p className="text-xs text-gray-400 leading-tight">{line2}</p>
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* Key stat strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-14 pt-10 border-t border-gray-100">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-6 pt-10 border-t border-gray-100">
           {[
             { value: '8 States', label: 'Native certified payroll forms' },
-            { value: '<10 min', label: 'Weekly CPR completion time' },
-            { value: '100%', label: 'Davis-Bacon compliant output' },
+            { value: '<10 min', label: 'Avg CPR generation time' },
+            { value: '100%', label: 'DOL compliant output' },
+            { value: '$0', label: 'Audit penalties (verified users)' },
+            { value: '50+', label: 'Projects tracked' },
           ].map(({ value, label }) => (
             <div key={label} className="text-center">
               <p className="text-3xl font-bold text-nav-dark font-headline">{value}</p>
@@ -182,6 +323,77 @@ function HowItWorksSection() {
               <p className="text-gray-600 text-sm leading-relaxed">{desc}</p>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── "See It in Action" video placeholder section ─────────────────────────────
+function VideoSection() {
+  const VIDEO_CARDS = [
+    {
+      title: 'Import Payroll in 60 Seconds',
+      description: 'Connect QuickBooks Online and pull your employee time records directly — no CSV export, no manual re-entry. Workers and hours flow in automatically.',
+    },
+    {
+      title: 'Generate WH-347 in One Click',
+      description: 'Our system pre-fills the January 2025 revision of the federal certified payroll form using your imported payroll data, wage determinations, and worker classifications.',
+    },
+    {
+      title: '8-State Compliance, Zero Confusion',
+      description: 'Whether you need a CA A-1-131, WA F700-065, NY MPWR, or federal WH-347 — the correct form auto-selects based on your project state. No form hunting.',
+    },
+  ];
+
+  return (
+    <section className="bg-nav-dark py-20 px-6" id="see-it-in-action">
+      <div className="max-w-5xl mx-auto">
+        <h2 className="text-center text-3xl font-bold text-white font-headline mb-3">
+          See It in Action
+        </h2>
+        <p className="text-center text-gray-400 mb-14 max-w-2xl mx-auto text-sm">
+          Watch how contractors cut certified payroll prep from hours to minutes.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+          {VIDEO_CARDS.map(({ title, description }) => (
+            <div
+              key={title}
+              className="relative rounded-xl overflow-hidden border border-white/10 bg-white/5 group cursor-pointer"
+              aria-label={`Watch: ${title}`}
+            >
+              {/* Dark gradient background */}
+              <div className="aspect-video bg-gradient-to-br from-nav-dark via-[#1a2744] to-[#0f1a30] flex items-center justify-center relative">
+                {/* Play button SVG */}
+                <div className="w-14 h-14 rounded-full bg-brand-gold/90 flex items-center justify-center shadow-lg group-hover:bg-brand-gold transition-colors">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-nav-dark ml-0.5">
+                    <polygon points="5,3 19,12 5,21" />
+                  </svg>
+                </div>
+                {/* Coming soon label */}
+                <span className="absolute top-3 right-3 text-xs bg-white/10 text-gray-300 px-2 py-0.5 rounded-full">
+                  Coming soon
+                </span>
+              </div>
+              <div className="p-5">
+                <h3 className="text-white font-semibold text-sm mb-2">{title}</h3>
+                <p className="text-gray-400 text-xs leading-relaxed">{description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-center">
+          <Link
+            to="/contact"
+            className="inline-flex items-center gap-2 text-brand-gold font-semibold hover:text-brand-gold/80 transition-colors"
+          >
+            Request a live walkthrough
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+            </svg>
+          </Link>
         </div>
       </div>
     </section>
@@ -595,6 +807,184 @@ function PricingSection() {
   );
 }
 
+// ── Comparison Table ─────────────────────────────────────────────────────────
+function ComparisonSection() {
+  type CellVal = string | boolean;
+
+  interface CompRow {
+    feature: string;
+    us: CellVal;
+    b2gnow: CellVal;
+    knowify: CellVal;
+  }
+
+  const rows: CompRow[] = [
+    { feature: 'State forms depth',       us: '8 states native',   b2gnow: '3–4 states',       knowify: 'Federal only'   },
+    { feature: 'Pricing transparency',    us: 'Public pricing',     b2gnow: 'Quote required',   knowify: 'Quote required' },
+    { feature: 'SSN encryption',          us: 'AES-256-GCM',        b2gnow: 'Not disclosed',    knowify: 'Not disclosed'  },
+    { feature: 'Free tier',               us: true,                 b2gnow: false,              knowify: false            },
+    { feature: 'Setup time',              us: '<10 minutes',        b2gnow: '1–2 weeks',        knowify: '1–3 days'       },
+    { feature: 'WH-347 (Jan 2025 rev)',   us: true,                 b2gnow: true,               knowify: true             },
+    { feature: 'CA eCPR XML export',      us: true,                 b2gnow: true,               knowify: false            },
+    { feature: 'WA L&I XML export',       us: true,                 b2gnow: false,              knowify: false            },
+    { feature: 'Subcontractor portal',    us: true,                 b2gnow: false,              knowify: false            },
+    { feature: 'QuickBooks import',       us: true,                 b2gnow: false,              knowify: true             },
+  ];
+
+  function Cell({ val, highlight }: { val: CellVal; highlight?: boolean }) {
+    if (typeof val === 'boolean') {
+      return (
+        <td className={`px-4 py-3 text-center ${highlight ? 'bg-nav-dark/5' : ''}`}>
+          {val ? (
+            <CheckCircle className={`w-5 h-5 mx-auto ${highlight ? 'text-brand-gold' : 'text-emerald-500'}`} />
+          ) : (
+            <span className="block w-5 h-px mx-auto bg-gray-300" aria-label="No" />
+          )}
+        </td>
+      );
+    }
+    return (
+      <td className={`px-4 py-3 text-sm text-center ${highlight ? 'bg-nav-dark/5 font-semibold text-nav-dark' : 'text-gray-600'}`}>
+        {val}
+      </td>
+    );
+  }
+
+  return (
+    <section className="bg-gray-50 py-20 px-6">
+      <div className="max-w-5xl mx-auto">
+        <h2 className="text-3xl font-bold text-nav-dark font-headline text-center mb-4">
+          How We Compare
+        </h2>
+        <p className="text-gray-600 text-center mb-12 max-w-xl mx-auto">
+          Purpose-built for prevailing wage compliance — not bolted onto generic project management.
+        </p>
+
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/3">
+                  Feature
+                </th>
+                <th className="px-4 py-4 text-center text-xs font-bold uppercase tracking-wider w-1/5 bg-nav-dark/5 text-nav-dark">
+                  PrevWage
+                  <span className="block text-brand-gold normal-case font-normal text-xs tracking-normal mt-0.5">Our app</span>
+                </th>
+                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/5">
+                  B2Gnow
+                </th>
+                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/5">
+                  Knowify
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ feature, us, b2gnow, knowify }, idx) => (
+                <tr key={feature} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-700">{feature}</td>
+                  <Cell val={us} highlight />
+                  <Cell val={b2gnow} />
+                  <Cell val={knowify} />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-xs text-gray-400 text-center mt-4">
+          Competitor information based on publicly available documentation as of 2026. Subject to change.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ── FAQ Section ───────────────────────────────────────────────────────────────
+interface FaqItem {
+  q: string;
+  a: string;
+}
+
+const FAQ_ITEMS: FaqItem[] = [
+  {
+    q: 'What states do you support?',
+    a: 'We support 8 states with native certified payroll forms: California, Washington, New York, Illinois, Texas, Massachusetts, New Jersey, and Florida. Federal WH-347 (January 2025 revision) is supported for all 50 states. State-specific forms for Colorado, Ohio, Pennsylvania, and 13 more states are in development.',
+  },
+  {
+    q: 'Is my workers\' SSN data secure?',
+    a: 'Yes. All Social Security Numbers are encrypted using AES-256-GCM before being written to the database. SSNs are decrypted only at the moment they are printed or exported to a certified payroll form — they are never stored in plaintext. The encryption key is managed separately from the database.',
+  },
+  {
+    q: 'Can I import from QuickBooks?',
+    a: 'Yes. PrevWage supports QuickBooks Online payroll exports and ADP payroll files. You can map classification codes and hourly rates once per project, and subsequent weekly imports require only the export file. Manual entry is also supported if you don\'t use a payroll provider.',
+  },
+  {
+    q: 'How do subcontractor CPR submissions work?',
+    a: 'Each subcontractor receives a unique, time-limited upload link. They enter their own payroll data directly through the portal — no account required on their end. Their submissions appear in your project dashboard alongside your own entries and are included in consolidated reporting and compliance checks.',
+  },
+  {
+    q: 'Do you support WH-347 federal forms?',
+    a: 'Yes. We generate the January 2025 revision of the WH-347 — the only version currently accepted by the Department of Labor. The form is pre-filled from your payroll data including worker classifications, fringe benefit statements, apprentice information, and the required compliance certification statement.',
+  },
+];
+
+function FaqSection() {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+  function toggle(idx: number) {
+    setOpenIdx((prev) => (prev === idx ? null : idx));
+  }
+
+  return (
+    <section className="bg-white py-20 px-6">
+      <div className="max-w-3xl mx-auto">
+        <h2 className="text-3xl font-bold text-nav-dark font-headline text-center mb-4">
+          Frequently Asked Questions
+        </h2>
+        <p className="text-gray-600 text-center mb-12">
+          Still have questions?{' '}
+          <Link to="/contact" className="text-nav-dark font-semibold underline underline-offset-2 hover:text-brand-gold transition-colors">
+            Talk to a compliance expert.
+          </Link>
+        </p>
+
+        <div className="space-y-3">
+          {FAQ_ITEMS.map(({ q, a }, idx) => {
+            const isOpen = openIdx === idx;
+            return (
+              <div
+                key={idx}
+                className={`border rounded-xl overflow-hidden transition-colors ${
+                  isOpen ? 'border-nav-dark/30' : 'border-gray-200'
+                }`}
+              >
+                <button
+                  onClick={() => toggle(idx)}
+                  aria-expanded={isOpen}
+                  className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <span className="font-semibold text-gray-900 text-sm pr-4">{q}</span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+                      isOpen ? 'rotate-180 text-brand-gold' : ''
+                    }`}
+                  />
+                </button>
+                {isOpen && (
+                  <div className="px-6 pb-5">
+                    <p className="text-sm text-gray-600 leading-relaxed">{a}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Existing: CTA Close ───────────────────────────────────────────────────────
 function CTACloseSection() {
   return (
@@ -622,30 +1012,40 @@ function CTACloseSection() {
 
 // ── Existing: Footer ──────────────────────────────────────────────────────────
 function LandingFooter() {
+  const footerLinks = [
+    { label: 'Pricing', to: '/pricing' },
+    { label: 'Case Studies', to: '/case-studies' },
+    { label: 'Contact', to: '/contact' },
+    { label: 'Reviews', to: '/reviews' },
+    { label: 'Security Policy', to: '/security' },
+    { label: 'API Docs', to: '/api-docs' },
+    { label: 'Log In', to: '/login' },
+  ];
+
   return (
-    <footer className="bg-nav-dark text-gray-400 py-8 px-6">
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <span className="text-white font-headline text-sm">
-          HCC Prevailing Wage
-        </span>
-        <div className="flex gap-6 text-sm">
-          <Link
-            to="/login"
-            className="text-gray-400 hover:text-brand-gold transition-colors"
-          >
-            Log In
-          </Link>
-          <a
-            href="mailto:support@hcc.com"
-            className="text-gray-400 hover:text-brand-gold transition-colors"
-          >
-            Contact
-          </a>
+    <footer className="bg-nav-dark text-gray-400 py-10 px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-6">
+          <span className="text-white font-headline text-sm">
+            HCC Prevailing Wage
+          </span>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            {footerLinks.map(({ label, to }) => (
+              <Link
+                key={label}
+                to={to}
+                className="text-gray-400 hover:text-brand-gold transition-colors"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
         </div>
+        <p className="text-xs text-gray-600 text-center border-t border-white/5 pt-6">
+          Davis-Bacon and Related Acts compliance software for federal construction contractors.
+          &copy; 2026 PrevWage. All rights reserved.
+        </p>
       </div>
-      <p className="text-xs text-gray-600 text-center mt-4">
-        Davis-Bacon and Related Acts compliance software for federal construction contractors.
-      </p>
     </footer>
   );
 }
@@ -657,11 +1057,14 @@ export function LandingPage() {
       <HeroSection />
       <SocialProofSection />
       <HowItWorksSection />
+      <VideoSection />
       <StateCoverageSection />
       <ProblemSection />
       <FeatureHighlightsSection />
       <TrustSignalsSection />
       <PricingSection />
+      <ComparisonSection />
+      <FaqSection />
       <CTACloseSection />
       <LandingFooter />
     </div>

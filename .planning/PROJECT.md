@@ -8,16 +8,19 @@ A web application that helps general contractors manage Davis-Bacon prevailing w
 
 A contractor can run a full project end-to-end — create project → add workers → enter payroll → generate WH-347 → submit — with no missing steps, no manual rate lookup, real-time compliance flags before submission, and a consistent branded UI that looks professional enough to hand to an auditor.
 
-## Current Milestone: v5.0 — State Coverage + Subcontractors + Reporting
+## Previous Milestone: v5.0 — State Coverage + Subcontractors + Reporting ✅ SHIPPED
 
-**Goal:** Expand certified payroll coverage to TX, FL, MA, and NJ (PDF-only, state-gated), close the CA A-1-131 gap, add GC subcontractor compliance tracking, and deepen reporting with exportable audit logs and multi-project views.
+**Delivered:** TX, FL, MA, NJ certified payroll PDFs; CA A-1-131 gap closed; subcontractor CPR tracking; audit log CSV export; multi-project compliance PDF; Pino structured logging; /api/health DB probe; payroll entry wizard; state column toggles; DOL wage live lookup; UI primitives (Input/Select/Table); 62-county state wage reference data; WD cache status page.
+
+## Current Milestone: v6.0 — Competitive Industry Leadership
+
+**Goal:** Surpass B2Gnow and Knowify on every scored dimension of COMPETITIVE_ANALYSIS.md — UI/UX, mobile/field, power features, integrations, and market credibility — making this the undisputed #1 prevailing wage platform for contractors.
 
 **Target features:**
-- CA A-1-131 PDF — close the pre-planned Phase 24 Plan 03 gap
-- TX, FL, MA, NJ certified payroll PDFs (PDF-only, state-gated, no portal XML)
-- Subcontractor tracking — GC adds subs per project, tracks CPR receipt/compliance per payroll week
-- Audit log CSV export — downloadable from ProjectActivityPage
-- Multi-project compliance PDF — snapshot of all active projects
+- Phase A — UI Polish: premium mobile-responsive treatment, onboarding tour, trust signals, 50-state coverage map on landing
+- Phase B — Power Features: QuickBooks OAuth direct sync, apprenticeship ratio enforcement per trade, DBE/MBE/WBE sub certification tracking, real-time compliance dashboard counter
+- Phase C — Mobile/Field PWA: offline-capable service worker, GPS clock-in/out, field photo capture, mobile sub CPR submission
+- Phase D — Market Credibility: SOC 2 Type II control implementation, public REST API + webhooks, government case study page, economic impact dashboard
 - Enhanced fringe report — by fund type, union local, journeyman vs apprentice
 
 ## Previous Milestone: v4.0 — Compliance Depth + Operations ✅ SHIPPED 2026-04-07

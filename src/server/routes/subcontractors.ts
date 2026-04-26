@@ -9,6 +9,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { sendSubUploadRequestEmail } from '../services/emailService.js';
+import { deliverWebhook, WEBHOOK_EVENT_SUBCONTRACTOR_CPR_RECEIVED } from '../services/webhookService.js';
 
 const router = Router();
 
@@ -388,6 +389,16 @@ router.post('/:id/subcontractors/:subId/cpr-weeks', validate(CreateCprWeekSchema
     });
   }
 
+  // Fire webhook (non-blocking)
+  void deliverWebhook(userId, WEBHOOK_EVENT_SUBCONTRACTOR_CPR_RECEIVED, {
+    event: WEBHOOK_EVENT_SUBCONTRACTOR_CPR_RECEIVED,
+    cprWeekId: id,
+    subcontractorId: subId,
+    projectId,
+    weekEndingDate: body.weekEndingDate,
+    isCompliant: body.isCompliant ?? null,
+  });
+
   res.status(201).json({ data: { cprWeek: newWeek } });
 });
 
@@ -402,6 +413,10 @@ const CreateCertSchema = z.object({
   expiresDate: z.string().optional(),
   reevaluationStatus: z.enum(['not_required', 'pending', 'cleared', 'suspended']).default('not_required'),
   selfCertified: z.boolean().default(false),
+  // Phase 82 (Gap-2) — SAM.gov-derived fields
+  uei: z.string().min(1).max(20).optional(),
+  cageCode: z.string().min(1).max(10).optional(),
+  samRegistrationStatus: z.string().max(50).optional(),
 });
 
 // GET /:id/subcontractors/:subId/certifications — list certs for a sub
@@ -478,6 +493,11 @@ router.post('/:id/subcontractors/:subId/certifications', validate(CreateCertSche
     expiresDate: body.expiresDate ?? null,
     reevaluationStatus: body.reevaluationStatus,
     selfCertified: body.selfCertified,
+    // Phase 82 (Gap-2) — SAM.gov fields persisted at create time
+    uei: body.uei ?? null,
+    cageCode: body.cageCode ?? null,
+    samRegistrationStatus: body.samRegistrationStatus ?? null,
+    samLastVerifiedAt: body.samRegistrationStatus ? now : null,
     createdAt: now,
     updatedAt: now,
   });

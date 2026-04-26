@@ -11,6 +11,7 @@ import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import type { Project } from '../utils/assertProjectAccess.js';
 import { createWorker, updateWorker, deleteWorker } from '../services/workerService.js';
+import { deliverWebhook, WEBHOOK_EVENT_WORKER_ADDED } from '../services/webhookService.js';
 
 const router = Router();
 
@@ -231,6 +232,16 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
     apprenticeshipProgramName: body.apprenticeshipProgramName,
     rapidsNumber: body.rapidsNumber,
   });
+  // Fire webhook (non-blocking)
+  const workerForWebhook = result as unknown as { id: string; name: string; createdAt: string };
+  void deliverWebhook(userId, WEBHOOK_EVENT_WORKER_ADDED, {
+    event: WEBHOOK_EVENT_WORKER_ADDED,
+    workerId: workerForWebhook.id,
+    workerName: workerForWebhook.name,
+    projectId,
+    createdAt: workerForWebhook.createdAt,
+  });
+
   res.status(201).json({ data: { worker: result } });
 });
 

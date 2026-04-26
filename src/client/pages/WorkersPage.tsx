@@ -394,7 +394,7 @@ export function WorkersPage() {
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <button onClick={() => navigate(`/projects/${projectId}`)} className="text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4 inline-block">
+        <button onClick={() => navigate(`/projects/${projectId}`)} className="text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4 inline-flex items-center min-h-[44px] px-1">
           &larr; Back to Project
         </button>
         <PageHeader title="Workers" />
@@ -429,7 +429,7 @@ export function WorkersPage() {
             <p className="text-red-600 text-sm mb-4">Failed to load workers.</p>
             <button
               onClick={() => refetch()}
-              className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-2.5 bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+              className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-3 min-h-[44px] bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
             >
               Try Again
             </button>
@@ -471,7 +471,7 @@ export function WorkersPage() {
               <button
                 key={chip.key}
                 onClick={() => setLaborFilter(chip.key as typeof laborFilter)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[36px] ${
+                className={`px-3 py-2.5 rounded-full text-sm font-medium border transition-colors min-h-[44px] ${
                   laborFilter === chip.key
                     ? 'bg-brand-navy text-white border-brand-navy'
                     : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
@@ -800,14 +800,14 @@ export function WorkersPage() {
                       <button
                         onClick={() => deleteWorker.mutate(w.id)}
                         disabled={deleteWorker.isPending}
-                        className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        className="px-4 py-3 min-h-[44px] bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
                         aria-label={`Confirm remove ${w.name}`}
                       >
                         {deleteWorker.isPending ? 'Removing...' : 'Yes, Remove'}
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                        className="px-4 py-3 min-h-[44px] text-sm text-gray-500 hover:text-gray-900 transition-colors"
                       >
                         Cancel
                       </button>

@@ -223,6 +223,19 @@ complianceRouter.get('/:weekId', requireAuth, async (req, res) => {
     } catch (err) {
       logger.error({ err: err }, '[compliance] failed to send violation alert emails:');
     }
+
+    // Best-effort webhook delivery for violation.detected — API-02
+    try {
+      const { deliverWebhook } = await import('../services/webhookService.js');
+      await deliverWebhook(userId, 'violation.detected', {
+        projectId: result.projectId,
+        weekId,
+        violationCount: result.violations.length + result.weekViolations.length,
+        hasViolations: result.hasViolations,
+      });
+    } catch (whErr) {
+      logger.error({ err: whErr }, '[webhook] violation.detected');
+    }
   }
 
   res.json(result);

@@ -33,8 +33,31 @@ export interface SubcontractorCertification {
   reevaluationStatus: 'not_required' | 'pending' | 'cleared' | 'suspended';
   selfCertified: boolean;
   documentPath: string | null;
+  // Phase 82 (Gap-2) — SAM.gov verification fields
+  uei: string | null;
+  cageCode: string | null;
+  samRegistrationStatus: string | null;
+  samLastVerifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// Phase 82 (Gap-2) — shape returned by /api/sam-gov/search and /entity/:uei
+export interface SamGovEntity {
+  entityName: string;
+  uei: string | null;
+  cage: string | null;
+  registrationStatus: string | null;
+  registrationDate: string | null;
+  expirationDate: string | null;
+  physicalAddress: {
+    line1: string | null;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+  };
+  certifications: string[];
+  naicsCodes: string[];
 }
 
 export interface CprWeek {

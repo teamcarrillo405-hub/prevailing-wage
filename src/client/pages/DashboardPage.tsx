@@ -1,8 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard, FolderOpen, AlertTriangle } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { LayoutDashboard, FolderOpen, AlertTriangle, TrendingUp, Download, FileText } from 'lucide-react';
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell,
+  AreaChart, Area,
+  PieChart, Pie,
+} from 'recharts';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { SkeletonGrid } from '../components/ui/SkeletonCard';
@@ -92,6 +97,62 @@ export function DashboardPage() {
     ),
     staleTime: 60_000,
   });
+
+  interface EconomicImpactData {
+    totalWagesByCraft: { trade: string; totalWages: number; workerCount: number; projectCount: number }[];
+    localHirePercent: number;
+    apprenticePercent: number;
+    stateBreakdown: { state: string; projectCount: number; workerCount: number; totalWages: number }[];
+    totalWagesPaid: number;
+    complianceTrend: { weekLabel: string; violations: number; compliant: number }[];
+    topViolatingProjects: { projectId: string; projectName: string; violations: number; lastViolation: string }[];
+    wageVarianceByTrade: { trade: string; avgRate: number; minRate: number; maxRate: number; deviation: number }[];
+    overtimeExposure: { projectId: string; projectName: string; dtHours: number; otHours: number; estimatedPremium: number }[];
+    apprenticeshipProgress: { trade: string; required: number; actual: number; gap: number }[];
+    submissionPunctuality: { onTime: number; late: number; missing: number; percentOnTime: number };
+    weeklyWageBurn: { weekLabel: string; wages: number; workers: number }[];
+    fringeVsBaseWage: { fringe: number; base: number; fringePercent: number };
+    projectRankings: { projectId: string; projectName: string; totalWages: number; workers: number; compliance: number }[];
+  }
+
+  // Sortable table types
+  type SortDir = 'asc' | 'desc';
+  type RankingRow = { projectId: string; projectName: string; totalWages: number; workers: number; compliance: number };
+
+  const PUNCTUALITY_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
+
+  const { data: economicData } = useQuery({
+    queryKey: ['economic-impact'],
+    queryFn: () => api.get<{ data: EconomicImpactData }>('/dashboard/economic-impact'),
+    staleTime: 5 * 60_000,
+  });
+
+  // Sortable project rankings state
+  const [rankSortKey, setRankSortKey] = useState<keyof RankingRow>('totalWages');
+  const [rankSortDir, setRankSortDir] = useState<SortDir>('desc');
+
+  function handleRankSort(key: keyof RankingRow) {
+    if (key === rankSortKey) {
+      setRankSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setRankSortKey(key);
+      setRankSortDir('desc');
+    }
+  }
+
+  const sortedRankings = useMemo(() => {
+    const rows = economicData?.data?.projectRankings ?? [];
+    return [...rows].sort((a, b) => {
+      const av = a[rankSortKey];
+      const bv = b[rankSortKey];
+      if (typeof av === 'number' && typeof bv === 'number') {
+        return rankSortDir === 'asc' ? av - bv : bv - av;
+      }
+      return rankSortDir === 'asc'
+        ? String(av).localeCompare(String(bv))
+        : String(bv).localeCompare(String(av));
+    });
+  }, [economicData?.data?.projectRankings, rankSortKey, rankSortDir]);
 
   const projects = data?.data?.projects ?? [];
 
@@ -186,17 +247,55 @@ export function DashboardPage() {
     return weeks.map(({ week, violations }) => ({ week, violations }));
   }, [summaryItemMap]);
 
-  // ── DASH-03 at-risk projects ─────────────────────────────────────────────
+  // ── DASH-03 at-risk projects — real-time polling (30s) ──────────────────
+  interface ViolationRealtimeItem {
+    id: string;
+    name: string;
+    activeViolations: number;
+    lastCheckedAt: string;
+  }
+
+  const { data: violationsData, dataUpdatedAt: violationsUpdatedAt } = useQuery({
+    queryKey: ['violations-realtime'],
+    queryFn: () => fetch('/api/dashboard/violations', { credentials: 'include' }).then(r => r.json()) as Promise<{ projects: ViolationRealtimeItem[] }>,
+    refetchInterval: 30_000,
+  });
+
+  // "Last updated X seconds ago" ticker
+  const [secondsSinceUpdate, setSecondsSinceUpdate] = useState(0);
+  const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!violationsUpdatedAt) return;
+    setSecondsSinceUpdate(0);
+    if (tickerRef.current) clearInterval(tickerRef.current);
+    tickerRef.current = setInterval(() => {
+      setSecondsSinceUpdate(Math.round((Date.now() - violationsUpdatedAt) / 1000));
+    }, 1000);
+    return () => {
+      if (tickerRef.current) clearInterval(tickerRef.current);
+    };
+  }, [violationsUpdatedAt]);
+
+  // Merge realtime violations into at-risk list — prefer live data when available
+  const realtimeViolationMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of violationsData?.projects ?? []) {
+      map.set(item.id, item.activeViolations);
+    }
+    return map;
+  }, [violationsData]);
+
   const atRiskProjects = useMemo(() => {
     return projects
       .map(p => ({
         id: p.id,
         name: p.name,
-        violationCount: summaryItemMap.get(p.id)?.violationCount ?? 0,
+        violationCount: realtimeViolationMap.get(p.id) ?? summaryItemMap.get(p.id)?.violationCount ?? 0,
       }))
       .filter(p => p.violationCount > 0)
       .sort((a, b) => b.violationCount - a.violationCount);
-  }, [projects, summaryItemMap]);
+  }, [projects, summaryItemMap, realtimeViolationMap]);
 
   const filteredProjects = useMemo(() => {
     let result = projects;
@@ -325,7 +424,7 @@ export function DashboardPage() {
         <div className="bg-brand-navy text-white rounded-xl p-8 mb-8">
           <h2 className="text-2xl font-bold mb-2">Welcome to PrevailingWage</h2>
           <p className="text-white/80 mb-6">Get your first certified payroll report in under 10 minutes.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
               { n: '1', label: 'Create a Project', desc: 'Enter project name, state, and funding type' },
               { n: '2', label: 'Add Workers', desc: 'Add workers with trade classifications' },
@@ -360,7 +459,7 @@ export function DashboardPage() {
 
       {/* DASH-01: Hero stat row — active projects, open violations, due this week */}
       {projects.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Active Projects', value: activeProjectCount, color: 'text-gray-900' },
             { label: 'Open Violations', value: totalViolations, color: totalViolations > 0 ? 'text-red-600' : 'text-emerald-600' },
@@ -395,13 +494,20 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* DASH-03: Projects-at-risk panel */}
+      {/* DASH-03: Projects-at-risk panel — 30s real-time polling */}
       {atRiskProjects.length > 0 && (
-        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-5 mb-8">
-          <h3 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Projects Needing Attention ({atRiskProjects.length})
-          </h3>
+        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-5 mb-8 md:max-w-lg">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Projects Needing Attention ({atRiskProjects.length})
+            </h3>
+            {violationsUpdatedAt > 0 && (
+              <span className="text-xs text-gray-400" aria-live="polite">
+                Updated {secondsSinceUpdate}s ago
+              </span>
+            )}
+          </div>
           <div className="space-y-2">
             {atRiskProjects.slice(0, 5).map(project => (
               <div key={project.id} className="flex items-center justify-between">
@@ -435,29 +541,29 @@ export function DashboardPage() {
       {/* Filter bar */}
       {(!isLoading && (projects.length > 0 || showArchived)) && (
         <div className="space-y-3 mb-6">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
             <input
               type="text"
               value={inputValue}
               onChange={handleSearchChange}
               placeholder="Search projects..."
-              className="text-sm border border-border-default rounded-xl px-3.5 py-2 bg-white text-text-primary placeholder:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold w-56 shadow-card"
+              className="text-base border border-border-default rounded-xl px-3.5 py-3 bg-white text-text-primary placeholder:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold w-full sm:w-56 shadow-card min-h-[44px]"
             />
             <select
               value={fundingFilter}
               onChange={handleFundingChange}
-              className="text-sm border border-border-default rounded-xl px-3.5 py-2 bg-white text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold shadow-card"
+              className="text-base border border-border-default rounded-xl px-3.5 py-3 bg-white text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold shadow-card min-h-[44px] w-full sm:w-auto"
             >
               {FUNDING_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none ml-auto">
+            <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none ml-auto min-h-[44px]">
               <input
                 type="checkbox"
                 checked={showArchived}
                 onChange={(e) => setShowArchived(e.target.checked)}
-                className="rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+                className="h-5 w-5 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
               />
               Show Archived
             </label>
@@ -470,7 +576,7 @@ export function DashboardPage() {
                 key={opt.value}
                 onClick={() => handleComplianceFilterChange(opt.value)}
                 aria-pressed={complianceFilter === opt.value}
-                className={`text-sm px-3.5 py-1.5 rounded-xl border transition-all duration-150 active:scale-95 ${
+                className={`text-sm px-3.5 py-2.5 rounded-xl border transition-all duration-150 active:scale-95 min-h-[44px] ${
                   complianceFilter === opt.value
                     ? 'bg-brand-gold text-nav-dark border-brand-gold font-medium shadow-sm'
                     : 'bg-white text-text-secondary border-border-default hover:border-brand-gold hover:text-text-primary shadow-card'
@@ -507,7 +613,7 @@ export function DashboardPage() {
           <p className="text-red-600 text-sm mb-4">Failed to load projects. Please refresh.</p>
           <button
             onClick={() => refetch()}
-            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-2.5 bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-3 min-h-[44px] bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
           >
             Try Again
           </button>
@@ -547,6 +653,409 @@ export function DashboardPage() {
           ))}
         </div>
       )}
+
+      {/* DASH-04 / TRUST-02: Economic Impact Section */}
+      {economicData?.data && (
+        <div className="mt-12">
+          <div className="flex items-center justify-between gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-brand-gold" />
+              <h2 className="text-lg font-bold text-gray-900">Economic Impact</h2>
+            </div>
+            <a
+              href="/api/reports/export-csv?report=economic-impact"
+              download="economic-impact.csv"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-2 bg-white hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Download Economic Impact Report
+            </a>
+          </div>
+
+          {/* Stat tiles — 4 across */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-5 text-center shadow-sm">
+              <p className="text-2xl font-bold text-gray-900 mb-1">
+                {economicData.data.localHirePercent}%
+              </p>
+              <p className="text-sm text-gray-500">Local Hire Rate</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5 text-center shadow-sm">
+              <p className="text-2xl font-bold text-gray-900 mb-1">
+                {economicData.data.apprenticePercent}%
+              </p>
+              <p className="text-sm text-gray-500">Apprentice Share</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5 text-center shadow-sm">
+              <p className="text-2xl font-bold text-gray-900 mb-1">
+                ${economicData.data.totalWagesPaid.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </p>
+              <p className="text-sm text-gray-500">Total Wages Paid</p>
+            </div>
+            {/* NEW: Fringe benefit rate tile */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5 text-center shadow-sm">
+              <p className="text-2xl font-bold text-gray-900 mb-1">
+                {economicData.data.fringeVsBaseWage.fringePercent}%
+              </p>
+              <p className="text-sm text-gray-500">Fringe Benefit Rate</p>
+              <p className="text-xs text-gray-400 mt-1">
+                ${economicData.data.fringeVsBaseWage.fringe.toLocaleString('en-US', { maximumFractionDigits: 0 })} fringe
+              </p>
+            </div>
+          </div>
+
+          {/* NEW: Submission Punctuality donut + Top Violating Projects */}
+          {(economicData.data.submissionPunctuality.onTime > 0 ||
+            economicData.data.submissionPunctuality.late > 0 ||
+            economicData.data.submissionPunctuality.missing > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">CPR Submission Punctuality</h3>
+                <div className="flex items-center gap-4">
+                  <ResponsiveContainer width={160} height={160}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'On Time', value: economicData.data.submissionPunctuality.onTime },
+                          { name: 'Late', value: economicData.data.submissionPunctuality.late },
+                          { name: 'Missing', value: economicData.data.submissionPunctuality.missing },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={70}
+                        dataKey="value"
+                      >
+                        {PUNCTUALITY_COLORS.map((color, idx) => (
+                          <Cell key={idx} fill={color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-2">
+                    <div className="text-3xl font-bold text-gray-900">
+                      {economicData.data.submissionPunctuality.percentOnTime}%
+                    </div>
+                    <p className="text-xs text-gray-500">On-time rate</p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
+                        <span className="text-gray-600">On Time: {economicData.data.submissionPunctuality.onTime}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+                        <span className="text-gray-600">Late: {economicData.data.submissionPunctuality.late}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
+                        <span className="text-gray-600">Missing: {economicData.data.submissionPunctuality.missing}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {economicData.data.topViolatingProjects.length > 0 && (
+                <div className="bg-white border border-red-100 rounded-xl p-5 shadow-sm">
+                  <h3 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4" />
+                    Top Projects by Past-Due Weeks
+                  </h3>
+                  <div className="space-y-2">
+                    {economicData.data.topViolatingProjects.map(p => (
+                      <div key={p.projectId} className="flex items-center justify-between text-sm">
+                        <span className="text-gray-700 truncate max-w-[180px]">{p.projectName}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-red-600 font-semibold">{p.violations} wks</span>
+                          <Link to={`/projects/${p.projectId}`} className="text-xs text-brand-gold hover:underline">
+                            Fix &rarr;
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Wages by craft bar chart — enhanced with worker count tooltip */}
+          {economicData.data.totalWagesByCraft.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Wages by Craft</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={economicData.data.totalWagesByCraft.slice(0, 8)}>
+                  <XAxis dataKey="trade" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload as { trade: string; totalWages: number; workerCount: number; projectCount: number };
+                      return (
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs space-y-1">
+                          <p className="font-semibold text-gray-800">{d.trade}</p>
+                          <p className="text-gray-600">Wages: <span className="font-medium text-gray-900">${d.totalWages.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></p>
+                          <p className="text-gray-600">Workers: <span className="font-medium text-gray-900">{d.workerCount}</span></p>
+                          <p className="text-gray-600">Projects: <span className="font-medium text-gray-900">{d.projectCount}</span></p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar dataKey="totalWages" fill="#F5C518" radius={[4, 4, 0, 0]}>
+                    {economicData.data.totalWagesByCraft.slice(0, 8).map((_entry, idx) => (
+                      <Cell key={idx} fill={idx === 0 ? '#B8940E' : '#F5C518'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* NEW: Weekly Wage Burn AreaChart */}
+          {economicData.data.weeklyWageBurn.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Weekly Wage Burn — Last 12 Weeks</h3>
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={economicData.data.weeklyWageBurn}>
+                  <defs>
+                    <linearGradient id="wageGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F5C518" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#F5C518" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="weekLabel" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    formatter={(value: unknown) => {
+                      const num = typeof value === 'number' ? value : 0;
+                      return [`$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 'Wages'];
+                    }}
+                  />
+                  <Area type="monotone" dataKey="wages" stroke="#F5C518" strokeWidth={2} fill="url(#wageGradient)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* NEW: Wage Variance by Trade table */}
+          {economicData.data.wageVarianceByTrade.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-700">Wage Rate Variance by Trade</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Per-trade spread between min and max base rates across all payroll entries</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Trade</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg Rate</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Min Rate</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Max Rate</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Std Dev</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {economicData.data.wageVarianceByTrade.map(row => (
+                    <tr key={row.trade} className="hover:bg-gray-50">
+                      <td className="px-5 py-3 font-medium text-gray-900">{row.trade}</td>
+                      <td className="px-5 py-3 text-right text-gray-700">${row.avgRate.toFixed(2)}</td>
+                      <td className="px-5 py-3 text-right text-gray-600">${row.minRate.toFixed(2)}</td>
+                      <td className="px-5 py-3 text-right text-gray-600">${row.maxRate.toFixed(2)}</td>
+                      <td className={`px-5 py-3 text-right font-medium ${row.deviation > 5 ? 'text-red-600' : row.deviation > 2 ? 'text-amber-600' : 'text-gray-600'}`}>
+                        &plusmn;${row.deviation.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* NEW: Overtime Exposure panel */}
+          {economicData.data.overtimeExposure.length > 0 && (
+            <div className="bg-white border border-amber-100 rounded-xl overflow-hidden shadow-sm mb-6">
+              <div className="px-5 py-4 border-b border-amber-100 bg-amber-50">
+                <h3 className="text-sm font-semibold text-amber-800">Overtime Exposure</h3>
+                <p className="text-xs text-amber-600 mt-0.5">Estimated premium labor cost from OT and DT hours per project</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Project</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">OT Hours</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">DT Hours</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Est. Premium</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {economicData.data.overtimeExposure.map(row => (
+                    <tr key={row.projectId} className="hover:bg-gray-50">
+                      <td className="px-5 py-3 font-medium text-gray-900">
+                        <Link to={`/projects/${row.projectId}`} className="hover:text-brand-gold transition-colors">
+                          {row.projectName}
+                        </Link>
+                      </td>
+                      <td className="px-5 py-3 text-right text-gray-700">{row.otHours.toFixed(1)}</td>
+                      <td className="px-5 py-3 text-right text-gray-700">{row.dtHours.toFixed(1)}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-amber-700">
+                        ${row.estimatedPremium.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* NEW: Apprenticeship Progress table */}
+          {economicData.data.apprenticeshipProgress.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-700">Apprenticeship Ratio Progress</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Actual apprentice hour % vs required threshold per trade (IRA/IIJA default: 25%)</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Trade</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Required</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actual</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Gap</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {economicData.data.apprenticeshipProgress.map(row => (
+                    <tr key={row.trade} className="hover:bg-gray-50">
+                      <td className="px-5 py-3 font-medium text-gray-900">{row.trade}</td>
+                      <td className="px-5 py-3 text-right text-gray-600">{row.required}%</td>
+                      <td className={`px-5 py-3 text-right font-semibold ${row.actual >= row.required ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {row.actual}%
+                      </td>
+                      <td className={`px-5 py-3 text-right font-medium ${row.gap > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {row.gap > 0 ? `-${row.gap}%` : 'Met'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* NEW: Project Rankings sortable table */}
+          {sortedRankings.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">Project Rankings</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Click column headers to sort</p>
+                </div>
+                <a
+                  href="/api/reports/export-csv?report=compliance"
+                  download="compliance-summary.csv"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 bg-white hover:bg-gray-50 transition-colors"
+                >
+                  <Download className="w-3 h-3" />
+                  Export CSV
+                </a>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {(
+                        [
+                          { label: 'Project', col: 'projectName' },
+                          { label: 'Total Wages', col: 'totalWages' },
+                          { label: 'Workers', col: 'workers' },
+                          { label: 'Compliance %', col: 'compliance' },
+                        ] as { label: string; col: keyof RankingRow }[]
+                      ).map(({ label, col }) => (
+                        <th
+                          key={col}
+                          className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none hover:text-gray-800 transition-colors"
+                          onClick={() => handleRankSort(col)}
+                        >
+                          {label}
+                          {rankSortKey === col && (
+                            <span className="ml-1 text-brand-gold">{rankSortDir === 'asc' ? '\u2191' : '\u2193'}</span>
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {sortedRankings.map(row => (
+                      <tr key={row.projectId} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          <Link to={`/projects/${row.projectId}`} className="hover:text-brand-gold transition-colors">
+                            {row.projectName}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          ${row.totalWages.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">{row.workers}</td>
+                        <td className="px-4 py-3">
+                          <span className={`font-semibold ${row.compliance >= 90 ? 'text-emerald-600' : row.compliance >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {row.compliance}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* State breakdown table + totalWages column */}
+          {economicData.data.stateBreakdown.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-700">Coverage by State</h3>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">State</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Projects</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Workers</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Wages</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {economicData.data.stateBreakdown.map(row => (
+                    <tr key={row.state}>
+                      <td className="px-5 py-3 font-medium text-gray-900">{row.state}</td>
+                      <td className="px-5 py-3 text-gray-600">{row.projectCount}</td>
+                      <td className="px-5 py-3 text-gray-600">{row.workerCount}</td>
+                      <td className="px-5 py-3 text-gray-600">
+                        ${(row.totalWages ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Link to full Reports hub */}
+          <div className="mt-6 text-center">
+            <Link
+              to="/reports"
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand-gold hover:text-brand-gold/80 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              View All Reports &rarr;
+            </Link>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }
