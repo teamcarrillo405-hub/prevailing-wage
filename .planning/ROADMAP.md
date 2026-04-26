@@ -1901,7 +1901,7 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 83. External Log Drain + Security Policy | v7.0 | 0/2 | Not started | - |
+| 83. External Log Drain + Security Policy | v7.0 | 1/2 | In Progress|  |
 | 84. Dependabot + Uptime Monitoring | v7.0 | 0/2 | Not started | - |
 | 85. Full-Text Search | v7.0 | 0/2 | Not started | - |
 | 86. Scheduled Report Emails | v7.0 | 0/2 | Not started | - |
@@ -1925,3 +1925,100 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 | 104. Advanced Audit Analytics | v7.0 | 0/2 | Not started | - |
 | 105. Growth Dashboard (Admin) | v7.0 | 0/2 | Not started | - |
 | 106. Phase D Watchdog Gate + v7.0 Ship | v7.0 | 0/1 | Not started | - |
+
+---
+
+## Phase Details (v7.0)
+
+### Phase 83: External Log Drain + Security Policy
+
+**Goal**: The app ships structured HTTP logs to an external immutable drain (Logtail/Better Stack) and publishes a SECURITY_POLICY.md — closing the two most-cited CC7/CC9 SOC 2 evidence gaps and making the audit package complete
+
+**Depends on**: Phase 82 (v6.0 complete)
+
+**Requirements**: SEC-07, SEC-08
+
+**Success Criteria** (what must be TRUE):
+  1. Pino HTTP request/response logs flow to an external drain via HTTPS transport configured in `src/server/index.ts`; every request emits `{ method, url, status, responseTime }` at minimum; logs are verifiable by reading drain dashboard or curl test
+  2. `SECURITY_POLICY.md` exists at repo root AND is served at `/security` as a static page (or redirected from footer link); it covers: supported versions, reporting process (email address), response SLA (72h acknowledgment, 7d resolution), and responsible disclosure policy
+  3. `LOGTAIL_TOKEN` (or `BETTERSTACK_TOKEN`) env var is documented in `.env.example` with a placeholder comment; startup logs a warning if the var is missing (non-fatal — local dev still works without it)
+  4. All existing 724 tests continue to pass; the Pino transport is mocked in test env via `NODE_ENV=test` guard so tests don't attempt external network calls
+
+**Plans**: 2 plans
+
+Plans:
+- [x] 83-01-PLAN.md -- Pino HTTPS transport to external log drain (Logtail/Better Stack); HTTP request middleware; ENV guard; test mock
+- [ ] 83-02-PLAN.md -- SECURITY_POLICY.md at repo root; /security static route; footer link; .env.example documentation
+
+**UI hint**: no
+
+---
+
+### Phase 84: Dependabot + Uptime Monitoring
+
+**Goal**: Automated dependency updates via Dependabot and a public uptime status page reduce operational toil and provide SOC 2 availability evidence
+
+**Depends on**: Phase 83
+
+**Requirements**: SEC-09, SEC-10
+
+**Success Criteria** (what must be TRUE):
+  1. `.github/dependabot.yml` exists configuring weekly npm updates and weekly GitHub Actions updates; PRs target main and are labeled `dependencies`
+  2. Uptime Robot (or equivalent) monitors `/api/health` at 5-minute intervals; public status page URL is linked from `src/client/pages/LandingPage.tsx` footer
+  3. `src/client/public/images/` contains a status badge SVG or the landing page footer has a status badge link using the Uptime Robot shield URL
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 84-01-PLAN.md -- .github/dependabot.yml for npm + actions; CI badge in README
+- [ ] 84-02-PLAN.md -- Uptime Robot setup instructions + status page link in LandingPage footer
+
+**UI hint**: no
+
+---
+
+### Phase 85: Full-Text Search
+
+**Goal**: Workers and projects are searchable via SQLite FTS5 virtual tables, with a debounced search UI component returning results in under 50ms
+
+**Depends on**: Phase 84
+
+**Requirements**: PERF-01, PERF-02
+
+**Success Criteria** (what must be TRUE):
+  1. SQLite FTS5 virtual table `workers_fts` mirrors `name` and `trade` from `workers`; triggers keep it in sync on INSERT/UPDATE/DELETE; migration file in `src/server/db/migrations/`
+  2. `GET /api/projects/:id/workers/search?q=` returns results using `workers_fts MATCH ?` query; response time < 50ms on a dataset of 500 workers (verifiable via curl timing)
+  3. `WorkersPage.tsx` has a search input that debounces 200ms and calls the search endpoint; results replace the full list while query is non-empty; clearing input restores the full list
+  4. Projects list on `DashboardPage.tsx` supports client-side filter by project name (no server call needed for < 100 projects)
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 85-01-PLAN.md -- FTS5 virtual table migration, sync triggers, GET /search route, vitest test
+- [ ] 85-02-PLAN.md -- WorkersPage search input + debounce hook; DashboardPage client-side project filter
+
+**UI hint**: yes
+
+---
+
+### Phase 86: Scheduled Report Emails
+
+**Goal**: Users receive automated compliance summary emails on a configurable schedule (daily/weekly/monthly), closing the NOTIF-05/06 gap and demonstrating operational maturity for enterprise prospects
+
+**Depends on**: Phase 85
+
+**Requirements**: NOTIF-05, NOTIF-06
+
+**Success Criteria** (what must be TRUE):
+  1. `projectSettings` JSON gains `reportSchedule: 'daily' | 'weekly' | 'monthly' | 'off'` and `reportEmail: string` fields; ProjectDetailPage Settings tab has a report schedule selector and email input
+  2. A cron job in `src/server/jobs/scheduledReports.ts` runs at 08:00 UTC on the appropriate cadence; for each project with `reportSchedule !== 'off'`, it sends a compliance summary email via nodemailer listing: compliance rate %, open violations count, payroll weeks due in next 7 days, and a "View Project" link
+  3. Email template is plain-text + HTML (same nodemailer dual-format pattern as existing emails); unsubscribe token appended to footer links to `POST /api/notifications/unsubscribe`
+  4. Scheduled job is registered in `src/server/index.ts` startup and logs schedule confirmation via Pino
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 86-01-PLAN.md -- projectSettings schema extension; scheduledReports cron job; nodemailer template; unsubscribe endpoint
+- [ ] 86-02-PLAN.md -- ProjectDetailPage Settings tab: report schedule selector + email input + save
+
+**UI hint**: yes
