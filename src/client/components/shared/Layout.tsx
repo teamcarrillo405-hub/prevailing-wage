@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { BottomTabBar } from './BottomTabBar';
 import { useQuery } from '@tanstack/react-query';
 import { Menu, X, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -38,7 +39,32 @@ interface TeamData {
 export function Layout({ children }: LayoutProps) {
   const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // ── Swipe gesture routing (MOB-21) ────────────────────────────────────────
+  const touchStartX = useRef<number | null>(null);
+  const TAB_ROUTES = ['/field', '/dashboard', '/reports', '/team'] as const;
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(deltaX) < 60) return;
+    const currentIdx = TAB_ROUTES.indexOf(pathname as typeof TAB_ROUTES[number]);
+    if (currentIdx === -1) return;
+    if (deltaX < 0) {
+      const next = TAB_ROUTES[currentIdx + 1];
+      if (next) navigate(next);
+    } else {
+      const prev = TAB_ROUTES[currentIdx - 1];
+      if (prev) navigate(prev);
+    }
+  }
 
   const { data: team } = useQuery<TeamData>({
     queryKey: ['team'],
@@ -245,9 +271,17 @@ export function Layout({ children }: LayoutProps) {
         </>
       )}
 
-      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 page-enter">
+      <main
+        id="main-content"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 page-enter pb-14 md:pb-8"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {children}
       </main>
+
+      {/* Phase 97: Mobile bottom tab bar */}
+      <BottomTabBar />
 
       {/* Footer — public links */}
       <footer className="border-t border-gray-200 mt-12 py-6 bg-white">
