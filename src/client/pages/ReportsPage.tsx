@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, TrendingUp, PieChart, Download, Printer } from 'lucide-react';
+import { FileText, TrendingUp, PieChart, Download, Printer, Shield } from 'lucide-react';
 import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ReportsSkeleton } from '../components/ui/Skeleton';
@@ -109,9 +109,28 @@ interface PivotRow {
   grossWages: number;
 }
 
+// Phase 109 (DBE-09): DBE Participation result type
+interface DbeClassificationBucket {
+  hours: number;
+  pct: number;
+}
+
+interface DbeParticipationResult {
+  projectId: string;
+  totalHours: number;
+  byClassification: {
+    dbe:         DbeClassificationBucket;
+    mbe:         DbeClassificationBucket;
+    wbe:         DbeClassificationBucket;
+    sdvosb:      DbeClassificationBucket;
+    uncertified: DbeClassificationBucket;
+  };
+  byWeek: Array<{ weekEndingDate: string; totalHours: number; certifiedHours: number; pct: number }>;
+}
+
 export function ReportsPage() {
   const { projectId } = useParams<{ projectId: string }>();
-  const [activeTab, setActiveTab] = useState<'fringe' | 'payHistory' | 'fringeBreakdown'>('fringe');
+  const [activeTab, setActiveTab] = useState<'fringe' | 'payHistory' | 'fringeBreakdown' | 'dbeParticipation'>('fringe');
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>('');
   const [isPrinting, setIsPrinting] = useState(false);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -212,6 +231,22 @@ export function ReportsPage() {
 
   const fringeBreakdownRows = fringeBreakdownData?.rows ?? [];
 
+  // Phase 109 (DBE-09): DBE Participation query — lazy-load when tab is active
+  const {
+    data: dbeData,
+    isLoading: dbeLoading,
+  } = useQuery({
+    queryKey: ['dbe-participation', projectId],
+    queryFn: async () => {
+      const res = await fetch(`/api/reports/${projectId}/dbe-participation`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch DBE participation data');
+      return res.json() as Promise<{ data: DbeParticipationResult }>;
+    },
+    staleTime: 60_000,
+    enabled: !!projectId && activeTab === 'dbeParticipation',
+  });
+  const dbe = dbeData?.data;
+
   function handlePrint() {
     setIsPrinting(true);
     setTimeout(() => {
@@ -238,6 +273,12 @@ export function ReportsPage() {
       icon: <PieChart className="w-4 h-4" />,
       title: 'Fringe Breakdown',
       description: 'Fringe contributions pivoted by fund type (H&W, Pension, Vacation, Training) and classification level.',
+    },
+    {
+      key: 'dbeParticipation' as const,
+      icon: <Shield className="w-4 h-4" />,
+      title: 'DBE Participation',
+      description: 'DBE/MBE/WBE/SDVOSB hours as a percentage of total project hours — DOT DBE program reporting.',
     },
   ];
 
@@ -749,6 +790,104 @@ export function ReportsPage() {
             </>
           )}
         </div>
+
+        {/* ---- DBE Participation tab (DBE-09) ---- */}
+        {activeTab === 'dbeParticipation' && (
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800 font-headline">DBE/MBE/WBE Participation</h2>
+                  <p className="text-xs text-gray-500">Certified sub hours as % of total project hours — DOT DBE program</p>
+                </div>
+              </div>
+              <button
+                onClick={() => window.print()}
+                className="print-hidden inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download PDF
+              </button>
+            </div>
+
+            {dbeLoading && <ReportsSkeleton />}
+
+            {!dbeLoading && dbe && (
+              <>
+                {/* Summary table */}
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-full text-sm text-left">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold text-gray-700">Classification</th>
+                        <th className="px-4 py-3 font-semibold text-gray-700 text-right">Hours</th>
+                        <th className="px-4 py-3 font-semibold text-gray-700 text-right">% of Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(['dbe', 'mbe', 'wbe', 'sdvosb', 'uncertified'] as const).map(cls => (
+                        <tr key={cls} className="border-t border-gray-100 hover:bg-gray-50">
+                          <td className="px-4 py-2 font-medium">
+                            {cls === 'uncertified' ? 'Uncertified / GC Direct' : cls.toUpperCase()}
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-600">
+                            {dbe.byClassification[cls].hours.toFixed(1)}
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-600">
+                            {dbe.byClassification[cls].pct.toFixed(2)}%
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="border-t-2 border-gray-300 font-semibold">
+                        <td className="px-4 py-2">Total Project Hours</td>
+                        <td className="px-4 py-2 text-right">{dbe.totalHours.toFixed(1)}</td>
+                        <td className="px-4 py-2 text-right">100.00%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Per-week breakdown */}
+                {dbe.byWeek.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-semibold text-gray-700 mt-4 mb-2">Weekly Breakdown</h3>
+                    <div className="overflow-x-auto rounded-lg border border-gray-200">
+                      <table className="min-w-full text-sm text-left">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold text-gray-700">Week Ending</th>
+                            <th className="px-4 py-3 font-semibold text-gray-700 text-right">Total Hours</th>
+                            <th className="px-4 py-3 font-semibold text-gray-700 text-right">Certified Hours</th>
+                            <th className="px-4 py-3 font-semibold text-gray-700 text-right">Certified %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dbe.byWeek.map(w => (
+                            <tr key={w.weekEndingDate} className="border-t border-gray-100 hover:bg-gray-50">
+                              <td className="px-4 py-2">{w.weekEndingDate}</td>
+                              <td className="px-4 py-2 text-right text-gray-600">{w.totalHours.toFixed(1)}</td>
+                              <td className="px-4 py-2 text-right text-gray-600">{w.certifiedHours.toFixed(1)}</td>
+                              <td className="px-4 py-2 text-right text-gray-600">{w.pct.toFixed(2)}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+
+                {dbe.totalHours === 0 && (
+                  <p className="text-gray-500 text-sm mt-4">
+                    No payroll entries found for this project. Add payroll weeks with worker hours to see DBE participation data.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
       </div>
     </Layout>
