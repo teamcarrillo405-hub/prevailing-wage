@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { UsComplianceMap } from '../components/UsComplianceMap.js';
 import { FolderPlus, ClipboardList, FileCheck, Shield, CheckCircle, Clock, FileText, Database, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -402,72 +403,17 @@ function VideoSection() {
 
 // ── UI-15: State Coverage Grid ────────────────────────────────────────────────
 function StateCoverageSection() {
-  const activeStates = [
-    { code: 'CA', label: 'California' },
-    { code: 'WA', label: 'Washington' },
-    { code: 'NY', label: 'New York' },
-    { code: 'IL', label: 'Illinois' },
-    { code: 'TX', label: 'Texas' },
-    { code: 'MA', label: 'Massachusetts' },
-    { code: 'NJ', label: 'New Jersey' },
-    { code: 'FL', label: 'Florida' },
-  ];
-
-  const comingSoonStates = [
-    'CO', 'OH', 'PA', 'MN', 'AZ', 'GA', 'NC', 'VA',
-    'OR', 'NV', 'MI', 'WI', 'IN', 'TN', 'MD', 'CT',
-  ];
-
   return (
     <section className="bg-white py-20 px-6">
       <div className="max-w-5xl mx-auto text-center">
         <h2 className="text-3xl font-bold text-nav-dark font-headline mb-4">
           8 States — More Coming
         </h2>
-        <p className="text-gray-600 mb-12 max-w-2xl mx-auto">
+        <p className="text-gray-600 mb-10 max-w-2xl mx-auto">
           Native certified payroll forms for every active state.
           Federal WH-347 supported for all 50 states.
         </p>
-
-        {/* Active states */}
-        <div className="mb-3">
-          <p className="text-xs text-gray-400 uppercase tracking-widest mb-4">
-            State-specific forms available now
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {activeStates.map(({ code, label }) => (
-              <div
-                key={code}
-                title={label}
-                className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold bg-nav-dark text-brand-gold shadow-md cursor-default select-none"
-              >
-                {code}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Coming soon states */}
-        <div className="mt-6 mb-10">
-          <p className="text-xs text-gray-400 uppercase tracking-widest mb-4">
-            Coming soon
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {comingSoonStates.map((code) => (
-              <div
-                key={code}
-                title={`${code} — Coming Soon`}
-                className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold bg-gray-100 text-gray-400 border border-gray-200 cursor-default select-none"
-              >
-                {code}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-sm text-gray-500">
-          All 50 states supported via federal WH-347 · State-specific forms for active states above
-        </p>
+        <UsComplianceMap />
       </div>
     </section>
   );
