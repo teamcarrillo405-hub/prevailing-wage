@@ -90,6 +90,8 @@ const UpsertEntrySchema = z.object({
   checkNumber: z.string().max(50).nullable().optional(),
   allOtherHours: z.number().min(0).nullable().optional(),
   totalWeekGrossWages: z.number().min(0).nullable().optional(),
+  // Phase 108 (DBE-08): optional sub attribution
+  subcontractorId: z.string().uuid().nullable().optional(),
 });
 
 const SubmitWeekSchema = z.object({

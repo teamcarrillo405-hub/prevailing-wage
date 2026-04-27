@@ -12,7 +12,7 @@ import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { getPayrollWeek } from '../services/payrollService.js';
 import { parseImportFile } from '../services/importService.js';
 import { getDb } from '../db/index.js';
-import { payrollEntries, payrollImports, payrollProviderMappings } from '../db/schema.js';
+import { payrollEntries, payrollImports, payrollProviderMappings, subcontractors } from '../db/schema.js';
 import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
 
 export const importRouter = Router();
@@ -160,6 +160,17 @@ importRouter.post('/commit', async (req, res) => {
 
   // Insert payrollEntries for each matched row
   for (const row of body.matched) {
+    // DBE-08: validate subcontractorId if provided — silently null if not found on this project
+    let resolvedSubId: string | null = null;
+    if (row.subcontractorId) {
+      const [sub] = await db
+        .select({ id: subcontractors.id })
+        .from(subcontractors)
+        .where(and(eq(subcontractors.id, row.subcontractorId), eq(subcontractors.projectId, week.projectId)))
+        .limit(1);
+      resolvedSubId = sub?.id ?? null;
+    }
+
     await db.insert(payrollEntries).values({
       id: randomUUID(),
       payrollWeekId: body.weekId,
@@ -195,6 +206,7 @@ importRouter.post('/commit', async (req, res) => {
       fringePension: null,
       fringeVacation: null,
       fringeTraining: null,
+      subcontractorId: resolvedSubId,
       createdByUserId: userId,
       updatedByUserId: null,
       createdAt: now,

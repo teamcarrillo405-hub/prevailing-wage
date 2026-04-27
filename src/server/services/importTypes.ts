@@ -27,6 +27,8 @@ export interface ImportedRow {
   friOt: number;
   satOt: number;
   sunOt: number;
+  // Phase 108 (DBE-08): optional sub attribution stamped at import time
+  subcontractorId?: string | null;
 }
 
 export interface UnmatchedRow {

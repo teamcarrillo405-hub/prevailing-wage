@@ -102,6 +102,8 @@ export interface UpsertPayrollEntryInput {
   federalIncomeTax?: number | null;
   stateIncomeTax?: number | null;
   sdiTax?: number | null;
+  // Phase 108 (DBE-08): optional sub attribution (null = GC direct labor)
+  subcontractorId?: string | null;
   userId?: string; // populated from req.user.id on POST/PUT; undefined for amendment copies
   // Audit-only fields — threaded from route handler (AUDIT-03)
   userEmail?: string;
@@ -339,6 +341,8 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     federalIncomeTax: input.federalIncomeTax ?? null,
     stateIncomeTax: input.stateIncomeTax ?? null,
     sdiTax: input.sdiTax ?? null,
+    // Phase 108 (DBE-08): optional sub attribution
+    subcontractorId: input.subcontractorId ?? null,
     createdByUserId: input.userId ?? null,
     updatedByUserId: input.userId ?? null,
     createdAt: now,
@@ -393,6 +397,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         federalIncomeTax: values.federalIncomeTax,
         stateIncomeTax: values.stateIncomeTax,
         sdiTax: values.sdiTax,
+        subcontractorId: values.subcontractorId,
         updatedByUserId: values.updatedByUserId,
         updatedAt: now,
       },

@@ -342,6 +342,9 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   // Phase 32 — user attribution (nullable for all existing rows per D-09)
   createdByUserId: text('created_by_user_id').references(() => users.id),
   updatedByUserId: text('updated_by_user_id').references(() => users.id),
+  // Phase 108 (DBE-08): optional sub attribution for DBE participation reporting
+  // null = GC direct labor. SET NULL on sub delete preserves payroll data integrity.
+  subcontractorId: text('subcontractor_id').references(() => subcontractors.id, { onDelete: 'set null' }),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, (table) => ({
