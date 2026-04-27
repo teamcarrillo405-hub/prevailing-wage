@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, count } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { workers, workerClassifications } from '../db/schema.js';
+import { workers, workerClassifications, projects as projectsTable, users } from '../db/schema.js';
 import { getCachedWd, getCachedClassifications } from '../services/wageCache.js';
 import { lookupWageDetermination } from '../services/wageLookup.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -12,6 +12,7 @@ import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import type { Project } from '../utils/assertProjectAccess.js';
 import { createWorker, updateWorker, deleteWorker } from '../services/workerService.js';
 import { deliverWebhook, WEBHOOK_EVENT_WORKER_ADDED } from '../services/webhookService.js';
+import { getLimits, type PlanTier } from '../utils/planLimits.js';
 
 const router = Router();
 
@@ -239,11 +240,38 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
   const db = getDb();
 
   // Verify user has access to the project
+  let project: Project;
   try {
-    await assertProjectAccess(db, projectId, userId);
+    ({ project } = await assertProjectAccess(db, projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
+  }
+
+  // Enforce per-plan worker cap (scoped to project owner)
+  const ownerUserId = project.userId;
+  const [ownerRow] = await db
+    .select({ planTier: users.planTier })
+    .from(users)
+    .where(eq(users.id, ownerUserId))
+    .limit(1);
+  const rawTier = ownerRow?.planTier;
+  const tier: PlanTier = (rawTier === 'pro' || rawTier === 'enterprise') ? rawTier : 'starter';
+  const limits = getLimits(tier);
+
+  if (limits.maxWorkers !== Infinity) {
+    const [{ value: workerCount }] = await db
+      .select({ value: count() })
+      .from(workers)
+      .innerJoin(projectsTable, eq(workers.projectId, projectsTable.id))
+      .where(and(eq(projectsTable.userId, ownerUserId), eq(workers.isActive, true)));
+    if (workerCount >= limits.maxWorkers) {
+      res.status(409).json({
+        error: 'Worker limit reached. Upgrade to Pro for unlimited workers.',
+        upgradeRequired: true,
+      });
+      return;
+    }
   }
 
   const body = req.body as z.infer<typeof CreateWorkerSchema>;

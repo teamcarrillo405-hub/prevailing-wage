@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, count } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { projects, projectMembers } from '../db/schema.js';
+import { projects, projectMembers, users } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import type { Project } from '../utils/assertProjectAccess.js';
+import { getLimits, type PlanTier } from '../utils/planLimits.js';
 
 const router = Router();
 
@@ -87,6 +88,31 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
   const body = req.body as z.infer<typeof CreateProjectSchema>;
   const userId = req.user!.userId;
   const db = getDb();
+
+  // Enforce per-plan project cap
+  const [userRow] = await db
+    .select({ planTier: users.planTier })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const rawTier = userRow?.planTier;
+  const tier: PlanTier = (rawTier === 'pro' || rawTier === 'enterprise') ? rawTier : 'starter';
+  const limits = getLimits(tier);
+
+  if (limits.maxProjects !== Infinity) {
+    const [{ value: projectCount }] = await db
+      .select({ value: count() })
+      .from(projects)
+      .where(eq(projects.userId, userId));
+    if (projectCount >= limits.maxProjects) {
+      res.status(409).json({
+        error: 'Project limit reached. Upgrade to Pro to create unlimited projects.',
+        upgradeRequired: true,
+      });
+      return;
+    }
+  }
+
   const now = new Date().toISOString();
   const id = randomUUID();
 

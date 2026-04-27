@@ -1,9 +1,9 @@
 import { logger } from '../logger.js';
 import { Router } from 'express';
-import { eq } from 'drizzle-orm';
+import { eq, and, count, isNull } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { getDb } from '../db/index.js';
-import { users } from '../db/schema.js';
+import { users, projects, workers, projectMembers } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import {
   createCheckoutSession,
@@ -11,6 +11,7 @@ import {
   constructWebhookEvent,
   PLANS,
 } from '../services/stripeService.js';
+import { getLimits, type PlanTier } from '../utils/planLimits.js';
 
 const router = Router();
 
@@ -89,6 +90,55 @@ router.post('/portal', requireAuth, async (req, res) => {
     const message = err instanceof Error ? err.message : 'Failed to create portal session';
     res.status(500).json({ error: message });
   }
+});
+
+// ── GET /api/billing/usage — requires auth ────────────────────────────────────
+router.get('/usage', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const [userRow] = await db
+    .select({ planTier: users.planTier })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const rawTier = userRow?.planTier;
+  const tier: PlanTier = (rawTier === 'pro' || rawTier === 'enterprise') ? rawTier : 'starter';
+  const limits = getLimits(tier);
+
+  // Count projects owned by this user
+  const [{ value: projectCount }] = await db
+    .select({ value: count() })
+    .from(projects)
+    .where(eq(projects.userId, userId));
+
+  // Count active workers across all projects owned by this user
+  const [{ value: workerCount }] = await db
+    .select({ value: count() })
+    .from(workers)
+    .innerJoin(projects, eq(workers.projectId, projects.id))
+    .where(and(eq(projects.userId, userId), eq(workers.isActive, true)));
+
+  // Count non-removed members (non-owner) on this user's projects
+  const [{ value: memberCount }] = await db
+    .select({ value: count() })
+    .from(projectMembers)
+    .innerJoin(projects, eq(projectMembers.projectId, projects.id))
+    .where(
+      and(
+        eq(projects.userId, userId),
+        isNull(projectMembers.removedAt),
+      ),
+    );
+
+  res.json({
+    projectCount,
+    workerCount,
+    memberCount,
+    limits,
+    planTier: tier,
+  });
 });
 
 // ── POST /api/billing/webhook — PUBLIC (no auth) ──────────────────────────────
