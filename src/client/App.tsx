@@ -53,6 +53,7 @@ const FieldHubPage = React.lazy(() => import('./pages/FieldHubPage').then(m => (
 const GovernmentPage = React.lazy(() => import('./pages/GovernmentPage').then(m => ({ default: m.GovernmentPage })));
 const OfflineChecklistPage = React.lazy(() => import('./pages/OfflineChecklistPage').then(m => ({ default: m.OfflineChecklistPage })));
 const RoiCalculatorPage = React.lazy(() => import('./pages/RoiCalculatorPage').then(m => ({ default: m.RoiCalculatorPage })));
+const TestimonialsPage = React.lazy(() => import('./pages/TestimonialsPage').then(m => ({ default: m.TestimonialsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -134,6 +135,7 @@ export default function App() {
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/government" element={<GovernmentPage />} />
               <Route path="/roi" element={<RoiCalculatorPage />} />
+              <Route path="/testimonials" element={<TestimonialsPage />} />
 
               {/* Public accept-invite route — no auth wrapper per D-09 */}
               <Route path="/accept-invite" element={<AcceptInvitePage />} />

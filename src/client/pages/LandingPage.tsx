@@ -1018,6 +1018,7 @@ const STATUS_PAGE_URL = 'https://YOUR-SUBDOMAIN.betteruptime.com';
 function LandingFooter() {
   const footerLinks = [
     { label: 'Pricing', to: '/pricing' },
+    { label: 'Testimonials', to: '/testimonials' },
     { label: 'Case Studies', to: '/case-studies' },
     { label: 'Contact', to: '/contact' },
     { label: 'Reviews', to: '/reviews' },
