@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.5
-milestone_name: Mobile Field Capabilities
-status: Phase complete — ready for next phase
-stopped_at: Completed 98-01-PLAN.md (Phase 98 Offline Compliance Checklists — all plans shipped)
-last_updated: "2026-04-27T14:20:00.000Z"
+milestone_name: Mobile Field Capabilities + ROI Marketing
+status: Phase complete — milestone complete
+stopped_at: Completed 100-02-PLAN.md (Phase 100 ROI Calculator Page — TRUST-04 shipped; all plans done)
+last_updated: "2026-04-27T14:30:00.000Z"
 progress:
-  total_phases: 42
-  completed_phases: 42
-  total_plans: 94
-  completed_plans: 96
+  total_phases: 44
+  completed_phases: 44
+  total_plans: 98
+  completed_plans: 100
 ---
 
 # State
@@ -23,10 +23,12 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 98 (98-offline-compliance-checklists) — COMPLETE (1 plan shipped)
-Plan: 1 of 1
+Phase: 100 (100-roi-calculator-page) — COMPLETE (2 plans shipped; TRUST-04 done)
+Plan: 2 of 2
 
 Previously completed:
+- Phase 99 (99-phase-c-watchdog-gate) — GATE_PASS 10.00/10 (all 10 criteria PASS)
+- Phase 98 (98-offline-compliance-checklists) — COMPLETE (1 plan shipped)
 - Phase 97 (97-mobile-nav-redesign) — COMPLETE (1 plan shipped; BottomTabBar + swipe gesture)
 - Phase 96 (96-photo-verification) — COMPLETE (2 plans shipped; migration 0059 + SignaturePad + PhotoGallery)
 - Phase 95 (95-background-sync) — COMPLETE (all 3 plans shipped)
@@ -203,6 +205,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 96-02]: Pure HTML5 canvas for SignaturePad (no external library); extractExifGps defined outside component; capture="environment" for rear camera preference; InferSelectModel fix for photos.ts map callback
 - [Phase 97-01]: BottomTabBar 4 tabs: Field/Payroll/Projects/More → /field,/dashboard,/reports,/team; pathname === tab.to exact match; pb-14 md:pb-8 on main; 60px swipe threshold
 - [Phase 98-01]: crypto.randomUUID() used in client (browser native, no uuid package); deleteChecklist inline in page component; syncPendingChecklists fires on online event + mount + item completion
+- [Phase 99-phase-c-watchdog-gate]: GATE_PASS 10.00/10 — all 10 Phase C criteria verified green; 803 tests passing; 0 TS deductions; Phase 100 unblocked
+- [Phase 100-01]: calcRoi() is pure exported function for deterministic unit testing; useSearchParams for URL param seeding; jsdom vitest-environment docblock per-file (not global config change)
+- [Phase 100-02]: Migration numbered 0061 (plan said 0055 — outdated); named export roiLeadsRouter; mounted before /api/auth (no auth); afterEach full-table delete in isolated in-memory DB
 - [Phase 93-phase-b-watchdog-gate]: GATE_PASS 9.50/10 — all 10 Phase B criteria verified green; 794 tests passing; 1 TS deduction (stripeService.ts version string, -0.5); Phase 94 unblocked
 - [Phase 89-01]: WH347_FORM_REVISION = 'Rev. Jan. 2025' constant + pdfDoc.setTitle() in fillSingleSet(); setText() for optional header_formRevision widget
 - [Phase 89-02]: DeductionViolation type + deductionViolations[] on ComplianceResult; DEDUCTION_RATIO_CAP=0.30 loop in computeCompliance(); hasViolations excludes deduction warnings; amber banner in PayrollWeekDetailPage
@@ -244,7 +249,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T14:20:00.000Z
-Stopped at: Completed 98-01-PLAN.md — Phases 96+97+98 (MOB-19 through MOB-22) fully shipped
+Last session: 2026-04-27T14:30:00.000Z
+Stopped at: Completed 100-02-PLAN.md — Phase 99 GATE_PASS (10.00/10) + Phase 100 ROI Calculator (TRUST-04) shipped
 Resume file: None
-Next action: Phases 96+97+98 complete. 803 tests passing. 0 TS errors. MOB-19 (photo verification), MOB-20 (photo gallery), MOB-21 (bottom tab nav), MOB-22 (offline checklists) implemented. Migrations 0059+0060 registered. TS note: stripeService.ts API version string still needs update to '2026-04-22.dahlia' (minor, pre-existing, unrelated).
+Next action: Milestone v2.5 complete. 824 tests passing. 0 TS errors. Phase 99 gate: all 10 mobile criteria passed. Phase 100: /roi public page + POST /api/roi-leads + migration 0061. TS note: stripeService.ts API version string still needs update to '2026-04-22.dahlia' (minor, pre-existing, unrelated).
