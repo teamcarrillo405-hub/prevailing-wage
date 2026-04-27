@@ -708,3 +708,13 @@ export const checklistSyncs = sqliteTable('checklist_syncs', {
   payload: text('payload').notNull(), // JSON string of Checklist
   syncedAt: text('synced_at').notNull(),
 });
+
+// ── Phase 100: ROI Calculator Leads ─────────────────────────────────────
+export const roiLeads = sqliteTable('roi_leads', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull(),
+  projectCount: integer('project_count').notNull(),
+  workerCount: integer('worker_count').notNull(),
+  estimatedSavings: real('estimated_savings').notNull(),
+  capturedAt: text('captured_at').notNull(),  // ISO 8601
+});

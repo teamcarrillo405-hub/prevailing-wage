@@ -51,6 +51,7 @@ import notificationsRouter from './routes/notifications.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import samGovRouter from './routes/samGov.js';
 import securityRouter from './routes/security.js';
+import { roiLeadsRouter } from './routes/roiLeads.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
@@ -164,6 +165,7 @@ app.get('/api/health', (_req, res) => {
   }
 });
 app.use('/api/sub-upload', subUploadRouter); // public — no auth required
+app.use('/api/roi-leads', roiLeadsRouter); // public — no auth required
 app.use('/api/auth', authRouter);
 app.use('/api/mfa', mfaRouter);
 app.use('/api/projects', projectsRouter);
