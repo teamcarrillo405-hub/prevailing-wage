@@ -51,6 +51,7 @@ const SecurityPolicyPage = React.lazy(() => import('./pages/SecurityPolicyPage')
 const PricingPage = React.lazy(() => import('./pages/PricingPage').then(m => ({ default: m.PricingPage })));
 const FieldHubPage = React.lazy(() => import('./pages/FieldHubPage').then(m => ({ default: m.FieldHubPage })));
 const GovernmentPage = React.lazy(() => import('./pages/GovernmentPage').then(m => ({ default: m.GovernmentPage })));
+const OfflineChecklistPage = React.lazy(() => import('./pages/OfflineChecklistPage').then(m => ({ default: m.OfflineChecklistPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -118,6 +119,8 @@ export default function App() {
                 <Route path="/projects/:projectId/settings" element={<ProjectSettingsPage />} />
                 <Route path="/reports" element={<GlobalReportsPage />} />
                 <Route path="/field" element={<FieldHubPage />} />
+                <Route path="/projects/:projectId/checklists" element={<OfflineChecklistPage />} />
+                <Route path="/checklists" element={<OfflineChecklistPage />} />
               </Route>
 
               {/* Public pages — no auth required */}

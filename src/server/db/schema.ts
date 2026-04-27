@@ -700,3 +700,11 @@ export const webhookDeliveries = sqliteTable('webhook_deliveries', {
   failedAt: text('failed_at'),
   retryCount: integer('retry_count').default(0),
 });
+
+// ── Phase 98: Offline Checklist Sync Log ──────────────────────────────────
+export const checklistSyncs = sqliteTable('checklist_syncs', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  payload: text('payload').notNull(), // JSON string of Checklist
+  syncedAt: text('synced_at').notNull(),
+});
