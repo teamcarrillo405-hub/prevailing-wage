@@ -617,6 +617,30 @@ export const weekPhotos = sqliteTable('week_photos', {
   createdAt: text('created_at').notNull(),
 });
 
+// ── Phase 96: Project-level Site Photos ───────────────────────────────────
+export const projectPhotos = sqliteTable('project_photos', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  uploadedBy: text('uploaded_by').notNull().references(() => users.id),
+  filePath: text('file_path').notNull(),   // relative to PHOTOS_DIR/project-photos/
+  caption: text('caption'),
+  takenAt: text('taken_at').notNull(),     // ISO 8601 (from EXIF or upload time)
+  latitude: real('latitude'),
+  longitude: real('longitude'),
+  createdAt: text('created_at').notNull(),
+});
+
+// ── Phase 96: Contractor Digital Signatures ───────────────────────────────
+// One signature per project (upsert). Stored as PNG blob on disk.
+export const contractorSignatures = sqliteTable('contractor_signatures', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().unique().references(() => projects.id, { onDelete: 'cascade' }),
+  uploadedBy: text('uploaded_by').notNull().references(() => users.id),
+  filePath: text('file_path').notNull(),   // relative to SIGNATURES_DIR
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
 // ── Phase 75: GPS Clock-In / Clock-Out ────────────────────────────────────
 // Records individual clock-in and clock-out punches per worker per project.
 // GPS fields are nullable — GPS is opt-in per project and may fail gracefully.

@@ -351,6 +351,13 @@
       "when": 1745972000000,
       "tag": "0058_phase92_va_project_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1745972100000,
+      "tag": "0059_photo_verification",
+      "breakpoints": true
     }
   ]
 }
