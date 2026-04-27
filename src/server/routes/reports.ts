@@ -3,12 +3,14 @@
 // GET /api/reports/:projectId/worker/:workerId/pay-history — RPT-02
 // GET /api/reports/compliance-summary              — RPT-04 (cross-project)
 // GET /api/reports/wage-statement?projectId=       — RPT-05 (project-scoped)
+// GET /api/reports/:projectId/hours-pivot          — REPT-06 (pivot analytics, Phase 104)
 // GET /api/reports/export-csv?report=&projectId=  — RPT-06 (CSV download)
 // Access check: verify user is a member of the project via assertProjectAccess.
 // Note: This router is registered in index.ts (Plan 04).
 
 import { Router } from 'express';
 import { eq, and, isNull } from 'drizzle-orm';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { requireAuth } from '../middleware/auth.js';
 import { getDb } from '../db/index.js';
 import { getFringeSummary, getWorkerPayHistory, getFringeBreakdown } from '../services/reportsService.js';
@@ -651,4 +653,161 @@ reportsRouter.get('/dbe-summary', requireAuth, async (req, res) => {
       byType: byTypeArray,
     },
   });
+});
+
+// ── REPT-06: Hours by Trade / Classification / Week Pivot (Phase 104) ────────
+// GET /api/reports/:projectId/hours-pivot
+// Query params: format = 'json' (default) | 'csv' | 'pdf'
+
+interface PivotRow {
+  weekEndingDate: string;
+  tradeCode: string;
+  tradeDescription: string;
+  laborType: string;
+  totalStraightHours: number;
+  totalOvertimeHours: number;
+  totalDoubleHours: number;
+  totalHours: number;
+  workerCount: number;
+  grossWages: number;
+}
+
+const PIVOT_SQL = `
+SELECT
+  pw.week_ending_date,
+  wc.trade_code,
+  wc.trade_description,
+  wc.labor_type,
+  COUNT(DISTINCT pe.worker_id) AS worker_count,
+  ROUND(SUM(COALESCE(pe.mon_st,0) + COALESCE(pe.tue_st,0) + COALESCE(pe.wed_st,0) + COALESCE(pe.thu_st,0) + COALESCE(pe.fri_st,0) + COALESCE(pe.sat_st,0) + COALESCE(pe.sun_st,0)), 2) AS total_st,
+  ROUND(SUM(COALESCE(pe.mon_ot,0) + COALESCE(pe.tue_ot,0) + COALESCE(pe.wed_ot,0) + COALESCE(pe.thu_ot,0) + COALESCE(pe.fri_ot,0) + COALESCE(pe.sat_ot,0) + COALESCE(pe.sun_ot,0)), 2) AS total_ot,
+  ROUND(SUM(COALESCE(pe.mon_dt,0) + COALESCE(pe.tue_dt,0) + COALESCE(pe.wed_dt,0) + COALESCE(pe.thu_dt,0) + COALESCE(pe.fri_dt,0) + COALESCE(pe.sat_dt,0) + COALESCE(pe.sun_dt,0)), 2) AS total_dt,
+  ROUND(SUM(COALESCE(pe.gross_wages, 0)), 2) AS gross_wages
+FROM payroll_entries pe
+JOIN payroll_weeks pw ON pw.id = pe.payroll_week_id
+JOIN worker_classifications wc ON wc.id = pe.classification_id
+WHERE pw.project_id = ?
+GROUP BY pw.week_ending_date, wc.trade_code, wc.trade_description, wc.labor_type
+ORDER BY pw.week_ending_date DESC, wc.trade_code ASC
+`.trim();
+
+reportsRouter.get('/:projectId/hours-pivot', requireAuth, async (req, res) => {
+  const projectId = req.params.projectId as string;
+  const userId = req.user!.userId;
+  const format = (req.query.format as string) ?? 'json';
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: unknown) {
+    const e = err as { status?: number; message?: string };
+    res.status(e.status ?? 500).json({ error: e.message ?? 'Access denied' });
+    return;
+  }
+
+  // Raw SQLite query for aggregation — Drizzle GROUP BY with joins is too verbose
+  const rawClient = (db as any).$client as { prepare: (sql: string) => { all: (arg: string) => unknown[] } };
+  const rawRows = rawClient.prepare(PIVOT_SQL).all(projectId) as Array<{
+    week_ending_date: string;
+    trade_code: string;
+    trade_description: string;
+    labor_type: string;
+    total_st: number | null;
+    total_ot: number | null;
+    total_dt: number | null;
+    gross_wages: number | null;
+    worker_count: number | null;
+  }>;
+
+  const pivot: PivotRow[] = rawRows.map((r) => ({
+    weekEndingDate: r.week_ending_date,
+    tradeCode: r.trade_code,
+    tradeDescription: r.trade_description,
+    laborType: r.labor_type,
+    totalStraightHours: r.total_st ?? 0,
+    totalOvertimeHours: r.total_ot ?? 0,
+    totalDoubleHours: r.total_dt ?? 0,
+    totalHours: (r.total_st ?? 0) + (r.total_ot ?? 0) + (r.total_dt ?? 0),
+    workerCount: r.worker_count ?? 0,
+    grossWages: r.gross_wages ?? 0,
+  }));
+
+  // ── JSON ──
+  if (format === 'json') {
+    res.json({ pivot, total: pivot.length });
+    return;
+  }
+
+  // ── CSV ──
+  if (format === 'csv') {
+    const CSV_HEADER = 'Week Ending,Trade Code,Trade Description,Labor Type,ST Hours,OT Hours,DT Hours,Total Hours,Workers,Gross Wages\n';
+    const CSV_ROWS = pivot
+      .map((r) =>
+        [
+          r.weekEndingDate, r.tradeCode, r.tradeDescription, r.laborType,
+          r.totalStraightHours, r.totalOvertimeHours, r.totalDoubleHours,
+          r.totalHours, r.workerCount, r.grossWages.toFixed(2),
+        ].join(',')
+      )
+      .join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="hours-pivot-${projectId}.csv"`);
+    res.send('\uFEFF' + CSV_HEADER + CSV_ROWS); // UTF-8 BOM for Excel
+    return;
+  }
+
+  // ── PDF ──
+  if (format === 'pdf') {
+    const pdfDoc = await PDFDocument.create();
+    let page = pdfDoc.addPage([842, 595]); // A4 landscape
+    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const bodyFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    // Title
+    page.drawText('Hours by Trade / Classification / Week', {
+      x: 40, y: 555, size: 14, font, color: rgb(0.1, 0.1, 0.1),
+    });
+    page.drawText(`Project: ${projectId}`, {
+      x: 40, y: 537, size: 8, font: bodyFont, color: rgb(0.5, 0.5, 0.5),
+    });
+
+    // Column headers
+    const COLS = ['Week Ending', 'Trade', 'Type', 'ST', 'OT', 'DT', 'Total', 'Workers', 'Wages'];
+    const COL_X = [40, 120, 220, 300, 340, 380, 420, 470, 520];
+    COLS.forEach((h, i) => {
+      page.drawText(h, { x: COL_X[i], y: 518, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+    });
+
+    // Data rows (paginate at ~30 rows per page)
+    let y = 503;
+    for (const row of pivot) {
+      if (y < 40) {
+        page = pdfDoc.addPage([842, 595]);
+        y = 555;
+      }
+      const vals = [
+        row.weekEndingDate,
+        row.tradeCode,
+        row.laborType.slice(0, 1).toUpperCase(),
+        row.totalStraightHours.toFixed(1),
+        row.totalOvertimeHours.toFixed(1),
+        row.totalDoubleHours.toFixed(1),
+        row.totalHours.toFixed(1),
+        String(row.workerCount),
+        `$${row.grossWages.toFixed(0)}`,
+      ];
+      vals.forEach((v, i) => {
+        page.drawText(v, { x: COL_X[i], y, size: 7, font: bodyFont, color: rgb(0.15, 0.15, 0.15) });
+      });
+      y -= 14;
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="hours-pivot-${projectId}.pdf"`);
+    res.send(Buffer.from(pdfBytes));
+    return;
+  }
+
+  res.status(400).json({ error: 'Invalid format parameter. Use json, csv, or pdf.' });
 });
