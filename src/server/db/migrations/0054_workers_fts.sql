@@ -16,14 +16,12 @@ CREATE TRIGGER IF NOT EXISTS workers_fts_ai
 --> statement-breakpoint
 CREATE TRIGGER IF NOT EXISTS workers_fts_au
   AFTER UPDATE ON workers BEGIN
-    INSERT INTO workers_fts(workers_fts, rowid, worker_id, project_id, name, trade_union)
-      VALUES('delete', old.rowid, old.id, old.project_id, old.name, COALESCE(old.trade_union, ''));
+    DELETE FROM workers_fts WHERE worker_id = old.id;
     INSERT INTO workers_fts(worker_id, project_id, name, trade_union)
       VALUES (new.id, new.project_id, new.name, COALESCE(new.trade_union, ''));
   END;
 --> statement-breakpoint
 CREATE TRIGGER IF NOT EXISTS workers_fts_ad
   AFTER DELETE ON workers BEGIN
-    INSERT INTO workers_fts(workers_fts, rowid, worker_id, project_id, name, trade_union)
-      VALUES('delete', old.rowid, old.id, old.project_id, old.name, COALESCE(old.trade_union, ''));
+    DELETE FROM workers_fts WHERE worker_id = old.id;
   END;

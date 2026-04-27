@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { workers, workerClassifications } from '../db/schema.js';
 import { getCachedWd, getCachedClassifications } from '../services/wageCache.js';
@@ -185,6 +185,51 @@ router.get('/:projectId/workers', async (req, res) => {
   );
 
   res.json({ data: { workers: result } });
+});
+
+// GET /api/projects/:projectId/workers/search?q= — Phase 85 PERF-01
+// FTS5 full-text search over workers.name + workers.trade_union, scoped to projectId.
+// MUST be registered BEFORE any /:projectId/workers/:workerId route — Express matches in order
+// and "search" would otherwise be captured as the :workerId param (RESEARCH Pitfall 1).
+router.get('/:projectId/workers/search', async (req, res) => {
+  const projectId = req.params.projectId as string;
+  const rawQuery = (req.query.q as string | undefined)?.trim() ?? '';
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  // IDOR guard FIRST — never query FTS5 before access is verified (NFR-03 pattern)
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  // Empty query → empty result. NEVER pass '' to FTS5 MATCH (RESEARCH Pitfall 5).
+  if (!rawQuery) {
+    res.json({ data: { workers: [] } });
+    return;
+  }
+
+  // Sanitize for FTS5 MATCH grammar: strip everything except [A-Za-z0-9 ] then prefix-match.
+  // FTS5 has its own special chars (parens, quotes, *, :, -) that crash MATCH if unescaped (RESEARCH Pitfall 2).
+  const sanitized = rawQuery.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+  if (!sanitized) {
+    res.json({ data: { workers: [] } });
+    return;
+  }
+  const ftsQuery = sanitized + '*'; // prefix match — "jo" matches "John"
+
+  // Slim result shape (worker_id, name, trade_union) — avoids N+1 classification joins,
+  // keeps response < 50ms on 500 workers (RESEARCH Open Question 1).
+  const rows = (await db.all(
+    sql`SELECT worker_id, name, trade_union
+        FROM workers_fts
+        WHERE workers_fts MATCH ${ftsQuery} AND project_id = ${projectId}
+        LIMIT 50`,
+  )) as { worker_id: string; name: string; trade_union: string | null }[];
+
+  res.json({ data: { workers: rows } });
 });
 
 // POST /api/projects/:projectId/workers — create a worker on a project

@@ -450,3 +450,186 @@ describe('workerSex field (NJ-01)', () => {
     expect(worker.workerSex).toBeNull();
   });
 });
+
+// ── Phase 85: FTS5 Search Tests ───────────────────────────────────────────
+
+describe("GET /:projectId/workers/search", () => {
+  it("returns matching workers by name (happy path)", async () => {
+    const cookie = await registerAndLogin("search-1");
+    const projectId = await createProject(cookie);
+    await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set("Cookie", cookie)
+      .send({ name: "John Doe", tradeUnion: "Carpenters Local 51" });
+    await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set("Cookie", cookie)
+      .send({ name: "Jane Smith", tradeUnion: "Electricians Local 11" });
+    await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set("Cookie", cookie)
+      .send({ name: "Bob Carter" });
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=john`)
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.workers).toHaveLength(1);
+    expect(res.body.data.workers[0].name).toBe("John Doe");
+    expect(res.body.data.workers[0].trade_union).toBe("Carpenters Local 51");
+  });
+
+  it("scopes results to projectId (no cross-project leakage)", async () => {
+    const cookie = await registerAndLogin("search-2");
+    const projectA = await createProject(cookie);
+    const projectB = await createProject(cookie);
+
+    await supertest(app)
+      .post(`/api/projects/${projectA}/workers`)
+      .set("Cookie", cookie)
+      .send({ name: "Alex Alpha" });
+    await supertest(app)
+      .post(`/api/projects/${projectB}/workers`)
+      .set("Cookie", cookie)
+      .send({ name: "Alex Beta" });
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectA}/workers/search?q=alex`)
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.workers).toHaveLength(1);
+    expect(res.body.data.workers[0].name).toBe("Alex Alpha");
+  });
+
+  it("returns empty array on empty query (q='' and q absent)", async () => {
+    const cookie = await registerAndLogin("search-3");
+    const projectId = await createProject(cookie);
+    await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set("Cookie", cookie)
+      .send({ name: "Someone Here" });
+
+    const resEmpty = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=`)
+      .set("Cookie", cookie);
+    expect(resEmpty.status).toBe(200);
+    expect(resEmpty.body.data.workers).toEqual([]);
+
+    const resAbsent = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search`)
+      .set("Cookie", cookie);
+    expect(resAbsent.status).toBe(200);
+    expect(resAbsent.body.data.workers).toEqual([]);
+  });
+
+  it("returns empty array on FTS5-only-special-char query", async () => {
+    const cookie = await registerAndLogin("search-4");
+    const projectId = await createProject(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=(((`)
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.workers).toEqual([]);
+  });
+
+  it("returns 401 for unauthenticated request", async () => {
+    const cookie = await registerAndLogin("search-5");
+    const projectId = await createProject(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=foo`);
+
+    expect(res.status).toBe(401);
+  });
+
+  it("blocks cross-tenant access (>= 400)", async () => {
+    const cookieA = await registerAndLogin("search-6a");
+    const cookieB = await registerAndLogin("search-6b");
+    const projectA = await createProject(cookieA);
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectA}/workers/search?q=foo`)
+      .set("Cookie", cookieB);
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).not.toBe(200);
+  });
+
+  it("does not crash on FTS5 special characters", async () => {
+    const cookie = await registerAndLogin("search-7");
+    const projectId = await createProject(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=john(doe)`)
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data.workers)).toBe(true);
+  });
+
+  it("resolves search route, not :workerId route (returns array shape)", async () => {
+    const cookie = await registerAndLogin("search-8");
+    const projectId = await createProject(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=foo`)
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveProperty("workers");
+    expect(Array.isArray(res.body.data.workers)).toBe(true);
+  });
+
+  it("removes stale rows from FTS index after worker name update (trigger sync)", async () => {
+    const cookie = await registerAndLogin("search-9");
+    const projectId = await createProject(cookie);
+
+    const createRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set("Cookie", cookie)
+      .send({ name: "Original Name" });
+    const workerId = createRes.body.data?.worker?.id as string;
+
+    await supertest(app)
+      .put(`/api/projects/${projectId}/workers/${workerId}`)
+      .set("Cookie", cookie)
+      .send({ name: "Updated Name" });
+
+    const resOld = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=original`)
+      .set("Cookie", cookie);
+    expect(resOld.status).toBe(200);
+    expect(resOld.body.data.workers).toHaveLength(0);
+
+    const resNew = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=updated`)
+      .set("Cookie", cookie);
+    expect(resNew.status).toBe(200);
+    expect(resNew.body.data.workers).toHaveLength(1);
+  });
+
+  it("removes row from FTS index after worker delete (trigger sync)", async () => {
+    const cookie = await registerAndLogin("search-10");
+    const projectId = await createProject(cookie);
+
+    const createRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set("Cookie", cookie)
+      .send({ name: "DeleteMe Worker" });
+    const workerId = createRes.body.data?.worker?.id as string;
+
+    await supertest(app)
+      .delete(`/api/projects/${projectId}/workers/${workerId}`)
+      .set("Cookie", cookie);
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/workers/search?q=deleteme`)
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.workers).toHaveLength(0);
+  });
+});
