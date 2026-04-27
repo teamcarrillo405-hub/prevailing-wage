@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.5
-milestone_name: State Portal Integration
+milestone_name: Mobile Field Capabilities
 status: Phase complete — ready for next phase
-stopped_at: Completed 95-03-PLAN.md (Phase 95 Background Sync — all plans shipped)
-last_updated: "2026-04-27T14:05:00.000Z"
+stopped_at: Completed 98-01-PLAN.md (Phase 98 Offline Compliance Checklists — all plans shipped)
+last_updated: "2026-04-27T14:20:00.000Z"
 progress:
-  total_phases: 39
-  completed_phases: 39
-  total_plans: 90
-  completed_plans: 92
+  total_phases: 42
+  completed_phases: 42
+  total_plans: 94
+  completed_plans: 96
 ---
 
 # State
@@ -23,10 +23,13 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 95 (95-background-sync) — COMPLETE (all 3 plans shipped)
-Plan: 3 of 3
+Phase: 98 (98-offline-compliance-checklists) — COMPLETE (1 plan shipped)
+Plan: 1 of 1
 
 Previously completed:
+- Phase 97 (97-mobile-nav-redesign) — COMPLETE (1 plan shipped; BottomTabBar + swipe gesture)
+- Phase 96 (96-photo-verification) — COMPLETE (2 plans shipped; migration 0059 + SignaturePad + PhotoGallery)
+- Phase 95 (95-background-sync) — COMPLETE (all 3 plans shipped)
 - Phase 94 (94-offline-payroll-entry-queue) — COMPLETE (all 3 plans shipped; 9 tests added; 803 total)
 - Phase 93 (93-phase-b-watchdog-gate) — COMPLETE (GATE_PASS 9.50/10)
 - Phase 92 (92-virginia-certified-payroll) — COMPLETE (1 plan shipped)
@@ -196,6 +199,10 @@ Key decisions locked for v5.0 scope:
 - [Phase 95-01]: replayPayrollQueue uses native indexedDB (not idb lib) — SW bundle isolation; 409 → synced-elsewhere; 2xx+other-4xx delete; 5xx/network keep
 - [Phase 95-02]: useSyncStatus derives idle/syncing/synced/pending state; SyncStatusIndicator pure presentational pill; 4s auto-hide after 'synced'
 - [Phase 95-03]: registerSyncIfSupported exported from offlineQueue.ts with SyncManager feature detect; void fire-and-forget in handleOnline
+- [Phase 96-01]: Migration 0059 uses statement-breakpoint between the two CREATE TABLE statements; GET /api/projects/:id/photos returns inline base64 dataUrl (option b — no separate file route needed)
+- [Phase 96-02]: Pure HTML5 canvas for SignaturePad (no external library); extractExifGps defined outside component; capture="environment" for rear camera preference; InferSelectModel fix for photos.ts map callback
+- [Phase 97-01]: BottomTabBar 4 tabs: Field/Payroll/Projects/More → /field,/dashboard,/reports,/team; pathname === tab.to exact match; pb-14 md:pb-8 on main; 60px swipe threshold
+- [Phase 98-01]: crypto.randomUUID() used in client (browser native, no uuid package); deleteChecklist inline in page component; syncPendingChecklists fires on online event + mount + item completion
 - [Phase 93-phase-b-watchdog-gate]: GATE_PASS 9.50/10 — all 10 Phase B criteria verified green; 794 tests passing; 1 TS deduction (stripeService.ts version string, -0.5); Phase 94 unblocked
 - [Phase 89-01]: WH347_FORM_REVISION = 'Rev. Jan. 2025' constant + pdfDoc.setTitle() in fillSingleSet(); setText() for optional header_formRevision widget
 - [Phase 89-02]: DeductionViolation type + deductionViolations[] on ComplianceResult; DEDUCTION_RATIO_CAP=0.30 loop in computeCompliance(); hasViolations excludes deduction warnings; amber banner in PayrollWeekDetailPage
@@ -237,7 +244,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T14:05:00.000Z
-Stopped at: Completed 95-03-PLAN.md — Phase 95 Background Sync fully shipped
+Last session: 2026-04-27T14:20:00.000Z
+Stopped at: Completed 98-01-PLAN.md — Phases 96+97+98 (MOB-19 through MOB-22) fully shipped
 Resume file: None
-Next action: Phases 94+95 complete. 803 tests passing. 0 TS errors. MOB-16, MOB-17, MOB-18 implemented. TS note: stripeService.ts API version string still needs update to '2026-04-22.dahlia' (minor, pre-existing, unrelated to Phase 95).
+Next action: Phases 96+97+98 complete. 803 tests passing. 0 TS errors. MOB-19 (photo verification), MOB-20 (photo gallery), MOB-21 (bottom tab nav), MOB-22 (offline checklists) implemented. Migrations 0059+0060 registered. TS note: stripeService.ts API version string still needs update to '2026-04-22.dahlia' (minor, pre-existing, unrelated).
