@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Workflow, Settings, ChevronRight, Building2, Shield } from 'lucide-react';
+import { Workflow, Settings, ChevronRight, Building2, Shield, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -58,6 +58,36 @@ function parseNotifSettings(raw: string | null | undefined): NotifSettings {
   } catch {
     return { ...DEFAULT_NOTIF_SETTINGS };
   }
+}
+
+interface PinRow {
+  wageDeterminationId: string;
+  isPrimary: boolean;
+  wdNumber: string;
+  revisionNumber: number;
+  lastFetchedAt: string | null;
+  constructionType: string | null;
+  pinnedAt: string;
+}
+
+function StaleWdBanner({ lastFetchedAt }: { lastFetchedAt: string | null }) {
+  if (lastFetchedAt === null) {
+    return (
+      <div className="flex items-center gap-2 bg-amber-50 border border-amber-400 text-amber-800 rounded-md px-4 py-3 mb-4 text-sm">
+        <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+        <span>Wage Determination has never been synced from SAM.gov &mdash; refresh recommended.</span>
+      </div>
+    );
+  }
+  const ageMs = Date.now() - new Date(lastFetchedAt).getTime();
+  const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+  if (ageDays <= 7) return null;
+  return (
+    <div className="flex items-center gap-2 bg-amber-50 border border-amber-400 text-amber-800 rounded-md px-4 py-3 mb-4 text-sm">
+      <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+      <span>Wage Determination last updated {ageDays} days ago &mdash; refresh recommended.</span>
+    </div>
+  );
 }
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
@@ -1223,6 +1253,13 @@ export function ProjectDetailPage() {
     staleTime: 60_000,
   });
 
+  const { data: wdPinsData } = useQuery({
+    queryKey: ['wd-pins', id],
+    queryFn: () => api.get<{ pins: PinRow[] }>(`/projects/${id}/wage-determinations`),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+
   const { data: complianceSummaryData } = useQuery({
     queryKey: ['compliance-summary-batch'],
     queryFn: () => api.get<{ projects: Array<{ id: string; status: string; violationCount: number }> }>(
@@ -1231,6 +1268,12 @@ export function ProjectDetailPage() {
     enabled: !!id && data?.data?.project?.status === 'active',
     staleTime: 60_000,
   });
+
+  const primaryPin = wdPinsData?.pins?.find((p) => p.isPrimary) ?? null;
+  const showStaleBanner =
+    primaryPin !== null &&
+    (primaryPin.lastFetchedAt === null ||
+      Date.now() - new Date(primaryPin.lastFetchedAt).getTime() > 7 * 24 * 60 * 60 * 1000);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -1657,6 +1700,10 @@ export function ProjectDetailPage() {
 
           {/* Wage determinations panel */}
           <div className="mt-8">
+            {/* Stale WD banner — COMP-06 Phase 88 */}
+            {showStaleBanner && primaryPin && (
+              <StaleWdBanner lastFetchedAt={primaryPin.lastFetchedAt} />
+            )}
             <ProjectWageDeterminationsPanel
               projectId={project.id}
               projectState={project.state}

@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { getDb } from '../db/index.js';
+import { projectWageDeterminations, wageDeterminations } from '../db/schema.js';
 import {
-  getPinnedWdsForProject,
   pinWdToProject,
   unpinWdFromProject,
   setPrimaryWd,
@@ -32,9 +33,28 @@ const PinBodySchema = z.object({
 });
 
 // GET /api/projects/:projectId/wage-determinations
+// Returns each pin with lastFetchedAt, wdNumber, revisionNumber (COMP-06 Phase 88)
 projectWdRouter.get('/', (req, res) => {
   const { projectId } = req.params as { projectId: string };
-  const pins = getPinnedWdsForProject(projectId);
+  const db = getDb();
+  const pins = db
+    .select({
+      wageDeterminationId: projectWageDeterminations.wageDeterminationId,
+      constructionType: projectWageDeterminations.constructionType,
+      isPrimary: projectWageDeterminations.isPrimary,
+      pinnedAt: projectWageDeterminations.pinnedAt,
+      pinnedByUserId: projectWageDeterminations.pinnedByUserId,
+      wdNumber: wageDeterminations.wdNumber,
+      revisionNumber: wageDeterminations.revisionNumber,
+      lastFetchedAt: wageDeterminations.lastFetchedAt,
+    })
+    .from(projectWageDeterminations)
+    .innerJoin(
+      wageDeterminations,
+      eq(projectWageDeterminations.wageDeterminationId, wageDeterminations.id),
+    )
+    .where(eq(projectWageDeterminations.projectId, projectId))
+    .all();
   res.json({ pins });
 });
 
