@@ -316,6 +316,13 @@
       "when": 1746057600000,
       "tag": "0053_session_version_sam_gov",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1745798400000,
+      "tag": "0054_workers_fts",
+      "breakpoints": true
     }
   ]
 }
