@@ -94,11 +94,39 @@ function ReportCard({ icon, title, description, active, onClick }: ReportCardPro
 
 // ---- Component ----
 
+// ── Phase 104: Pivot row shape (REPT-06) ─────────────────────────────────────
+
+interface PivotRow {
+  weekEndingDate: string;
+  tradeCode: string;
+  tradeDescription: string;
+  laborType: string;
+  totalStraightHours: number;
+  totalOvertimeHours: number;
+  totalDoubleHours: number;
+  totalHours: number;
+  workerCount: number;
+  grossWages: number;
+}
+
 export function ReportsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [activeTab, setActiveTab] = useState<'fringe' | 'payHistory' | 'fringeBreakdown'>('fringe');
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>('');
   const [isPrinting, setIsPrinting] = useState(false);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+
+  // Phase 104 — Hours pivot query (REPT-06)
+  const pivotQuery = useQuery({
+    queryKey: ['hoursPivot', projectId],
+    queryFn: async () => {
+      const res = await fetch(`/api/reports/${projectId}/hours-pivot`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to load pivot data');
+      return res.json() as Promise<{ pivot: PivotRow[] }>;
+    },
+    enabled: !!projectId,
+    staleTime: 60_000,
+  });
 
   // Workers list for the pay history selector
   const { data: workersData } = useQuery({
@@ -614,6 +642,113 @@ export function ReportsPage() {
             })()}
           </div>
         )}
+
+        {/* ── Phase 104: Hours by Trade / Classification / Week Pivot (REPT-06) ── */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-nav-dark font-headline">
+              Hours by Trade / Classification / Week
+            </h2>
+            <div className="flex gap-2">
+              <a
+                href={`/api/reports/${projectId}/hours-pivot?format=csv`}
+                className="border border-nav-dark text-nav-dark text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                download
+              >
+                Download CSV
+              </a>
+              <a
+                href={`/api/reports/${projectId}/hours-pivot?format=pdf`}
+                className="bg-nav-dark text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-nav-dark/90 transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download PDF
+              </a>
+            </div>
+          </div>
+
+          {pivotQuery.isLoading && (
+            <div className="py-8 text-center text-gray-400">Loading pivot data...</div>
+          )}
+
+          {pivotQuery.isError && (
+            <div className="py-4 text-red-600 text-sm">Failed to load pivot data.</div>
+          )}
+
+          {pivotQuery.data && (
+            <>
+              {pivotQuery.data.pivot.length === 0 ? (
+                <div className="py-8 text-center text-gray-400">
+                  No payroll data found for this project.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-nav-dark text-white">
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Week Ending</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Trade</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">ST Hrs</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">OT Hrs</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">DT Hrs</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">Total</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">Workers</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">Gross Wages</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pivotQuery.data.pivot.map((row, i) => {
+                        const rowKey = `${row.weekEndingDate}-${row.tradeCode}`;
+                        const isExpanded = expandedKey === rowKey;
+                        return (
+                          <>
+                            <tr
+                              key={`${rowKey}-${row.laborType}`}
+                              className={`cursor-pointer hover:bg-gray-50 transition-colors ${
+                                i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                              } ${isExpanded ? 'ring-1 ring-inset ring-brand-gold' : ''}`}
+                              onClick={() =>
+                                setExpandedKey((prev) => (prev === rowKey ? null : rowKey))
+                              }
+                            >
+                              <td className="px-4 py-3 text-gray-700 font-medium">{row.weekEndingDate}</td>
+                              <td className="px-4 py-3">
+                                <span className="bg-nav-dark text-brand-gold font-bold text-xs px-2 py-0.5 rounded font-headline">
+                                  {row.tradeCode}
+                                </span>
+                                <span className="ml-2 text-gray-600 text-xs">{row.tradeDescription}</span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-500 text-xs capitalize">{row.laborType}</td>
+                              <td className="px-4 py-3 text-right text-gray-700">{row.totalStraightHours.toFixed(1)}</td>
+                              <td className="px-4 py-3 text-right text-gray-700">{row.totalOvertimeHours.toFixed(1)}</td>
+                              <td className="px-4 py-3 text-right text-gray-700">{row.totalDoubleHours.toFixed(1)}</td>
+                              <td className="px-4 py-3 text-right font-semibold text-nav-dark">{row.totalHours.toFixed(1)}</td>
+                              <td className="px-4 py-3 text-right text-gray-700">{row.workerCount}</td>
+                              <td className="px-4 py-3 text-right text-gray-700">
+                                ${row.grossWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                            {isExpanded && (
+                              <tr key={`${rowKey}-drill`} className="bg-amber-50">
+                                <td colSpan={9} className="px-6 py-3 text-xs text-gray-600">
+                                  <strong>Drill-down:</strong> {row.workerCount} workers logged hours as{' '}
+                                  {row.tradeDescription} ({row.laborType}) during week ending {row.weekEndingDate}.
+                                  Navigate to the payroll week to see individual entries.
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
       </div>
     </Layout>
