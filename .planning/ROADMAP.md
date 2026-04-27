@@ -1824,7 +1824,7 @@ Plans:
 - [x] **Phase 84: Dependabot + Uptime Monitoring** — Dependabot npm weekly PRs, Uptime Robot + Instatus status page, public status badge on landing (SEC-09, SEC-10)
  (completed 2026-04-26)
 - [x] **Phase 85: Full-Text Search** — SQLite FTS5 virtual tables for workers + projects, debounced search UI, highlighted matches (PERF-01, PERF-02) (completed 2026-04-27)
-- [ ] **Phase 86: Scheduled Report Emails** — daily/weekly/monthly compliance summaries via nodemailer cron, user-configurable delivery prefs, unsubscribe token (NOTIF-05, NOTIF-06)
+- [x] **Phase 86: Scheduled Report Emails** — daily/weekly/monthly compliance summaries via nodemailer cron, user-configurable delivery prefs, unsubscribe token (NOTIF-05, NOTIF-06) (completed 2026-04-27)
 - [ ] **Phase 87: Phase A Watchdog Gate** — SOC 2 evidence package review (CC6–CC9 coverage), score target 8.55+
 
 **Acceptance criteria:**
@@ -1906,7 +1906,7 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 | 83. External Log Drain + Security Policy | v7.0 | 2/2 | Complete    | 2026-04-26 |
 | 84. Dependabot + Uptime Monitoring | v7.0 | 2/2 | Complete    | 2026-04-27 |
 | 85. Full-Text Search | v7.0 | 2/2 | Complete    | 2026-04-27 |
-| 86. Scheduled Report Emails | v7.0 | 1/2 | In Progress|  |
+| 86. Scheduled Report Emails | v7.0 | 2/2 | Complete   | 2026-04-27 |
 | 87. Phase A Watchdog Gate | v7.0 | 0/1 | Not started | - |
 | 88. Live SAM.gov WD Fetch | v7.0 | 0/3 | Not started | - |
 | 89. DOL 2024 Rule Updates | v7.0 | 0/2 | Not started | - |
@@ -2021,6 +2021,6 @@ Plans:
 
 Plans:
 - [x] 86-01-PLAN.md -- projectSettings schema extension; scheduledReports cron job; nodemailer template; unsubscribe endpoint
-- [ ] 86-02-PLAN.md -- ProjectDetailPage Settings tab: report schedule selector + email input + save
+- [x] 86-02-PLAN.md -- ProjectDetailPage Settings tab: report schedule selector + email input + save
 
 **UI hint**: yes

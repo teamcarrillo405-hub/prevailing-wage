@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 86-01-PLAN.md
-last_updated: "2026-04-27T19:15:46.354Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 86-02-PLAN.md
+last_updated: "2026-04-27T19:26:44.251Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -180,6 +180,7 @@ Key decisions locked for v5.0 scope:
 - [Phase 86]: UTC timezone for scheduled-reports cron (not ET) — deterministic region-agnostic dispatch per ROADMAP spec
 - [Phase 86]: GET and POST both supported for /api/notifications/unsubscribe — email href fires GET; POST for API callers
 - [Phase 86]: Resend used (not nodemailer) for scheduled reports — STATE.md decision; ROADMAP nodemailer wording is documented copy-paste error per RESEARCH Pitfall 1
+- [Phase 86-scheduled-report-emails]: parseReportSettings exported for direct unit test coverage without mounting full page
 
 ### Phase Order Rationale
 
@@ -212,7 +213,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T19:15:46.350Z
-Stopped at: Completed 86-01-PLAN.md
+Last session: 2026-04-27T19:26:44.246Z
+Stopped at: Completed 86-02-PLAN.md
 Resume file: None
 Next action: Execute Phase 85 (Full-Text Search). Manual follow-up: create Better Stack account and replace STATUS_PAGE_URL placeholder in src/client/pages/LandingPage.tsx.
