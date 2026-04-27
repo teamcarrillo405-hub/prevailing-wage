@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, TrendingUp, PieChart, Download, Printer, Shield } from 'lucide-react';
+import { FileText, TrendingUp, PieChart, Download, Printer, Shield, HardHat } from 'lucide-react';
+import { ApprenticeshipDashboard } from '../components/ApprenticeshipDashboard';
 import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ReportsSkeleton } from '../components/ui/Skeleton';
@@ -130,7 +131,7 @@ interface DbeParticipationResult {
 
 export function ReportsPage() {
   const { projectId } = useParams<{ projectId: string }>();
-  const [activeTab, setActiveTab] = useState<'fringe' | 'payHistory' | 'fringeBreakdown' | 'dbeParticipation'>('fringe');
+  const [activeTab, setActiveTab] = useState<'fringe' | 'payHistory' | 'fringeBreakdown' | 'dbeParticipation' | 'apprenticeship'>('fringe');
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>('');
   const [isPrinting, setIsPrinting] = useState(false);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -280,6 +281,12 @@ export function ReportsPage() {
       title: 'DBE Participation',
       description: 'DBE/MBE/WBE/SDVOSB hours as a percentage of total project hours — DOT DBE program reporting.',
     },
+    {
+      key: 'apprenticeship' as const,
+      icon: <HardHat className="w-4 h-4" />,
+      title: 'Apprenticeship',
+      description: 'Per-trade apprenticeship ratios, IRA/IIJA 15% compliance check, and 12-week trend.',
+    },
   ];
 
   return (
@@ -339,7 +346,7 @@ export function ReportsPage() {
         </div>
 
         {/* Report selector cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 print-hidden">
           {REPORT_CARDS.map(card => (
             <ReportCard
               key={card.key}
@@ -886,6 +893,22 @@ export function ReportsPage() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* ---- Apprenticeship tab (Phase 117 APP-01) ---- */}
+        {activeTab === 'apprenticeship' && projectId && (
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+                <HardHat className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 font-headline">Apprenticeship Ratios</h2>
+                <p className="text-xs text-gray-500">Per-trade apprentice ratios, IRA/IIJA 15% check, and 12-week trend</p>
+              </div>
+            </div>
+            <ApprenticeshipDashboard projectId={projectId} />
           </div>
         )}
 

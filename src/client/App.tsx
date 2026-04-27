@@ -63,6 +63,9 @@ const GrowthDashboardPage = React.lazy(() =>
 const SsoConfigPage = React.lazy(() =>
   import('./pages/SsoConfigPage').then(m => ({ default: m.SsoConfigPage }))
 );
+const ApprenticeshipPage = React.lazy(() =>
+  import('./pages/ApprenticeshipPage').then(m => ({ default: m.ApprenticeshipPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -133,6 +136,7 @@ export default function App() {
                 <Route path="/reports" element={<GlobalReportsPage />} />
                 <Route path="/field" element={<FieldHubPage />} />
                 <Route path="/projects/:projectId/checklists" element={<OfflineChecklistPage />} />
+                <Route path="/projects/:projectId/apprenticeship" element={<ApprenticeshipPage />} />
                 <Route path="/checklists" element={<OfflineChecklistPage />} />
                 <Route path="/classification-assist" element={<ClassificationAssistPage />} />
               </Route>

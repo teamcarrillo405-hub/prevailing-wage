@@ -22,6 +22,7 @@ import { ProjectWageDeterminationsPanel } from '../components/ProjectWageDetermi
 import { useToast } from '../contexts/ToastContext';
 import { SignaturePad } from '../components/ui/SignaturePad';
 import { PhotoGallery } from '../components/ui/PhotoGallery';
+import { ApprenticeshipDashboard } from '../components/ApprenticeshipDashboard';
 
 interface Project {
   id: string;
@@ -1283,6 +1284,30 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
   );
 }
 
+// ── Phase 117: Apprenticeship Ratios collapsible section ─────────────────────
+
+function ApprenticeshipSection({ projectId }: { projectId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-8">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-brand-navy transition-colors mb-3"
+        aria-expanded={open}
+      >
+        <ChevronRight className={`w-4 h-4 transition-transform ${open ? 'rotate-90' : ''}`} />
+        Apprenticeship Ratios
+      </button>
+      {open && (
+        <div className="mt-2">
+          <ApprenticeshipDashboard projectId={projectId} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -1750,6 +1775,9 @@ export function ProjectDetailPage() {
           <div className="mt-8">
             <SubcontractorsPanel projectId={project.id} />
           </div>
+
+          {/* Apprenticeship Ratios — Phase 117 (APP-01) */}
+          <ApprenticeshipSection projectId={project.id} />
 
           {/* Wage determinations panel */}
           <div className="mt-8">
