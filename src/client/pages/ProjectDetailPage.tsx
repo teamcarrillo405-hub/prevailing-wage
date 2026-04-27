@@ -20,6 +20,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ProjectWageDeterminationsPanel } from '../components/ProjectWageDeterminationsPanel';
 import { useToast } from '../contexts/ToastContext';
+import { SignaturePad } from '../components/ui/SignaturePad';
+import { PhotoGallery } from '../components/ui/PhotoGallery';
 
 interface Project {
   id: string;
@@ -1709,6 +1711,16 @@ export function ProjectDetailPage() {
               projectState={project.state}
               projectCounty={project.county}
             />
+          </div>
+
+          {/* Phase 96: Contractor Signature */}
+          <div className="mt-8">
+            <SignaturePad projectId={project.id} />
+          </div>
+
+          {/* Phase 96: Site Photo Gallery */}
+          <div className="mt-8">
+            <PhotoGallery projectId={project.id} />
           </div>
         </div>
       )}
