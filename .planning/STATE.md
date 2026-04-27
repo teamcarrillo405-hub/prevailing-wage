@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Phase A Foundation + Security
-status: Complete — Phase 87 GATE_PASS 10.0/10 — Phase 88 unblocked
-stopped_at: Completed 87-01-PLAN.md (Phase A Watchdog Gate — GATE_PASS)
-last_updated: "2026-04-27T19:38:00Z"
+status: Complete — Phase 89 DOL 2024 Rule Updates — all 3 plans shipped
+stopped_at: Completed 89-03-PLAN.md (Civil Penalty Display)
+last_updated: "2026-04-27T20:30:00Z"
 progress:
-  total_phases: 37
-  completed_phases: 36
-  total_plans: 84
-  completed_plans: 84
+  total_phases: 38
+  completed_phases: 37
+  total_plans: 87
+  completed_plans: 87
 ---
 
 # State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 87 (phase-a-watchdog-gate) — COMPLETE (GATE_PASS 10.0/10)
-Plan: 1 of 1
+Phase: 89 (89-dol-2024-rule-updates) — COMPLETE (all 3 plans shipped)
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -182,6 +182,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 86]: Resend used (not nodemailer) for scheduled reports — STATE.md decision; ROADMAP nodemailer wording is documented copy-paste error per RESEARCH Pitfall 1
 - [Phase 86-scheduled-report-emails]: parseReportSettings exported for direct unit test coverage without mounting full page
 - [Phase 87-phase-a-watchdog-gate]: GATE_PASS 10.0/10 — all 10 Phase A criteria verified green; 762 tests passing; TypeScript clean; Phase 88 unblocked
+- [Phase 89-01]: WH347_FORM_REVISION = 'Rev. Jan. 2025' constant + pdfDoc.setTitle() in fillSingleSet(); setText() for optional header_formRevision widget
+- [Phase 89-02]: DeductionViolation type + deductionViolations[] on ComplianceResult; DEDUCTION_RATIO_CAP=0.30 loop in computeCompliance(); hasViolations excludes deduction warnings; amber banner in PayrollWeekDetailPage
+- [Phase 89-03]: CIVIL_PENALTY_PER_VIOLATION=13_508 constant; useQuery for /compliance/projects/summary; civil penalty card renders only on active projects with violations
 
 ### Phase Order Rationale
 
@@ -215,7 +218,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T19:38:00.000Z
-Stopped at: Completed Phase 87 (Phase A Watchdog Gate) — GATE_PASS 10.0/10
+Last session: 2026-04-27T20:30:00.000Z
+Stopped at: Completed Phase 89 (DOL 2024 Rule Updates) — all 3 plans shipped
 Resume file: None
-Next action: Begin Phase 88 — Phase A is fully gated and unblocked.
+Next action: Phase 89 complete. All DOL 2024 compliance updates (Rev. Jan. 2025 PDF metadata, 30% deduction cap, civil penalty display) shipped.
