@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Phase complete — ready for verification
-stopped_at: Completed 88-01-PLAN.md and 88-02-PLAN.md; awaiting human-verify checkpoint for stale-WD banner
-last_updated: "2026-04-27T19:57:28.006Z"
+status: Phase complete — ready for next phase
+stopped_at: Completed 92-01-PLAN.md (VA DOLI certified payroll); phases 90, 91, 92 all complete
+last_updated: "2026-04-27T20:45:00.000Z"
 progress:
   total_phases: 37
-  completed_phases: 34
-  total_plans: 81
-  completed_plans: 83
+  completed_phases: 37
+  total_plans: 84
+  completed_plans: 86
 ---
 
 # State
@@ -23,8 +23,13 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 89 (89-dol-2024-rule-updates) — COMPLETE (all 3 plans shipped)
-Plan: 3 of 3
+Phase: 92 (92-virginia-certified-payroll) — COMPLETE
+Plan: 1 of 1
+
+Previously completed:
+- Phase 90 (90-procore-timesheet-sync) — COMPLETE (all 3 plans shipped)
+- Phase 91 (91-minnesota-certified-payroll) — COMPLETE (1 plan shipped)
+- Phase 89 (89-dol-2024-rule-updates) — COMPLETE (all 3 plans shipped)
 
 ## Performance Metrics
 
@@ -186,6 +191,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 89-02]: DeductionViolation type + deductionViolations[] on ComplianceResult; DEDUCTION_RATIO_CAP=0.30 loop in computeCompliance(); hasViolations excludes deduction warnings; amber banner in PayrollWeekDetailPage
 - [Phase 89-03]: CIVIL_PENALTY_PER_VIOLATION=13_508 constant; useQuery for /compliance/projects/summary; civil penalty card renders only on active projects with violations
 - [Phase 88]: Weekly WD sync cron (Sunday 03:00 UTC) replaces monthly 1st-of-month cron; wdRevisionLog table tracks revision bumps for audit trail
+- [Phase 90-03]: Procore card placed below QBO card with same visual pattern; ?procore=connected banner uses no setTimeout (user navigates away); Import Timesheets uses plain anchor not Button
+- [Phase 91]: MN DLI form uses Monday-first day order (Mo-Tu-We-Th-Fr-Sa-Su); migration idx 57 used (55/56 already taken); grossWages field simpler than MA projectGross/totalWeekGross split; Statement of Compliance cites Minn. Stat. 177.42
+- [Phase 92]: VA DOLI form uses Monday-first day order matching MN; migration idx 58 (next after 57); Statement of Compliance cites Va. Code § 2.2-4360 et seq. (Virginia Public Procurement Act)
 
 ### Phase Order Rationale
 
@@ -219,7 +227,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T19:57:21.494Z
-Stopped at: Completed 88-01-PLAN.md and 88-02-PLAN.md; awaiting human-verify checkpoint for stale-WD banner
+Last session: 2026-04-27T20:45:00.000Z
+Stopped at: Completed 90-03-PLAN.md, 91-01-PLAN.md, 92-01-PLAN.md
 Resume file: None
-Next action: Phase 89 complete. All DOL 2024 compliance updates (Rev. Jan. 2025 PDF metadata, 30% deduction cap, civil penalty display) shipped.
+Next action: Phases 90, 91, 92 complete. State form library now includes MN (DLI) and VA (DOLI). Procore integrations tile live. 794 tests passing, 0 new TS errors.
