@@ -35,6 +35,7 @@ const BillingPage = React.lazy(() => import('./pages/BillingPage').then(m => ({ 
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage.js').then(m => ({ default: m.AcceptInvitePage })));
 const SubUploadPage = React.lazy(() => import('./pages/SubUploadPage').then(m => ({ default: m.SubUploadPage })));
 const IntegrationsPage = React.lazy(() => import('./pages/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })));
+const ProcoreImportPage = React.lazy(() => import('./pages/ProcoreImportPage').then(m => ({ default: m.ProcoreImportPage })));
 const FieldClockPage = React.lazy(() => import('./pages/FieldClockPage').then(m => ({ default: m.FieldClockPage })));
 const ProjectSettingsPage = React.lazy(() => import('./pages/ProjectSettingsPage').then(m => ({ default: m.ProjectSettingsPage })));
 const MfaSetupPage = React.lazy(() => import('./pages/MfaSetupPage').then(m => ({ default: m.MfaSetupPage })));
@@ -108,6 +109,7 @@ export default function App() {
                 <Route path="/team" element={<TeamPage />} />
                 <Route path="/billing" element={<BillingPage />} />
                 <Route path="/settings/integrations" element={<IntegrationsPage />} />
+                <Route path="/procore/import" element={<ProcoreImportPage />} />
                 <Route path="/settings/mfa" element={<MfaSetupPage />} />
                 <Route path="/settings/security" element={<SecurityDashboardPage />} />
                 <Route path="/settings/api-keys" element={<ApiKeysPage />} />

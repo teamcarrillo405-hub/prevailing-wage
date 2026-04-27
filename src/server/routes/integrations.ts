@@ -624,4 +624,145 @@ integrationsRouter.delete('/procore', requireAuth, async (req, res) => {
   res.json({ data: { disconnected: true } });
 });
 
+// ── Phase 90 Wave 2: Procore Timesheet Import Bridge ─────────────────────────
+
+// GET /api/integrations/procore/timesheet-entries?projectId=&startDate=&endDate=
+// Fetches timesheet entries from Procore for the given project + date range.
+integrationsRouter.get('/procore/timesheet-entries', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const { projectId, startDate, endDate } = req.query as Record<string, string>;
+
+  if (!projectId || !startDate || !endDate) {
+    res.status(400).json({ error: 'projectId, startDate, and endDate are required (YYYY-MM-DD)' });
+    return;
+  }
+
+  const tokenData = await getValidProcoreToken(userId);
+  if (!tokenData) {
+    res.status(401).json({ error: 'Procore not connected' });
+    return;
+  }
+
+  const { accessToken, companyId } = tokenData;
+
+  const procoreResp = await fetch(
+    `https://api.procore.com/rest/v1.0/projects/${encodeURIComponent(projectId)}/timesheet_entries` +
+    `?filters[start_datetime]=${encodeURIComponent(startDate + 'T00:00:00Z')}` +
+    `&filters[end_datetime]=${encodeURIComponent(endDate + 'T23:59:59Z')}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Procore-Company-Id': companyId,
+        'Accept': 'application/json',
+      },
+    },
+  );
+
+  if (!procoreResp.ok) {
+    const text = await procoreResp.text();
+    logger.error({ status: procoreResp.status, body: text.slice(0, 400) }, '[procore-timesheet] API error');
+    res.status(502).json({ error: 'Procore API error', detail: text.slice(0, 200) });
+    return;
+  }
+
+  const entries = await procoreResp.json() as Array<{
+    id: number;
+    worker?: { name?: string; id?: number };
+    hours?: string;
+    date?: string;
+    cost_code?: { name?: string };
+    description?: string;
+  }>;
+
+  const rows = entries.map((e) => ({
+    procoreId: String(e.id),
+    workerName: e.worker?.name ?? 'Unknown',
+    workerId: e.worker?.id ? String(e.worker.id) : null,
+    date: e.date ?? null,
+    hours: parseFloat(e.hours ?? '0') || 0,
+    costCode: e.cost_code?.name ?? null,
+    description: e.description ?? null,
+  }));
+
+  res.json({ data: { entries: rows, count: rows.length } });
+});
+
+// POST /api/integrations/procore/import
+// Body: { weekId, entries: [{ workerId, classificationId, date, hours }] }
+// Commits selected Procore timesheet rows as payroll entries.
+integrationsRouter.post('/procore/import', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const body = req.body as {
+    weekId: string;
+    entries: Array<{
+      workerId: string;
+      classificationId: string;
+      date: string;
+      hours: number;
+      baseRateSnapshot?: number;
+      fringeRateSnapshot?: number;
+    }>;
+  };
+
+  if (!body.weekId || !Array.isArray(body.entries) || body.entries.length === 0) {
+    res.status(400).json({ error: 'weekId and entries[] are required' });
+    return;
+  }
+
+  const tokenData = await getValidProcoreToken(userId);
+  if (!tokenData) {
+    res.status(401).json({ error: 'Procore not connected' });
+    return;
+  }
+
+  const db = getDb();
+  const [week] = await db.select().from(payrollWeeks).where(eq(payrollWeeks.id, body.weekId)).limit(1);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+  if (week.submittedAt) {
+    res.status(423).json({ error: 'This payroll week is submitted and cannot be modified.' });
+    return;
+  }
+
+  const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+  type DayHours = { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number };
+
+  const grouped = new Map<string, { workerId: string; classificationId: string; baseRate: number; fringeRate: number; days: DayHours }>();
+
+  for (const entry of body.entries) {
+    const key = `${entry.workerId}::${entry.classificationId}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        workerId: entry.workerId,
+        classificationId: entry.classificationId,
+        baseRate: entry.baseRateSnapshot ?? 0,
+        fringeRate: entry.fringeRateSnapshot ?? 0,
+        days: { monSt: 0, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0 },
+      });
+    }
+    const group = grouped.get(key)!;
+    const d = new Date(entry.date + 'T00:00:00Z');
+    const dayKey = `${DAY_KEYS[d.getUTCDay()]}St` as keyof DayHours;
+    group.days[dayKey] += entry.hours;
+  }
+
+  let committed = 0;
+  for (const [, group] of grouped) {
+    await upsertPayrollEntry({
+      payrollWeekId: body.weekId,
+      workerId: group.workerId,
+      classificationId: group.classificationId,
+      baseRateSnapshot: group.baseRate,
+      fringeRateSnapshot: group.fringeRate,
+      userId,
+      ...group.days,
+    });
+    committed++;
+  }
+
+  res.json({ data: { committed, weekId: body.weekId } });
+});
+
 export { integrationsRouter };
