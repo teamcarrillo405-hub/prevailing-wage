@@ -24,6 +24,7 @@ const CreateSubSchema = z.object({
   contactName: z.string().max(200).optional(),
   contactEmail: z.string().email().optional(),
   address: z.string().max(500).optional(),
+  dbeClassification: z.enum(['none', 'dbe', 'mbe', 'wbe', 'sdvosb']).optional().default('none'),
 });
 
 const UpdateSubSchema = z.object({
@@ -32,6 +33,7 @@ const UpdateSubSchema = z.object({
   contactName: z.string().max(200).optional().nullable(),
   contactEmail: z.string().email().optional().nullable(),
   address: z.string().max(500).optional().nullable(),
+  dbeClassification: z.enum(['none', 'dbe', 'mbe', 'wbe', 'sdvosb']).optional(),
 });
 
 const CreateCprWeekSchema = z.object({
@@ -127,6 +129,7 @@ router.post('/:id/subcontractors', validate(CreateSubSchema), async (req, res) =
     contactName: body.contactName ?? null,
     contactEmail: body.contactEmail ?? null,
     address: body.address ?? null,
+    dbeClassification: body.dbeClassification ?? 'none',
     createdAt: now,
   });
 
@@ -189,6 +192,7 @@ router.patch('/:id/subcontractors/:subId', validate(UpdateSubSchema), async (req
       contactName: body.contactName !== undefined ? body.contactName : existing.contactName,
       contactEmail: body.contactEmail !== undefined ? body.contactEmail : existing.contactEmail,
       address: body.address !== undefined ? body.address : existing.address,
+      ...(body.dbeClassification !== undefined ? { dbeClassification: body.dbeClassification } : {}),
     })
     .where(eq(subcontractors.id, subId));
 

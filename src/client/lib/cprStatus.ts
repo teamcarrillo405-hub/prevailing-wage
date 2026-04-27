@@ -16,6 +16,8 @@ export interface Subcontractor {
   contactName: string | null;
   contactEmail: string | null;
   address: string | null;
+  // Phase 107 (DBE-07): DBE classification flag
+  dbeClassification: 'none' | 'dbe' | 'mbe' | 'wbe' | 'sdvosb';
   createdAt: string;
   // DBE-05: cert summary attached by GET /subcontractors (populated server-side)
   certSummary?: SubcontractorCertSummary;

@@ -490,6 +490,9 @@ export const subcontractors = sqliteTable('subcontractors', {
   contactName: text('contact_name'),
   contactEmail: text('contact_email'),
   address: text('address'),
+  // Phase 107 (DBE-07): DBE classification flag
+  dbeClassification: text('dbe_classification').notNull().default('none')
+    .$type<'none' | 'dbe' | 'mbe' | 'wbe' | 'sdvosb'>(),
   createdAt: text('created_at').notNull(),
 });
 

@@ -146,12 +146,31 @@ function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean
   );
 }
 
+// Phase 107 (DBE-07): DBE classification options and badge color map
+type DbeClass = 'none' | 'dbe' | 'mbe' | 'wbe' | 'sdvosb';
+
+const DBE_CLASS_OPTIONS: Array<{ value: DbeClass; label: string }> = [
+  { value: 'none',   label: 'None' },
+  { value: 'dbe',    label: 'DBE' },
+  { value: 'mbe',    label: 'MBE' },
+  { value: 'wbe',    label: 'WBE' },
+  { value: 'sdvosb', label: 'SDVOSB' },
+];
+
+const DBE_BADGE_CLASSES: Record<Exclude<DbeClass, 'none'>, string> = {
+  dbe:    'bg-brand-gold text-black',
+  mbe:    'bg-emerald-600 text-white',
+  wbe:    'bg-blue-600 text-white',
+  sdvosb: 'bg-purple-600 text-white',
+};
+
 const EMPTY_SUB_FORM = {
   name: '',
   licenseNumber: '',
   contactName: '',
   contactEmail: '',
   address: '',
+  dbeClassification: 'none' as DbeClass,
 };
 
 const EMPTY_CPR_FORM = {
@@ -882,7 +901,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
   });
 
   const addSubMutation = useMutation({
-    mutationFn: (body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string }) =>
+    mutationFn: (body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string; dbeClassification?: DbeClass }) =>
       api.post<{ data: { subcontractor: Subcontractor } }>(`/projects/${projectId}/subcontractors`, body),
     onSuccess: (_, body) => {
       queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
@@ -894,7 +913,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
   });
 
   const editSubMutation = useMutation({
-    mutationFn: ({ subId, body }: { subId: string; body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string } }) =>
+    mutationFn: ({ subId, body }: { subId: string; body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string; dbeClassification?: DbeClass } }) =>
       api.patch(`/projects/${projectId}/subcontractors/${subId}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
@@ -917,8 +936,9 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
 
   function handleAddSub() {
     if (!addForm.name.trim()) return;
-    const body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string } = {
+    const body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string; dbeClassification?: DbeClass } = {
       name: addForm.name.trim(),
+      dbeClassification: addForm.dbeClassification,
     };
     if (addForm.licenseNumber.trim()) body.licenseNumber = addForm.licenseNumber.trim();
     if (addForm.contactName.trim()) body.contactName = addForm.contactName.trim();
@@ -929,8 +949,9 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
 
   function handleEditSub(subId: string) {
     if (!editForm.name.trim()) return;
-    const body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string } = {
+    const body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string; dbeClassification?: DbeClass } = {
       name: editForm.name.trim(),
+      dbeClassification: editForm.dbeClassification,
     };
     if (editForm.licenseNumber.trim()) body.licenseNumber = editForm.licenseNumber.trim();
     if (editForm.contactName.trim()) body.contactName = editForm.contactName.trim();
@@ -947,6 +968,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
       contactName: sub.contactName ?? '',
       contactEmail: sub.contactEmail ?? '',
       address: sub.address ?? '',
+      dbeClassification: sub.dbeClassification ?? 'none',
     });
   }
 
@@ -1062,6 +1084,18 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                 />
               </div>
             </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">DBE Classification</label>
+              <select
+                className={INPUT_CLASSES + ' w-full'}
+                value={addForm.dbeClassification}
+                onChange={e => setAddForm(f => ({ ...f, dbeClassification: e.target.value as DbeClass }))}
+              >
+                {DBE_CLASS_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="secondary" onClick={() => { setAddingNew(false); setAddForm({ ...EMPTY_SUB_FORM }); }}>
@@ -1141,6 +1175,18 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">DBE Classification</label>
+                  <select
+                    className={INPUT_CLASSES + ' w-full'}
+                    value={editForm.dbeClassification}
+                    onChange={e => setEditForm(f => ({ ...f, dbeClassification: e.target.value as DbeClass }))}
+                  >
+                    {DBE_CLASS_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="mt-4 flex justify-end gap-2">
                 <Button variant="secondary" onClick={() => setEditingSubId(null)}>
@@ -1161,6 +1207,11 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-900 font-body">{sub.name}</span>
+                    {sub.dbeClassification && sub.dbeClassification !== 'none' && (
+                      <span className={`px-1.5 py-0.5 text-xs font-semibold rounded uppercase ${DBE_BADGE_CLASSES[sub.dbeClassification as Exclude<DbeClass, 'none'>]}`}>
+                        {sub.dbeClassification.toUpperCase()}
+                      </span>
+                    )}
                     {sub.licenseNumber && (
                       <span className="text-xs text-gray-500">Lic: {sub.licenseNumber}</span>
                     )}
