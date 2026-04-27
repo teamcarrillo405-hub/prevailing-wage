@@ -7,7 +7,7 @@
 
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { payrollEntries, payrollWeeks, workers, workerClassifications } from '../db/schema.js';
+import { payrollEntries, payrollWeeks, workers, workerClassifications, subcontractors } from '../db/schema.js';
 
 // ── Exported interfaces ────────────────────────────────────────────────────
 
@@ -321,4 +321,77 @@ export async function getFringeBreakdown(
     if (a.classificationLevel !== b.classificationLevel) return a.classificationLevel.localeCompare(b.classificationLevel);
     return a.fundType.localeCompare(b.fundType);
   });
+}
+
+// ── Phase 109 (DBE-09): DBE Participation Report ──────────────────────────
+
+type DbeClass = 'dbe' | 'mbe' | 'wbe' | 'sdvosb';
+
+export interface DbeParticipationResult {
+  projectId: string;
+  totalHours: number;
+  byClassification: Record<DbeClass | 'uncertified', { hours: number; pct: number }>;
+  byWeek: Array<{ weekEndingDate: string; totalHours: number; certifiedHours: number; pct: number }>;
+}
+
+export async function getDbeParticipation(db: ReturnType<typeof getDb>, projectId: string): Promise<DbeParticipationResult> {
+  // Fetch all payroll entries for this project, joining through payrollWeeks and left-joining subcontractors
+  const rows = await db
+    .select({
+      // Hours
+      monSt: payrollEntries.monSt, tueSt: payrollEntries.tueSt, wedSt: payrollEntries.wedSt,
+      thuSt: payrollEntries.thuSt, friSt: payrollEntries.friSt, satSt: payrollEntries.satSt, sunSt: payrollEntries.sunSt,
+      monOt: payrollEntries.monOt, tueOt: payrollEntries.tueOt, wedOt: payrollEntries.wedOt,
+      thuOt: payrollEntries.thuOt, friOt: payrollEntries.friOt, satOt: payrollEntries.satOt, sunOt: payrollEntries.sunOt,
+      monDt: payrollEntries.monDt, tueDt: payrollEntries.tueDt, wedDt: payrollEntries.wedDt,
+      thuDt: payrollEntries.thuDt, friDt: payrollEntries.friDt, satDt: payrollEntries.satDt, sunDt: payrollEntries.sunDt,
+      weekEndingDate: payrollWeeks.weekEndingDate,
+      dbeClassification: subcontractors.dbeClassification,
+    })
+    .from(payrollEntries)
+    .innerJoin(payrollWeeks, eq(payrollEntries.payrollWeekId, payrollWeeks.id))
+    .leftJoin(subcontractors, eq(payrollEntries.subcontractorId, subcontractors.id))
+    .where(eq(payrollWeeks.projectId, projectId));
+
+  const sumHours = (r: typeof rows[number]) =>
+    (r.monSt + r.tueSt + r.wedSt + r.thuSt + r.friSt + r.satSt + r.sunSt +
+     r.monOt + r.tueOt + r.wedOt + r.thuOt + r.friOt + r.satOt + r.sunOt +
+     r.monDt + r.tueDt + r.wedDt + r.thuDt + r.friDt + r.satDt + r.sunDt);
+
+  const totalHours = rows.reduce((acc: number, r: typeof rows[number]) => acc + sumHours(r), 0);
+  const toPct = (h: number) => totalHours === 0 ? 0 : parseFloat(((h / totalHours) * 100).toFixed(2));
+
+  const byClass: Record<DbeClass | 'uncertified', number> = { dbe: 0, mbe: 0, wbe: 0, sdvosb: 0, uncertified: 0 };
+  const weekMap: Record<string, { total: number; certified: number }> = {};
+
+  for (const r of rows) {
+    const h = sumHours(r);
+    const cls = (r.dbeClassification && r.dbeClassification !== 'none')
+      ? r.dbeClassification as DbeClass
+      : 'uncertified';
+    byClass[cls] += h;
+    if (!weekMap[r.weekEndingDate]) weekMap[r.weekEndingDate] = { total: 0, certified: 0 };
+    weekMap[r.weekEndingDate].total += h;
+    if (cls !== 'uncertified') weekMap[r.weekEndingDate].certified += h;
+  }
+
+  return {
+    projectId,
+    totalHours,
+    byClassification: {
+      dbe:         { hours: byClass.dbe,         pct: toPct(byClass.dbe) },
+      mbe:         { hours: byClass.mbe,         pct: toPct(byClass.mbe) },
+      wbe:         { hours: byClass.wbe,         pct: toPct(byClass.wbe) },
+      sdvosb:      { hours: byClass.sdvosb,      pct: toPct(byClass.sdvosb) },
+      uncertified: { hours: byClass.uncertified, pct: toPct(byClass.uncertified) },
+    },
+    byWeek: Object.entries(weekMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([weekEndingDate, v]) => ({
+        weekEndingDate,
+        totalHours: v.total,
+        certifiedHours: v.certified,
+        pct: v.total === 0 ? 0 : parseFloat(((v.certified / v.total) * 100).toFixed(2)),
+      })),
+  };
 }

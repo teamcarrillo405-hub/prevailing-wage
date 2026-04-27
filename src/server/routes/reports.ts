@@ -13,7 +13,8 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { requireAuth } from '../middleware/auth.js';
 import { getDb } from '../db/index.js';
-import { getFringeSummary, getWorkerPayHistory, getFringeBreakdown } from '../services/reportsService.js';
+import { getFringeSummary, getWorkerPayHistory, getFringeBreakdown, getDbeParticipation } from '../services/reportsService.js';
+import { logger } from '../logger.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import {
   projects,
@@ -653,6 +654,33 @@ reportsRouter.get('/dbe-summary', requireAuth, async (req, res) => {
       byType: byTypeArray,
     },
   });
+});
+
+// ── DBE-09: DBE Participation Report (Phase 109) ─────────────────────────────
+// GET /api/reports/:projectId/dbe-participation
+// Returns total hours, per-classification hours/pct, and per-week breakdown.
+// Protected by requireAuth + assertProjectAccess.
+// NOTE: Must be registered BEFORE /:projectId/hours-pivot to prevent wildcard capture.
+
+reportsRouter.get('/:projectId/dbe-participation', requireAuth, async (req, res) => {
+  const projectId = req.params.projectId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  try {
+    const result = await getDbeParticipation(db, projectId);
+    res.json({ data: result });
+  } catch (err) {
+    logger.error({ err, projectId }, '[dbe-participation] query failed');
+    res.status(500).json({ error: 'Failed to compute DBE participation' });
+  }
 });
 
 // ── REPT-06: Hours by Trade / Classification / Week Pivot (Phase 104) ────────
