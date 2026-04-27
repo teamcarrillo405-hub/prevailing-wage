@@ -54,6 +54,9 @@ const GovernmentPage = React.lazy(() => import('./pages/GovernmentPage').then(m 
 const OfflineChecklistPage = React.lazy(() => import('./pages/OfflineChecklistPage').then(m => ({ default: m.OfflineChecklistPage })));
 const RoiCalculatorPage = React.lazy(() => import('./pages/RoiCalculatorPage').then(m => ({ default: m.RoiCalculatorPage })));
 const TestimonialsPage = React.lazy(() => import('./pages/TestimonialsPage').then(m => ({ default: m.TestimonialsPage })));
+const ClassificationAssistPage = React.lazy(() =>
+  import('./pages/ClassificationAssistPage').then(m => ({ default: m.ClassificationAssistPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -123,6 +126,7 @@ export default function App() {
                 <Route path="/field" element={<FieldHubPage />} />
                 <Route path="/projects/:projectId/checklists" element={<OfflineChecklistPage />} />
                 <Route path="/checklists" element={<OfflineChecklistPage />} />
+                <Route path="/classification-assist" element={<ClassificationAssistPage />} />
               </Route>
 
               {/* Public pages — no auth required */}
