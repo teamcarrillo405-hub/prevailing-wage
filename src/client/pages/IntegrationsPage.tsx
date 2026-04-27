@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import { Layout } from '../components/shared/Layout.js';
@@ -26,6 +26,12 @@ interface ProcoreStatusResponse {
     accessTokenExpiresAt?: string;
     refreshTokenExpiresAt?: string;
   };
+}
+
+interface SsoConfigStatus {
+  provider: string;
+  domain: string | null;
+  status: 'pending' | 'active' | 'disabled';
 }
 
 interface QboEmployee {
@@ -178,6 +184,13 @@ export function IntegrationsPage() {
     mutationFn: () => api.delete<unknown>('/api/integrations/procore'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['procore-status'] }),
   });
+
+  const { data: ssoData } = useQuery({
+    queryKey: ['sso-config'],
+    queryFn: () =>
+      api.get<{ data: SsoConfigStatus | null }>('/sso/config').catch(() => ({ data: null })),
+  });
+  const ssoConfig = ssoData?.data ?? null;
 
   const status = data?.data;
   const procoreStatus = procoreData?.data;
@@ -340,34 +353,35 @@ export function IntegrationsPage() {
               appear in plaintext.
             </p>
 
-            {/* SSO / SAML Section — Phase 102 ENT-02 */}
-            <section className="mt-12">
-              <h2 className="text-xl font-bold text-nav-dark font-headline mb-1">Single Sign-On (SSO)</h2>
-              <p className="text-gray-500 text-sm mb-6">
-                Connect your identity provider so your team signs in with existing corporate credentials.
-                Available on the Enterprise plan.{' '}
-                <a href="/contact" className="text-brand-gold hover:underline font-medium">Contact Sales</a> to enable.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  { name: 'Okta', logo: 'OK', desc: 'SAML 2.0 via Okta Identity Provider.' },
-                  { name: 'Azure Active Directory', logo: 'AZ', desc: 'SAML 2.0 / OIDC via Microsoft Entra ID.' },
-                ].map(({ name, logo, desc }) => (
-                  <div key={name} className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-nav-dark text-brand-gold font-bold text-sm flex items-center justify-center flex-shrink-0">
-                      {logo}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-nav-dark text-sm">{name}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">{desc}</p>
-                    </div>
-                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full font-medium whitespace-nowrap">
-                      Enterprise
-                    </span>
+            {/* Enterprise SSO — Phase 110 ENT-03 */}
+            <div className="mt-10">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Enterprise</h2>
+              <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-headline text-nav-dark text-lg">SAML Single Sign-On</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Connect Okta, Azure AD, or any SAML 2.0 IdP for enterprise team login.
+                    </p>
                   </div>
-                ))}
+                  <Badge variant={ssoConfig?.status === 'active' ? 'compliant' : ssoConfig ? 'warning' : 'neutral'}>
+                    {ssoConfig?.status === 'active' ? 'Active' : ssoConfig?.status === 'pending' ? 'Pending' : 'Not Configured'}
+                  </Badge>
+                </div>
+                {ssoConfig && (
+                  <div className="text-sm text-gray-600 mb-3">
+                    <span className="font-medium">Domain:</span> {ssoConfig.domain ?? '—'}
+                    {'  '}
+                    <span className="font-medium ml-4">Provider:</span> {ssoConfig.provider?.replace('_', ' ')}
+                  </div>
+                )}
+                <Link to="/settings/sso">
+                  <Button variant="secondary">
+                    {ssoConfig ? 'Manage SSO Configuration' : 'Configure SSO'}
+                  </Button>
+                </Link>
               </div>
-            </section>
+            </div>
           </>
         )}
       </div>
