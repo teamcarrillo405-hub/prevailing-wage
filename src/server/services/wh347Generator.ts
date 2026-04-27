@@ -20,6 +20,9 @@ import { PDFDocument } from 'pdf-lib';
 import path from 'path';
 import { readFileSync } from 'fs';
 
+/** DOL form revision date — January 2025 revision (29 CFR Part 3 / Davis-Bacon). */
+export const WH347_FORM_REVISION = 'Rev. Jan. 2025';
+
 // ── Interfaces (unchanged public API) ─────────────────────────────────────
 
 export interface Wh347WorkerRow {
@@ -270,6 +273,12 @@ async function fillSingleSet(
   setText(form, 'sig_officialName', data.compliance.officialName);
   setText(form, 'sig_date',         data.compliance.signatureDate);
   setText(form, 'sig_phone',        data.compliance.phoneNumber);
+
+  // Stamp revision date into optional header widget (silently skipped if absent).
+  setText(form, 'header_formRevision', WH347_FORM_REVISION);
+
+  // Embed revision in PDF document metadata title for audit trail.
+  pdfDoc.setTitle(`WH-347 Certified Payroll — ${WH347_FORM_REVISION}`);
 
   // ── Flatten: convert widgets into drawn content so the output is a
   // plain (non-editable) PDF, per project decision (option b). ────────────
