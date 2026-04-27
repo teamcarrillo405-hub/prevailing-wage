@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0.0
-milestone_name: Industry Leadership — Phase D complete
-status: Milestone complete — v7.0.0 shipped
-stopped_at: Completed 106-01-PLAN.md (Phase D Watchdog Gate GATE_PASS 10.0/10 — v7.0.0 tagged and pushed)
-last_updated: "2026-04-27T15:10:00.000Z"
+milestone: v8.0.0
+milestone_name: Enterprise SSO + SVG Map — Phases 110-114 complete
+status: Phases 110-114 complete — GATE_PASS 10.02/10
+stopped_at: Completed 114-02-PLAN.md (SVG map wired; all phases 110-114 shipped)
+last_updated: "2026-04-27T23:15:00.000Z"
 progress:
-  total_phases: 50
-  completed_phases: 50
-  total_plans: 101
-  completed_plans: 101
+  total_phases: 57
+  completed_phases: 57
+  total_plans: 109
+  completed_plans: 109
 ---
 
 # State
@@ -23,10 +23,17 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 106 (106-phase-d-watchdog-gate-v7-ship) — COMPLETE (1 plan shipped; GATE_PASS 10.0/10; v7.0.0 tagged)
-Plan: 1 of 1
+Phase: 114 (114-svg-compliance-map) — COMPLETE (2 plans shipped; SVG choropleth map + LandingPage wired)
+Plan: 2 of 2
 
 Previously completed:
+- Phase 114 (114-svg-compliance-map) — COMPLETE (UI-17; UsComplianceMap 50-state SVG + LandingPage replacement)
+- Phase 113 (113-production-hardening) — COMPLETE (OPS-02/OPS-03; render.yaml healthCheckPath + 9 env vars + DEPLOY.md)
+- Phase 112 (112-phase-b-gate-v8) — GATE_PASS 10.02/10 (all 6 SSO criteria; 824 tests)
+- Phase 111 (111-sso-admin-ui) — COMPLETE (ENT-05; SsoConfigPage + IntegrationsPage SSO status card)
+- Phase 110 (110-saml-sso-routes) — COMPLETE (ENT-03/ENT-04; @node-saml/node-saml + 4 SSO routes)
+
+Previously completed before this session:
 - Phase 106 (106-phase-d-watchdog-gate-v7-ship) — GATE_PASS 10.00/10 (all 10 criteria PASS); v7.0.0 tagged + pushed
 - Phase 105 (105-growth-dashboard-admin) — COMPLETE (OPS-01; GrowthDashboardPage + requireAdmin + /admin/growth)
 - Phase 104 (104-advanced-audit-analytics) — COMPLETE (REPT-06; hours-pivot route + CSV/PDF export + ReportsPage)
@@ -215,6 +222,11 @@ Key decisions locked for v5.0 scope:
 - [Phase 99-phase-c-watchdog-gate]: GATE_PASS 10.00/10 — all 10 Phase C criteria verified green; 803 tests passing; 0 TS deductions; Phase 100 unblocked
 - [Phase 100-01]: calcRoi() is pure exported function for deterministic unit testing; useSearchParams for URL param seeding; jsdom vitest-environment docblock per-file (not global config change)
 - [Phase 100-02]: Migration numbered 0061 (plan said 0055 — outdated); named export roiLeadsRouter; mounted before /api/auth (no auth); afterEach full-table delete in isolated in-memory DB
+- [Phase 110-01]: @node-saml/node-saml v5 exports SAML class (not ServiceProvider/IdentityProvider — plan had wrong API surface); used SAML.getAuthorizeUrlAsync + SAML.validatePostResponseAsync; ValidateInResponseTo enum for type-safe config; all 4 SSO routes created in single file for API consistency
+- [Phase 111-01]: User type in AuthContext lacks planTier — fetch from /api/billing/status via useQuery (same as BillingPage pattern)
+- [Phase 112]: Phase B Gate GATE_PASS 10.02/10 — all 6 criteria verified
+- [Phase 113]: /api/health was already present in index.ts (returns {status:'ok', db:'ok'}); render.yaml healthCheckPath + 9 env vars added; DEPLOY.md 7-section runbook created
+- [Phase 114]: UsComplianceMap uses grid-aligned polygon approximations (plan explicitly permits this); 8KB file; no external map library; Alaska/Hawaii as bottom-left insets
 - [Phase 106-watchdog-gate]: Phase D GATE_PASS 10.0/10 — all 10 criteria verified; 824 tests passing; 0 TS errors; LCPtracker audit 5 AHEAD / 2 PARITY / 1 BEHIND (DBE classification gap); v7.0.0 tagged 2026-04-27
 - [Phase 93-phase-b-watchdog-gate]: GATE_PASS 9.50/10 — all 10 Phase B criteria verified green; 794 tests passing; 1 TS deduction (stripeService.ts version string, -0.5); Phase 94 unblocked
 - [Phase 89-01]: WH347_FORM_REVISION = 'Rev. Jan. 2025' constant + pdfDoc.setTitle() in fillSingleSet(); setText() for optional header_formRevision widget
@@ -257,7 +269,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T15:10:00.000Z
-Stopped at: Completed 106-01-PLAN.md — Phase D Watchdog Gate GATE_PASS 10.0/10; v7.0.0 tagged and pushed to GitHub
+Last session: 2026-04-27T23:15:00.000Z
+Stopped at: Completed 114-02-PLAN.md — Phases 110-114 all shipped; SAML SSO + production hardening + SVG compliance map complete
 Resume file: None
-Next action: v7.0.0 milestone complete. 824 tests passing. 0 TS errors. All Phase D criteria verified. LCPtracker audit recorded. DBE/MBE/WBE classification is the only BEHIND item (Phase 107 candidate). stripeService.ts API version string update deferred (minor, pre-existing).
+Next action: v8.0.0 milestone complete. 824 tests passing. 0 TS errors. Phase B gate GATE_PASS 10.02/10. All 8 plans in phases 110-114 shipped. Ready for Phase 115+.
