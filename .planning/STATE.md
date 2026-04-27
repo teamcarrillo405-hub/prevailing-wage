@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.0.0
-milestone_name: Enterprise SSO + SVG Map — Phases 110-114 complete
-status: Phases 110-114 complete — GATE_PASS 10.02/10
-stopped_at: Completed 114-02-PLAN.md (SVG map wired; all phases 110-114 shipped)
-last_updated: "2026-04-27T23:15:00.000Z"
+milestone: v8.1.0
+milestone_name: Apprenticeship Ratio Dashboard — Phase 117 complete
+status: Phase 117 complete — ApprenticeshipDashboard shipped (100% unique vs all competitors)
+stopped_at: Completed 117-01-PLAN.md (per-trade ratios + IRA trend + ReportsPage tab)
+last_updated: "2026-04-27T23:45:00.000Z"
 progress:
-  total_phases: 57
-  completed_phases: 57
-  total_plans: 109
-  completed_plans: 109
+  total_phases: 58
+  completed_phases: 58
+  total_plans: 112
+  completed_plans: 112
 ---
 
 # State
@@ -23,10 +23,11 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 114 (114-svg-compliance-map) — COMPLETE (2 plans shipped; SVG choropleth map + LandingPage wired)
-Plan: 2 of 2
+Phase: 117 (117-apprenticeship-ratio-dashboard) — COMPLETE (3 tasks shipped; per-trade ratios + IRA trend + wired UI)
+Plan: 1 of 1
 
 Previously completed:
+- Phase 117 (117-apprenticeship-ratio-dashboard) — COMPLETE (APP-01; ApprenticeshipDashboard + API + 5th ReportsPage tab)
 - Phase 114 (114-svg-compliance-map) — COMPLETE (UI-17; UsComplianceMap 50-state SVG + LandingPage replacement)
 - Phase 113 (113-production-hardening) — COMPLETE (OPS-02/OPS-03; render.yaml healthCheckPath + 9 env vars + DEPLOY.md)
 - Phase 112 (112-phase-b-gate-v8) — GATE_PASS 10.02/10 (all 6 SSO criteria; 824 tests)
@@ -269,7 +270,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T23:15:00.000Z
-Stopped at: Completed 114-02-PLAN.md — Phases 110-114 all shipped; SAML SSO + production hardening + SVG compliance map complete
+Last session: 2026-04-27T23:45:00.000Z
+Stopped at: Completed 117-01-PLAN.md — ApprenticeshipDashboard shipped; 838 tests passing; 0 TS errors
 Resume file: None
-Next action: v8.0.0 milestone complete. 824 tests passing. 0 TS errors. Phase B gate GATE_PASS 10.02/10. All 8 plans in phases 110-114 shipped. Ready for Phase 115+.
+Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.
