@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 83-02-PLAN.md
-last_updated: "2026-04-26T20:05:00.641Z"
+status: Ready to execute
+stopped_at: Completed 84-01-PLAN.md
+last_updated: "2026-04-27T15:56:45.462Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 83 — external-log-drain-security-policy
+**Current focus:** Phase 84 — dependabot-uptime-monitoring
 
 ## Current Position
 
-Phase: 83
-Plan: Not started
+Phase: 84 (dependabot-uptime-monitoring) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -168,6 +168,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 83]: @logtail/pino installed with --legacy-peer-deps due to pre-existing vite8/vite-plugin-pwa peer conflict; three-branch transport (test=none, token=drain, dev-no-token=pino-pretty); startup warning after pinoHttp registration
 - [Phase 83]: Primary contact security@prevailingwage.app matches /.well-known/security.txt; teamcarrillo405@gmail.com as escalation-only in SECURITY_POLICY.md
 - [Phase 83]: SecurityPolicyPage.tsx SLA updated from 48h to 72h and contact from security@prevwage.app to security@prevailingwage.app — three artifacts now consistent
+- [Phase 84-dependabot-uptime-monitoring]: npm-all group with patterns:[*] consolidates 68 npm packages into single weekly PR
+- [Phase 84-dependabot-uptime-monitoring]: dependencies label must be created manually in GitHub repo Settings before first Dependabot run
 
 ### Phase Order Rationale
 
@@ -200,7 +202,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-26T20:01:28.385Z
-Stopped at: Completed 83-02-PLAN.md
+Last session: 2026-04-27T15:56:45.458Z
+Stopped at: Completed 84-01-PLAN.md
 Resume file: None
 Next action: Execute `/gsd:plan-phase 47` to plan Phase 47 (State Foundations + TX Certified Payroll)
