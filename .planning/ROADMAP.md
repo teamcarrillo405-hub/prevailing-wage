@@ -1906,7 +1906,7 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 | 83. External Log Drain + Security Policy | v7.0 | 2/2 | Complete    | 2026-04-26 |
 | 84. Dependabot + Uptime Monitoring | v7.0 | 2/2 | Complete    | 2026-04-27 |
 | 85. Full-Text Search | v7.0 | 2/2 | Complete    | 2026-04-27 |
-| 86. Scheduled Report Emails | v7.0 | 0/2 | Not started | - |
+| 86. Scheduled Report Emails | v7.0 | 1/2 | In Progress|  |
 | 87. Phase A Watchdog Gate | v7.0 | 0/1 | Not started | - |
 | 88. Live SAM.gov WD Fetch | v7.0 | 0/3 | Not started | - |
 | 89. DOL 2024 Rule Updates | v7.0 | 0/2 | Not started | - |
@@ -2020,7 +2020,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 86-01-PLAN.md -- projectSettings schema extension; scheduledReports cron job; nodemailer template; unsubscribe endpoint
+- [x] 86-01-PLAN.md -- projectSettings schema extension; scheduledReports cron job; nodemailer template; unsubscribe endpoint
 - [ ] 86-02-PLAN.md -- ProjectDetailPage Settings tab: report schedule selector + email input + save
 
 **UI hint**: yes

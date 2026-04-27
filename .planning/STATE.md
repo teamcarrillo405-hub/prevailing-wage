@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 85-02-PLAN.md
-last_updated: "2026-04-27T18:50:30.412Z"
+status: Ready to execute
+stopped_at: Completed 86-01-PLAN.md
+last_updated: "2026-04-27T19:15:46.354Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 85 — full-text-search
+**Current focus:** Phase 86 — scheduled-report-emails
 
 ## Current Position
 
-Phase: 85
-Plan: Not started
+Phase: 86 (scheduled-report-emails) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -177,6 +177,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 85]: useDebounce initialized with value (not undefined) — first render returns correct initial value without debounce penalty
 - [Phase 85]: displayedWorkers switches between FTS5 search hits and labor-filter-respecting full workers list (fullWorkers = post-filter workers, not allWorkers)
 - [Phase 85]: DashboardPage client-side project filter verified unchanged (filteredProjects useMemo at lines 300-313 meets Phase 85 criterion 4 via pre-existing Phase 18 code)
+- [Phase 86]: UTC timezone for scheduled-reports cron (not ET) — deterministic region-agnostic dispatch per ROADMAP spec
+- [Phase 86]: GET and POST both supported for /api/notifications/unsubscribe — email href fires GET; POST for API callers
+- [Phase 86]: Resend used (not nodemailer) for scheduled reports — STATE.md decision; ROADMAP nodemailer wording is documented copy-paste error per RESEARCH Pitfall 1
 
 ### Phase Order Rationale
 
@@ -209,7 +212,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T18:45:36.687Z
-Stopped at: Completed 85-02-PLAN.md
+Last session: 2026-04-27T19:15:46.350Z
+Stopped at: Completed 86-01-PLAN.md
 Resume file: None
 Next action: Execute Phase 85 (Full-Text Search). Manual follow-up: create Better Stack account and replace STATUS_PAGE_URL placeholder in src/client/pages/LandingPage.tsx.
