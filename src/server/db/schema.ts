@@ -741,3 +741,21 @@ export const ssoConfigs = sqliteTable('sso_configs', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+// ── Phase 103: AI Classification Assist Audit Trail (AI-02) ───────────────
+// Every POST /api/ai/classify call is persisted here. Required for IL AI Act
+// disclosure compliance and SOC 2 audit trail.
+export const aiClassifications = sqliteTable('ai_classifications', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  jobDescription: text('job_description').notNull(),
+  tradeCode: text('trade_code').notNull(),
+  tradeDescription: text('trade_description').notNull(),
+  confidence: real('confidence').notNull(),
+  reasoning: text('reasoning'),
+  alternativesJson: text('alternatives_json'), // JSON array
+  modelUsed: text('model_used').notNull(),
+  latencyMs: integer('latency_ms'),
+  createdAt: text('created_at').notNull(),
+});
