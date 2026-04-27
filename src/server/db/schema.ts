@@ -244,6 +244,18 @@ export const wageSyncMeta = sqliteTable('wage_sync_meta', {
   errorMessage: text('error_message'),
 });
 
+// ── Phase 88: WD Revision Log — COMP-07 ───────────────────────────────────
+
+export const wdRevisionLog = sqliteTable('wd_revision_log', {
+  id: text('id').primaryKey(),
+  wdId: text('wd_id').notNull()
+    .references(() => wageDeterminations.id, { onDelete: 'cascade' }),
+  oldRevision: integer('old_revision').notNull(),
+  newRevision: integer('new_revision').notNull(),
+  detectedAt: text('detected_at').notNull(),
+  changeSummary: text('change_summary'),
+});
+
 // ── Phase 4: Certified Payroll Tables ─────────────────────────────────────
 
 export const payrollWeeks = sqliteTable('payroll_weeks', {

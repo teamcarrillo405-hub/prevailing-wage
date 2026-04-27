@@ -12,7 +12,7 @@ import { fetchWdFromSamGov } from './wdolFetcher.js';
 import { parseWdDocument } from './wdolParser.js';
 import { upsertWageDetermination, upsertClassifications, isWdCached } from './wageCache.js';
 import { getDb } from '../db/index.js';
-import { wageSyncMeta, wageDeterminations, projectWageDeterminations, projects } from '../db/schema.js';
+import { wageSyncMeta, wageDeterminations, projectWageDeterminations, projects, wdRevisionLog } from '../db/schema.js';
 
 // Known WD identifiers for the top 20 states by Davis-Bacon construction volume.
 // Source: SAM.gov cross-index + live verification of individual WD API responses.
@@ -3933,6 +3933,19 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
     try {
       const response = await fetchWdFromSamGov(wd.wdNumber, wd.revisionNumber);
       if (!response) { failed++; continue; }
+      // COMP-07: log revision bump if SAM.gov returned a higher revision
+      if (response.revisionNumber > wd.revisionNumber) {
+        const logEntry = {
+          id: crypto.randomUUID(),
+          wdId: wd.id,
+          oldRevision: wd.revisionNumber,
+          newRevision: response.revisionNumber,
+          detectedAt: new Date().toISOString(),
+          changeSummary: `Revision ${wd.revisionNumber} -> ${response.revisionNumber} detected during weekly sync on ${new Date().toISOString().slice(0, 10)}`,
+        };
+        db.insert(wdRevisionLog).values(logEntry).run();
+        logger.info(`[wdolSync] ${wd.wdNumber} revision bump: ${wd.revisionNumber} -> ${response.revisionNumber}`);
+      }
       const nowIso = new Date().toISOString();
       const classifications = response.document ? parseWdDocument(response.document) : [];
       upsertWageDetermination({

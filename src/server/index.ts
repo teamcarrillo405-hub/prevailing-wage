@@ -212,17 +212,17 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3001;
 const server = app.listen(PORT, () => {
   logger.info({ port: PORT }, 'API running');
-  // Register monthly wage sync — MUST be inside listen() callback so getDb() is initialized
-  // Cron: 2:00 AM on the 1st of every month
-  cron.schedule('0 2 1 * *', async () => {
-    logger.info('wage-sync: starting monthly sync');
+  // Register weekly wage sync — COMP-06 (Phase 88)
+  // Cron: Sunday 03:00 UTC every week (was: monthly 1st 02:00 ET)
+  cron.schedule('0 3 * * 0', async () => {
+    logger.info('wage-sync: starting weekly sync');
     try {
       await runWageSync();
     } catch (err) {
       logger.error({ err }, 'wage-sync: failed');
       // Never rethrow — cron failures must not crash Express
     }
-  }, { timezone: 'America/New_York' });
+  }, { timezone: 'UTC' });
 
   // Register daily payroll due-soon scan — NOTIF-02
   // Runs at 7:00 AM Eastern every day

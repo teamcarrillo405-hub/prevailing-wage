@@ -323,6 +323,13 @@
       "when": 1745798400000,
       "tag": "0054_workers_fts",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1745971500000,
+      "tag": "0055_wd_revision_log",
+      "breakpoints": true
     }
   ]
 }

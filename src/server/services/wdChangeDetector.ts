@@ -5,8 +5,8 @@ import { logger } from '../logger.js';
 // Called on a daily cron from index.ts (NOTIF-07).
 
 import { getDb } from '../db/index.js';
-import { wageDeterminations, projects, projectMembers, users } from '../db/schema.js';
-import { lt, eq, and, isNull } from 'drizzle-orm';
+import { wageDeterminations, projects, projectMembers, users, wdRevisionLog } from '../db/schema.js';
+import { lt, eq, and, isNull, gt } from 'drizzle-orm';
 import { sendWdChangedEmail } from './emailService.js';
 
 export async function checkWdChanges(): Promise<void> {
@@ -73,6 +73,54 @@ export async function checkWdChanges(): Promise<void> {
         oldRevision: wd.revisionNumber,
         newRevision: wd.revisionNumber, // alerting on cache expiry, not a revision bump
       }).catch((err) => logger.error({ err: err }, '[wd-detector] sendWdChangedEmail failed:'));
+    }
+  }
+
+  // COMP-07: surface revision bumps detected by the weekly sync
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const recentRevisions = await db
+    .select({
+      wdId: wdRevisionLog.wdId,
+      oldRevision: wdRevisionLog.oldRevision,
+      newRevision: wdRevisionLog.newRevision,
+      changeSummary: wdRevisionLog.changeSummary,
+      wdNumber: wageDeterminations.wdNumber,
+    })
+    .from(wdRevisionLog)
+    .innerJoin(wageDeterminations, eq(wdRevisionLog.wdId, wageDeterminations.id))
+    .where(gt(wdRevisionLog.detectedAt, oneDayAgo))
+    .all();
+
+  if (recentRevisions.length > 0) {
+    logger.info(`[wd-detector] Found ${recentRevisions.length} revision log entries in last 24h`);
+
+    for (const rev of recentRevisions) {
+      // Find emails for projects linked to this WD
+      const projectRows = await db
+        .select({ memberEmail: users.email })
+        .from(wageDeterminations)
+        .innerJoin(projects, eq(projects.wdIdentifier, wageDeterminations.wdNumber))
+        .innerJoin(projectMembers, and(
+          eq(projectMembers.projectId, projects.id),
+          isNull(projectMembers.removedAt),
+        ))
+        .innerJoin(users, eq(projectMembers.userId, users.id))
+        .where(eq(wageDeterminations.id, rev.wdId))
+        .all();
+
+      const emailSet = new Set<string>();
+      for (const row of projectRows) {
+        if (row.memberEmail) emailSet.add(row.memberEmail);
+      }
+      for (const email of emailSet) {
+        await sendWdChangedEmail({
+          toEmail: email,
+          projectName: rev.wdNumber,
+          wdNumber: rev.wdNumber,
+          oldRevision: rev.oldRevision,
+          newRevision: rev.newRevision,
+        }).catch((err) => logger.error({ err }, '[wd-detector] revision bump email failed'));
+      }
     }
   }
 
