@@ -66,7 +66,8 @@ const PLANS: Plan[] = [
       'Custom state form requests',
       'DBE / MBE certification tracking',
       'Priority support + SLA',
-      'SSO / SAML (roadmap)',
+      'SSO / SAML',
+      'Dedicated onboarding + CSM',
       'SOC 2 Type II reports',
     ],
   },
@@ -94,6 +95,7 @@ const MATRIX_ROWS: MatrixRow[] = [
   { label: 'Sub portal',         starter: false,             pro: true,             enterprise: true          },
   { label: 'Audit export',       starter: false,             pro: true,             enterprise: true          },
   { label: 'MFA',                starter: true,              pro: true,             enterprise: true          },
+  { label: 'SSO / SAML',        starter: false,             pro: false,            enterprise: true          },
   { label: 'Priority support',   starter: false,             pro: false,            enterprise: true          },
 ];
 

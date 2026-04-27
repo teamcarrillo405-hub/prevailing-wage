@@ -339,6 +339,35 @@ export function IntegrationsPage() {
               QuickBooks and Procore credentials are stored encrypted with AES-256-GCM and never
               appear in plaintext.
             </p>
+
+            {/* SSO / SAML Section — Phase 102 ENT-02 */}
+            <section className="mt-12">
+              <h2 className="text-xl font-bold text-nav-dark font-headline mb-1">Single Sign-On (SSO)</h2>
+              <p className="text-gray-500 text-sm mb-6">
+                Connect your identity provider so your team signs in with existing corporate credentials.
+                Available on the Enterprise plan.{' '}
+                <a href="/contact" className="text-brand-gold hover:underline font-medium">Contact Sales</a> to enable.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { name: 'Okta', logo: 'OK', desc: 'SAML 2.0 via Okta Identity Provider.' },
+                  { name: 'Azure Active Directory', logo: 'AZ', desc: 'SAML 2.0 / OIDC via Microsoft Entra ID.' },
+                ].map(({ name, logo, desc }) => (
+                  <div key={name} className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-nav-dark text-brand-gold font-bold text-sm flex items-center justify-center flex-shrink-0">
+                      {logo}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-nav-dark text-sm">{name}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{desc}</p>
+                    </div>
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full font-medium whitespace-nowrap">
+                      Enterprise
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
           </>
         )}
       </div>
