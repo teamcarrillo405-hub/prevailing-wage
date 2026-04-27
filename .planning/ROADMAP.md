@@ -1819,7 +1819,8 @@ Plans:
 
 **Goal:** Close all SOC 2 Type I evidence gaps; ship full-text search and scheduled reports.
 
-- [x] **Phase 83: External Log Drain + Security Policy** — Logtail/Better Stack Pino transport, HTTPS drain, SECURITY_POLICY.md at /security (SEC-07, SEC-08) (completed 2026-04-26)
+- [x] **Phase 83: External Log Drain + Security Policy** — Logtail/Better Stack Pino transport, HTTPS drain, SECURITY_POLICY.md at /security (SEC-07, SEC-08)
+ (completed 2026-04-26)
 - [ ] **Phase 84: Dependabot + Uptime Monitoring** — Dependabot npm weekly PRs, Uptime Robot + Instatus status page, public status badge on landing (SEC-09, SEC-10)
 - [ ] **Phase 85: Full-Text Search** — SQLite FTS5 virtual tables for workers + projects, debounced search UI, highlighted matches (PERF-01, PERF-02)
 - [ ] **Phase 86: Scheduled Report Emails** — daily/weekly/monthly compliance summaries via nodemailer cron, user-configurable delivery prefs, unsubscribe token (NOTIF-05, NOTIF-06)
@@ -1970,8 +1971,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 84-01-PLAN.md -- .github/dependabot.yml for npm + actions; CI badge in README
-- [ ] 84-02-PLAN.md -- Uptime Robot setup instructions + status page link in LandingPage footer
+- [ ] 84-01-PLAN.md -- .github/dependabot.yml (npm + github-actions weekly grouped PRs); README.md with CI badges
+- [ ] 84-02-PLAN.md -- LandingPage footer System Status link + Better Stack iframe badge (placeholder constant with TODO)
 
 **UI hint**: no
 
