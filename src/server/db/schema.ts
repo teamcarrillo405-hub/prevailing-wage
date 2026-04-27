@@ -69,6 +69,8 @@ export const projects = sqliteTable('projects', {
   // Phase 51 — New Jersey-specific fields
   njPwcNumber: text('nj_pwc_number'),
   njContractId: text('nj_contract_id'),
+  // Phase 91 — Minnesota-specific fields
+  mnContractId: text('mn_contract_id'),
   projectSettings: text('project_settings'),
   // Phase 70 — Apprenticeship ratio enforcement
   apprenticeshipRequirements: text('apprenticeship_requirements'), // JSON: { "Electrician": { "maxRatio": "1:2" }, ... }

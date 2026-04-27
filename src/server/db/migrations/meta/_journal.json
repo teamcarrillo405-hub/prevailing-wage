@@ -337,6 +337,13 @@
       "when": 1745971400000,
       "tag": "0056_procore_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1745971900000,
+      "tag": "0057_phase91_mn_project_fields",
+      "breakpoints": true
     }
   ]
 }

@@ -34,6 +34,7 @@ import { fillPw12, type Pw12Input } from '../services/pw12Generator.js';
 import { fillIlCertifiedTranscript } from '../services/ilPdfGenerator.js';
 import { fillMaCertifiedPayroll } from '../services/maPdfGenerator.js';
 import { fillNjCertifiedPayroll, type NjPdfInput } from '../services/njPdfGenerator.js';
+import { fillMnCertifiedPayroll, type MnPdfInput } from '../services/mnPdfGenerator.js';
 import {
   generateWaCprXml,
   type WaCprData,
@@ -1451,6 +1452,94 @@ router.get('/nj-mw562/:weekId', async (req, res) => {
       entityType: 'payroll_week',
       entityId: weekId,
       action: 'nj_pdf.downloaded',
+      meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
+    });
+  } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
+});
+
+// ── GET /api/export/mn-dli/:weekId ────────────────────────────────────────────
+// Minnesota DLI Weekly Certified Payroll — state-gated to MN projects only
+// Phase 91: STATE-14
+
+router.get('/mn-dli/:weekId', async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+
+  const week = await getPayrollWeek(weekId);
+  if (!week) { res.status(404).json({ error: 'Payroll week not found' }); return; }
+
+  const db = getDb();
+  let project: Project;
+  try {
+    ({ project } = await assertProjectAccess(db, week.projectId, userId));
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  if (project.state?.toUpperCase() !== 'MN') {
+    res.status(400).json({ error: 'MN DLI Payroll is only available for Minnesota projects' });
+    return;
+  }
+
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+
+  const mnData: MnPdfInput = {
+    contractor: {
+      name: project.name,
+      fein: (project as any).contractorFein ?? '',
+      address: (project.county || '') + ', ' + (project.state || ''),
+    },
+    project: {
+      name: project.name,
+      mnContractId: (project as any).mnContractId ?? null,
+      location: (project.county || '') + ', ' + (project.state || ''),
+      awardingAuthority: (project as any).contractingAgency ?? '',
+    },
+    week: {
+      weekEndingDate: week.weekEndingDate,
+      payrollNumber: week.amendmentNumber != null && week.originalWeekId != null
+        ? `${week.payrollNumber} (AMENDED ${week.amendmentNumber})`
+        : String(week.payrollNumber),
+    },
+    entries: entries.map((e: any) => ({
+      workerName: e.workerName,
+      workerSsnLast4: e.workerSsnLast4 ?? null,
+      workerAddress: e.workerAddress ?? '',
+      classification: e.tradeDescription ?? '',
+      monSt: e.entry?.monSt ?? 0,
+      tueSt: e.entry?.tueSt ?? 0,
+      wedSt: e.entry?.wedSt ?? 0,
+      thuSt: e.entry?.thuSt ?? 0,
+      friSt: e.entry?.friSt ?? 0,
+      satSt: e.entry?.satSt ?? 0,
+      sunSt: e.entry?.sunSt ?? 0,
+      baseRate: e.entry?.baseRateSnapshot ?? 0,
+      fringeHealthWelfare: e.entry?.fringeHealthWelfare ?? null,
+      fringePension: e.entry?.fringePension ?? null,
+      fringeVacation: e.entry?.fringeVacation ?? null,
+      fringeTraining: e.entry?.fringeTraining ?? null,
+      grossWages: e.entry?.grossWages ?? null,
+      checkNumber: e.entry?.checkNumber ?? null,
+    })),
+  };
+
+  const filledPdf = await fillMnCertifiedPayroll(mnData);
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="mn-dli-${weekId}.pdf"`);
+  res.end(Buffer.from(filledPdf));
+
+  try {
+    const { insertAuditLog } = await import('../services/auditService.js');
+    await insertAuditLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      projectId: week.projectId,
+      entityType: 'payroll_week',
+      entityId: weekId,
+      action: 'mn_pdf.downloaded',
       meta: { payrollNumber: week.payrollNumber, weekEnding: week.weekEndingDate, format: 'pdf' },
     });
   } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }

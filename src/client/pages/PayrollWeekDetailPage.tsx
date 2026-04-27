@@ -506,6 +506,7 @@ export function PayrollWeekDetailPage() {
     FL: { downloadLabel: 'Download WH-347 (FL)', route: 'wh347' },
     MA: { downloadLabel: 'Download MA DLS Payroll', route: 'ma-cpr' },
     NJ: { downloadLabel: 'Download NJ MW-562', route: 'nj-mw562' },
+    MN: { downloadLabel: 'Download MN DLI Payroll', route: 'mn-dli' },
   };
   const stateFormConfig = STATE_FORMS[projectData?.data?.project?.state?.toUpperCase() ?? ''] ?? null;
 
