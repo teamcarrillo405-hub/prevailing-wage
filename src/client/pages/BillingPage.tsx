@@ -19,6 +19,18 @@ interface TeamData {
   isOwner: boolean;
 }
 
+interface BillingUsage {
+  projectCount: number;
+  workerCount: number;
+  memberCount: number;
+  limits: {
+    maxProjects: number;
+    maxWorkers: number;
+    maxMembers: number;
+  };
+  planTier: 'starter' | 'pro' | 'enterprise';
+}
+
 const PLAN_LABELS: Record<BillingStatus['planTier'], string> = {
   starter: 'Starter',
   pro: 'Pro',
@@ -32,6 +44,59 @@ const STATUS_BADGE: Record<string, 'compliant' | 'warning' | 'neutral' | 'violat
   canceled: 'neutral',
   unpaid: 'violation',
 };
+
+// ── UsageBar — inline subcomponent ────────────────────────────────────────────
+
+interface UsageBarProps {
+  label: string;
+  used: number;
+  max: number;
+}
+
+function UsageBar({ label, used, max }: UsageBarProps) {
+  if (max === Infinity) {
+    return (
+      <div className="flex items-center justify-between py-2">
+        <span className="text-sm font-medium text-text-primary">{label}</span>
+        <span className="text-sm text-gray-500">Unlimited</span>
+      </div>
+    );
+  }
+
+  const pct = Math.min(100, Math.round((used / max) * 100));
+  const isWarning = pct >= 80;
+
+  return (
+    <div className="py-2">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-sm font-medium text-text-primary">{label}</span>
+        <span className={`text-sm ${isWarning ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+          {used} / {max}
+        </span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-gray-200">
+        <div
+          className={`h-2 rounded-full transition-all ${isWarning ? 'bg-red-500' : 'bg-brand-gold'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function UsageBarSkeleton() {
+  return (
+    <div className="py-2">
+      <div className="flex items-center justify-between mb-1">
+        <div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
+        <div className="h-4 w-12 rounded bg-gray-200 animate-pulse" />
+      </div>
+      <div className="h-2 w-full rounded-full bg-gray-200 animate-pulse" />
+    </div>
+  );
+}
+
+// ── BillingPage ───────────────────────────────────────────────────────────────
 
 export function BillingPage() {
   const { data: billing, isLoading: billingLoading, error: billingError } = useQuery<BillingStatus>({
@@ -52,13 +117,26 @@ export function BillingPage() {
         .then((d) => d.data),
   });
 
+  const { data: usage } = useQuery<BillingUsage>({
+    queryKey: ['billing-usage'],
+    queryFn: () =>
+      fetch('/api/billing/usage', { credentials: 'include' })
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        }),
+  });
+
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ priceId: 'price_pro_placeholder' }),
+        body: JSON.stringify({
+          priceId: 'price_pro_placeholder',
+          quantity: team?.members?.length ?? 1,
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -131,6 +209,13 @@ export function BillingPage() {
 
   const mutationError = checkoutMutation.error?.message ?? portalMutation.error?.message ?? null;
 
+  // Determine if any usage dimension is at or above 80% of its finite limit
+  const showUpgradeCta = !isPro && usage !== undefined && (
+    (usage.limits.maxProjects !== Infinity && Math.round((usage.projectCount / usage.limits.maxProjects) * 100) >= 80) ||
+    (usage.limits.maxWorkers !== Infinity && Math.round((usage.workerCount / usage.limits.maxWorkers) * 100) >= 80) ||
+    (usage.limits.maxMembers !== Infinity && Math.round((usage.memberCount / usage.limits.maxMembers) * 100) >= 80)
+  );
+
   return (
     <Layout>
       <PageHeader title="Billing" subtitle="Manage your plan and subscription" />
@@ -160,6 +245,36 @@ export function BillingPage() {
           <p className="text-sm text-gray-500 mt-2">
             You are on the Enterprise plan. Contact support for billing changes.
           </p>
+        )}
+      </Card>
+
+      {/* Usage card */}
+      <Card padding="default" className="mb-6">
+        <h2 className="font-headline text-lg mb-4">Usage</h2>
+        {usage ? (
+          <div className="divide-y divide-gray-100">
+            <UsageBar label="Projects" used={usage.projectCount} max={usage.limits.maxProjects} />
+            <UsageBar label="Workers" used={usage.workerCount} max={usage.limits.maxWorkers} />
+            <UsageBar label="Team Members" used={usage.memberCount} max={usage.limits.maxMembers} />
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            <UsageBarSkeleton />
+            <UsageBarSkeleton />
+            <UsageBarSkeleton />
+          </div>
+        )}
+
+        {showUpgradeCta && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <Button
+              variant="primary"
+              onClick={() => checkoutMutation.mutate()}
+              disabled={checkoutMutation.isPending || portalMutation.isPending}
+            >
+              {checkoutMutation.isPending ? 'Redirecting...' : 'Upgrade to Pro — Unlock Unlimited'}
+            </Button>
+          </div>
         )}
       </Card>
 

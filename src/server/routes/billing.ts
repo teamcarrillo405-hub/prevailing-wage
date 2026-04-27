@@ -47,17 +47,18 @@ router.get('/status', requireAuth, async (req, res) => {
 // ── POST /api/billing/checkout — requires auth ────────────────────────────────
 router.post('/checkout', requireAuth, async (req, res) => {
   const userId = req.user!.userId;
-  const { priceId } = req.body as { priceId?: unknown };
+  const { priceId, quantity } = req.body as { priceId?: unknown; quantity?: unknown };
 
   if (!priceId || typeof priceId !== 'string' || priceId.trim() === '') {
     res.status(400).json({ error: 'priceId is required and must be a non-empty string' });
     return;
   }
 
+  const seatCount = typeof quantity === 'number' && quantity > 0 ? Math.floor(quantity) : 1;
   const returnUrl = `${req.protocol}://${req.get('host')}/billing`;
 
   try {
-    const { url } = await createCheckoutSession(userId, priceId, returnUrl);
+    const { url } = await createCheckoutSession(userId, priceId, returnUrl, seatCount);
     res.json({ url });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to create checkout session';

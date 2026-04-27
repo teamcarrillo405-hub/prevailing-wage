@@ -46,10 +46,9 @@ const PLANS: Plan[] = [
     ctaTo: '/register?plan=pro',
     highlight: true,
     features: [
-      'Unlimited projects',
+      'Unlimited projects, unlimited workers, 10 team members',
       'All 8 state forms + XML exports',
       'Subcontractor CPR portal',
-      'Team collaboration (5 members)',
       'Public API access',
       'Email support',
     ],

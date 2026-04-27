@@ -32,11 +32,12 @@ export async function createCheckoutSession(
   userId: string,
   priceId: string,
   returnUrl: string,
+  quantity = 1,
 ): Promise<{ url: string }> {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [{ price: priceId, quantity }],
     success_url: `${returnUrl}?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: returnUrl,
     metadata: { userId },
