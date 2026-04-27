@@ -4,6 +4,7 @@ services:
     runtime: node
     buildCommand: npm run build
     startCommand: node dist/server/index.js
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
@@ -16,6 +17,24 @@ services:
       - key: INVITE_CODE
         sync: false
       - key: LOGTAIL_TOKEN
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+      - key: STRIPE_PRICE_ENTERPRISE
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: SSO_SP_CERT
+        sync: false
+      - key: SSO_SP_KEY
         sync: false
     disk:
       name: data
