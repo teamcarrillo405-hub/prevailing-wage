@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import { Layout } from '../components/shared/Layout.js';
@@ -14,6 +15,16 @@ interface QboStatusResponse {
     accessTokenExpiresAt?: string;
     refreshTokenExpiresAt?: string;
     nearExpiry?: boolean;
+  };
+}
+
+interface ProcoreStatusResponse {
+  data: {
+    connected: boolean;
+    companyId?: string;
+    nearExpiry?: boolean;
+    accessTokenExpiresAt?: string;
+    refreshTokenExpiresAt?: string;
   };
 }
 
@@ -145,6 +156,8 @@ function EmployeeMappingSection() {
 
 export function IntegrationsPage() {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const procoreJustConnected = searchParams.get('procore') === 'connected';
 
   const { data, isLoading } = useQuery<QboStatusResponse>({
     queryKey: ['qbo-status'],
@@ -156,7 +169,18 @@ export function IntegrationsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qbo-status'] }),
   });
 
+  const { data: procoreData } = useQuery<ProcoreStatusResponse>({
+    queryKey: ['procore-status'],
+    queryFn: () => api.get<ProcoreStatusResponse>('/api/integrations/procore/status'),
+  });
+
+  const disconnectProcore = useMutation({
+    mutationFn: () => api.delete<unknown>('/api/integrations/procore'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['procore-status'] }),
+  });
+
   const status = data?.data;
+  const procoreStatus = procoreData?.data;
 
   return (
     <Layout>
@@ -235,9 +259,85 @@ export function IntegrationsPage() {
 
             {status?.connected && <EmployeeMappingSection />}
 
+            {/* Procore connection success banner */}
+            {procoreJustConnected && (
+              <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                Procore connected successfully.
+              </div>
+            )}
+
+            {/* Procore card */}
+            <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Procore</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Import timesheet entries directly from Procore projects to populate
+                    prevailing wage payroll entries without manual re-entry.
+                  </p>
+                </div>
+                {procoreStatus?.connected ? (
+                  <Badge variant="compliant">Connected</Badge>
+                ) : (
+                  <Badge variant="neutral">Not connected</Badge>
+                )}
+              </div>
+
+              {procoreStatus?.connected ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Company ID:</span>{' '}
+                    <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                      {procoreStatus.companyId}
+                    </span>
+                  </p>
+
+                  {procoreStatus.nearExpiry && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                      Your Procore connection expires soon. Reconnect to maintain access.
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    <a
+                      href="/procore/import"
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Import Timesheets
+                    </a>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { window.location.href = '/api/integrations/procore/connect'; }}
+                    >
+                      Reconnect
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:bg-red-50 border border-red-200"
+                      onClick={() => disconnectProcore.mutate()}
+                      loading={disconnectProcore.isPending}
+                      disabled={disconnectProcore.isPending}
+                    >
+                      {disconnectProcore.isPending ? 'Disconnecting...' : 'Disconnect'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => { window.location.href = '/api/integrations/procore/connect'; }}
+                >
+                  Connect to Procore
+                </Button>
+              )}
+            </div>
+
             <p className="text-xs text-gray-500">
-              QuickBooks credentials are stored encrypted with AES-256-GCM and never appear in
-              plaintext.
+              QuickBooks and Procore credentials are stored encrypted with AES-256-GCM and never
+              appear in plaintext.
             </p>
           </>
         )}
