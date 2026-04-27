@@ -2,6 +2,7 @@
 // Offline/online status banner + queue badge (MOB-05)
 import { useState, useEffect } from 'react';
 import { processQueue, getQueueLength } from '../../lib/offlineQueue';
+import { getPendingCount } from '../../lib/payrollQueue';
 
 // ── OfflineBadge ─────────────────────────────────────────────────────────────
 export function OfflineBadge() {
@@ -11,8 +12,11 @@ export function OfflineBadge() {
     let active = true;
 
     async function refresh() {
-      const len = await getQueueLength();
-      if (active) setQueueLen(len);
+      const [genericLen, payrollLen] = await Promise.all([
+        getQueueLength(),
+        getPendingCount(),
+      ]);
+      if (active) setQueueLen(genericLen + payrollLen);
     }
 
     // Poll every 10 seconds to keep the badge fresh
@@ -36,8 +40,8 @@ export function OfflineBadge() {
   return (
     <span
       className="inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1 rounded-full bg-amber-500 text-white text-[11px] font-semibold leading-none"
-      title={`${queueLen} change${queueLen === 1 ? '' : 's'} queued for sync`}
-      aria-label={`${queueLen} pending offline changes`}
+      title={`${queueLen} item${queueLen === 1 ? '' : 's'} pending sync`}
+      aria-label={`${queueLen} item${queueLen === 1 ? '' : 's'} pending sync`}
     >
       {queueLen}
     </span>
