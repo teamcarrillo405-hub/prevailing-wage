@@ -1823,7 +1823,7 @@ Plans:
  (completed 2026-04-26)
 - [x] **Phase 84: Dependabot + Uptime Monitoring** — Dependabot npm weekly PRs, Uptime Robot + Instatus status page, public status badge on landing (SEC-09, SEC-10)
  (completed 2026-04-26)
-- [ ] **Phase 85: Full-Text Search** — SQLite FTS5 virtual tables for workers + projects, debounced search UI, highlighted matches (PERF-01, PERF-02)
+- [x] **Phase 85: Full-Text Search** — SQLite FTS5 virtual tables for workers + projects, debounced search UI, highlighted matches (PERF-01, PERF-02) (completed 2026-04-27)
 - [ ] **Phase 86: Scheduled Report Emails** — daily/weekly/monthly compliance summaries via nodemailer cron, user-configurable delivery prefs, unsubscribe token (NOTIF-05, NOTIF-06)
 - [ ] **Phase 87: Phase A Watchdog Gate** — SOC 2 evidence package review (CC6–CC9 coverage), score target 8.55+
 
@@ -1905,7 +1905,7 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 |-------|-----------|----------------|--------|-----------|
 | 83. External Log Drain + Security Policy | v7.0 | 2/2 | Complete    | 2026-04-26 |
 | 84. Dependabot + Uptime Monitoring | v7.0 | 2/2 | Complete    | 2026-04-27 |
-| 85. Full-Text Search | v7.0 | 1/2 | In Progress|  |
+| 85. Full-Text Search | v7.0 | 2/2 | Complete   | 2026-04-27 |
 | 86. Scheduled Report Emails | v7.0 | 0/2 | Not started | - |
 | 87. Phase A Watchdog Gate | v7.0 | 0/1 | Not started | - |
 | 88. Live SAM.gov WD Fetch | v7.0 | 0/3 | Not started | - |
@@ -1997,7 +1997,7 @@ Plans:
 
 Plans:
 - [x] 85-01-PLAN.md -- FTS5 virtual table migration, sync triggers, GET /search route, vitest test
-- [ ] 85-02-PLAN.md -- WorkersPage search input + debounce hook; DashboardPage client-side project filter
+- [x] 85-02-PLAN.md -- WorkersPage search input + debounce hook; DashboardPage client-side project filter
 
 **UI hint**: yes
 

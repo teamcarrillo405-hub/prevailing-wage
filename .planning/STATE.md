@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 85-01-PLAN.md
-last_updated: "2026-04-27T18:40:27.177Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 85-02-PLAN.md
+last_updated: "2026-04-27T18:45:36.691Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -174,6 +174,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 84-02]: System Status uses <a> not React Router <Link> because it is an external URL
 - [Phase 85]: FTS5 standalone triggers use DELETE FROM workers_fts WHERE worker_id = old.id (not FTS5 delete idiom) — works in trigger context; rowid idiom is content-table-only and fails
 - [Phase 85]: Search route registered at line 194 before :workerId at line 294 in workers.ts — prevents Express treating 'search' as workerId param
+- [Phase 85]: useDebounce initialized with value (not undefined) — first render returns correct initial value without debounce penalty
+- [Phase 85]: displayedWorkers switches between FTS5 search hits and labor-filter-respecting full workers list (fullWorkers = post-filter workers, not allWorkers)
+- [Phase 85]: DashboardPage client-side project filter verified unchanged (filteredProjects useMemo at lines 300-313 meets Phase 85 criterion 4 via pre-existing Phase 18 code)
 
 ### Phase Order Rationale
 
@@ -206,7 +209,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T18:40:27.173Z
-Stopped at: Completed 85-01-PLAN.md
+Last session: 2026-04-27T18:45:36.687Z
+Stopped at: Completed 85-02-PLAN.md
 Resume file: None
 Next action: Execute Phase 85 (Full-Text Search). Manual follow-up: create Better Stack account and replace STATUS_PAGE_URL placeholder in src/client/pages/LandingPage.tsx.
