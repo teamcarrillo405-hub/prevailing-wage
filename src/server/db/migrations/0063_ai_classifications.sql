@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS ai_classifications (
   latency_ms INTEGER,
   created_at TEXT NOT NULL
 );
-
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_ai_classifications_user_id ON ai_classifications(user_id);
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_ai_classifications_project_id ON ai_classifications(project_id);

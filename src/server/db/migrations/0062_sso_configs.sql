@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS sso_configs (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
-
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_sso_configs_user_id ON sso_configs(user_id);
+--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sso_configs_domain ON sso_configs(domain) WHERE domain IS NOT NULL;

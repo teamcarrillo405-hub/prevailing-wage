@@ -57,6 +57,9 @@ const TestimonialsPage = React.lazy(() => import('./pages/TestimonialsPage').the
 const ClassificationAssistPage = React.lazy(() =>
   import('./pages/ClassificationAssistPage').then(m => ({ default: m.ClassificationAssistPage }))
 );
+const GrowthDashboardPage = React.lazy(() =>
+  import('./pages/GrowthDashboardPage').then(m => ({ default: m.GrowthDashboardPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -102,6 +105,7 @@ export default function App() {
                 <Route path="/cost-estimation" element={<CostEstimationPage />} />
                 <Route path="/admin/coverage" element={<WageCoveragePage />} />
                 <Route path="/admin/wages" element={<AdminStateWagePage />} />
+                <Route path="/admin/growth" element={<GrowthDashboardPage />} />
                 <Route path="/projects/:projectId/payroll" element={<PayrollListPage />} />
                 <Route path="/projects/:projectId/payroll/new" element={<PayrollWizardPage />} />
                 <Route path="/projects/:projectId/payroll/:weekId/edit" element={<PayrollWizardPage />} />
