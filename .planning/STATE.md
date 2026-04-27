@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: Phase A Foundation + Security
-status: Complete — Phase 89 DOL 2024 Rule Updates — all 3 plans shipped
-stopped_at: Completed 89-03-PLAN.md (Civil Penalty Display)
-last_updated: "2026-04-27T20:30:00Z"
+milestone: v2.5
+milestone_name: State Portal Integration
+status: Phase complete — ready for verification
+stopped_at: Completed 88-01-PLAN.md and 88-02-PLAN.md; awaiting human-verify checkpoint for stale-WD banner
+last_updated: "2026-04-27T19:57:28.006Z"
 progress:
-  total_phases: 38
-  completed_phases: 37
-  total_plans: 87
-  completed_plans: 87
+  total_phases: 37
+  completed_phases: 34
+  total_plans: 81
+  completed_plans: 83
 ---
 
 # State
@@ -185,6 +185,7 @@ Key decisions locked for v5.0 scope:
 - [Phase 89-01]: WH347_FORM_REVISION = 'Rev. Jan. 2025' constant + pdfDoc.setTitle() in fillSingleSet(); setText() for optional header_formRevision widget
 - [Phase 89-02]: DeductionViolation type + deductionViolations[] on ComplianceResult; DEDUCTION_RATIO_CAP=0.30 loop in computeCompliance(); hasViolations excludes deduction warnings; amber banner in PayrollWeekDetailPage
 - [Phase 89-03]: CIVIL_PENALTY_PER_VIOLATION=13_508 constant; useQuery for /compliance/projects/summary; civil penalty card renders only on active projects with violations
+- [Phase 88]: Weekly WD sync cron (Sunday 03:00 UTC) replaces monthly 1st-of-month cron; wdRevisionLog table tracks revision bumps for audit trail
 
 ### Phase Order Rationale
 
@@ -218,7 +219,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T20:30:00.000Z
-Stopped at: Completed Phase 89 (DOL 2024 Rule Updates) — all 3 plans shipped
+Last session: 2026-04-27T19:57:21.494Z
+Stopped at: Completed 88-01-PLAN.md and 88-02-PLAN.md; awaiting human-verify checkpoint for stale-WD banner
 Resume file: None
 Next action: Phase 89 complete. All DOL 2024 compliance updates (Rev. Jan. 2025 PDF metadata, 30% deduction cap, civil penalty display) shipped.
