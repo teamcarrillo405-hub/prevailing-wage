@@ -73,6 +73,9 @@ const FUNDING_TYPE_LABELS: Record<string, string> = {
   mixed: 'Mixed',
 };
 
+/** Maximum DOL civil penalty per violation — 29 CFR Part 5.14 (2024 inflation adjustment). */
+const CIVIL_PENALTY_PER_VIOLATION = 13_508;
+
 function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean; to: string }[] }) {
   return (
     <div className="flex items-center gap-0 mb-6 flex-wrap">
@@ -1220,6 +1223,15 @@ export function ProjectDetailPage() {
     staleTime: 60_000,
   });
 
+  const { data: complianceSummaryData } = useQuery({
+    queryKey: ['compliance-summary-batch'],
+    queryFn: () => api.get<{ projects: Array<{ id: string; status: string; violationCount: number }> }>(
+      '/compliance/projects/summary'
+    ),
+    enabled: !!id && data?.data?.project?.status === 'active',
+    staleTime: 60_000,
+  });
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -1291,6 +1303,11 @@ export function ProjectDetailPage() {
 
   const workers = workersData?.data?.workers ?? [];
   const weeks = weeksData?.weeks ?? [];
+
+  // Civil penalty exposure — COMP-08 / DOL 2024
+  const projectCompliance = complianceSummaryData?.projects?.find(p => p.id === id);
+  const violationCount = projectCompliance?.violationCount ?? 0;
+  const maxCivilPenalty = violationCount * CIVIL_PENALTY_PER_VIOLATION;
 
   const steps = [
     { label: 'Create Project', complete: true, to: `/projects/${id}` },
@@ -1562,6 +1579,39 @@ export function ProjectDetailPage() {
                 </Button>
               </div>
             </Card>
+          )}
+
+          {/* Civil penalty exposure — COMP-08 / DOL 2024 */}
+          {project.status === 'active' && violationCount > 0 && (
+            <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 max-w-lg">
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-status-violation">
+                    Civil Penalty Exposure
+                  </p>
+                  <p className="text-xs text-red-700 mt-0.5">
+                    {violationCount} active violation{violationCount !== 1 ? 's' : ''} detected
+                    across payroll weeks for this project.
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-center">
+                    <div className="rounded bg-white border border-red-100 px-3 py-2">
+                      <p className="text-lg font-bold text-status-violation">{violationCount}</p>
+                      <p className="text-xs text-gray-500">Violations</p>
+                    </div>
+                    <div className="rounded bg-white border border-red-100 px-3 py-2">
+                      <p className="text-lg font-bold text-status-violation">
+                        ${maxCivilPenalty.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-gray-500">Max Exposure</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-red-600 mt-2">
+                    Max penalty: ${CIVIL_PENALTY_PER_VIOLATION.toLocaleString()} per violation (29 CFR Part 5.14, 2024).
+                    Resolve violations on the Payroll Weeks page before submission.
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
 
           {archiveModalOpen && (
