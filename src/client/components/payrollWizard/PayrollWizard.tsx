@@ -8,7 +8,8 @@ import { Step2HoursGrid, type GridWorkerRow } from './Step2HoursGrid';
 import type { RowValues } from './Step2GridRow';
 import { Step3Review } from './Step3Review';
 import { StepProgress, StepTransition } from './StepTransition';
-import { useEntryMutation } from './useEntryMutation';
+import { useOfflineEntryMutation } from './useOfflineEntryMutation';
+import type { OfflineSaveStatus } from './useOfflineEntryMutation';
 import { api } from '../../lib/api';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
 
@@ -84,7 +85,11 @@ export function PayrollWizard({ projectId, weekId }: Props) {
   function advance() { setDirection('forward');  dispatch({ type: 'ADVANCE' }); }
   function goBack()  { setDirection('backward'); dispatch({ type: 'GO_BACK' }); }
 
-  const { markDirty, flush, saveStatus } = useEntryMutation(state.weekId, () => dispatch({ type: 'LOCK' }));
+  const { markDirty, flush, saveStatus } = useOfflineEntryMutation(
+    state.weekId,
+    projectId,
+    () => dispatch({ type: 'LOCK' }),
+  );
 
   // Warn the user before closing/refreshing the tab while they have unsaved payroll data.
   // Only active on Step 2 (hours entry) and Step 3 (review) — not Step 1 (roster setup).

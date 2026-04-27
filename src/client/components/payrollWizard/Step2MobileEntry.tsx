@@ -10,7 +10,7 @@ import type { StateToggles } from './Step2BulkActions';
 interface Props {
   rows: GridWorkerRow[];
   toggles: StateToggles;
-  saveStatus?: 'idle' | 'pending' | 'saving';
+  saveStatus?: 'idle' | 'pending' | 'saving' | 'queued' | 'conflict';
   onCellChange: (workerId: string, classificationId: string, field: keyof HourValues, value: number) => void;
   onMetaChange: (workerId: string, classificationId: string, field: MetaField, value: number) => void;
   onExtraChange: (workerId: string, classificationId: string, field: keyof RowExtras, value: number | string | null) => void;

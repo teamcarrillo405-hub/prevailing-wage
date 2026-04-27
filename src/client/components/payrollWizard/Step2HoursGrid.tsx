@@ -27,7 +27,7 @@ export interface GridWorkerRow {
 interface Props {
   initialRows: GridWorkerRow[];
   projectState: string;
-  saveStatus?: 'idle' | 'pending' | 'saving';
+  saveStatus?: 'idle' | 'pending' | 'saving' | 'queued' | 'conflict';
   highlightedWorkerIds?: Set<string>;
   onRowChange: (row: GridWorkerRow) => void;
   onReview: () => void;
@@ -361,8 +361,23 @@ export function Step2HoursGrid({ initialRows, projectState, saveStatus, highligh
           </table>
         </div>
         <div className="flex items-center justify-between mt-4">
-          <span aria-live="polite" className="text-xs text-gray-400">
-            {saveStatus === 'pending' || saveStatus === 'saving' ? 'Saving…' : 'All changes saved'}
+          <span aria-live="polite" className="text-xs">
+            {saveStatus === 'queued' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                Queued for sync
+              </span>
+            )}
+            {saveStatus === 'conflict' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                Synced by another device
+              </span>
+            )}
+            {(saveStatus === 'pending' || saveStatus === 'saving') && (
+              <span className="text-gray-400">Saving…</span>
+            )}
+            {(saveStatus === 'idle' || saveStatus === undefined) && (
+              <span className="text-gray-400">All changes saved</span>
+            )}
           </span>
           <div className="flex gap-3">
             <Button variant="secondary" onClick={onBack}>

@@ -3,15 +3,16 @@
 // Follows the same lazy-singleton openDB pattern as offlineQueue.ts.
 import { openDB } from 'idb';
 import type { IDBPDatabase } from 'idb';
+import type { RowValues } from '../components/payrollWizard/Step2GridRow';
 
 export const PAYROLL_QUEUE_DB = 'payroll-queue';
 export const PAYROLL_STORE = 'entries';
 
-// EntryPayload is defined inline to avoid circular refs with useEntryMutation.ts
+// EntryPayload mirrors useEntryMutation.EntryPayload — defined here to avoid circular ref.
 export interface EntryPayload {
   workerId: string;
   classificationId: string;
-  values: Record<string, number | null>;
+  values: RowValues;
   baseRateSnapshot: number;
   fringeRateSnapshot: number;
   deductions: number;
