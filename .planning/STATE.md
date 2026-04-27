@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 84-02-PLAN.md
-last_updated: "2026-04-27T16:20:56.955Z"
+status: Ready to execute
+stopped_at: Completed 85-01-PLAN.md
+last_updated: "2026-04-27T18:40:27.177Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 84 — dependabot-uptime-monitoring
+**Current focus:** Phase 85 — full-text-search
 
 ## Current Position
 
-Phase: 84
-Plan: Not started
+Phase: 85 (full-text-search) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -172,6 +172,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 84-dependabot-uptime-monitoring]: dependencies label must be created manually in GitHub repo Settings before first Dependabot run
 - [Phase 84-02]: STATUS_PAGE_URL placeholder committed deliberately — Better Stack account setup is a deferred manual follow-up; Task 2 checkpoint deferred-approved by user
 - [Phase 84-02]: System Status uses <a> not React Router <Link> because it is an external URL
+- [Phase 85]: FTS5 standalone triggers use DELETE FROM workers_fts WHERE worker_id = old.id (not FTS5 delete idiom) — works in trigger context; rowid idiom is content-table-only and fails
+- [Phase 85]: Search route registered at line 194 before :workerId at line 294 in workers.ts — prevents Express treating 'search' as workerId param
 
 ### Phase Order Rationale
 
@@ -204,7 +206,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-26T00:00:00.000Z
-Stopped at: Completed 84-02-PLAN.md
+Last session: 2026-04-27T18:40:27.173Z
+Stopped at: Completed 85-01-PLAN.md
 Resume file: None
 Next action: Execute Phase 85 (Full-Text Search). Manual follow-up: create Better Stack account and replace STATUS_PAGE_URL placeholder in src/client/pages/LandingPage.tsx.

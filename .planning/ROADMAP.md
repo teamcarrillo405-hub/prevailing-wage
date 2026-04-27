@@ -1905,7 +1905,7 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 |-------|-----------|----------------|--------|-----------|
 | 83. External Log Drain + Security Policy | v7.0 | 2/2 | Complete    | 2026-04-26 |
 | 84. Dependabot + Uptime Monitoring | v7.0 | 2/2 | Complete    | 2026-04-27 |
-| 85. Full-Text Search | v7.0 | 0/2 | Not started | - |
+| 85. Full-Text Search | v7.0 | 1/2 | In Progress|  |
 | 86. Scheduled Report Emails | v7.0 | 0/2 | Not started | - |
 | 87. Phase A Watchdog Gate | v7.0 | 0/1 | Not started | - |
 | 88. Live SAM.gov WD Fetch | v7.0 | 0/3 | Not started | - |
@@ -1996,7 +1996,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 85-01-PLAN.md -- FTS5 virtual table migration, sync triggers, GET /search route, vitest test
+- [x] 85-01-PLAN.md -- FTS5 virtual table migration, sync triggers, GET /search route, vitest test
 - [ ] 85-02-PLAN.md -- WorkersPage search input + debounce hook; DashboardPage client-side project filter
 
 **UI hint**: yes
