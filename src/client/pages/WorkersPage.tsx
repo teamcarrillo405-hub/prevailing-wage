@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDebounce } from '../hooks/useDebounce';
 import { Users } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
@@ -212,6 +213,21 @@ export function WorkersPage() {
     enabled: !!projectId,
   });
 
+  // Phase 85 PERF-02 — debounced FTS5 search
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedQuery = useDebounce(searchQuery, 200);
+
+  type WorkerSearchHit = { worker_id: string; name: string; trade_union: string | null };
+  const { data: searchData, isFetching: searchFetching } = useQuery({
+    queryKey: ['workers-search', projectId, debouncedQuery],
+    queryFn: () =>
+      api.get<{ data: { workers: WorkerSearchHit[] } }>(
+        `/projects/${projectId}/workers/search?q=${encodeURIComponent(debouncedQuery)}`,
+      ),
+    enabled: !!projectId && debouncedQuery.trim().length > 0,
+    staleTime: 30_000,
+  });
+
   const wageClassifications = wdData?.data?.classifications ?? [];
   const hasWd = wdData?.data?.hasWd ?? false;
   const wdNumber = wdData?.data?.wdNumber;
@@ -221,6 +237,46 @@ export function WorkersPage() {
     : allWorkers.filter(w =>
         w.classifications.some(c => c.laborType === laborFilter)
       );
+
+  // When user is searching, render search hits; when input is empty, render full list.
+  const isSearching = debouncedQuery.trim().length > 0;
+  const fullWorkers = workers;
+  const searchHits = searchData?.data?.workers ?? [];
+  // Re-shape search hits to the existing Worker render contract (other fields shown as null/em-dash).
+  const displayedWorkers = isSearching
+    ? searchHits.map((h) => {
+        const full = fullWorkers.find((w) => w.id === h.worker_id);
+        return full ?? {
+          id: h.worker_id,
+          name: h.name,
+          ssnLast4: null,
+          hasFullSsn: false,
+          tradeUnion: h.trade_union,
+          address: null,
+          addressStreet: null,
+          addressCity: null,
+          addressState: null,
+          addressZip: null,
+          unionLocal: null,
+          unionBookNumber: null,
+          apprenticeshipCommittee: null,
+          apprenticeshipRegNumber: null,
+          nysRegisteredApprentice: null,
+          race: null,
+          ethnicity: null,
+          gender: null,
+          veteranStatus: null,
+          skillLevel: null,
+          isWoman: null,
+          isMinority: null,
+          oshaTraining: null,
+          workerSex: null,
+          apprenticeshipProgramName: null,
+          rapidsNumber: null,
+          classifications: [],
+        } as Worker;
+      })
+    : fullWorkers;
   const selectedTrade = wageClassifications.find(wc => wc.tradeCode === form.tradeCode);
   const selectedExtraTrade = wageClassifications.find(wc => wc.tradeCode === extraClass.tradeCode);
   const isWA = projectData?.data?.project?.state?.toUpperCase() === 'WA';
@@ -483,13 +539,35 @@ export function WorkersPage() {
           </div>
         )}
 
+        {/* Search input */}
+        {allWorkers.length > 0 && (
+          <div className="mb-4">
+            <label htmlFor="worker-search" className="sr-only">Search workers</label>
+            <input
+              id="worker-search"
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search workers by name or trade union..."
+              className="w-full px-3 py-2 rounded-md border border-border-default bg-surface-card text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-gold focus:border-brand-gold"
+              autoComplete="off"
+            />
+            {isSearching && searchFetching && (
+              <p className="mt-1 text-xs text-text-muted">Searching...</p>
+            )}
+            {isSearching && !searchFetching && searchHits.length === 0 && (
+              <p className="mt-1 text-xs text-text-muted">No workers match "{debouncedQuery}".</p>
+            )}
+          </div>
+        )}
+
         {/* Worker list */}
-        {allWorkers.length > 0 && workers.length === 0 && (
+        {allWorkers.length > 0 && !isSearching && workers.length === 0 && (
           <p className="text-sm text-gray-500 mb-4">No workers match the selected filter.</p>
         )}
-        {workers.length > 0 && (
+        {displayedWorkers.length > 0 && (
           <div className="mb-8 space-y-3">
-            {workers.map((w) => (
+            {displayedWorkers.map((w) => (
               <Card key={w.id} padding="sm">
 
                 {editingId === w.id ? (
