@@ -1904,7 +1904,7 @@ WATCHDOG GATE: Score ≥ 9.2/10 required to ship v7.0 milestone.
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 83. External Log Drain + Security Policy | v7.0 | 2/2 | Complete    | 2026-04-26 |
-| 84. Dependabot + Uptime Monitoring | v7.0 | 2/2 | Complete    | 2026-04-26 |
+| 84. Dependabot + Uptime Monitoring | v7.0 | 2/2 | Complete    | 2026-04-27 |
 | 85. Full-Text Search | v7.0 | 0/2 | Not started | - |
 | 86. Scheduled Report Emails | v7.0 | 0/2 | Not started | - |
 | 87. Phase A Watchdog Gate | v7.0 | 0/1 | Not started | - |
