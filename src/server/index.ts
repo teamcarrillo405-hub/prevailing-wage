@@ -54,6 +54,7 @@ import securityRouter from './routes/security.js';
 import { roiLeadsRouter } from './routes/roiLeads.js';
 import { aiClassifyRouter } from './routes/aiClassify.js';
 import { growthRouter } from './routes/growth.js';
+import { ssoRouter } from './routes/sso.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
@@ -145,6 +146,8 @@ app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   // Skip webhook endpoint — Stripe sends without browser Origin
   if (req.path.startsWith('/api/billing/webhook')) return next();
+  // Skip SSO ACS — IdP sends form POST from external origin
+  if (req.path.startsWith('/api/sso/acs')) return next();
   // Skip health check
   if (req.path === '/api/health') return next();
   // Skip public REST API — uses Bearer token auth, no browser origin
@@ -208,6 +211,7 @@ app.use('/api/security', securityRouter);
 app.use('/api/notifications', notificationsRouter);
 // /v1 — public REST API, Bearer token auth (no CSRF check needed — API key, no browser origin)
 app.use('/v1', publicApiRouter);
+app.use('/api/sso', ssoRouter);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {
