@@ -556,6 +556,23 @@ export const qboTokens = sqliteTable('qbo_tokens', {
   idxQboTokensUser: index('idx_qbo_tokens_user').on(table.userId),
 }));
 
+// ── Phase 90: Procore OAuth Tokens ───────────────────────────────────────────
+// Stores encrypted OAuth tokens per user. One row per user (upsert pattern).
+// Tokens encrypted AES-256-GCM via cryptoService — never stored plaintext.
+export const procoreTokens = sqliteTable('procore_tokens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  companyId: text('company_id').notNull(),  // Procore company ID (equivalent of QBO realmId)
+  accessTokenEncrypted: text('access_token_encrypted').notNull(),
+  refreshTokenEncrypted: text('refresh_token_encrypted').notNull(),
+  accessTokenExpiresAt: text('access_token_expires_at').notNull(),
+  refreshTokenExpiresAt: text('refresh_token_expires_at').notNull(),
+  connectedAt: text('connected_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  idxProcoreUser: index('idx_procore_tokens_user').on(table.userId),
+}));
+
 // ── Phase 64: SOC 2 Security Audit Tables ────────────────────────────────
 export const securityEvents = sqliteTable('security_events', {
   id:        text('id').primaryKey(),

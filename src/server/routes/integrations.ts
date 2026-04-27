@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { eq } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
 import { getQboConnection, deleteQboTokens, saveQboTokens, getValidAccessToken } from '../services/qboService.js';
+import { getProcoreConnection, saveProcoreTokens, deleteProcoreTokens, getValidProcoreToken } from '../services/procoreService.js';
 import { insertSecurityEvent } from '../db/auditHelpers.js';
 import { logger } from '../logger.js';
 import { getDb } from '../db/index.js';
@@ -498,6 +499,129 @@ integrationsRouter.post('/qbo/push-approved-hours', requireAuth, async (req, res
   }
 
   res.json({ data: { committed, weekId: body.weekId } });
+});
+
+// ── Phase 90: Procore OAuth2 ──────────────────────────────────────────────────
+
+// GET /api/integrations/procore/status
+integrationsRouter.get('/procore/status', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const status = await getProcoreConnection(userId);
+  res.json({ data: status });
+});
+
+// GET /api/integrations/procore/connect
+integrationsRouter.get('/procore/connect', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const clientId = process.env.PROCORE_CLIENT_ID;
+  const redirectUri = process.env.PROCORE_REDIRECT_URI;
+
+  if (!clientId || !redirectUri) {
+    res.status(503).json({ error: 'Procore integration not configured' });
+    return;
+  }
+
+  const state = Buffer.from(JSON.stringify({ userId, nonce: Math.random().toString(36) })).toString('base64url');
+
+  const authUrl =
+    `https://login.procore.com/oauth/authorize?` +
+    `client_id=${encodeURIComponent(clientId)}` +
+    `&response_type=code` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&state=${state}`;
+
+  res.redirect(authUrl);
+});
+
+// GET /api/integrations/procore/callback
+integrationsRouter.get('/procore/callback', async (req, res) => {
+  const { code, state } = req.query as Record<string, string>;
+
+  if (!code || !state) {
+    res.status(400).send('Missing OAuth parameters');
+    return;
+  }
+
+  let userId: string;
+  try {
+    const decoded = JSON.parse(Buffer.from(state, 'base64url').toString()) as { userId: string };
+    userId = decoded.userId;
+    if (!userId || typeof userId !== 'string') throw new Error('invalid userId');
+  } catch {
+    res.status(400).send('Invalid state parameter');
+    return;
+  }
+
+  const clientId = process.env.PROCORE_CLIENT_ID;
+  const clientSecret = process.env.PROCORE_CLIENT_SECRET;
+  const redirectUri = process.env.PROCORE_REDIRECT_URI;
+
+  if (!clientId || !clientSecret || !redirectUri) {
+    res.status(503).send('Procore integration not configured');
+    return;
+  }
+
+  try {
+    const tokenResponse = await fetch('https://login.procore.com/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const body = await tokenResponse.text();
+      logger.error({ status: tokenResponse.status, body }, '[procore-callback] token exchange failed');
+      res.status(502).send('Token exchange failed');
+      return;
+    }
+
+    const tokens = await tokenResponse.json() as {
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+      created_at?: number;
+    };
+
+    // Fetch the company ID from Procore /me endpoint
+    const meResp = await fetch('https://api.procore.com/rest/v1.0/me', {
+      headers: { 'Authorization': `Bearer ${tokens.access_token}`, 'Accept': 'application/json' },
+    });
+    const meData = meResp.ok
+      ? await meResp.json() as { company?: { id?: number } }
+      : null;
+    // Use the first company ID from /me, fallback to '0' if unavailable
+    const companyId = String(meData?.company?.id ?? '0');
+
+    const now = Date.now();
+    await saveProcoreTokens(userId, {
+      companyId,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      accessTokenExpiresAt: new Date(now + tokens.expires_in * 1000),
+      refreshTokenExpiresAt: new Date(now + 365 * 24 * 60 * 60 * 1000),
+    });
+
+    void insertSecurityEvent({ userId, eventType: 'connect_procore', metadata: { companyId } });
+    res.redirect('/settings/integrations?procore=connected');
+  } catch (err) {
+    logger.error({ err }, '[procore-callback] unexpected error');
+    res.status(500).send('Internal error during Procore connection');
+  }
+});
+
+// DELETE /api/integrations/procore
+integrationsRouter.delete('/procore', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  await deleteProcoreTokens(userId);
+  void insertSecurityEvent({ userId, eventType: 'disconnect_procore' });
+  res.json({ data: { disconnected: true } });
 });
 
 export { integrationsRouter };
