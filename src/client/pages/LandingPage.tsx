@@ -1010,6 +1010,10 @@ function CTACloseSection() {
   );
 }
 
+// TODO: set after Better Stack account setup — replace YOUR-SUBDOMAIN with the actual subdomain
+// chosen during account creation at https://betterstack.com/uptime
+const STATUS_PAGE_URL = 'https://YOUR-SUBDOMAIN.betteruptime.com';
+
 // ── Existing: Footer ──────────────────────────────────────────────────────────
 function LandingFooter() {
   const footerLinks = [
@@ -1039,7 +1043,27 @@ function LandingFooter() {
                 {label}
               </Link>
             ))}
+            <a
+              href={STATUS_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-brand-gold transition-colors"
+            >
+              System Status
+            </a>
           </div>
+        </div>
+        {/* Better Stack embeddable status badge */}
+        <div className="mb-4">
+          <iframe
+            src={`${STATUS_PAGE_URL}/badge?theme=dark`}
+            width="250"
+            height="30"
+            frameBorder="0"
+            scrolling="no"
+            title="Service status"
+            style={{ colorScheme: 'none' }}
+          />
         </div>
         <p className="text-xs text-gray-600 text-center border-t border-white/5 pt-6">
           Davis-Bacon and Related Acts compliance software for federal construction contractors.
