@@ -1823,8 +1823,10 @@ Plans:
  (completed 2026-04-26)
 - [x] **Phase 84: Dependabot + Uptime Monitoring** — Dependabot npm weekly PRs, Uptime Robot + Instatus status page, public status badge on landing (SEC-09, SEC-10)
  (completed 2026-04-26)
-- [x] **Phase 85: Full-Text Search** — SQLite FTS5 virtual tables for workers + projects, debounced search UI, highlighted matches (PERF-01, PERF-02) (completed 2026-04-27)
-- [x] **Phase 86: Scheduled Report Emails** — daily/weekly/monthly compliance summaries via nodemailer cron, user-configurable delivery prefs, unsubscribe token (NOTIF-05, NOTIF-06) (completed 2026-04-27)
+- [x] **Phase 85: Full-Text Search** — SQLite FTS5 virtual tables for workers + projects, debounced search UI, highlighted matches (PERF-01, PERF-02)
+ (completed 2026-04-27)
+- [x] **Phase 86: Scheduled Report Emails** — daily/weekly/monthly compliance summaries via nodemailer cron, user-configurable delivery prefs, unsubscribe token (NOTIF-05, NOTIF-06)
+ (completed 2026-04-27)
 - [x] **Phase 87: Phase A Watchdog Gate** — GATE_PASS 10.0/10 (2026-04-27); all 10 Phase A criteria verified; 762 tests passing; Phase 88 unblocked
 
 **Acceptance criteria:**
@@ -2052,5 +2054,363 @@ WATCHDOG GATE: Score >= 8.55 required before Phase 88 begins.
 
 Plans:
 - [x] 87-01-PLAN.md -- Run all 10 gate criterion checks; compute score; write 87-SCORE.md; declare GATE_PASS or GATE_FAIL (GATE_PASS 10.0/10 — 2026-04-27)
+
+**UI hint**: no
+
+
+---
+
+## v8.0 Production-Ready + DBE Parity + Enterprise SAML (Phases 107-116) — SHIPPED 2026-04-27
+
+**Milestone goal:** Close the single LCPtracker gap (DBE classification flag on subcontractor records + payroll line items + participation % reporting); deliver a fully working SAML SSO handshake replacing the Phase 102 schema stub; harden production deploy with health check path, all missing env vars documented, and a deploy runbook; replace the landing page abbreviation-box state grid with a geographic SVG compliance map; and wire per-seat billing quotas so enterprise pricing is actually enforced in the server.
+
+**Entering v8.0:** 824 tests passing, 0 new TS errors, v7.0.0 tagged. The REST API (`/v1`), webhooks, Stripe billing routes, and plan-tier member limits are fully built. `sso_configs` table exists as a stub with no SAML library or handshake routes. `subcontractors.dbeClassification` column and `payroll_entries.subcontractorId` FK do not exist. `render.yaml` is missing `healthCheckPath` and 9 required env var keys.
+
+---
+
+### Phase A -- DBE Gap Closure (Phases 107-109)
+
+**Goal:** Move DBE/MBE/WBE tracking from BEHIND to AHEAD of LCPtracker: add the classification flag on subcontractor records, surface it on individual payroll line items, and produce a participation % report per project.
+
+- [x] **Phase 107: DBE Classification Flag on Subcontractors** -- `dbeClassification` text column (`none | dbe | mbe | wbe | sdvosb`) on `subcontractors` table; SubcontractorPanel shows flag selector + color badge per sub (DBE-07)
+- [x] **Phase 108: DBE Flag on Payroll Line Items** -- nullable `subcontractorId` FK on `payroll_entries`; payroll entry form shows optional sub selector; DBE badge on worker rows where entry references a certified sub; import pipeline accepts subcontractorId (DBE-08)
+- [x] **Phase 109: DBE Participation Report + Phase A Watchdog Gate** -- `GET /api/projects/:id/reports/dbe-participation` computes sub labor hours by classification vs. total project hours; DBE Participation tab on ReportsPage with PDF export; gate score >= 9.3/10 (DBE-09) -- WATCHDOG GATE
+
+**Acceptance criteria:**
+- Subcontractor record shows `dbeClassification` selector in SubcontractorPanel; color badge (gold=DBE, emerald=MBE, blue=WBE, purple=SDVOSB, gray=None) renders in sub list
+- Payroll entry for sub labor row correctly inherits sub DBE flag; visible in audit log
+- DBE Participation report shows total project hours, DBE/MBE/WBE/SDVOSB/uncertified hours each as count and % of total, broken down by payroll week
+- 0 new TS errors; all tests green
+
+WATCHDOG GATE: Score >= 9.3/10 required before Phase 110 begins.
+
+---
+
+### Phase B -- Full SAML SSO (Phases 110-112)
+
+**Goal:** Enterprise customers can connect their Okta or Azure AD tenant via SAML 2.0; the SP-initiated handshake is complete server-side; SSO login transparently redirects users whose email domain matches a configured tenant.
+
+- [x] **Phase 110: SAML Library + SP Metadata** -- install `@node-saml/node-saml`; `GET /api/sso/metadata` returns valid SP XML; `POST /api/sso/admin/config` parses IdP metadata XML and upserts `sso_configs` row (ENT-03)
+- [x] **Phase 111: SAML Handshake + Session Creation** -- `GET /api/sso/login?domain=` generates AuthnRequest and redirects to IdP; `POST /api/sso/acs` validates SAMLResponse (signature + NotOnOrAfter + Audience), provisions user if new, issues JWT session cookie; replay attack protection via in-memory assertion ID dedup (ENT-04)
+- [x] **Phase 112: SSO Domain Gating + Admin UI + Phase B Watchdog Gate** -- `POST /api/auth/login` checks email domain against active `sso_configs` before password validation; `/settings/sso` enterprise admin page (config status, metadata upload, SP metadata download, Test Login button); gate score >= 9.3/10 (ENT-05) -- WATCHDOG GATE
+
+**Acceptance criteria:**
+- SP metadata endpoint returns valid SAML XML parseable by Okta/Azure AD metadata import
+- ACS endpoint validates SAMLResponse signature; rejects tampered or replayed assertions
+- User with matching email domain is redirected to IdP on login; after IdP auth, lands on `/dashboard` with valid JWT session cookie
+- Non-SSO users unaffected; email/password login continues working for all non-SSO domains
+
+WATCHDOG GATE: Score >= 9.3/10 required before Phase 113 begins.
+
+---
+
+### Phase C -- Production Hardening (Phase 113)
+
+**Goal:** The Render.com deployment has a documented health check path, all required env vars declared in `render.yaml`, and a `DEPLOY.md` runbook covering env var checklist, disk backup, zero-downtime deploy, rollback, and smoke-test steps.
+
+- [x] **Phase 113: Render Health Check + Env Completeness + Deploy Runbook** -- `render.yaml` gains `healthCheckPath: /api/health` and all 9 missing env var keys (`STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`, `STRIPE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `APP_URL`, `SSO_SP_CERT`, `SSO_SP_KEY`); `DEPLOY.md` at repo root covers 7 sections: Prerequisites, Env Var Checklist, Disk Backup Procedure, Render Rolling Deploy steps, Rollback Procedure, Post-Deploy Smoke Test (7 steps), Known Limitations (OPS-02, OPS-03)
+
+**Acceptance criteria:**
+- `render.yaml` `healthCheckPath` value matches the unauthenticated `/api/health` route that returns `{ status: "ok", db: "ok" }`
+- Every env var key the server reads via `process.env` at runtime is declared in `render.yaml` with `sync: false` for secrets
+- `DEPLOY.md` documents the 7-step smoke test (auth, project create, payroll entry, WH-347 download, API key create, webhook fire, admin/growth view)
+- No new application code added -- config and documentation only; all existing tests continue to pass
+
+---
+
+### Phase D -- Landing Page SVG Compliance Map (Phase 114)
+
+**Goal:** The landing page state coverage section displays an actual geographic United States SVG choropleth map with active states filled gold and inactive states outlined -- replacing the abbreviation-box grid that does not communicate geographic coverage at a glance.
+
+- [x] **Phase 114: 50-State SVG Compliance Map** -- `UsComplianceMap.tsx` component with 50 inline `<path>` elements keyed by state abbreviation; active states filled `var(--color-nav-dark)` with gold stroke, inactive states filled `#f3f4f6`; Alaska/Hawaii as insets; hover/tap tooltip (state name + form status); replaces `StateCoverageSection` in `LandingPage.tsx`; no external map library; SVG under 80 KB; responsive at 375px/768px/1280px (UI-17)
+
+**Acceptance criteria:**
+- SVG renders at 375px, 768px, and 1280px without horizontal overflow
+- 8 active states are visually distinct from inactive states at a glance with no labels required
+- Hover tooltip appears on both active and inactive states; never overflows viewport
+- No new entry in `package.json` dependencies for a map library
+- Total SVG path data under 80 KB
+
+---
+
+### Phase E -- Per-Seat Billing Quotas + v8.0 Ship (Phases 115-116)
+
+**Goal:** Plan tier limits are enforced in the server for project and worker creation, Stripe checkout passes seat count for Pro subscriptions, BillingPage shows usage vs. limits with upgrade CTA, and the v8.0 milestone closes with a Watchdog gate.
+
+- [x] **Phase 115: Per-Seat Billing Quotas** -- `planLimits.ts` gains `maxProjects` and `maxWorkers` per tier (starter: 3 projects / 25 workers, pro/enterprise: unlimited); `POST /api/projects` and `POST /api/projects/:id/workers` enforce caps with 409 + `{ upgradeRequired: true }`; `GET /api/billing/usage` returns current usage counts; `BillingPage.tsx` shows usage card with progress bars and upgrade CTA at >= 80% utilization; Stripe Checkout for Pro passes `quantity: seatCount` (ENT-06, BILL-01)
+- [x] **Phase 116: v8.0 Watchdog Gate + Ship** -- 10-criteria SCORE.md in `.planning/phases/116-watchdog-gate-v8-ship/`; LCPtracker re-audit confirms DBE row moves from BEHIND to AHEAD; full test suite green (>= 850 tests); gate score >= 9.3/10; v8.0.0 tag created (OPS-04) -- WATCHDOG GATE
+
+**Acceptance criteria:**
+- Starter account blocked from creating a 4th project with "Upgrade to Pro" modal
+- Starter account blocked from adding a 26th worker with same upgrade prompt
+- Pro Stripe checkout line item reflects actual seat count
+- DBE participation report passes LCPtracker re-audit (AHEAD verdict)
+- SAML SSO handshake verified with Okta dev account end-to-end
+- All tests green; 0 new TS errors beyond two known pre-existing
+
+WATCHDOG GATE: Score >= 9.3/10 required to ship v8.0 milestone.
+
+---
+
+## v8.0 Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 107. DBE Classification Flag on Subcontractors | v8.0 | 1/1 | Complete | 2026-04-27 |
+| 108. DBE Flag on Payroll Line Items | v8.0 | 2/2 | Complete | 2026-04-27 |
+| 109. DBE Participation Report + Phase A Gate | v8.0 | 2/2 | Complete | 2026-04-27 |
+| 110. SAML Library + SP Metadata | v8.0 | 2/2 | Complete | 2026-04-27 |
+| 111. SAML Handshake + Session Creation | v8.0 | 2/2 | Complete | 2026-04-27 |
+| 112. SSO Domain Gating + Admin UI + Phase B Gate | v8.0 | 2/2 | Complete | 2026-04-27 |
+| 113. Render Health Check + Env Completeness + Deploy Runbook | v8.0 | 1/1 | Complete | 2026-04-27 |
+| 114. 50-State SVG Compliance Map | v8.0 | 2/2 | Complete | 2026-04-27 |
+| 115. Per-Seat Billing Quotas | v8.0 | 2/2 | Complete | 2026-04-27 |
+| 116. v8.0 Watchdog Gate + Ship | v8.0 | 1/1 | Complete | 2026-04-27 |
+
+---
+
+## Phase Details (v8.0)
+
+### Phase 107: DBE Classification Flag on Subcontractors
+
+**Goal**: Every subcontractor record carries an explicit DBE classification flag -- the primary gap identified in the v7.0 LCPtracker audit -- making it possible to query which subs are DBE/MBE/WBE-certified at the record level rather than inferring from the separate certifications table
+
+**Depends on**: Phase 106 (v7.0 complete)
+
+**Requirements**: DBE-07
+
+**Success Criteria** (what must be TRUE):
+  1. A migration adds `dbe_classification` text column to the `subcontractors` table with a CHECK constraint enforcing values `none | dbe | mbe | wbe | sdvosb`; the column defaults to `'none'`; the Drizzle schema is updated and the migration registered in `meta/_journal.json`
+  2. `SubcontractorPanel.tsx` shows a "DBE Classification" select field (None / DBE / MBE / WBE / SDVOSB) on both the add-sub form and the edit-sub form; value is saved via PATCH `/api/projects/:id/subcontractors/:subId` (which accepts the new field)
+  3. The subcontractor list in `SubcontractorPanel.tsx` shows a color-coded badge next to each sub name: DBE=gold, MBE=emerald, WBE=blue, SDVOSB=purple, None=gray (no badge)
+  4. `GET /api/projects/:id/subcontractors` response includes `dbeClassification` on each sub object; route tests are extended with a case asserting the field is present and defaults to `none`
+
+**Plans**: 1 plan
+
+Plans:
+- [x] 107-01-PLAN.md -- Migration (dbe_classification column + CHECK) + Drizzle schema + PATCH route update + SubcontractorPanel select + classification badges + route tests
+
+**UI hint**: yes
+
+---
+
+### Phase 108: DBE Flag on Payroll Line Items
+
+**Goal**: Payroll entries for subcontractor labor carry the sub reference so compliance reports can compute certified payroll hours broken down by DBE status -- this is the specific payroll-line-item flag LCPtracker surfaces and the project currently lacks
+
+**Depends on**: Phase 107 (dbeClassification must exist on subcontractors before payroll entries can reference it)
+
+**Requirements**: DBE-08
+
+**Success Criteria** (what must be TRUE):
+  1. A migration adds `subcontractor_id` nullable FK column to `payroll_entries` referencing `subcontractors.id` with SET NULL on delete; existing entries are unaffected (null = GC direct labor); the Drizzle schema is updated
+  2. The payroll entry form on `PayrollWeekDetailPage` shows an optional "Subcontractor" select populated from the project sub list; selecting a sub stamps `subcontractorId` on the entry; the field is absent when no subs exist on the project
+  3. `PayrollWeekDetailPage` renders a DBE classification badge next to any worker row where the entry has a `subcontractorId` whose `dbeClassification` is non-null and non-`none` -- the badge value is read from the sub record join, not a denormalized column
+  4. The payroll import pipeline (`importService.ts`) accepts an optional `subcontractorId` field on import rows; if present and the sub exists on the project, it is stamped on the created entry; if the subId is absent or unknown it is silently ignored
+
+**Plans**: 2 plans
+
+Plans:
+- [x] 108-01-PLAN.md -- Migration (subcontractor_id nullable FK on payroll_entries) + Drizzle schema + payroll service extension (include subcontractorId on select/insert) + import pipeline subcontractorId passthrough
+- [x] 108-02-PLAN.md -- PayrollWeekDetailPage subcontractor selector + DBE badge on worker rows + integration tests (entry with sub, entry without sub, badge renders correctly)
+
+**UI hint**: yes
+
+---
+
+### Phase 109: DBE Participation Report + Phase A Watchdog Gate
+
+**Goal**: Project owners can view and export a DBE participation summary showing certified sub labor hours as a percentage of total project hours -- the report format required by most federal agency compliance offices -- and the Phase A Watchdog gate confirms the LCPtracker DBE gap is fully closed
+
+**Depends on**: Phase 108 (subcontractorId on payroll_entries must exist for the participation aggregation to be correct)
+
+**Requirements**: DBE-09
+
+**Success Criteria** (what must be TRUE):
+  1. `GET /api/projects/:id/reports/dbe-participation` returns: total project payroll hours, hours by classification (dbe/mbe/wbe/sdvosb/uncertified), each as a count and percentage of total project hours, with a per-week breakdown array
+  2. `ReportsPage` has a new "DBE Participation" tab showing the summary table with fund-type rows and week columns; a "Download PDF" button generates a one-page PDF with project header and participation breakdown table using `PDFDocument.create()`
+  3. The participation % formula matches DOT DBE program requirements: `(certified sub hours / total project hours) * 100` rounded to 2 decimal places; a project with zero sub hours returns 0% (not NaN or null)
+  4. Phase A Watchdog gate SCORE.md exists in `.planning/phases/109-phase-a-watchdog-gate-v8/` with 6 criteria covering DBE-07, DBE-08, DBE-09, test suite green, TS clean, and LCPtracker re-audit showing DBE row moves to AHEAD
+
+WATCHDOG GATE: Score >= 9.3/10 required before Phase 110 begins.
+
+**Plans**: 2 plans
+
+Plans:
+- [x] 109-01-PLAN.md -- getDbeParticipation() in reportsService.ts + GET /api/projects/:id/reports/dbe-participation route + unit tests (zero hours, mixed GC+sub, all-sub project)
+- [x] 109-02-PLAN.md -- DBE Participation tab on ReportsPage (summary table + per-week breakdown + PDF download) + Phase A Watchdog gate SCORE.md
+
+**UI hint**: yes
+
+---
+
+### Phase 110: SAML Library + SP Metadata
+
+**Goal**: The server has a working SAML 2.0 Service Provider implementation with a valid SP metadata endpoint and an admin route for uploading IdP metadata -- the required foundation before any actual IdP handshake can be tested
+
+**Depends on**: Phase 109 (Phase A complete; Phase B SAML work begins)
+
+**Requirements**: ENT-03
+
+**Success Criteria** (what must be TRUE):
+  1. `@node-saml/node-saml` is installed and listed in `package.json` dependencies; no breaking changes to existing auth routes; `SSO_SP_CERT` and `SSO_SP_KEY` are documented in `.env.example`
+  2. `GET /api/sso/metadata` returns a valid XML SP metadata document with `entityID` matching `APP_URL + /api/sso/acs`, AssertionConsumerService `Location` pointing to `/api/sso/acs`, `NameIDFormat` set to `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`, and the SP certificate when `SSO_SP_CERT` env var is set
+  3. `POST /api/sso/admin/config` (requireAuth + owner role check) accepts `{ provider, idpMetadataXml, domain }` -- parses the XML to extract `idpEntityId`, `idpSsoUrl`, `idpCertificate` -- and upserts the `sso_configs` row for the requesting user; returns the parsed values (minus raw cert) for UI confirmation
+  4. `GET /api/sso/admin/config` (requireAuth + owner role) returns the current `sso_configs` row for the tenant omitting the raw `idpCertificate` bytes; returns 404 if no config exists
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 110-01-PLAN.md -- Install @node-saml/node-saml; SSO_SP_CERT/SSO_SP_KEY in .env.example; GET /api/sso/metadata SP metadata endpoint
+- [ ] 110-02-PLAN.md -- POST /api/sso/admin/config (IdP metadata XML parse + sso_configs upsert) + GET /api/sso/admin/config (read, cert omitted)
+
+**UI hint**: no
+
+---
+
+### Phase 111: SAML Handshake + Session Creation
+
+**Goal**: The complete SAML 2.0 SP-initiated login flow works end-to-end: AuthnRequest sent to IdP, SAMLResponse received and validated at ACS endpoint, user provisioned or looked up, JWT session cookie issued -- identical session shape to email/password login
+
+**Depends on**: Phase 110 (SP metadata and IdP config endpoints must exist; sso_configs row must be writable before ACS can look up the IdP cert)
+
+**Requirements**: ENT-04
+
+**Success Criteria** (what must be TRUE):
+  1. `GET /api/sso/login?domain=[domain]` looks up the active `sso_configs` row for that domain, generates a SAML AuthnRequest using `@node-saml/node-saml`, stores the request ID in session, and redirects the browser to the IdP SSO URL via redirect binding; returns 404 if no active config exists for the domain
+  2. `POST /api/sso/acs` receives the SAMLResponse form body, validates it: signature check against stored `idpCertificate`, `NotOnOrAfter` not expired, `Audience` matches SP entity ID; extracts the `NameID` email address; any validation failure returns 400 with a non-leaking error message
+  3. After successful assertion validation: if a user with that email exists, issues a JWT and sets the httpOnly `token` session cookie using the same `res.cookie(...)` pattern as `POST /api/auth/login`; if no user exists, creates a new `users` row with `planTier = 'starter'` and a random placeholder password hash
+  4. Replay protection: the assertion `InResponseTo` ID is stored in a short-lived in-memory Set with 5-minute TTL; a duplicate ID returns 400 `{ error: "Assertion already consumed" }`
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 111-01-PLAN.md -- GET /api/sso/login AuthnRequest generation + redirect binding + domain lookup; replay protection Set with TTL cleanup
+- [ ] 111-02-PLAN.md -- POST /api/sso/acs SAMLResponse validation (sig + NotOnOrAfter + Audience) + user provision/lookup + JWT cookie issuance
+
+**UI hint**: no
+
+---
+
+### Phase 112: SSO Domain Gating + Admin UI + Phase B Watchdog Gate
+
+**Goal**: Users whose email domain matches an active SSO config are transparently redirected to their IdP at login; enterprise admins have a self-service UI to configure and test their SSO connection; the Phase B Watchdog gate confirms the full SAML flow works end-to-end
+
+**Depends on**: Phase 111 (ACS endpoint must work before domain gating can redirect to it)
+
+**Requirements**: ENT-05
+
+**Success Criteria** (what must be TRUE):
+  1. `POST /api/auth/login` checks the submitted email domain against `sso_configs` before password validation; if an active config is found, returns `{ ssoRedirect: "/api/sso/login?domain=[domain]" }` with HTTP 200 -- the `LoginPage.tsx` client catches this response shape and performs the redirect; email/password login is unchanged for non-SSO domains
+  2. `/settings/sso` page (enterprise `planTier` only, owner role only) shows: current config status badge (Not Configured / Pending / Active), IdP metadata XML upload form, domain field, SP metadata download button, and a "Test Login" button that opens the SSO flow in a new tab
+  3. The "Test Login" button generates a test AuthnRequest and opens the IdP login page in a new tab; on successful return, the tab posts a message to the parent window and the parent shows a "SSO connection verified" banner
+  4. Phase B Watchdog gate SCORE.md exists in `.planning/phases/112-phase-b-watchdog-gate-v8/` with 6 criteria covering ENT-03 through ENT-05, test suite green, TS clean, and a manual-verify note for live Okta end-to-end
+
+WATCHDOG GATE: Score >= 9.3/10 required before Phase 113 begins.
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 112-01-PLAN.md -- POST /api/auth/login SSO domain check + ssoRedirect response shape + LoginPage.tsx client handling of ssoRedirect
+- [ ] 112-02-PLAN.md -- /settings/sso enterprise admin page (status + metadata upload + SP download + Test Login) + Phase B Watchdog gate SCORE.md
+
+**UI hint**: yes
+
+---
+
+### Phase 113: Render Health Check + Env Completeness + Deploy Runbook
+
+**Goal**: The production Render.com deployment is fully self-documented -- every secret the server reads is declared in `render.yaml`, the health check path is wired, and a `DEPLOY.md` runbook gives any team member everything needed to deploy, roll back, and smoke-test the app
+
+**Depends on**: Phase 112 (Phase B complete; new SSO env vars are now known before hardening)
+
+**Requirements**: OPS-02, OPS-03
+
+**Success Criteria** (what must be TRUE):
+  1. `render.yaml` has `healthCheckPath: /api/health` set on the web service; every env var key the server reads via `process.env` at runtime is present in the `envVars` list with `sync: false` for secrets -- specifically `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`, `STRIPE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `APP_URL`, `SSO_SP_CERT`, `SSO_SP_KEY` are all added
+  2. `DEPLOY.md` at repo root covers seven sections: Prerequisites, Env Var Checklist (one row per key: key name, description, where to obtain), Disk Backup Procedure (SQLite `.backup` + Render disk snapshot interval), Render Rolling Deploy Steps, Rollback Procedure (revert to prior tag + env restore), Post-Deploy Smoke Test (7 steps), Known Limitations (SQLite single-writer, 1 GB disk)
+  3. The existing `GET /api/health` route is verified to return `{ status: "ok", db: "ok" }` without requiring a session cookie -- Render health poller calls it unauthenticated; if it currently requires auth, the auth gate is removed from that one route only
+  4. No new application code is added beyond the potential health route auth fix; all existing tests continue to pass
+
+**Plans**: 1 plan
+
+Plans:
+- [ ] 113-01-PLAN.md -- render.yaml healthCheckPath + full env var declaration (9 new keys) + /api/health auth gate removal if needed + DEPLOY.md (7-section runbook)
+
+**UI hint**: no
+
+---
+
+### Phase 114: 50-State SVG Compliance Map
+
+**Goal**: The landing page state coverage section displays a geographic United States SVG choropleth map -- replacing the abbreviation-box grid that does not communicate geographic coverage at a glance -- so prospects understand spatial reach in under 3 seconds
+
+**Depends on**: Phase 113 (production environment stable before landing page changes ship)
+
+**Requirements**: UI-17
+
+**Success Criteria** (what must be TRUE):
+  1. A `UsComplianceMap.tsx` component in `src/client/components/` renders an inline SVG US map with 50 `<path>` elements keyed by state abbreviation; the component accepts an `activeStates: string[]` prop; no external map library is added to `package.json`
+  2. Active states (CA, WA, NY, IL, TX, MA, NJ, FL) are filled with the `--color-nav-dark` CSS token and stroked with `--color-brand-gold`; inactive states are filled `#f3f4f6` and stroked `#9ca3af`; Alaska and Hawaii are shown as inset boxes positioned below the lower-48
+  3. Hovering any state (desktop) or tapping (mobile) shows a tooltip with the state name and either "State-specific certified payroll form available" or "Federal WH-347 supported -- State form coming soon"; tooltip is positioned to never overflow the viewport edge
+  4. The `StateCoverageSection` function in `LandingPage.tsx` is replaced with `<UsComplianceMap activeStates={ACTIVE_STATES} />`; the abbreviation-box grid JSX is deleted; the section heading and supporting copy are preserved
+  5. The SVG path data (inlined or imported) totals under 80 KB; the component renders without horizontal overflow at 375px, 768px, and 1280px viewport widths
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 114-01-PLAN.md -- UsComplianceMap.tsx: 50-state SVG paths (simplified from public-domain US TopoJSON), active/inactive fill via CSS token props, Alaska/Hawaii insets
+- [ ] 114-02-PLAN.md -- Hover/tap tooltip component (never-overflow positioning) + LandingPage.tsx StateCoverageSection replacement + responsive audit at 375px/768px/1280px
+
+**UI hint**: yes
+
+---
+
+### Phase 115: Per-Seat Billing Quotas
+
+**Goal**: Plan tier limits are enforced server-side for project and worker creation, Stripe checkout reflects actual seat count for Pro subscriptions, and BillingPage shows current usage with an upgrade CTA -- making the pricing page copy accurate and the upgrade path frictionless
+
+**Depends on**: Phase 114 (landing page finalized; PricingPage copy change ships together with quota enforcement)
+
+**Requirements**: ENT-06, BILL-01
+
+**Success Criteria** (what must be TRUE):
+  1. `planLimits.ts` gains `maxProjects: number` and `maxWorkers: number` per tier: `starter = { maxProjects: 3, maxWorkers: 25, maxMembers: 2 }`, `pro = { maxProjects: Infinity, maxWorkers: Infinity, maxMembers: 10 }`, `enterprise = { maxProjects: Infinity, maxWorkers: Infinity, maxMembers: 999 }` -- `Infinity` is treated as "no limit" in enforcement routes
+  2. `POST /api/projects` enforces the project cap: if the owner account's project count (active + archived) equals `maxProjects`, returns 409 `{ error: "Project limit reached. Upgrade to Pro to create unlimited projects.", upgradeRequired: true }` -- the client shows an upgrade modal on this response shape
+  3. `POST /api/projects/:id/workers` enforces the worker cap: count of workers across all the owner account's projects; same 409 + `upgradeRequired: true` shape; the client shows the same upgrade modal
+  4. `GET /api/billing/usage` (new, requireAuth) returns `{ projectCount, workerCount, memberCount, limits: { maxProjects, maxWorkers, maxMembers } }` derived from the owner account; `BillingPage.tsx` renders a "Usage" card with a progress bar row per dimension and an "Upgrade to Pro" CTA when any dimension is >= 80% of its limit
+  5. `PricingPage.tsx` Pro tier description reads "Unlimited projects, unlimited workers, 10 team members"; Stripe Checkout for Pro passes `quantity: memberCount` from the team data so the checkout line item reflects actual seat count
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 115-01-PLAN.md -- planLimits.ts maxProjects + maxWorkers; GET /api/billing/usage endpoint; POST /api/projects quota enforcement + 409 response; POST /api/workers quota enforcement + 409 response; client upgrade modal on upgradeRequired response
+- [ ] 115-02-PLAN.md -- BillingPage usage card (3 progress bars + upgrade CTA at >= 80%) + PricingPage Pro copy update + Stripe Checkout seat quantity passthrough
+
+**UI hint**: yes
+
+---
+
+### Phase 116: v8.0 Watchdog Gate + Ship
+
+**Goal**: Automated evidence checks confirm all v8.0 criteria pass, the LCPtracker DBE re-audit shows AHEAD, SAML is verified end-to-end, and v8.0.0 is tagged
+
+**Depends on**: Phase 115 (all v8.0 features complete)
+
+**Requirements**: OPS-04
+
+**Success Criteria** (what must be TRUE):
+  1. `116-SCORE.md` in `.planning/phases/116-watchdog-gate-v8-ship/` contains 10 gate criteria (C1-C10): C1 dbeClassification column on subcontractors, C2 subcontractorId FK on payroll_entries, C3 DBE participation report route, C4 SAML metadata endpoint, C5 SAML ACS route registered, C6 SSO domain check in auth/login, C7 render.yaml healthCheckPath, C8 project quota 409 enforcement, C9 SVG map component exists, C10 full test suite green
+  2. Each criterion row shows PASS or FAIL with a reproducible bash command as evidence
+  3. Full Vitest suite is green (>= 850 tests passing) at time of scoring; 0 new TS errors beyond the two known pre-existing (workers.ts implicit-any, stripeService.ts Stripe version string)
+  4. LCPtracker re-audit table updated in the SCORE.md: DBE/MBE/WBE row changes from BEHIND to AHEAD with evidence citation pointing to the new dbeClassification column and participation report
+  5. Final score >= 9.3/10 → GATE_PASS declared; v8.0.0 git tag created; ROADMAP.md phases 107-116 updated to Complete
+
+WATCHDOG GATE: Score >= 9.3/10 required to ship v8.0 milestone.
+
+**Plans**: 1 plan
+
+Plans:
+- [ ] 116-01-PLAN.md -- Run all 10 gate criterion checks; LCPtracker re-audit; compute score; write 116-SCORE.md; declare GATE_PASS or GATE_FAIL; create v8.0.0 tag
 
 **UI hint**: no
