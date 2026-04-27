@@ -60,6 +60,9 @@ const ClassificationAssistPage = React.lazy(() =>
 const GrowthDashboardPage = React.lazy(() =>
   import('./pages/GrowthDashboardPage').then(m => ({ default: m.GrowthDashboardPage }))
 );
+const SsoConfigPage = React.lazy(() =>
+  import('./pages/SsoConfigPage').then(m => ({ default: m.SsoConfigPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +122,7 @@ export default function App() {
                 <Route path="/team" element={<TeamPage />} />
                 <Route path="/billing" element={<BillingPage />} />
                 <Route path="/settings/integrations" element={<IntegrationsPage />} />
+                <Route path="/settings/sso" element={<SsoConfigPage />} />
                 <Route path="/procore/import" element={<ProcoreImportPage />} />
                 <Route path="/settings/mfa" element={<MfaSetupPage />} />
                 <Route path="/settings/security" element={<SecurityDashboardPage />} />
