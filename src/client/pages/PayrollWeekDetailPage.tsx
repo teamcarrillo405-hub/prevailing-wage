@@ -73,6 +73,9 @@ interface PayrollEntryRow {
     grossWages: number | null;
     deductions: number | null;
     netPay: number | null;
+    // Phase 108 (DBE-08): optional sub attribution
+    subcontractorId: string | null;
+    classificationId: string;
   };
   workerName: string;
   laborType: string;
@@ -368,6 +371,51 @@ export function PayrollWeekDetailPage() {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to remove classification override');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+    },
+  });
+
+  // ── Phase 108 (DBE-08): Subcontractor query + entry attribution ─────────────
+
+  const { data: subsData } = useQuery({
+    queryKey: ['subcontractors', projectId],
+    queryFn: () => api.get<{ data: { subcontractors: Array<{ id: string; name: string; dbeClassification: string }> } }>(`/projects/${projectId}/subcontractors`),
+    enabled: !!projectId,
+  });
+  const subs = subsData?.data?.subcontractors ?? [];
+  const subById = Object.fromEntries(subs.map(s => [s.id, s]));
+
+  type DbeClassVal = 'dbe' | 'mbe' | 'wbe' | 'sdvosb';
+  const DBE_BADGE: Record<DbeClassVal, string> = {
+    dbe:    'bg-brand-gold text-black',
+    mbe:    'bg-emerald-600 text-white',
+    wbe:    'bg-blue-600 text-white',
+    sdvosb: 'bg-purple-600 text-white',
+  };
+
+  const subAttributionMutation = useMutation({
+    mutationFn: async ({ entryRow, subcontractorId }: {
+      entryRow: PayrollEntryRow;
+      subcontractorId: string | null;
+    }) => {
+      const e = entryRow.entry;
+      return api.put(`/payroll/entries/${e.id}`, {
+        payrollWeekId: e.payrollWeekId,
+        workerId: e.workerId,
+        classificationId: e.classificationId,
+        monSt: e.monSt, tueSt: e.tueSt, wedSt: e.wedSt, thuSt: e.thuSt,
+        friSt: e.friSt, satSt: e.satSt, sunSt: e.sunSt,
+        monOt: e.monOt, tueOt: e.tueOt, wedOt: e.wedOt, thuOt: e.thuOt,
+        friOt: e.friOt, satOt: e.satOt, sunOt: e.sunOt,
+        baseRateSnapshot: e.baseRateSnapshot,
+        fringeRateSnapshot: e.fringeRateSnapshot,
+        grossWages: e.grossWages,
+        deductions: e.deductions,
+        netPay: e.netPay,
+        subcontractorId,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
@@ -1554,6 +1602,7 @@ export function PayrollWeekDetailPage() {
                     <th className="px-5 py-3">Gross Wages</th>
                     <th className="px-5 py-3">Deductions</th>
                     <th className="px-5 py-3">Net Pay</th>
+                    {subs.length > 0 && <th className="px-5 py-3">Subcontractor</th>}
                     <th className="px-5 py-3">Status</th>
                   </tr>
                 </thead>
@@ -1568,7 +1617,22 @@ export function PayrollWeekDetailPage() {
 
                     return (
                       <tr key={e.id} className="hover:bg-gray-50">
-                        <td className="px-5 py-3 font-medium text-gray-900">{row.workerName}</td>
+                        <td className="px-5 py-3 font-medium text-gray-900">
+                          <span className="inline-flex items-center gap-1.5">
+                            {row.workerName}
+                            {(() => {
+                              const sub = e.subcontractorId ? subById[e.subcontractorId] : null;
+                              if (!sub || sub.dbeClassification === 'none') return null;
+                              const cls = DBE_BADGE[sub.dbeClassification as DbeClassVal];
+                              if (!cls) return null;
+                              return (
+                                <span className={`px-1.5 py-0.5 text-xs font-semibold rounded uppercase ${cls}`}>
+                                  {sub.dbeClassification.toUpperCase()}
+                                </span>
+                              );
+                            })()}
+                          </span>
+                        </td>
                         <td className="px-5 py-3 text-gray-600">
                           {row.tradeDescription}
                           {row.overrideClassificationId && (
@@ -1627,6 +1691,26 @@ export function PayrollWeekDetailPage() {
                         <td className="px-5 py-3 font-medium text-gray-900">
                           {e.netPay !== null ? `$${e.netPay.toFixed(2)}` : '—'}
                         </td>
+                        {subs.length > 0 && (
+                          <td className="px-5 py-3">
+                            <select
+                              value={e.subcontractorId ?? ''}
+                              onChange={ev => {
+                                subAttributionMutation.mutate({
+                                  entryRow: row,
+                                  subcontractorId: ev.target.value || null,
+                                });
+                              }}
+                              className="text-sm border border-gray-200 rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                              disabled={!!week?.submittedAt}
+                            >
+                              <option value="">— GC Direct —</option>
+                              {subs.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
                         <td className="px-5 py-3">
                           {violation ? (
                             <Badge variant="violation">{violationLabel(violation.violationType)}</Badge>
