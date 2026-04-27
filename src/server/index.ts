@@ -45,6 +45,7 @@ import photosRouter, { photoFileRouter } from './routes/photos.js';
 import apiKeysRouter from './routes/apiKeys.js';
 import webhooksRouter from './routes/webhooks.js';
 import publicApiRouter from './routes/publicApi.js';
+import notificationsRouter from './routes/notifications.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import samGovRouter from './routes/samGov.js';
 import securityRouter from './routes/security.js';
@@ -52,6 +53,7 @@ import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
 import { runCertificationExpiryAlerts } from './jobs/certificationExpiryAlerts.js';
+import { runScheduledReports } from './jobs/scheduledReports.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
 import { fileURLToPath } from 'url';
@@ -193,6 +195,7 @@ app.use('/api/dashboard', dashboardRouter);
 // Phase 82 (Gap-2) — SAM.gov DBE verification proxy + SOC 2 user security dashboard
 app.use('/api/sam-gov', samGovRouter);
 app.use('/api/security', securityRouter);
+app.use('/api/notifications', notificationsRouter);
 // /v1 — public REST API, Bearer token auth (no CSRF check needed — API key, no browser origin)
 app.use('/v1', publicApiRouter);
 
@@ -256,6 +259,20 @@ const server = app.listen(PORT, () => {
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'America/New_York' });
+
+  // Register daily scheduled compliance reports — NOTIF-06 (Phase 86)
+  // Runs at 8:00 AM UTC every day; job dispatches per-project based on reportSchedule.
+  // WHY UTC (not America/New_York): ROADMAP author specified 08:00 UTC for deterministic
+  // region-agnostic dispatch. Cert-expiry runs 08:00 ET (4-5h later) — no conflict.
+  cron.schedule('0 8 * * *', async () => {
+    logger.info('scheduled-reports: running daily report dispatch');
+    try {
+      await runScheduledReports();
+    } catch (err) {
+      logger.error({ err }, 'scheduled-reports: failed');
+      // Never rethrow — cron failures must not crash Express
+    }
+  }, { timezone: 'UTC' });
 });
 
 // Graceful shutdown — give in-flight requests 10s to complete
