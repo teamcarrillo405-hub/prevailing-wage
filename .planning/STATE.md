@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Phase complete — ready for next phase
-stopped_at: Completed 92-01-PLAN.md (VA DOLI certified payroll); phases 90, 91, 92 all complete
-last_updated: "2026-04-27T20:45:00.000Z"
+stopped_at: Completed 93-01-PLAN.md (Phase B Watchdog Gate); GATE_PASS 9.50/10; Phase 94 unblocked
+last_updated: "2026-04-27T13:43:00.000Z"
 progress:
   total_phases: 37
   completed_phases: 37
@@ -19,16 +19,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 88 — UNBLOCKED (Phase A GATE_PASS 10.0/10)
+**Current focus:** Phase 94 — UNBLOCKED (Phase B GATE_PASS 9.50/10)
 
 ## Current Position
 
-Phase: 92 (92-virginia-certified-payroll) — COMPLETE
+Phase: 93 (93-phase-b-watchdog-gate) — COMPLETE (GATE_PASS 9.50/10)
 Plan: 1 of 1
 
 Previously completed:
-- Phase 90 (90-procore-timesheet-sync) — COMPLETE (all 3 plans shipped)
+- Phase 92 (92-virginia-certified-payroll) — COMPLETE (1 plan shipped)
 - Phase 91 (91-minnesota-certified-payroll) — COMPLETE (1 plan shipped)
+- Phase 90 (90-procore-timesheet-sync) — COMPLETE (all 3 plans shipped)
 - Phase 89 (89-dol-2024-rule-updates) — COMPLETE (all 3 plans shipped)
 
 ## Performance Metrics
@@ -187,6 +188,7 @@ Key decisions locked for v5.0 scope:
 - [Phase 86]: Resend used (not nodemailer) for scheduled reports — STATE.md decision; ROADMAP nodemailer wording is documented copy-paste error per RESEARCH Pitfall 1
 - [Phase 86-scheduled-report-emails]: parseReportSettings exported for direct unit test coverage without mounting full page
 - [Phase 87-phase-a-watchdog-gate]: GATE_PASS 10.0/10 — all 10 Phase A criteria verified green; 762 tests passing; TypeScript clean; Phase 88 unblocked
+- [Phase 93-phase-b-watchdog-gate]: GATE_PASS 9.50/10 — all 10 Phase B criteria verified green; 794 tests passing; 1 TS deduction (stripeService.ts version string, -0.5); Phase 94 unblocked
 - [Phase 89-01]: WH347_FORM_REVISION = 'Rev. Jan. 2025' constant + pdfDoc.setTitle() in fillSingleSet(); setText() for optional header_formRevision widget
 - [Phase 89-02]: DeductionViolation type + deductionViolations[] on ComplianceResult; DEDUCTION_RATIO_CAP=0.30 loop in computeCompliance(); hasViolations excludes deduction warnings; amber banner in PayrollWeekDetailPage
 - [Phase 89-03]: CIVIL_PENALTY_PER_VIOLATION=13_508 constant; useQuery for /compliance/projects/summary; civil penalty card renders only on active projects with violations
@@ -227,7 +229,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T20:45:00.000Z
-Stopped at: Completed 90-03-PLAN.md, 91-01-PLAN.md, 92-01-PLAN.md
+Last session: 2026-04-27T13:43:00.000Z
+Stopped at: Completed 93-01-PLAN.md — Phase B Watchdog Gate GATE_PASS 9.50/10
 Resume file: None
-Next action: Phases 90, 91, 92 complete. State form library now includes MN (DLI) and VA (DOLI). Procore integrations tile live. 794 tests passing, 0 new TS errors.
+Next action: Phase 94 is unblocked. Gate score 9.50/10. 794 tests passing. TS note: stripeService.ts API version string needs update to '2026-04-22.dahlia' (minor, unrelated to Phase B).

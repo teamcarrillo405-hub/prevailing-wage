@@ -1841,12 +1841,12 @@ WATCHDOG GATE: Score ≥ 8.55/10 required before Phase 88 begins.
 
 **Goal:** Live SAM.gov/DOL wage determination fetch; Procore timesheet sync; 2 new state forms.
 
-- [ ] **Phase 88: Live SAM.gov WD Fetch** — SAM.gov API key, weekly cron against `/api/prod/wdol/v1/wd/{WD}/{REV}/download`, stale-WD banner on project detail, revision diff log (COMP-06, COMP-07)
-- [ ] **Phase 89: DOL 2024 Rule Updates** — WH-347 updated to Jan 2025 form, 30% rule compliance notice on wage determinations, civil penalty display ($13,508/violation) (COMP-08)
-- [ ] **Phase 90: Procore Timesheet Sync** — Procore OAuth2 connect, timesheet import bridge → payroll entries preview, Integrations page tile (INT-01, INT-02)
-- [ ] **Phase 91: Minnesota Certified Payroll** — MN DLI form, STATE_FORMS registry entry, migration (STATE-14)
-- [ ] **Phase 92: Virginia Certified Payroll** — VA DOLI form, STATE_FORMS registry entry, migration (STATE-15)
-- [ ] **Phase 93: Phase B Watchdog Gate** — live WD fetch verified against known WD number, score target 8.75+
+- [x] **Phase 88: Live SAM.gov WD Fetch** — SAM.gov API key, weekly cron against `/api/prod/wdol/v1/wd/{WD}/{REV}/download`, stale-WD banner on project detail, revision diff log (COMP-06, COMP-07)
+- [x] **Phase 89: DOL 2024 Rule Updates** — WH-347 updated to Jan 2025 form, 30% rule compliance notice on wage determinations, civil penalty display ($13,508/violation) (COMP-08)
+- [x] **Phase 90: Procore Timesheet Sync** — Procore OAuth2 connect, timesheet import bridge → payroll entries preview, Integrations page tile (INT-01, INT-02)
+- [x] **Phase 91: Minnesota Certified Payroll** — MN DLI form, STATE_FORMS registry entry, migration (STATE-14)
+- [x] **Phase 92: Virginia Certified Payroll** — VA DOLI form, STATE_FORMS registry entry, migration (STATE-15)
+- [x] **Phase 93: Phase B Watchdog Gate** — GATE_PASS 9.50/10 (2026-04-27); all 10 criteria green; 794 tests passing; Phase 94 unblocked
 
 **Acceptance criteria:**
 - WD refresh cron runs weekly; project shows "WD updated X days ago"
@@ -1882,6 +1882,10 @@ WATCHDOG GATE: Score ≥ 8.90/10 required before Phase 100 begins.
 **Goal:** ROI calculator; customer testimonials; AI classification assist; SSO for enterprise; v7.0 ship.
 
 - [ ] **Phase 100: ROI Calculator Page** — /roi route, pre-filled by project count + worker count, hours-saved estimate, email capture CTA (TRUST-04)
+  **Plans:** 2 plans
+  Plans:
+  - [ ] 100-01-PLAN.md — ROI calculator React page (sliders, live formula, email CTA, brand-matched UI)
+  - [ ] 100-02-PLAN.md — POST /api/roi-leads server route + roi_leads DB migration
 - [ ] **Phase 101: Customer Testimonials + Video** — 3 contractor quotes with photos, video embed, PDF case study download (TRUST-05, TRUST-06)
 - [ ] **Phase 102: Enterprise Pricing + SSO Foundation** — enterprise tier on PricingPage, SAML SSO schema (sso_configs table), Okta/Azure AD connect UI stub (ENT-01, ENT-02)
 - [ ] **Phase 103: AI Classification Assist** — Claude API integration, job description → Davis-Bacon classification suggestion, confidence score, audit trail entry, IL AI Act disclosure (AI-01, AI-02)
@@ -2024,3 +2028,28 @@ Plans:
 - [x] 86-02-PLAN.md -- ProjectDetailPage Settings tab: report schedule selector + email input + save
 
 **UI hint**: yes
+
+---
+
+### Phase 87: Phase A Watchdog Gate
+
+**Goal**: Run automated evidence checks against phases 83–86, compute a score, and declare GATE_PASS (>= 8.55) or GATE_FAIL — gating Phase 88 from starting until the score is on record
+
+**Depends on**: Phase 86 (all Phase A features must be implemented before gate runs)
+
+**Requirements**: SEC-07, SEC-08, SEC-09, SEC-10, PERF-01, PERF-02, NOTIF-05, NOTIF-06
+
+**Success Criteria** (what must be TRUE):
+  1. 87-SCORE.md exists in `.planning/phases/87-phase-a-watchdog-gate/` with a row for each of the 10 gate criteria (C1–C10)
+  2. Each criterion row shows PASS or FAIL based on a reproducible bash command
+  3. The full Vitest suite is green (762+ tests passing) at the time of scoring
+  4. Final score >= 8.55 → GATE_PASS declared; score < 8.55 → GATE_FAIL with remediation bullets
+
+WATCHDOG GATE: Score >= 8.55 required before Phase 88 begins.
+
+**Plans**: 1 plan
+
+Plans:
+- [ ] 87-01-PLAN.md -- Run all 10 gate criterion checks; compute score; write 87-SCORE.md; declare GATE_PASS or GATE_FAIL
+
+**UI hint**: no
