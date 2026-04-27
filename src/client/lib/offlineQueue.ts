@@ -102,3 +102,25 @@ export async function getQueueLength(): Promise<number> {
   const db = await getDb();
   return db.count(STORE_NAME);
 }
+
+/**
+ * Register a Background Sync tag with the service worker.
+ * No-ops silently on Safari / non-SW environments where SyncManager is unavailable.
+ * In those browsers, the window 'online' event + processQueue() provides the fallback.
+ */
+export async function registerSyncIfSupported(tag: string): Promise<void> {
+  if (typeof navigator === 'undefined') return;
+  if (!('serviceWorker' in navigator)) return;
+  if (!('SyncManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    // TypeScript doesn't include sync in the standard lib — cast needed
+    const syncReg = reg as ServiceWorkerRegistration & {
+      sync: { register(tag: string): Promise<void> };
+    };
+    await syncReg.sync.register(tag);
+  } catch (err) {
+    // Ignore — Background Sync not available or SW not active
+    console.warn('[offlineQueue] registerSyncIfSupported failed:', err);
+  }
+}

@@ -1,7 +1,7 @@
 // src/client/components/ui/OfflineBanner.tsx
 // Offline/online status banner + queue badge (MOB-05)
 import { useState, useEffect } from 'react';
-import { processQueue, getQueueLength } from '../../lib/offlineQueue';
+import { processQueue, getQueueLength, registerSyncIfSupported } from '../../lib/offlineQueue';
 import { getPendingCount } from '../../lib/payrollQueue';
 
 // ── OfflineBadge ─────────────────────────────────────────────────────────────
@@ -76,6 +76,9 @@ export function OfflineBanner() {
       } catch (err) {
         console.warn('[OfflineBanner] processQueue error', err);
       }
+
+      // Register Background Sync for payroll queue (Chrome/Edge only; Safari uses processQueue above)
+      void registerSyncIfSupported('payroll-queue-replay');
 
       backOnlineTimer = setTimeout(() => {
         setState('hidden');
