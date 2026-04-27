@@ -55,6 +55,7 @@ import { roiLeadsRouter } from './routes/roiLeads.js';
 import { aiClassifyRouter } from './routes/aiClassify.js';
 import { growthRouter } from './routes/growth.js';
 import { ssoRouter } from './routes/sso.js';
+import { apprenticeshipRouter } from './routes/apprenticeship.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
@@ -212,6 +213,7 @@ app.use('/api/notifications', notificationsRouter);
 // /v1 — public REST API, Bearer token auth (no CSRF check needed — API key, no browser origin)
 app.use('/v1', publicApiRouter);
 app.use('/api/sso', ssoRouter);
+app.use('/api/apprenticeship', apprenticeshipRouter);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {
