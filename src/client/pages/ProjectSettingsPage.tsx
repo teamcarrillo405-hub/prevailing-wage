@@ -16,6 +16,7 @@ interface Project {
   gpsLatitude: number | null;
   gpsLongitude: number | null;
   gpsRadiusMeters: number | null;
+  projectSettings: string | null;
 }
 
 interface TeamMember {
@@ -23,6 +24,123 @@ interface TeamMember {
   email: string;
   role: string;
   joinedAt: string;
+}
+
+// ── Phase 86: Report schedule settings ─────────────────────────────────────
+// Defined locally (not imported from server emailService) to avoid pulling
+// server code into the client bundle — same pattern as parseNotifSettings
+// in ProjectDetailPage.tsx.
+
+type ReportSchedule = 'daily' | 'weekly' | 'monthly' | 'off';
+
+interface ReportSettings {
+  reportSchedule: ReportSchedule;
+  reportEmail: string;
+}
+
+export function parseReportSettings(raw: string | null | undefined): ReportSettings {
+  const DEFAULT: ReportSettings = { reportSchedule: 'off', reportEmail: '' };
+  if (!raw) return DEFAULT;
+  try {
+    const parsed = JSON.parse(raw);
+    const sched = parsed.reportSchedule;
+    const validSched: ReportSchedule =
+      sched === 'daily' || sched === 'weekly' || sched === 'monthly' ? sched : 'off';
+    return {
+      reportSchedule: validSched,
+      reportEmail: typeof parsed.reportEmail === 'string' ? parsed.reportEmail : '',
+    };
+  } catch {
+    return DEFAULT;
+  }
+}
+
+function ReportScheduleSection({ projectId, projectSettings }: { projectId: string; projectSettings: string | null }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const initial = parseReportSettings(projectSettings);
+  const [schedule, setSchedule] = useState<ReportSchedule>(initial.reportSchedule);
+  const [email, setEmail] = useState<string>(initial.reportEmail);
+
+  // Re-sync when projectSettings prop changes (e.g., after PATCH refetch)
+  useEffect(() => {
+    const next = parseReportSettings(projectSettings);
+    setSchedule(next.reportSchedule);
+    setEmail(next.reportEmail);
+  }, [projectSettings]);
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      api.patch<{ data: { project: Project } }>(`/projects/${projectId}`, {
+        projectSettings: JSON.stringify({ reportSchedule: schedule, reportEmail: email }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Report schedule saved');
+    },
+    onError: () => {
+      toast.error('Failed to save report schedule');
+    },
+  });
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
+      <h2 className="font-headline text-base font-semibold text-gray-900">
+        Compliance Report Schedule
+      </h2>
+      <p className="text-sm text-gray-600">
+        Receive an automated compliance summary email — compliance rate, open violations, and
+        payroll weeks due in the next 7 days.
+      </p>
+
+      {/* Schedule selector */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Frequency
+        </label>
+        <select
+          value={schedule}
+          onChange={(e) => setSchedule(e.target.value as ReportSchedule)}
+          aria-label="Report schedule frequency"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+        >
+          <option value="off">Off</option>
+          <option value="daily">Daily (every day at 08:00 UTC)</option>
+          <option value="weekly">Weekly (Mondays at 08:00 UTC)</option>
+          <option value="monthly">Monthly (1st of the month at 08:00 UTC)</option>
+        </select>
+      </div>
+
+      {/* Email input */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Send to email (optional)
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="leave blank to use project owner's email"
+          aria-label="Report email recipient"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          If blank, reports go to the project owner's account email.
+        </p>
+      </div>
+
+      <div className="pt-2">
+        <button
+          onClick={() => saveMutation.mutate()}
+          disabled={saveMutation.isPending}
+          className="px-5 py-2 rounded font-semibold text-sm text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+        >
+          {saveMutation.isPending ? 'Saving...' : 'Save Report Schedule'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ── Transfer Ownership section ─────────────────────────────────────────────
@@ -433,6 +551,9 @@ export function ProjectSettingsPage() {
             </button>
           </div>
         </div>
+
+        {/* Phase 86: Compliance Report Schedule */}
+        <ReportScheduleSection projectId={projectId!} projectSettings={project.projectSettings} />
 
         {/* Field clock link */}
         <div className="text-center">
