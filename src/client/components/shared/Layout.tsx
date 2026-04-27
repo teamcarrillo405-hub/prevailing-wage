@@ -4,7 +4,9 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Menu, X, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useSyncStatus } from '../../hooks/useSyncStatus';
 import { OfflineBanner, OfflineBadge } from '../ui/OfflineBanner';
+import { SyncStatusIndicator } from '../ui/SyncStatusIndicator';
 import { PwaInstallBanner } from '../ui/PwaInstallBanner';
 
 function navCls({ isActive }: { isActive: boolean }) {
@@ -48,6 +50,7 @@ export function Layout({ children }: LayoutProps) {
   });
 
   const isOwner = team?.isOwner ?? false;
+  const syncStatus = useSyncStatus();
 
   async function handleLogout() {
     await logout();
@@ -105,6 +108,7 @@ export function Layout({ children }: LayoutProps) {
             )}
             <div className="w-px h-4 bg-white/15" aria-hidden="true" />
             <OfflineBadge />
+            <SyncStatusIndicator status={syncStatus} />
             <button
               onClick={handleLogout}
               className="text-sm text-gray-400 hover:text-white transition-colors"
