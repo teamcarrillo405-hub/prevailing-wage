@@ -109,6 +109,14 @@ interface ComplianceResult {
   projectId: string;
   violations: ComplianceViolation[];
   weekViolations: WeekViolation[];
+  deductionViolations?: Array<{
+    entryId: string;
+    workerId: string;
+    workerName: string;
+    deductions: number;
+    grossWages: number;
+    deductionPct: number;
+  }>;
   hasViolations: boolean;
   certProperPayment: boolean;
   certAccuratePayroll: boolean;
@@ -1698,6 +1706,28 @@ export function PayrollWeekDetailPage() {
               <div className="px-5 py-4 flex items-center gap-2">
                 <Badge variant="compliant">Compliant</Badge>
                 <span className="text-sm text-gray-700">No violations for this payroll week.</span>
+              </div>
+            )}
+            {/* 29 CFR Part 3 §3.5 — 30% deduction cap warning (COMP-08) */}
+            {(complianceData?.deductionViolations?.length ?? 0) > 0 && (
+              <div className="px-5 pb-4">
+                <div className="rounded border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-sm font-semibold text-amber-800 mb-1">
+                    30% Deduction Cap Notice (29 CFR Part 3 §3.5)
+                  </p>
+                  <p className="text-xs text-amber-700 mb-2">
+                    The following workers have total deductions exceeding 30% of gross wages.
+                    Deductions above this threshold require written worker authorization and may be disallowed by the DOL.
+                  </p>
+                  <ul className="space-y-1">
+                    {complianceData!.deductionViolations!.map((dv, i) => (
+                      <li key={i} className="text-xs text-amber-800">
+                        <span className="font-semibold">{dv.workerName}</span>
+                        {': '}${dv.deductions.toFixed(2)} deducted from ${dv.grossWages.toFixed(2)} gross ({dv.deductionPct}%)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             )}
           </Card>

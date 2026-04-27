@@ -41,11 +41,22 @@ export interface WeekViolation {
   actualPct?: number;
 }
 
+export interface DeductionViolation {
+  violationType: 'deduction-ratio';
+  entryId: string;
+  workerId: string;
+  workerName: string;
+  deductions: number;
+  grossWages: number;
+  deductionPct: number;   // actual deduction percentage (e.g. 35.2)
+}
+
 export interface ComplianceResult {
   weekId: string;
   projectId: string;
   violations: ComplianceViolation[];
   weekViolations: WeekViolation[];
+  deductionViolations: DeductionViolation[];  // 29 CFR Part 3 §3.5 — 30% cap
   hasViolations: boolean;
   certProperPayment: boolean;    // false when any 'under-wage' violation exists
   certAccuratePayroll: boolean;  // false when any 'cwhssa-ot' violation exists
@@ -201,6 +212,29 @@ export async function computeCompliance(
         expected: expectedGross,
         actual: actualGross,
         delta,
+      });
+    }
+  }
+
+  // ── 29 CFR Part 3 §3.5 — Deduction ratio check (COMP-08 / DOL 2024) ─────
+  // Deductions may not exceed 30% of gross wages in any payroll week.
+  const DEDUCTION_RATIO_CAP = 0.30;
+  const deductionViolations: DeductionViolation[] = [];
+
+  for (const row of rows) {
+    const gross = row.entry.grossWages;
+    const deductions = row.entry.deductions ?? 0;
+    if (!gross || gross <= 0 || deductions <= 0) continue;
+    const ratio = deductions / gross;
+    if (ratio > DEDUCTION_RATIO_CAP) {
+      deductionViolations.push({
+        violationType: 'deduction-ratio',
+        entryId: row.entry.id,
+        workerId: row.entry.workerId,
+        workerName: row.workerName,
+        deductions,
+        grossWages: gross,
+        deductionPct: Math.round(ratio * 1000) / 10,  // one decimal place
       });
     }
   }
@@ -369,6 +403,7 @@ export async function computeCompliance(
     projectId: week.projectId,
     violations,
     weekViolations,
+    deductionViolations,   // 29 CFR Part 3 §3.5 — 30% cap warnings
     hasViolations: violations.length > 0 || weekViolations.length > 0,
     certProperPayment: !violations.some(v => v.violationType === 'under-wage'),
     certAccuratePayroll: !violations.some(v => v.violationType === 'cwhssa-ot'),
