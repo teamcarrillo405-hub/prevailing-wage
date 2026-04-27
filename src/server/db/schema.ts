@@ -718,3 +718,26 @@ export const roiLeads = sqliteTable('roi_leads', {
   estimatedSavings: real('estimated_savings').notNull(),
   capturedAt: text('captured_at').notNull(),  // ISO 8601
 });
+
+// ── Phase 102: Enterprise SSO Configuration (ENT-02) ──────────────────────
+// One row per enterprise tenant. Stores IdP metadata for Okta / Azure AD /
+// Google Workspace / generic SAML. status transitions: pending → active → disabled.
+export const ssoConfigs = sqliteTable('sso_configs', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull()
+    .$type<'okta' | 'azure_ad' | 'google_workspace' | 'generic_saml'>(),
+  status: text('status').notNull().default('pending')
+    .$type<'pending' | 'active' | 'disabled'>(),
+  // IdP metadata (from XML metadata download or manual entry)
+  idpEntityId: text('idp_entity_id'),
+  idpSsoUrl: text('idp_sso_url'),
+  idpCertificate: text('idp_certificate'),
+  // SP metadata (we provide to the IdP)
+  spEntityId: text('sp_entity_id'),
+  spAcsUrl: text('sp_acs_url'),
+  // Email domain that triggers SSO redirect (e.g. "acme.com")
+  domain: text('domain'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
