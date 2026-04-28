@@ -290,4 +290,13 @@ authRouter.get('/me', requireAuth, (req, res) => {
   res.json({ data: { user: { id: req.user!.userId, email: req.user!.email } } });
 });
 
+// GET /api/auth/token — returns the raw session JWT so mobile clients can use
+// Bearer auth. Only accessible when a valid session cookie is already present.
+authRouter.get('/token', requireAuth, (req, res) => {
+  const token = (req as any).cookies?.pw_session;
+  if (!token) return res.status(401).json({ error: 'No session' });
+  res.json({ token });
+});
+
+export { authRouter as router };
 export default authRouter;
