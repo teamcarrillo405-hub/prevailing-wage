@@ -140,6 +140,73 @@ async function seedEntry(
   return res.body.data?.entry?.id ?? res.body.id;
 }
 
+async function seedProjectWithApprenticeshipConfig(opts: {
+  apprenticeshipRequirements?: string | null;
+  isIraIijaProject?: boolean;
+}) {
+  const email = `app-cfg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.com`;
+  const regRes = await supertest(app)
+    .post('/api/auth/register')
+    .send({ email, password: 'password123' });
+  const cookies = regRes.headers['set-cookie'] as string[] | string;
+  const cookie = Array.isArray(cookies) ? cookies.join('; ') : cookies;
+
+  const pRes = await supertest(app)
+    .post('/api/projects')
+    .set('Cookie', cookie)
+    .send({
+      name: 'App Config Project',
+      state: 'TX',
+      county: 'Travis',
+      contractType: 'federal-davis-bacon',
+      awardDate: '2025-03-01',
+      fundingType: 'federal',
+      ...(opts.apprenticeshipRequirements != null
+          ? { apprenticeshipRequirements: opts.apprenticeshipRequirements }
+          : {}),
+      ...(opts.isIraIijaProject !== undefined
+          ? { isIraIijaProject: opts.isIraIijaProject }
+          : {}),
+    });
+  const projectId = pRes.body.data?.project?.id as string;
+
+  // Seed an Electrician journeyworker (tradeDescription = 'Electrician' to satisfy
+  // case-insensitive partial match against config key 'Electrician').
+  const wRes = await supertest(app)
+    .post(`/api/projects/${projectId}/workers`)
+    .set('Cookie', cookie)
+    .send({ name: 'Jane Electrician' });
+  const workerId = wRes.body.data?.worker?.id as string;
+  const cRes = await supertest(app)
+    .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+    .set('Cookie', cookie)
+    .send({
+      tradeCode: 'ELEC',
+      tradeDescription: 'Electrician',
+      laborType: 'journeyworker',
+    });
+  const classificationId = cRes.body.data?.classification?.id as string;
+
+  // Seed an Electrician apprentice (same tradeDescription).
+  const awRes = await supertest(app)
+    .post(`/api/projects/${projectId}/workers`)
+    .set('Cookie', cookie)
+    .send({ name: 'App Rentice' });
+  const appWorkerId = awRes.body.data?.worker?.id as string;
+  const acRes = await supertest(app)
+    .post(`/api/projects/${projectId}/workers/${appWorkerId}/classifications`)
+    .set('Cookie', cookie)
+    .send({
+      tradeCode: 'ELEC',
+      tradeDescription: 'Electrician',
+      laborType: 'apprentice',
+      apprenticePercent: 80,
+    });
+  const appClassificationId = acRes.body.data?.classification?.id as string;
+
+  return { projectId, workerId, classificationId, appWorkerId, appClassificationId, cookie };
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────
 
 describe('computeCompliance', () => {
@@ -605,5 +672,192 @@ describe('computeCompliance', () => {
     expect(result!.violations).toHaveLength(0);        // no per-entry violations
     expect(result!.weekViolations).toHaveLength(1);    // 1 ratio violation
     expect(result!.hasViolations).toBe(true);          // true because weekViolations non-empty
+  });
+
+  // ── COMP-04: Per-trade daily apprenticeship ratio ────────────────────────
+
+  it('COMP-04: violation fires when apprentice hours exceed configured 1:2 ratio', async () => {
+    const { projectId, workerId, classificationId, appWorkerId, appClassificationId, cookie } =
+      await seedProjectWithApprenticeshipConfig({
+        apprenticeshipRequirements: JSON.stringify({ Electrician: { maxRatio: '1:2' } }),
+      });
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-01', 20);
+    // JW: 20 hrs (max allowed apprentice = 20 * 1/2 = 10)
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 4,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 1000,
+    });
+    // Apprentice: 20 hrs (10 over limit)
+    await seedEntry(cookie, weekId, appWorkerId, appClassificationId, {
+      monSt: 8, tueSt: 8, wedSt: 4,
+      baseRateSnapshot: 25,
+      fringeRateSnapshot: 5,
+      grossWages: 600,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const tradeRatioViolations = result!.weekViolations.filter(
+      v => v.violationType === 'apprentice-trade-ratio',
+    );
+    expect(tradeRatioViolations).toHaveLength(1);
+    expect(tradeRatioViolations[0].trade).toBe('Electrician');
+    expect(tradeRatioViolations[0].apprenticeHours).toBe(20);
+    expect(tradeRatioViolations[0].journeyworkerHours).toBe(20);
+    expect(tradeRatioViolations[0].maxAllowedApprenticeHours).toBeCloseTo(10, 1);
+    expect(tradeRatioViolations[0].excessHours).toBeCloseTo(10, 1);
+    // estimatedLiabilityUsd = 10 * (40 - 25) = 150
+    expect(tradeRatioViolations[0].estimatedLiabilityUsd).toBeCloseTo(150, 1);
+  });
+
+  it('COMP-04: no violation when apprentice hours equal max allowed (exactly at 1:2 ratio)', async () => {
+    const { projectId, workerId, classificationId, appWorkerId, appClassificationId, cookie } =
+      await seedProjectWithApprenticeshipConfig({
+        apprenticeshipRequirements: JSON.stringify({ Electrician: { maxRatio: '1:2' } }),
+      });
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-02', 21);
+    // JW: 20 hrs
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 4,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 1000,
+    });
+    // Apprentice: 10 hrs (exactly at limit)
+    await seedEntry(cookie, weekId, appWorkerId, appClassificationId, {
+      monSt: 8, tueSt: 2,
+      baseRateSnapshot: 25,
+      fringeRateSnapshot: 5,
+      grossWages: 300,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const tradeRatioViolations = result!.weekViolations.filter(
+      v => v.violationType === 'apprentice-trade-ratio',
+    );
+    expect(tradeRatioViolations).toHaveLength(0);
+  });
+
+  it('COMP-04: no violation when project has no apprenticeshipRequirements configured', async () => {
+    const { projectId, workerId, classificationId, appWorkerId, appClassificationId, cookie } =
+      await seedProjectWithApprenticeshipConfig({
+        apprenticeshipRequirements: null,
+      });
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-03', 22);
+    // JW: 20 hrs, Apprentice: 20 hrs — would fire COMP-04 if config existed
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 4,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 1000,
+    });
+    await seedEntry(cookie, weekId, appWorkerId, appClassificationId, {
+      monSt: 8, tueSt: 8, wedSt: 4,
+      baseRateSnapshot: 25,
+      fringeRateSnapshot: 5,
+      grossWages: 600,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const tradeRatioViolations = result!.weekViolations.filter(
+      v => v.violationType === 'apprentice-trade-ratio',
+    );
+    expect(tradeRatioViolations).toHaveLength(0);
+    // Note: legacy 'apprentice-ratio' (COMP-03) may still fire — that is unrelated to COMP-04.
+  });
+
+  // ── COMP-05: IRA/IIJA 15% apprenticeship threshold ───────────────────────
+
+  it('COMP-05: violation fires when IRA/IIJA project apprentice % falls below 15%', async () => {
+    const { projectId, workerId, classificationId, appWorkerId, appClassificationId, cookie } =
+      await seedProjectWithApprenticeshipConfig({
+        isIraIijaProject: true,
+      });
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-04', 23);
+    // JW: 90 hrs, Apprentice: 5 hrs → 5/95 ≈ 5.26%
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
+      monOt: 10, tueOt: 10, wedOt: 10, thuOt: 10, friOt: 10,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 5000,
+    });
+    await seedEntry(cookie, weekId, appWorkerId, appClassificationId, {
+      monSt: 5,
+      baseRateSnapshot: 25,
+      fringeRateSnapshot: 5,
+      grossWages: 150,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const iraViolations = result!.weekViolations.filter(
+      v => v.violationType === 'ira-iija-apprentice-pct',
+    );
+    expect(iraViolations).toHaveLength(1);
+    expect(iraViolations[0].actualPct).toBeLessThan(0.15);
+    expect(iraViolations[0].apprenticeHours).toBe(5);
+    expect(iraViolations[0].totalHours).toBe(95);
+  });
+
+  it('COMP-05: no violation when IRA/IIJA project apprentice % is at or above 15%', async () => {
+    const { projectId, workerId, classificationId, appWorkerId, appClassificationId, cookie } =
+      await seedProjectWithApprenticeshipConfig({
+        isIraIijaProject: true,
+      });
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-05', 24);
+    // JW: 50 hrs, Apprentice: 10 hrs → 10/60 ≈ 16.67% (above 15%)
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 8, sunSt: 2,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 2500,
+    });
+    await seedEntry(cookie, weekId, appWorkerId, appClassificationId, {
+      monSt: 8, tueSt: 2,
+      baseRateSnapshot: 25,
+      fringeRateSnapshot: 5,
+      grossWages: 300,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const iraViolations = result!.weekViolations.filter(
+      v => v.violationType === 'ira-iija-apprentice-pct',
+    );
+    expect(iraViolations).toHaveLength(0);
+  });
+
+  it('COMP-05: no violation when project is NOT marked IRA/IIJA, even with apprentice % below 15%', async () => {
+    const { projectId, workerId, classificationId, appWorkerId, appClassificationId, cookie } =
+      await seedProjectWithApprenticeshipConfig({
+        isIraIijaProject: false,
+      });
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-06', 25);
+    // JW: 90 hrs, Apprentice: 5 hrs (would fire if isIraIijaProject were true)
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
+      monOt: 10, tueOt: 10, wedOt: 10, thuOt: 10, friOt: 10,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 5000,
+    });
+    await seedEntry(cookie, weekId, appWorkerId, appClassificationId, {
+      monSt: 5,
+      baseRateSnapshot: 25,
+      fringeRateSnapshot: 5,
+      grossWages: 150,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const iraViolations = result!.weekViolations.filter(
+      v => v.violationType === 'ira-iija-apprentice-pct',
+    );
+    expect(iraViolations).toHaveLength(0);
   });
 });
