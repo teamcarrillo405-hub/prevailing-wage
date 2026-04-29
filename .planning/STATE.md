@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 119-02-PLAN.md — DashboardPage wired to 3 server endpoints; 849 tests passing; 0 TS errors; Phase 119 complete
-last_updated: "2026-04-29T22:45:14.490Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 120-01-PLAN.md — WA add-worker inputs (APP-02), structured COMP-04 render (APP-05), 6 COMP-04/COMP-05 tests; 855 tests passing; 0 TS errors; Phase 120 complete
+last_updated: "2026-04-29T23:21:32.810Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 119 — dashboard-intelligence
+**Current focus:** Phase 120 — apprenticeship-enforcement-suite
 
 ## Current Position
 
-Phase: 119
-Plan: Not started
+Phase: 120 (apprenticeship-enforcement-suite) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -212,6 +212,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 119]: getBatchProjectCompliance reused for /stats and /compliance-trend — avoids duplicate batch traversal
 - [Phase 119]: Pitfall 2 resolved: at-risk definition = past-due unsubmitted payroll week < today-7d, matching /violations route semantics
 - [Phase 119]: Three new useQuery hooks replace five client-side useMemos — DashboardPage is now a thin presentation layer consuming server endpoint contracts
+- [Phase 120]: WA branch input IDs use add-wa- prefix to avoid duplicate-id HTML conflicts with hasWd branch
+- [Phase 120]: COMP-04 structured render uses ?? 0 nullish coalescing for optional WeekViolation fields excessHours/estimatedLiabilityUsd
+- [Phase 120]: Non-COMP-04 violations fall through to flat wv.detail span per RESEARCH Pitfall 3
 
 ### Phase Order Rationale
 
@@ -245,7 +248,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-29T22:40:29.376Z
-Stopped at: Completed 119-02-PLAN.md — DashboardPage wired to 3 server endpoints; 849 tests passing; 0 TS errors; Phase 119 complete
+Last session: 2026-04-29T23:21:32.803Z
+Stopped at: Completed 120-01-PLAN.md — WA add-worker inputs (APP-02), structured COMP-04 render (APP-05), 6 COMP-04/COMP-05 tests; 855 tests passing; 0 TS errors; Phase 120 complete
 Resume file: None
 Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.

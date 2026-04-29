@@ -2441,3 +2441,145 @@ Plans:
 - [x] 119-02-PLAN.md -- DashboardPage hero stat row + ComplianceTrendChart (recharts) + ProjectsAtRisk panel + project card violation count badge
 
 **UI hint**: yes
+
+---
+
+### Phase 120: Apprenticeship Enforcement Suite
+
+**Goal**: Apprenticeship ratio enforcement is complete end-to-end — GCs configure per-trade ratios on each project, worker profiles capture RAPIDS numbers, the compliance engine fires COMP-04 (per-trade daily ratio violation) and COMP-05 (IRA/IIJA 15% threshold), and PayrollWeekDetailPage shows the per-trade breakdown with estimated wage liability so a GC can defend any DOL audit
+
+**Depends on**: Phase 119
+
+**Requirements**: APP-01, APP-02, APP-03, APP-04, APP-05
+
+**Success Criteria** (what must be TRUE):
+  1. `projects` table has `apprenticeship_requirements` JSON column (migration); `ProjectForm.tsx` shows an "Apprenticeship Ratios" section (visible when funding type is federal/state) with trade dropdown + ratio input (e.g., "1:2"); supports multiple trades per project; saved to DB on form submit
+  2. `workers` table has `apprenticeship_program_name` (text) and `rapids_number` (text) columns (migration); `WorkersPage.tsx` shows these fields on the worker form when `isApprenticeship` is true; both fields optional but shown with placeholder guidance
+  3. `complianceService.ts` fires `COMP-04` violation: on payroll week save, for each trade with configured ratio, compute daily `jw_hours` and `apprentice_hours`; if `apprentice_hours > jw_hours * ratio`, fire COMP-04 with trade, day, excess hours, and `estWageLiability = excessHours * (jwRate - apprenticeRate)`; at least 3 Vitest tests covering ratio pass, ratio fail, and zero-apprentice-hours cases
+  4. When project has `ira_iija_project = true` boolean flag (new column on projects), dashboard shows "Apprentice Hours %: X% of Y total hours" with 15% threshold indicator; compliance engine fires `COMP-05` if apprentice % drops below 15% on any week; IRA banner visible on ApprenticeshipDashboard (Phase 117 component)
+  5. `PayrollWeekDetailPage.tsx` violation panel for COMP-04 shows per-trade breakdown: "Electricians: 4 apprentice hrs, 2 JW hrs (max 2). Excess: 2 hrs. Est. wage adjustment: $XX." — not a generic ratio flag; COMP-05 shows "IRA/IIJA threshold: 12.3% (below 15% — X hrs deficit)"
+
+**Plans**: 1 plan
+
+Plans:
+- [x] 120-01-PLAN.md -- WA add-worker apprenticeship inputs (APP-02 parity) + structured COMP-04 violation row in PayrollWeekDetailPage main panel and WH-347 preflight modal (APP-05) + 6 new Vitest cases for COMP-04/COMP-05 (APP-03/APP-04 coverage); server logic and schema already shipped in prior phases
+
+**UI hint**: yes
+
+---
+
+### Phase 121: QuickBooks Employee + Time Import
+
+**Goal**: The QuickBooks Online integration is complete — field workers' employee records import directly from QB into Workers, and timesheet hours from QB TimeActivity records flow through the existing import pipeline into payroll entries, eliminating the CSV download step for QB Online users
+
+**Depends on**: Phase 120
+
+**Requirements**: QB-02, QB-03
+
+**Success Criteria** (what must be TRUE):
+  1. `GET /api/integrations/qbo/employees` (already scaffolded) returns QB Employee list; `IntegrationsPage.tsx` shows a "Import Employees from QuickBooks" preview table with columns: QB name, mapped worker name, SSN (masked), address; user selects rows and clicks "Import Selected"; server creates workers via existing worker creation logic; duplicate detection by name match shows "already exists" warning instead of creating duplicate
+  2. `GET /api/integrations/qbo/timeactivities?startDate=&endDate=&projectId=` fetches QB TimeActivity records for the date range; maps hours to existing `importService.ts` pipeline (worker matching by name, conflict detection, preview-then-commit pattern identical to CSV import); daily M-Su split: if QB stores weekly totals, shows confirmation prompt "QB stores weekly hours — split evenly across days?"; at least 2 Vitest tests for the route (auth 401, shape)
+  3. `IntegrationsPage.tsx` has a "Sync Timesheet" section: date range pickers (start/end), project selector, "Preview Import" button; preview table shows worker, day-by-day hours, ST/OT/DT split; "Commit Import" button uses existing import commit endpoint; success toast shows count of entries created
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 121-01-PLAN.md -- GET /api/integrations/qbo/employees full implementation + IntegrationsPage employee import preview table + import action
+- [ ] 121-02-PLAN.md -- GET /api/integrations/qbo/timeactivities route + importService pipeline wiring + IntegrationsPage sync timesheet UI
+
+**UI hint**: yes
+
+---
+
+### Phase 122: DBE Certification Management
+
+**Goal**: Subcontractors have full certification lifecycle management — GCs record DBE/MBE/WBE/SBE/8(a)/HUBZone certifications with expiry dates, receive email alerts before expiry, and the CPR upload portal blocks subs with expired or suspended certifications — making the app the single source of truth for DBE compliance on federal and state-funded projects
+
+**Depends on**: Phase 121
+
+**Requirements**: DBE-01, DBE-02, DBE-03, DBE-04, DBE-05, DBE-06
+
+**Success Criteria** (what must be TRUE):
+  1. `subcontractor_certifications` table exists (migration): id, subcontractor_id FK, cert_type (text — DBE/MBE/WBE/SBE/ACDBE/8a/HUBZone), certifying_agency, cert_number, naics_codes, issue_date, expires_date, owner_race, owner_gender, personal_net_worth_usd, reevaluation_status (text: not_required/pending/cleared/suspended), self_certified boolean, document_path, created_at, updated_at
+  2. `SubcontractorPanel.tsx` (or equivalent) has "+ Add Certification" form per sub with all fields from SC-1; edit and delete within panel; multiple certs per sub supported; form validates that expires_date > issue_date
+  3. Scheduled job (reuses existing cron/alert pattern) sends Resend email at 90/60/30 days before `expires_date` with sub name, cert type, days remaining; email template matches existing compliance alert style; at least 1 Vitest test for the expiry-check function
+  4. Public CPR upload portal (`/upload/:token`) blocks upload with inline warning "Sub's DBE certification expired — resolve before accepting CPR" when sub's active cert is expired OR `reevaluation_status = 'suspended'`; warning shown in SubcontractorPanel too; non-blocking for subs with no certifications
+  5. `ProjectDetailPage.tsx` has "DBE/MBE/WBE Participation" card: active certified subs count, expired cert warnings count, subs under DOT reevaluation count; clicking opens sub certification detail view
+  6. Certification form labels `reevaluation_status` as "DOT Oct 2025 IFR Status" with tooltip "DOT issued revised DBE rules Oct 3 2025 — existing certifications require reevaluation"; certs imported/created before Oct 3 2025 default to `reevaluation_status = 'pending'`
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 122-01-PLAN.md -- subcontractor_certifications migration + CRUD routes (GET/POST/PATCH/DELETE) + SubcontractorPanel cert form UI
+- [ ] 122-02-PLAN.md -- Resend expiry alert job (90/60/30 days) + CPR upload portal cert gate + DBE-04 SubcontractorPanel warning
+- [ ] 122-03-PLAN.md -- ProjectDetailPage DBE participation card (DBE-05) + DOT IFR 2025 label + reevaluation_status default logic (DBE-06)
+
+**UI hint**: yes
+
+---
+
+### Phase 123: SOC 2 Foundation + MFA
+
+**Goal**: The SOC 2 observation clock is running — owner accounts have TOTP MFA protecting sensitive operations, all security events flow to an immutable log drain, and the audit log has a SHA-256 hash chain that an auditor can verify was not tampered with — making the app enterprise-ready for government procurement that requires SOC 2 evidence
+
+**Depends on**: Phase 122
+
+**Requirements**: SEC-01, SEC-02, SEC-03
+
+**Success Criteria** (what must be TRUE):
+  1. `otplib ^12.x` and `qrcode ^1.5.x` installed; `user_mfa` table (id, user_id FK unique, totp_secret text AES-256-GCM encrypted, recovery_codes text AES-256-GCM encrypted — 10 bcrypt-hashed one-time codes, enrolled_at); owner-role users see MFA enrollment prompt on next login after feature ships; `POST /api/auth/mfa/enroll` returns QR data URL + recovery codes (shown once); `POST /api/auth/mfa/verify` validates TOTP token; MFA required on login (if enrolled), ownership transfer, team invite revocation
+  2. Pino JSON output piped to Logtail/Better Stack via HTTPS drain; `LOGTAIL_SOURCE_TOKEN` env var; all `security_events` rows also forwarded; logs immutable at destination; `LOGTAIL_SOURCE_TOKEN` added to `.env.example` and `render.yaml` env var list; at least 1 integration test confirming the transport is configured
+  3. `audit_logs` table gains `prev_hash` (text) and `row_hash` (text) columns (migration); `insertAuditLog()` computes `row_hash = SHA256(id + action + diff + prev_hash)`; backfill migration hashes existing rows in chronological order; `GET /api/audit/verify-chain` (admin only) returns `{ valid: boolean, firstInvalidId: string | null }` for auditor use
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] 123-01-PLAN.md -- user_mfa table migration + TOTP enroll/verify routes + MFA enforcement on login + ownership transfer + team invite revocation
+- [ ] 123-02-PLAN.md -- Logtail HTTPS drain transport + audit_log hash chain migration + backfill + chain verify route
+
+**UI hint**: no
+
+---
+
+### Phase 124: Public REST API + Webhooks
+
+**Goal**: Enterprise customers and integration partners can access project and compliance data via authenticated API keys, receive webhook events for key actions, and explore the API via Swagger UI — making the app the only prevailing wage platform with a public integration API and enabling the Procore partnership pathway
+
+**Depends on**: Phase 123
+
+**Requirements**: API-01, API-02, API-03, API-04, API-05
+
+**Success Criteria** (what must be TRUE):
+  1. `api_keys` table (id, user_id FK, key_hash SHA-256, name, last_used_at, expires_at nullable, created_at); `POST /api/keys` creates key (shown once — raw key never stored), `GET /api/keys` lists name + last4 only, `DELETE /api/keys/:id` revokes; rate limit 100 req/min per key hash; Settings page has "API Keys" tab with create/list/revoke UI
+  2. Public REST API v1: `GET /api/v1/projects`, `GET /api/v1/projects/:id`, `GET /api/v1/projects/:id/payroll-weeks`, `GET /api/v1/projects/:id/payroll-weeks/:weekId/compliance`; Bearer token (API key) auth; JSON responses; rate-limited; all requests audit-logged; at least 4 Vitest tests (auth, shape, pagination)
+  3. `openapi.json` in repo root auto-generated from route definitions; served at `GET /api/docs` (JSON) and rendered at `GET /api/docs/html` (Swagger UI via `swagger-ui-express`); spec covers all v1 endpoints with request/response schemas and Bearer auth description
+  4. `webhooks` table (id, user_id FK, url, events JSON array, secret, active boolean, created_at); `POST /api/webhooks`, `GET /api/webhooks`, `DELETE /api/webhooks/:id`; SSRF protection (DNS pre-resolve, block RFC 1918); payload signed with HMAC-SHA-256 `X-PW-Signature` header; events: `payroll_week.created`, `payroll_week.submitted`, `compliance.violation_detected`
+  5. `webhook_deliveries` table; `setInterval` 30s polling attempts delivery with exponential backoff, max 5 attempts, then `status = failed`; Settings → Webhooks shows delivery log with last error + retry count + manual "Retry" button
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 124-01-PLAN.md -- api_keys table + rate limiting + Settings API Keys tab + public v1 endpoints (GET only) + Vitest tests
+- [ ] 124-02-PLAN.md -- OpenAPI 3.1 spec generation + swagger-ui-express at /api/docs/html
+- [ ] 124-03-PLAN.md -- webhooks table + SSRF check + HMAC signing + webhook_deliveries queue + Settings Webhooks UI
+
+**UI hint**: yes
+
+---
+
+### Phase 125: Core Page Premium UI
+
+**Goal**: Every page a prospect sees during a demo feels premium — ProjectDetail, PayrollList, PayrollWeekDetail, Workers, and Reports all use design-token-consistent elevated cards; skeleton loading states replace blank-white flashes; contextual empty states guide users to first action; framer-motion route transitions add polish; mobile responsiveness passes a 375px/768px/1024px audit on all 5 pages
+
+**Depends on**: Phase 124
+
+**Requirements**: UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07, UI-08, UI-09, UI-10, UI-11
+
+**Plans**: 3 plans
+
+Plans:
+- [ ] 125-01-PLAN.md -- UI-01 ProjectDetailPage + UI-02 PayrollListPage premium treatment (elevated cards, status badges via design tokens, empty states)
+- [ ] 125-02-PLAN.md -- UI-03 PayrollWeekDetailPage + UI-04 WorkersPage premium treatment; UI-05 ReportsPage report cards; UI-06 framer-motion AnimatePresence fade-slide on route changes
+- [ ] 125-03-PLAN.md -- UI-07 to UI-09 mobile responsive audit (375/768/1024px, 44px tap targets, font-size 16px inputs); UI-10 skeleton loading on 5 pages; UI-11 contextual empty states on all list views
+
+**UI hint**: yes
