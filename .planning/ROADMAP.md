@@ -2438,6 +2438,6 @@ Plans:
 
 Plans:
 - [x] 119-01-PLAN.md -- GET /api/dashboard/stats + GET /api/dashboard/compliance-trend + GET /api/dashboard/at-risk endpoints; Vitest tests for all 3; no N+1 queries
-- [ ] 119-02-PLAN.md -- DashboardPage hero stat row + ComplianceTrendChart (recharts) + ProjectsAtRisk panel + project card violation count badge
+- [x] 119-02-PLAN.md -- DashboardPage hero stat row + ComplianceTrendChart (recharts) + ProjectsAtRisk panel + project card violation count badge
 
 **UI hint**: yes

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 119-01-PLAN.md — 3 dashboard endpoints + 9 tests; 849 tests passing; 0 TS errors
-last_updated: "2026-04-29T22:33:02.394Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 119-02-PLAN.md — DashboardPage wired to 3 server endpoints; 849 tests passing; 0 TS errors; Phase 119 complete
+last_updated: "2026-04-29T22:40:29.384Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -211,6 +211,7 @@ Key decisions locked for v5.0 scope:
 - [Phase 92]: VA DOLI form uses Monday-first day order matching MN; migration idx 58 (next after 57); Statement of Compliance cites Va. Code § 2.2-4360 et seq. (Virginia Public Procurement Act)
 - [Phase 119]: getBatchProjectCompliance reused for /stats and /compliance-trend — avoids duplicate batch traversal
 - [Phase 119]: Pitfall 2 resolved: at-risk definition = past-due unsubmitted payroll week < today-7d, matching /violations route semantics
+- [Phase 119]: Three new useQuery hooks replace five client-side useMemos — DashboardPage is now a thin presentation layer consuming server endpoint contracts
 
 ### Phase Order Rationale
 
@@ -244,7 +245,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-29T22:33:02.389Z
-Stopped at: Completed 119-01-PLAN.md — 3 dashboard endpoints + 9 tests; 849 tests passing; 0 TS errors
+Last session: 2026-04-29T22:40:29.376Z
+Stopped at: Completed 119-02-PLAN.md — DashboardPage wired to 3 server endpoints; 849 tests passing; 0 TS errors; Phase 119 complete
 Resume file: None
 Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.
