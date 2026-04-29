@@ -1400,6 +1400,36 @@ export function WorkersPage() {
                       />
                     </div>
                   )}
+                  {form.laborType === 'apprentice' && (
+                    <div className="col-span-2">
+                      <label htmlFor="add-wa-apprenticeship-program-name" className="block text-xs text-gray-600 mb-1">
+                        Apprenticeship Program Name <span className="text-gray-400">(optional)</span>
+                      </label>
+                      <input
+                        id="add-wa-apprenticeship-program-name"
+                        type="text"
+                        placeholder="e.g. IBEW Apprenticeship Training"
+                        value={form.apprenticeshipProgramName}
+                        onChange={e => setForm(f => ({ ...f, apprenticeshipProgramName: e.target.value }))}
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                      />
+                    </div>
+                  )}
+                  {form.laborType === 'apprentice' && (
+                    <div>
+                      <label htmlFor="add-wa-rapids-number" className="block text-xs text-gray-600 mb-1">
+                        RAPIDS Number <span className="text-gray-400">(optional)</span>
+                      </label>
+                      <input
+                        id="add-wa-rapids-number"
+                        type="text"
+                        placeholder="DOL RAPIDS registration number"
+                        value={form.rapidsNumber}
+                        onChange={e => setForm(f => ({ ...f, rapidsNumber: e.target.value }))}
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                      />
+                    </div>
+                  )}
                   <div className="col-span-2 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
                     <p className="text-xs font-medium text-blue-800">Washington Prevailing Wage</p>
                     <div className="grid grid-cols-2 gap-3">
