@@ -1783,7 +1783,18 @@ export function PayrollWeekDetailPage() {
                          wv.violationType === 'ira-iija-apprentice-pct' ? 'IRA/IIJA' :
                          'Apprentice Ratio'}
                       </Badge>
-                      <span>{wv.detail}</span>
+                      {wv.violationType === 'apprentice-trade-ratio' && wv.trade ? (
+                        <span>
+                          <strong>{wv.trade}</strong>:{' '}
+                          {wv.apprenticeHours.toFixed(1)} apprentice hrs,{' '}
+                          {wv.journeyworkerHours.toFixed(1)} JW hrs
+                          {' '}(max: {wv.maxAllowedApprenticeHours.toFixed(1)}).
+                          {' '}Excess: {(wv.excessHours ?? 0).toFixed(1)} hrs.
+                          {' '}Est. wage adjustment: ${(wv.estimatedLiabilityUsd ?? 0).toFixed(2)}
+                        </span>
+                      ) : (
+                        <span>{wv.detail}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -3361,7 +3372,18 @@ export function PayrollWeekDetailPage() {
                        wv.violationType === 'ira-iija-apprentice-pct' ? 'IRA/IIJA' :
                        'Apprentice Ratio'}
                     </Badge>
-                    <span>{wv.detail}</span>
+                    {wv.violationType === 'apprentice-trade-ratio' && wv.trade ? (
+                      <span>
+                        <strong>{wv.trade}</strong>:{' '}
+                        {wv.apprenticeHours.toFixed(1)} apprentice hrs,{' '}
+                        {wv.journeyworkerHours.toFixed(1)} JW hrs
+                        {' '}(max: {wv.maxAllowedApprenticeHours.toFixed(1)}).
+                        {' '}Excess: {(wv.excessHours ?? 0).toFixed(1)} hrs.
+                        {' '}Est. wage adjustment: ${(wv.estimatedLiabilityUsd ?? 0).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span>{wv.detail}</span>
+                    )}
                   </li>
                 ))}
               </ul>
