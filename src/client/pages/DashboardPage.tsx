@@ -98,6 +98,22 @@ export function DashboardPage() {
     staleTime: 60_000,
   });
 
+  const { data: statsData } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => api.get<{ activeProjects: number; openViolations: number; weeksDueThisWeek: number }>(
+      '/dashboard/stats'
+    ),
+    staleTime: 60_000,
+  });
+
+  const { data: trendResp } = useQuery({
+    queryKey: ['dashboard-compliance-trend'],
+    queryFn: () => api.get<{ weeks: Array<{ weekLabel: string; violationCount: number }> }>(
+      '/dashboard/compliance-trend'
+    ),
+    staleTime: 60_000,
+  });
+
   interface EconomicImpactData {
     totalWagesByCraft: { trade: string; totalWages: number; workerCount: number; projectCount: number }[];
     localHirePercent: number;
@@ -174,78 +190,13 @@ export function DashboardPage() {
     return map;
   }, [summaryItemMap]);
 
-  // ── DASH-01 hero stat computations ──────────────────────────────────────
-  const activeProjectCount = useMemo(
-    () => projects.filter(p => p.status === 'active').length,
-    [projects],
-  );
+  // DASH-01 hero stats — sourced from server (replaces client-side useMemos)
+  const activeProjectCount = statsData?.activeProjects ?? 0;
+  const totalViolations = statsData?.openViolations ?? 0;
+  const dueSoonCount = statsData?.weeksDueThisWeek ?? 0;
 
-  const totalViolations = useMemo(() => {
-    let total = 0;
-    for (const item of summaryItemMap.values()) {
-      total += item.violationCount;
-    }
-    return total;
-  }, [summaryItemMap]);
-
-  const dueSoonCount = useMemo(() => {
-    const now = new Date();
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const todayStr = now.toISOString().slice(0, 10);
-    const limitStr = sevenDaysFromNow.toISOString().slice(0, 10);
-    let count = 0;
-    for (const item of summaryItemMap.values()) {
-      const hasWeekDueSoon = item.unsubmittedWeekEndingDates.some(
-        date => date >= todayStr && date <= limitStr,
-      );
-      if (hasWeekDueSoon) count++;
-    }
-    return count;
-  }, [summaryItemMap]);
-
-  // ── DASH-02 trend data: violation counts for last 12 weeks ───────────────
-  const trendData = useMemo(() => {
-    // Build a map of week-ending-date → weekly violation label
-    // We use the unsubmittedWeekEndingDates as a proxy for week boundaries,
-    // plus derive approximate week labels from current date
-    const now = new Date();
-    const weeks: { week: string; weekEnd: string; violations: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i * 7);
-      const weekEnd = d.toISOString().slice(0, 10);
-      const weekStart = new Date(d.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      weeks.push({ week: label, weekEnd, violations: 0 });
-    }
-
-    // For each project's violations status, attribute violations to the most recent
-    // applicable week bucket based on available data.
-    // Since we don't have per-week violation timestamps from the batch endpoint,
-    // we distribute violation counts evenly across weeks that have unsubmitted dates
-    // that fall within the 12-week window — this is an approximation.
-    // Projects with violations contribute their total count to their most recent week bucket.
-    for (const item of summaryItemMap.values()) {
-      if (item.violationCount === 0) continue;
-      // Find the latest unsubmitted week date within our 12-week window
-      const windowStart = weeks[0]?.weekEnd ?? '';
-      const relevantDates = item.unsubmittedWeekEndingDates.filter(d => d >= windowStart);
-      const latestDate = relevantDates.sort().pop() ?? '';
-      if (!latestDate) continue;
-      // Find the closest week bucket
-      let bestIdx = 0;
-      let bestDiff = Infinity;
-      for (let i = 0; i < weeks.length; i++) {
-        const diff = Math.abs(
-          new Date(latestDate).getTime() - new Date(weeks[i].weekEnd).getTime()
-        );
-        if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
-      }
-      weeks[bestIdx].violations += item.violationCount;
-    }
-
-    return weeks.map(({ week, violations }) => ({ week, violations }));
-  }, [summaryItemMap]);
+  // DASH-02 12-week trend — sourced from server (replaces client-side bucket approximation)
+  const trendData = trendResp?.weeks ?? [];
 
   // ── DASH-03 at-risk projects — real-time polling (30s) ──────────────────
   interface ViolationRealtimeItem {
@@ -474,25 +425,27 @@ export function DashboardPage() {
       )}
 
       {/* DASH-02: 12-week violation trend chart */}
-      {trendData.length > 0 && projects.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-8">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Compliance Trend — Last 12 Weeks</h3>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-8">
+        <h3 className="text-sm font-semibold text-gray-700 mb-4">Compliance Trend — Last 12 Weeks</h3>
+        {(trendData.length > 0 && projects.length > 0) ? (
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={trendData}>
-              <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+              <XAxis dataKey="weekLabel" tick={{ fontSize: 11 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
               <Tooltip />
               <Line
                 type="monotone"
-                dataKey="violations"
+                dataKey="violationCount"
                 stroke="#DC2626"
                 strokeWidth={2}
                 dot={false}
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-gray-500 py-4 text-center">No violation data yet</p>
+        )}
+      </div>
 
       {/* DASH-03: Projects-at-risk panel — 30s real-time polling */}
       {atRiskProjects.length > 0 && (
