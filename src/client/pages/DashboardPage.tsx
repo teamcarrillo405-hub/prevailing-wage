@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { LayoutDashboard, FolderOpen, AlertTriangle, TrendingUp, Download, FileText } from 'lucide-react';
@@ -198,55 +198,21 @@ export function DashboardPage() {
   // DASH-02 12-week trend — sourced from server (replaces client-side bucket approximation)
   const trendData = trendResp?.weeks ?? [];
 
-  // ── DASH-03 at-risk projects — real-time polling (30s) ──────────────────
-  interface ViolationRealtimeItem {
+  // DASH-03 at-risk projects — sourced from server endpoint (replaces legacy /violations polling)
+  interface AtRiskProject {
     id: string;
     name: string;
-    activeViolations: number;
-    lastCheckedAt: string;
+    openViolationCount: number;
+    oldestViolationDays: number;
   }
 
-  const { data: violationsData, dataUpdatedAt: violationsUpdatedAt } = useQuery({
-    queryKey: ['violations-realtime'],
-    queryFn: () => fetch('/api/dashboard/violations', { credentials: 'include' }).then(r => r.json()) as Promise<{ projects: ViolationRealtimeItem[] }>,
-    refetchInterval: 30_000,
+  const { data: atRiskResp } = useQuery({
+    queryKey: ['dashboard-at-risk'],
+    queryFn: () => api.get<{ projects: AtRiskProject[] }>('/dashboard/at-risk'),
+    staleTime: 60_000,
   });
 
-  // "Last updated X seconds ago" ticker
-  const [secondsSinceUpdate, setSecondsSinceUpdate] = useState(0);
-  const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (!violationsUpdatedAt) return;
-    setSecondsSinceUpdate(0);
-    if (tickerRef.current) clearInterval(tickerRef.current);
-    tickerRef.current = setInterval(() => {
-      setSecondsSinceUpdate(Math.round((Date.now() - violationsUpdatedAt) / 1000));
-    }, 1000);
-    return () => {
-      if (tickerRef.current) clearInterval(tickerRef.current);
-    };
-  }, [violationsUpdatedAt]);
-
-  // Merge realtime violations into at-risk list — prefer live data when available
-  const realtimeViolationMap = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const item of violationsData?.projects ?? []) {
-      map.set(item.id, item.activeViolations);
-    }
-    return map;
-  }, [violationsData]);
-
-  const atRiskProjects = useMemo(() => {
-    return projects
-      .map(p => ({
-        id: p.id,
-        name: p.name,
-        violationCount: realtimeViolationMap.get(p.id) ?? summaryItemMap.get(p.id)?.violationCount ?? 0,
-      }))
-      .filter(p => p.violationCount > 0)
-      .sort((a, b) => b.violationCount - a.violationCount);
-  }, [projects, summaryItemMap, realtimeViolationMap]);
+  const atRiskProjects: AtRiskProject[] = atRiskResp?.projects ?? [];
 
   const filteredProjects = useMemo(() => {
     let result = projects;
@@ -447,27 +413,20 @@ export function DashboardPage() {
         )}
       </div>
 
-      {/* DASH-03: Projects-at-risk panel — 30s real-time polling */}
+      {/* DASH-03: Projects-at-risk panel — sourced from /api/dashboard/at-risk */}
       {atRiskProjects.length > 0 && (
         <div className="bg-white rounded-xl border border-red-200 shadow-sm p-5 mb-8 md:max-w-lg">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              Projects Needing Attention ({atRiskProjects.length})
-            </h3>
-            {violationsUpdatedAt > 0 && (
-              <span className="text-xs text-gray-400" aria-live="polite">
-                Updated {secondsSinceUpdate}s ago
-              </span>
-            )}
-          </div>
+          <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-4 h-4" />
+            Projects Needing Attention ({atRiskProjects.length})
+          </h3>
           <div className="space-y-2">
             {atRiskProjects.slice(0, 5).map(project => (
               <div key={project.id} className="flex items-center justify-between">
                 <span className="text-sm text-gray-900">{project.name}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-red-600 font-medium">
-                    {project.violationCount} violation{project.violationCount !== 1 ? 's' : ''}
+                    {project.openViolationCount} violation{project.openViolationCount !== 1 ? 's' : ''}
                   </span>
                   <Link to={`/projects/${project.id}`} className="text-xs text-brand-gold hover:underline">
                     Resolve &rarr;
