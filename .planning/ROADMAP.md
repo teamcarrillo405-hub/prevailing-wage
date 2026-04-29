@@ -2414,3 +2414,30 @@ Plans:
 - [ ] 116-01-PLAN.md -- Run all 10 gate criterion checks; LCPtracker re-audit; compute score; write 116-SCORE.md; declare GATE_PASS or GATE_FAIL; create v8.0.0 tag
 
 **UI hint**: no
+
+---
+
+## Phase Details (v8.1)
+
+### Phase 119: Dashboard Intelligence
+
+**Goal**: The DashboardPage becomes a live command center — a hero stat row shows active projects, open violations, and weeks due this week; a 12-week compliance trend sparkline shows trajectory at a glance; a projects-at-risk panel surfaces the top 5 stale-violation projects; and project cards show specific violation counts instead of a generic badge — so a GC can assess their entire portfolio in under 10 seconds without clicking into any project
+
+**Depends on**: Phase 118 (React Native mobile app complete; no blocking dependencies)
+
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04
+
+**Success Criteria** (what must be TRUE):
+  1. `DashboardPage.tsx` renders a hero stat row with three cards: "X Active Projects" (count of non-archived projects for owner account), "Y Open Violations" (total COMP violations across all active projects with status != resolved), "Z Weeks Due This Week" (payroll weeks whose due date falls within the current calendar week and are not yet submitted); stats fetched from `GET /api/dashboard/stats` (new endpoint); React Query `staleTime: 60000`
+  2. `GET /api/dashboard/stats` (requireAuth) returns `{ activeProjects: number, openViolations: number, weeksDueThisWeek: number }` computed from owner account's projects; response time < 200ms (single SQL query with joins); endpoint covered by at least 2 Vitest tests
+  3. `DashboardPage.tsx` renders a "Compliance Trend" section below the stat row: a `ComplianceTrendChart` component showing weekly total violation counts for the last 12 weeks as a line chart using recharts (already a dependency — do not add a new charting library); data from `GET /api/dashboard/compliance-trend` returning `{ weeks: Array<{ weekLabel: string, violationCount: number }> }` ordered oldest-first; empty state shows "No violation data yet" placeholder
+  4. `DashboardPage.tsx` renders a "Projects at Risk" panel showing the top 5 projects with open violations older than 7 days, sorted descending by violation count; each row shows project name, violation count chip (crimson), and a "View" link to `/projects/:id`; data from `GET /api/dashboard/at-risk` returning `{ projects: Array<{ id, name, openViolationCount, oldestViolationDays }> }`; panel hidden when no at-risk projects exist (not shown as empty — omitted entirely)
+  5. Project cards on DashboardPage (existing `ProjectCard` or equivalent) show specific open violation count as a crimson badge (e.g., "3 violations") instead of the current generic "Has Violations" indicator; zero-violation projects show a green "Compliant" badge; badge data sourced from the existing batch-summary endpoint or the new `GET /api/dashboard/stats` response shape (whichever avoids an N+1 query)
+
+**Plans**: 2 plans
+
+Plans:
+- [x] 119-01-PLAN.md -- GET /api/dashboard/stats + GET /api/dashboard/compliance-trend + GET /api/dashboard/at-risk endpoints; Vitest tests for all 3; no N+1 queries
+- [ ] 119-02-PLAN.md -- DashboardPage hero stat row + ComplianceTrendChart (recharts) + ProjectsAtRisk panel + project card violation count badge
+
+**UI hint**: yes

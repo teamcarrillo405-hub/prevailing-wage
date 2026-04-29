@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.1.0
-milestone_name: Apprenticeship Ratio Dashboard — Phase 117 complete
-status: Phase 117 complete — ApprenticeshipDashboard shipped (100% unique vs all competitors)
-stopped_at: Completed 117-01-PLAN.md (per-trade ratios + IRA trend + ReportsPage tab)
-last_updated: "2026-04-27T23:45:00.000Z"
+milestone: v2.5
+milestone_name: State Portal Integration
+status: Ready to execute
+stopped_at: Completed 119-01-PLAN.md — 3 dashboard endpoints + 9 tests; 849 tests passing; 0 TS errors
+last_updated: "2026-04-29T22:33:02.394Z"
 progress:
-  total_phases: 58
-  completed_phases: 58
-  total_plans: 112
-  completed_plans: 112
+  total_phases: 37
+  completed_phases: 34
+  total_plans: 81
+  completed_plans: 83
 ---
 
 # State
@@ -19,40 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 94 — UNBLOCKED (Phase B GATE_PASS 9.50/10)
+**Current focus:** Phase 119 — dashboard-intelligence
 
 ## Current Position
 
-Phase: 117 (117-apprenticeship-ratio-dashboard) — COMPLETE (3 tasks shipped; per-trade ratios + IRA trend + wired UI)
-Plan: 1 of 1
-
-Previously completed:
-- Phase 117 (117-apprenticeship-ratio-dashboard) — COMPLETE (APP-01; ApprenticeshipDashboard + API + 5th ReportsPage tab)
-- Phase 114 (114-svg-compliance-map) — COMPLETE (UI-17; UsComplianceMap 50-state SVG + LandingPage replacement)
-- Phase 113 (113-production-hardening) — COMPLETE (OPS-02/OPS-03; render.yaml healthCheckPath + 9 env vars + DEPLOY.md)
-- Phase 112 (112-phase-b-gate-v8) — GATE_PASS 10.02/10 (all 6 SSO criteria; 824 tests)
-- Phase 111 (111-sso-admin-ui) — COMPLETE (ENT-05; SsoConfigPage + IntegrationsPage SSO status card)
-- Phase 110 (110-saml-sso-routes) — COMPLETE (ENT-03/ENT-04; @node-saml/node-saml + 4 SSO routes)
-
-Previously completed before this session:
-- Phase 106 (106-phase-d-watchdog-gate-v7-ship) — GATE_PASS 10.00/10 (all 10 criteria PASS); v7.0.0 tagged + pushed
-- Phase 105 (105-growth-dashboard-admin) — COMPLETE (OPS-01; GrowthDashboardPage + requireAdmin + /admin/growth)
-- Phase 104 (104-advanced-audit-analytics) — COMPLETE (REPT-06; hours-pivot route + CSV/PDF export + ReportsPage)
-- Phase 103 (103-ai-classification-assist) — COMPLETE (AI-01+AI-02; aiClassify.ts + claude-3-5-haiku + IL disclosure)
-- Phase 102 (102-enterprise-pricing-sso-foundation) — COMPLETE (ENT-01+ENT-02; Enterprise tier + ssoConfigs schema)
-- Phase 101 (101-customer-testimonials-video) — COMPLETE (TRUST-05+TRUST-06; TestimonialsPage + YouTube embed)
-- Phase 100 (100-roi-calculator-page) — COMPLETE (TRUST-04; /roi page + POST /api/roi-leads + migration 0061)
-- Phase 99 (99-phase-c-watchdog-gate) — GATE_PASS 10.00/10 (all 10 criteria PASS)
-- Phase 98 (98-offline-compliance-checklists) — COMPLETE (1 plan shipped)
-- Phase 97 (97-mobile-nav-redesign) — COMPLETE (1 plan shipped; BottomTabBar + swipe gesture)
-- Phase 96 (96-photo-verification) — COMPLETE (2 plans shipped; migration 0059 + SignaturePad + PhotoGallery)
-- Phase 95 (95-background-sync) — COMPLETE (all 3 plans shipped)
-- Phase 94 (94-offline-payroll-entry-queue) — COMPLETE (all 3 plans shipped; 9 tests added; 803 total)
-- Phase 93 (93-phase-b-watchdog-gate) — COMPLETE (GATE_PASS 9.50/10)
-- Phase 92 (92-virginia-certified-payroll) — COMPLETE (1 plan shipped)
-- Phase 91 (91-minnesota-certified-payroll) — COMPLETE (1 plan shipped)
-- Phase 90 (90-procore-timesheet-sync) — COMPLETE (all 3 plans shipped)
-- Phase 89 (89-dol-2024-rule-updates) — COMPLETE (all 3 plans shipped)
+Phase: 119 (dashboard-intelligence) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -237,6 +209,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 90-03]: Procore card placed below QBO card with same visual pattern; ?procore=connected banner uses no setTimeout (user navigates away); Import Timesheets uses plain anchor not Button
 - [Phase 91]: MN DLI form uses Monday-first day order (Mo-Tu-We-Th-Fr-Sa-Su); migration idx 57 used (55/56 already taken); grossWages field simpler than MA projectGross/totalWeekGross split; Statement of Compliance cites Minn. Stat. 177.42
 - [Phase 92]: VA DOLI form uses Monday-first day order matching MN; migration idx 58 (next after 57); Statement of Compliance cites Va. Code § 2.2-4360 et seq. (Virginia Public Procurement Act)
+- [Phase 119]: getBatchProjectCompliance reused for /stats and /compliance-trend — avoids duplicate batch traversal
+- [Phase 119]: Pitfall 2 resolved: at-risk definition = past-due unsubmitted payroll week < today-7d, matching /violations route semantics
 
 ### Phase Order Rationale
 
@@ -270,7 +244,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-27T23:45:00.000Z
-Stopped at: Completed 117-01-PLAN.md — ApprenticeshipDashboard shipped; 838 tests passing; 0 TS errors
+Last session: 2026-04-29T22:33:02.389Z
+Stopped at: Completed 119-01-PLAN.md — 3 dashboard endpoints + 9 tests; 849 tests passing; 0 TS errors
 Resume file: None
 Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.

@@ -76,9 +76,9 @@ Target: Integrations 9.0+ (currently 6.3), Compliance 9.5+ (currently 8.4).
 
 ### Feature Area B4: Real-Time Compliance Dashboard
 
-- [ ] **DASH-01** — Dashboard hero stat row: "X Active Projects | Y Open Violations | Z Weeks Due This Week." Stats computed from batch compliance summary (existing endpoint, extend to include due-this-week count). Updates on page load (no WebSocket — React Query staleTime 60s).
-- [ ] **DASH-02** — Compliance trend chart on DashboardPage: weekly violation count over the last 12 weeks (line chart using existing recharts dependency if present, or a lightweight SVG chart). Shows "getting better" or "getting worse" trend at a glance.
-- [ ] **DASH-03** — Projects-at-risk panel: top 5 projects with open violations older than 7 days, sorted by violation count. Each row shows project name, violation count, and "Resolve" link. Shown below the stat row.
+- [x] **DASH-01** — Dashboard hero stat row: "X Active Projects | Y Open Violations | Z Weeks Due This Week." Stats computed from batch compliance summary (existing endpoint, extend to include due-this-week count). Updates on page load (no WebSocket — React Query staleTime 60s).
+- [x] **DASH-02** — Compliance trend chart on DashboardPage: weekly violation count over the last 12 weeks (line chart using existing recharts dependency if present, or a lightweight SVG chart). Shows "getting better" or "getting worse" trend at a glance.
+- [x] **DASH-03** — Projects-at-risk panel: top 5 projects with open violations older than 7 days, sorted by violation count. Each row shows project name, violation count, and "Resolve" link. Shown below the stat row.
 - [ ] **DASH-04** — Compliance violation live counter on project cards: project card badges updated to show specific violation count (not just "Has Violations" text). "3 violations" badge in crimson with count.
 
 ---
