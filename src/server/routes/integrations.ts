@@ -8,6 +8,8 @@ import { logger } from '../logger.js';
 import { getDb } from '../db/index.js';
 import { workers, payrollWeeks } from '../db/schema.js';
 import { upsertPayrollEntry } from '../services/payrollService.js';
+import { createWorker } from '../services/workerService.js';
+import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 
 const integrationsRouter = Router();
 
@@ -185,6 +187,106 @@ integrationsRouter.get('/qbo/employees', requireAuth, async (req, res) => {
   });
 
   res.json({ data: { employees: preview } });
+});
+
+// POST /api/integrations/qbo/import-employees
+// Imports selected QB Online employees as Workers under the given project.
+// - Re-queries QB server-side for raw SSN per employee (never trusts client SSN)
+// - Server-side dedup by case-insensitive name match against existing project workers
+// - Returns { created, skipped, errors } counts
+// Phase 121 / QB-02
+integrationsRouter.post('/qbo/import-employees', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const { projectId, qboIds } = req.body as { projectId?: string; qboIds?: string[] };
+
+  if (!projectId) {
+    res.status(400).json({ error: 'projectId is required' });
+    return;
+  }
+  if (!Array.isArray(qboIds) || qboIds.length === 0) {
+    res.status(400).json({ error: 'qboIds must be a non-empty array of QB employee IDs' });
+    return;
+  }
+
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+
+  const tokenData = await getValidAccessToken(userId);
+  if (!tokenData) {
+    res.status(401).json({ error: 'QuickBooks not connected' });
+    return;
+  }
+  const { accessToken, realmId } = tokenData;
+
+  // Load existing workers for case-insensitive name dedup
+  const existing = await db
+    .select({ name: workers.name })
+    .from(workers)
+    .where(eq(workers.projectId, projectId));
+  const existingNamesLower = new Set(existing.map((w: { name: string }) => w.name.trim().toLowerCase()));
+
+  let created = 0;
+  let skipped = 0;
+  const errors: Array<{ qboId: string; reason: string }> = [];
+
+  for (const qboId of qboIds) {
+    try {
+      // Re-query QB for the single Employee to retrieve raw SSN server-side
+      const qboResp = await fetch(
+        `https://quickbooks.api.intuit.com/v3/company/${realmId}/employee/${encodeURIComponent(qboId)}`,
+        { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } },
+      );
+      if (!qboResp.ok) {
+        errors.push({ qboId, reason: `QB API ${qboResp.status}` });
+        continue;
+      }
+      const json = await qboResp.json() as { Employee?: Record<string, unknown> };
+      const emp = json.Employee ?? {};
+
+      const displayName = ((emp['DisplayName'] as string | undefined) ||
+        `${(emp['GivenName'] as string) ?? ''} ${(emp['FamilyName'] as string) ?? ''}`.trim()).trim();
+
+      if (!displayName) {
+        errors.push({ qboId, reason: 'No DisplayName on QB Employee' });
+        continue;
+      }
+
+      if (existingNamesLower.has(displayName.toLowerCase())) {
+        skipped += 1;
+        continue;
+      }
+
+      const ssn = emp['SSN'] as string | undefined;
+      const addr = emp['PrimaryAddr'] as Record<string, string> | undefined;
+
+      await createWorker(db, {
+        userId,
+        userEmail: req.user!.email,
+        ipAddress: req.ip ?? null,
+        projectId,
+        name: displayName,
+        ssn: ssn || undefined,
+        addressStreet: addr?.['Line1'] ?? undefined,
+        addressCity: addr?.['City'] ?? undefined,
+        addressState: addr?.['CountrySubDivisionCode'] ?? undefined,
+        addressZip: addr?.['PostalCode'] ?? undefined,
+      });
+
+      // Add to dedup set so duplicates within the same batch are also caught
+      existingNamesLower.add(displayName.toLowerCase());
+      created += 1;
+    } catch (err) {
+      logger.error({ qboId, err }, '[qbo-import-employees] Per-employee error');
+      errors.push({ qboId, reason: 'Internal error' });
+    }
+  }
+
+  res.json({ data: { created, skipped, errors } });
 });
 
 // GET /api/integrations/qbo/timeactivities?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD

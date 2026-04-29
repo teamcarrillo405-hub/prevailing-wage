@@ -89,4 +89,32 @@ describe('QB integration routes', () => {
     expect(res.status).toBe(400);
     expect(String(res.body.error ?? '')).toContain('startDate');
   });
+
+  // Test C: POST /qbo/import-employees — IDOR guard: another user's projectId returns 403
+  it('POST /api/integrations/qbo/import-employees with another users projectId returns 403', async () => {
+    // User A creates a project
+    const cookieA = await registerAndLogin('qbo-idor-owner');
+    const projectIdA = await createProject(cookieA);
+
+    // User B tries to import employees into User A's project
+    const cookieB = await registerAndLogin('qbo-idor-attacker');
+    const res = await supertest(app)
+      .post('/api/integrations/qbo/import-employees')
+      .set('Cookie', cookieB)
+      .send({ projectId: projectIdA, qboIds: ['emp-1'] });
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  // Test D: POST /qbo/import-employees — no QB connection returns 401 with "QuickBooks not connected"
+  it('POST /api/integrations/qbo/import-employees with no QB connection returns 401 with QuickBooks not connected', async () => {
+    const cookie = await registerAndLogin('qbo-no-connection');
+    const projectId = await createProject(cookie);
+    const res = await supertest(app)
+      .post('/api/integrations/qbo/import-employees')
+      .set('Cookie', cookie)
+      .send({ projectId, qboIds: ['emp-1'] });
+    expect(res.status).toBe(401);
+    expect(String(res.body.error ?? '')).toContain('QuickBooks not connected');
+  });
 });
