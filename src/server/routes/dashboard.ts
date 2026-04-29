@@ -13,6 +13,7 @@ import {
   projectMembers,
   payrollWeeks,
 } from '../db/schema.js';
+import { getBatchProjectCompliance } from '../services/complianceService.js';
 
 export const dashboardRouter = Router();
 
@@ -78,6 +79,171 @@ dashboardRouter.get('/violations', requireAuth, async (req, res) => {
       lastCheckedAt,
     }))
     .sort((a, b) => b.activeViolations - a.activeViolations);
+
+  res.json({ projects: result });
+});
+
+// GET /api/dashboard/stats
+// DASH-01 / DASH-02 — hero stat row data: { activeProjects, openViolations, weeksDueThisWeek }
+// Reuses getBatchProjectCompliance to avoid duplicate violation computation (Pitfall 3 in RESEARCH.md).
+dashboardRouter.get('/stats', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  // Single call to the batch service — reuses the same data-set the existing
+  // /api/compliance/projects/summary endpoint serves, so React Query caches collide
+  // and total cost on dashboard load is one batch (not two).
+  const summary = await getBatchProjectCompliance(db, userId);
+
+  // Compute today and today+7 as ISO 'YYYY-MM-DD' strings (string-comparable to weekEndingDate)
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const limitStr = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  let activeProjects = 0;
+  let openViolations = 0;
+  let weeksDueThisWeek = 0;
+
+  for (const item of summary.values()) {
+    // status comes from getBatchProjectCompliance: 'archived' | 'violations' | 'compliant' | 'no-payroll'
+    // Active = anything not archived (matches DashboardPage's existing client-side filter
+    // `projects.filter(p => p.status === 'active')` in spirit — archived projects are 'closed' status).
+    if (item.status !== 'archived') activeProjects++;
+
+    openViolations += item.violationCount;
+
+    const hasDueSoon = item.unsubmittedWeekEndingDates.some(
+      (d) => d >= todayStr && d <= limitStr,
+    );
+    if (hasDueSoon) weeksDueThisWeek++;
+  }
+
+  res.json({ activeProjects, openViolations, weeksDueThisWeek });
+});
+
+// GET /api/dashboard/compliance-trend
+// DASH-03 — 12-week violation trend, oldest-first.
+// Bucket logic mirrors the legacy DashboardPage trendData useMemo so visual parity is preserved
+// when Plan 02 swaps the client-side computation for this endpoint.
+dashboardRouter.get('/compliance-trend', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const summary = await getBatchProjectCompliance(db, userId);
+
+  // Build 12 buckets, oldest-first (index 0 = 11 weeks ago, index 11 = today)
+  const now = new Date();
+  const weeks: { weekLabel: string; weekEnd: string; violationCount: number }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i * 7);
+    const weekEnd = d.toISOString().slice(0, 10);
+    const weekLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    weeks.push({ weekLabel, weekEnd, violationCount: 0 });
+  }
+
+  // Attribute each project's violationCount to its latest unsubmitted week within window
+  const windowStart = weeks[0]?.weekEnd ?? '';
+  for (const item of summary.values()) {
+    if (item.violationCount === 0) continue;
+    const relevant = item.unsubmittedWeekEndingDates.filter((d) => d >= windowStart);
+    if (relevant.length === 0) continue;
+    const latestDate = relevant.sort().pop()!;
+
+    // Find closest bucket by absolute time delta
+    let bestIdx = 0;
+    let bestDiff = Infinity;
+    for (let i = 0; i < weeks.length; i++) {
+      const diff = Math.abs(
+        new Date(latestDate).getTime() - new Date(weeks[i].weekEnd).getTime(),
+      );
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = i;
+      }
+    }
+    weeks[bestIdx].violationCount += item.violationCount;
+  }
+
+  // Strip the internal weekEnd field — public shape is { weekLabel, violationCount }
+  res.json({
+    weeks: weeks.map(({ weekLabel, violationCount }) => ({ weekLabel, violationCount })),
+  });
+});
+
+// GET /api/dashboard/at-risk
+// DASH-04 (panel) — top 5 projects with open violations older than 7 days.
+// "Older than 7 days" = at least one unsubmitted payroll week whose weekEndingDate < today-7d.
+// Matches the existing /violations route definition exactly (RESEARCH.md Pitfall 2 ambiguity resolved).
+dashboardRouter.get('/at-risk', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  // Get user's project IDs + names — same membership pattern as /violations route
+  const memberRows = await db
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.userId, userId), isNull(projectMembers.removedAt)));
+
+  const projectIds = new Set(memberRows.map((r: { projectId: string }) => r.projectId));
+  if (projectIds.size === 0) {
+    res.json({ projects: [] });
+    return;
+  }
+
+  const projectRows = await db
+    .select({ id: projects.id, name: projects.name })
+    .from(projects);
+  const nameMap = new Map<string, string>();
+  for (const p of projectRows) {
+    if (projectIds.has(p.id)) nameMap.set(p.id, p.name);
+  }
+
+  // Pull all payroll weeks once and bucket per project
+  const weekRows = await db
+    .select({
+      projectId: payrollWeeks.projectId,
+      weekEndingDate: payrollWeeks.weekEndingDate,
+      submittedAt: payrollWeeks.submittedAt,
+    })
+    .from(payrollWeeks);
+
+  const now = new Date();
+  const thresholdMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  const thresholdStr = new Date(thresholdMs).toISOString().slice(0, 10);
+
+  // For each project: count past-due unsubmitted weeks + track oldest weekEndingDate
+  const perProject = new Map<string, { count: number; oldest: string }>();
+  for (const week of weekRows) {
+    if (!projectIds.has(week.projectId)) continue;
+    if (week.submittedAt) continue;
+    if (week.weekEndingDate >= thresholdStr) continue;
+
+    const entry = perProject.get(week.projectId);
+    if (!entry) {
+      perProject.set(week.projectId, { count: 1, oldest: week.weekEndingDate });
+    } else {
+      entry.count += 1;
+      if (week.weekEndingDate < entry.oldest) entry.oldest = week.weekEndingDate;
+    }
+  }
+
+  const result = Array.from(perProject.entries())
+    .map(([id, { count, oldest }]) => {
+      const oldestMs = new Date(oldest).getTime();
+      const oldestViolationDays = Math.max(
+        0,
+        Math.floor((now.getTime() - oldestMs) / (24 * 60 * 60 * 1000)),
+      );
+      return {
+        id,
+        name: nameMap.get(id) ?? '(unknown)',
+        openViolationCount: count,
+        oldestViolationDays,
+      };
+    })
+    .sort((a, b) => b.openViolationCount - a.openViolationCount)
+    .slice(0, 5);
 
   res.json({ projects: result });
 });
