@@ -2535,7 +2535,7 @@ Plans:
 
 Plans:
 - [ ] 123-01-PLAN.md -- user_mfa table migration + TOTP enroll/verify routes + MFA enforcement on login + ownership transfer + team invite revocation
-- [ ] 123-02-PLAN.md -- Logtail HTTPS drain transport + audit_log hash chain migration + backfill + chain verify route
+- [x] 123-02-PLAN.md -- Logtail HTTPS drain transport + audit_log hash chain migration + backfill + chain verify route
 
 **UI hint**: no
 

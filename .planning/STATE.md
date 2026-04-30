@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 122-03-PLAN.md — DBE-05 card onClick + 2 public-portal gate tests, 890 passing, 0 TS errors, Phase 122 complete
-last_updated: "2026-04-30T01:30:23.837Z"
+status: Ready to execute
+stopped_at: Completed 123-02-PLAN.md — buildTransport export + 10 SOC2 audit/transport tests + backfill script, 914 passing tests, 0 TS errors
+last_updated: "2026-04-30T02:31:24.783Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 122 — dbe-certification-management
+**Current focus:** Phase 123 — soc2-foundation-mfa
 
 ## Current Position
 
-Phase: 122
-Plan: Not started
+Phase: 123 (soc2-foundation-mfa) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -224,6 +224,8 @@ Key decisions locked for v5.0 scope:
 - [Phase 122]: UpdateCertSchema grouped with CreateCertSchema; PATCH cert route after DELETE cert; api.patch already exists; EMPTY_CERT_FORM extended with issueDate/naicsCodes/selfCertified for edit form pre-population; editingCertId toggle pattern for inline cert edit
 - [Phase 122]: vi.mock('resend') factory uses function constructor (not arrow) — dynamic import in job's lazy-init requires new Resend() to work as constructor; shared mockSend reference handles singleton without vi.resetModules
 - [Phase 122]: Branch A chosen for participation card click handler: expandedSubId state present in SubcontractorsPanel, setExpandedSubId(firstCertified.id) used
+- [Phase 123-02]: vi.doMock (not vi.mock) for per-test transport isolation — vi.mock is hoisted once; vi.doMock fires at call time and survives vi.resetModules()
+- [Phase 123-02]: getDb() called inside test functions not at module scope — module-level calls run before beforeAll in setupFiles, returning wrong DB handle
 
 ### Phase Order Rationale
 
@@ -257,7 +259,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-30T01:23:54.277Z
-Stopped at: Completed 122-03-PLAN.md — DBE-05 card onClick + 2 public-portal gate tests, 890 passing, 0 TS errors, Phase 122 complete
+Last session: 2026-04-30T02:31:24.775Z
+Stopped at: Completed 123-02-PLAN.md — buildTransport export + 10 SOC2 audit/transport tests + backfill script, 914 passing tests, 0 TS errors
 Resume file: None
 Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.
