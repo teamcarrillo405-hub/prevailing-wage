@@ -423,6 +423,21 @@ const CreateCertSchema = z.object({
   samRegistrationStatus: z.string().max(50).optional(),
 });
 
+// Phase 122 (DBE-02): UpdateCertSchema for PATCH cert route — all fields optional
+const UpdateCertSchema = z.object({
+  certTypes: z.string().min(1).optional(),
+  certifyingAgency: z.string().optional().nullable(),
+  certNumber: z.string().optional().nullable(),
+  naicsCodes: z.string().optional().nullable(),
+  issueDate: z.string().optional().nullable(),
+  expiresDate: z.string().optional().nullable(),
+  reevaluationStatus: z.enum(['not_required', 'pending', 'cleared', 'suspended']).optional(),
+  selfCertified: z.boolean().optional(),
+  uei: z.string().optional().nullable(),
+  cageCode: z.string().optional().nullable(),
+  samRegistrationStatus: z.string().optional().nullable(),
+});
+
 // GET /:id/subcontractors/:subId/certifications — list certs for a sub
 router.get('/:id/subcontractors/:subId/certifications', async (req, res) => {
   const projectId = req.params.id as string;
@@ -483,6 +498,18 @@ router.post('/:id/subcontractors/:subId/certifications', validate(CreateCertSche
   }
 
   const body = req.body as z.infer<typeof CreateCertSchema>;
+
+  // DBE-06: certs issued before DOT IFR (Oct 3 2025) default reevaluationStatus to 'pending'
+  // when the GC has not explicitly opted out by setting it to 'cleared' or 'suspended'.
+  let finalReevalStatus = body.reevaluationStatus;
+  if (
+    body.issueDate &&
+    body.issueDate < '2025-10-03' &&
+    body.reevaluationStatus === 'not_required'
+  ) {
+    finalReevalStatus = 'pending';
+  }
+
   const now = new Date().toISOString();
   const id = randomUUID();
 
@@ -495,7 +522,7 @@ router.post('/:id/subcontractors/:subId/certifications', validate(CreateCertSche
     naicsCodes: body.naicsCodes ?? null,
     issueDate: body.issueDate ?? null,
     expiresDate: body.expiresDate ?? null,
-    reevaluationStatus: body.reevaluationStatus,
+    reevaluationStatus: finalReevalStatus,
     selfCertified: body.selfCertified,
     // Phase 82 (Gap-2) — SAM.gov fields persisted at create time
     uei: body.uei ?? null,
@@ -536,6 +563,63 @@ router.delete('/:id/subcontractors/:subId/certifications/:certId', async (req, r
 
   res.json({ data: { deleted: true } });
 });
+
+// PATCH /:id/subcontractors/:subId/certifications/:certId — partial update (DBE-02)
+router.patch('/:id/subcontractors/:subId/certifications/:certId',
+  validate(UpdateCertSchema),
+  async (req, res) => {
+    const projectId = req.params.id as string;
+    const subId = req.params.subId as string;
+    const certId = req.params.certId as string;
+    const userId = req.user!.userId;
+    const db = getDb();
+
+    try {
+      await assertProjectAccess(db, projectId, userId);
+    } catch (err: any) {
+      res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+      return;
+    }
+
+    // Verify sub belongs to project
+    const [sub] = await db.select().from(subcontractors)
+      .where(and(eq(subcontractors.id, subId), eq(subcontractors.projectId, projectId)))
+      .limit(1);
+    if (!sub) { res.status(404).json({ error: 'Subcontractor not found' }); return; }
+
+    // Verify cert belongs to sub
+    const [existing] = await db.select().from(subcontractorCertifications)
+      .where(and(
+        eq(subcontractorCertifications.id, certId),
+        eq(subcontractorCertifications.subcontractorId, subId),
+      ))
+      .limit(1);
+    if (!existing) { res.status(404).json({ error: 'Certification not found' }); return; }
+
+    const body = req.body as z.infer<typeof UpdateCertSchema>;
+    const now = new Date().toISOString();
+
+    await db.update(subcontractorCertifications).set({
+      certTypes: body.certTypes !== undefined ? body.certTypes : existing.certTypes,
+      certifyingAgency: body.certifyingAgency !== undefined ? body.certifyingAgency : existing.certifyingAgency,
+      certNumber: body.certNumber !== undefined ? body.certNumber : existing.certNumber,
+      naicsCodes: body.naicsCodes !== undefined ? body.naicsCodes : existing.naicsCodes,
+      issueDate: body.issueDate !== undefined ? body.issueDate : existing.issueDate,
+      expiresDate: body.expiresDate !== undefined ? body.expiresDate : existing.expiresDate,
+      reevaluationStatus: body.reevaluationStatus !== undefined ? body.reevaluationStatus : existing.reevaluationStatus,
+      selfCertified: body.selfCertified !== undefined ? body.selfCertified : existing.selfCertified,
+      uei: body.uei !== undefined ? body.uei : existing.uei,
+      cageCode: body.cageCode !== undefined ? body.cageCode : existing.cageCode,
+      samRegistrationStatus: body.samRegistrationStatus !== undefined ? body.samRegistrationStatus : existing.samRegistrationStatus,
+      updatedAt: now,
+    }).where(eq(subcontractorCertifications.id, certId));
+
+    const [updated] = await db.select().from(subcontractorCertifications)
+      .where(eq(subcontractorCertifications.id, certId)).limit(1);
+
+    res.json({ data: { certification: updated } });
+  }
+);
 
 // PATCH /:id/subcontractors/:subId/cpr-weeks/:weekId — update a CPR week record
 router.patch('/:id/subcontractors/:subId/cpr-weeks/:weekId', validate(UpdateCprWeekSchema), async (req, res) => {
