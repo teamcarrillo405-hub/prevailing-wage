@@ -68,11 +68,11 @@ Target: Integrations 9.0+ (currently 6.3), Compliance 9.5+ (currently 8.4).
 ### Feature Area B3: DBE/MBE/WBE Certification Tracking
 
 - [ ] **DBE-01** — New `subcontractor_certifications` table: id, subcontractor_id (FK → subcontractors, CASCADE DELETE), cert_type (ENUM: DBE/MBE/WBE/SBE/ACDBE/8a/HUBZone — multi-value via CSV column), certifying_agency (text), cert_number (text), naics_codes (text — comma-separated), issue_date (date), expires_date (date), owner_race (text), owner_gender (text), personal_net_worth_usd (integer), reevaluation_status (ENUM: not_required/pending/cleared/suspended — DOT IFR Oct 2025), self_certified (boolean), document_path (text), created_at, updated_at.
-- [ ] **DBE-02** — Certification CRUD on SubcontractorPanel: "+ Add Certification" form per sub with all fields from DBE-01. Edit and delete within panel. Multiple certs per sub supported (e.g., a firm can be both DBE and WBE).
+- [x] **DBE-02** — Certification CRUD on SubcontractorPanel: "+ Add Certification" form per sub with all fields from DBE-01. Edit and delete within panel. Multiple certs per sub supported (e.g., a firm can be both DBE and WBE).
 - [ ] **DBE-03** — Certification expiration alerts: at 90/60/30 days before `expires_date`, send Resend email to project owner with sub name, cert type, and days remaining. Reuses existing Resend email infrastructure and scheduled check pattern from compliance alerts.
 - [ ] **DBE-04** — CPR upload gate: if a subcontractor's active certification is expired or in `reevaluation_status = 'suspended'`, block their CPR upload with inline warning: "Sub's DBE certification expired — resolve before accepting CPR." Warning shown in SubcontractorPanel and on public upload portal.
 - [ ] **DBE-05** — DBE participation summary on ProjectDetailPage: "DBE/MBE/WBE Participation" card showing: active certified subs count, expired cert warnings count, subs under DOT reevaluation count. Clicking opens the sub certification detail view.
-- [ ] **DBE-06** — DOT IFR 2025 reevaluation status field is prominently labeled "DOT Oct 2025 IFR Status" in UI with tooltip explaining the rule change. Certs imported before Oct 3, 2025 default to `reevaluation_status = 'pending'` with advisory to verify current status.
+- [x] **DBE-06** — DOT IFR 2025 reevaluation status field is prominently labeled "DOT Oct 2025 IFR Status" in UI with tooltip explaining the rule change. Certs imported before Oct 3, 2025 default to `reevaluation_status = 'pending'` with advisory to verify current status.
 
 ### Feature Area B4: Real-Time Compliance Dashboard
 

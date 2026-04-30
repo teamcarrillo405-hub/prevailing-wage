@@ -2510,7 +2510,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 122-01-PLAN.md -- subcontractor_certifications migration + CRUD routes (GET/POST/PATCH/DELETE) + SubcontractorPanel cert form UI
+- [x] 122-01-PLAN.md -- subcontractor_certifications migration + CRUD routes (GET/POST/PATCH/DELETE) + SubcontractorPanel cert form UI
 - [ ] 122-02-PLAN.md -- Resend expiry alert job (90/60/30 days) + CPR upload portal cert gate + DBE-04 SubcontractorPanel warning
 - [ ] 122-03-PLAN.md -- ProjectDetailPage DBE participation card (DBE-05) + DOT IFR 2025 label + reevaluation_status default logic (DBE-06)
 

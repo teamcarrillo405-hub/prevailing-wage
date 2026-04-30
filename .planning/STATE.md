@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 121-02-PLAN.md — SyncTimesheetSection + buildImportRows + 10 tests GREEN; 0 TS errors
-last_updated: "2026-04-30T00:32:49.427Z"
+status: Ready to execute
+stopped_at: Completed 122-01-PLAN.md — PATCH cert route + DBE-06 auto-pending + inline edit UI; 0 TS errors
+last_updated: "2026-04-30T00:59:40.834Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 121 — quickbooks-employee-time-import
+**Current focus:** Phase 122 — dbe-certification-management
 
 ## Current Position
 
-Phase: 121
-Plan: Not started
+Phase: 122 (dbe-certification-management) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -221,6 +221,7 @@ Key decisions locked for v5.0 scope:
 - [Phase 121-quickbooks-employee-time-import]: buildImportRows exported not inline — enables direct unit test import without mounting IntegrationsPage (Phase 86 pattern)
 - [Phase 121-quickbooks-employee-time-import]: dailySplitConfirmed defaults false and gates commit — prevents silent acceptance of evenly-split QB weekly totals
 - [Phase 121-quickbooks-employee-time-import]: Commit posts to /api/payroll/import/commit with provider:'quickbooks' (not push-approved-hours) — audit-row + conflict-detection consistency (Pitfall 6 resolution)
+- [Phase 122]: UpdateCertSchema grouped with CreateCertSchema; PATCH cert route after DELETE cert; api.patch already exists; EMPTY_CERT_FORM extended with issueDate/naicsCodes/selfCertified for edit form pre-population; editingCertId toggle pattern for inline cert edit
 
 ### Phase Order Rationale
 
@@ -254,7 +255,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-30T00:16:16.519Z
-Stopped at: Completed 121-02-PLAN.md — SyncTimesheetSection + buildImportRows + 10 tests GREEN; 0 TS errors
+Last session: 2026-04-30T00:59:40.827Z
+Stopped at: Completed 122-01-PLAN.md — PATCH cert route + DBE-06 auto-pending + inline edit UI; 0 TS errors
 Resume file: None
 Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.
