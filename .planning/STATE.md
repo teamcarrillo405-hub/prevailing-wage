@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Executing Phase null
-stopped_at: Completed 125-01-PLAN.md
-last_updated: "2026-04-30T04:19:23.306Z"
+status: Executing Phase 125
+stopped_at: Completed 125-02-PLAN.md
+last_updated: "2026-04-29T00:00:00.000Z"
 progress:
   total_phases: 37
   completed_phases: 34
   total_plans: 81
-  completed_plans: 83
+  completed_plans: 84
 ---
 
 # State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase null
+**Current focus:** Phase 125
 
 ## Current Position
 
-Phase: null — EXECUTING
-Plan: 1 of ?
+Phase: 125 — EXECUTING
+Plan: 2 of ?
 
 ## Performance Metrics
 
@@ -260,7 +260,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-30T04:19:23.299Z
-Stopped at: Completed 125-01-PLAN.md
+Last session: 2026-04-29T00:00:00.000Z
+Stopped at: Completed 125-02-PLAN.md
 Resume file: None
-Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.
+Next action: Phase 125-02 complete. PayrollWeekDetailPage alternating rows + violation callouts, WorkersPage premium cards, ReportsPage design-token cards, App.tsx framer-motion AnimatePresence route transitions. 0 TS errors.
