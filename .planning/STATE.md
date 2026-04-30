@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 123-02-PLAN.md — buildTransport export + 10 SOC2 audit/transport tests + backfill script, 914 passing tests, 0 TS errors
-last_updated: "2026-04-30T02:31:24.783Z"
+status: Phase complete — ready for verification
+stopped_at: "Completed 123-01-PLAN.md — SEC-01 MFA gaps closed: qrDataUrl QR image, TOTP gate on owner ops, nag banner, 14 new tests, 914 passing, 0 TS errors"
+last_updated: "2026-04-30T02:33:17.262Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -226,6 +226,7 @@ Key decisions locked for v5.0 scope:
 - [Phase 122]: Branch A chosen for participation card click handler: expandedSubId state present in SubcontractorsPanel, setExpandedSubId(firstCertified.id) used
 - [Phase 123-02]: vi.doMock (not vi.mock) for per-test transport isolation — vi.mock is hoisted once; vi.doMock fires at call time and survives vi.resetModules()
 - [Phase 123-02]: getDb() called inside test functions not at module scope — module-level calls run before beforeAll in setupFiles, returning wrong DB handle
+- [Phase 123]: qrcode installed with --legacy-peer-deps; generateTotpSecret made async returning qrDataUrl; TOTP gate on transfer-ownership+invite-revoke via dynamic import; bannerDismissed in-memory only for SOC 2 nag
 
 ### Phase Order Rationale
 
@@ -259,7 +260,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-30T02:31:24.775Z
-Stopped at: Completed 123-02-PLAN.md — buildTransport export + 10 SOC2 audit/transport tests + backfill script, 914 passing tests, 0 TS errors
+Last session: 2026-04-30T02:33:17.255Z
+Stopped at: Completed 123-01-PLAN.md — SEC-01 MFA gaps closed: qrDataUrl QR image, TOTP gate on owner ops, nag banner, 14 new tests, 914 passing, 0 TS errors
 Resume file: None
 Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.
