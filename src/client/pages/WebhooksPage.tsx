@@ -28,6 +28,7 @@ interface Delivery {
   deliveredAt: string | null;
   failedAt: string | null;
   retryCount: number;
+  status: 'pending' | 'succeeded' | 'failed';
 }
 
 const AVAILABLE_EVENTS = [
@@ -88,6 +89,14 @@ export function WebhooksPage() {
     onSuccess: (_, id) => {
       if (expandedId === id) refetchDeliveries();
       queryClient.invalidateQueries({ queryKey: ['webhook-deliveries', id] });
+    },
+  });
+
+  const retryMutation = useMutation({
+    mutationFn: ({ webhookId, deliveryId }: { webhookId: string; deliveryId: string }) =>
+      api.post(`/webhooks/${webhookId}/deliveries/${deliveryId}/retry`, {}),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['webhook-deliveries', vars.webhookId] });
     },
   });
 
@@ -215,16 +224,26 @@ export function WebhooksPage() {
                     <div className="space-y-2">
                       {deliveries.map(d => (
                         <div key={d.id} className="bg-white border border-gray-200 rounded-lg p-3 text-xs">
-                          <div className="flex items-center gap-3 mb-1">
-                            <span
-                              className={`font-mono px-2 py-0.5 rounded ${
-                                d.statusCode && d.statusCode >= 200 && d.statusCode < 300
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : 'bg-red-100 text-red-700'
-                              }`}
-                            >
-                              {d.statusCode ?? 'ERR'}
+                          <div className="flex items-center gap-3 mb-1 flex-wrap">
+                            <span className={`font-mono px-2 py-0.5 rounded text-xs ${
+                              d.status === 'succeeded' ? 'bg-emerald-100 text-emerald-700'
+                              : d.status === 'failed' ? 'bg-red-100 text-red-700'
+                              : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {d.status}{d.statusCode ? ` · ${d.statusCode}` : ''}
                             </span>
+                            {d.retryCount > 0 && (
+                              <span className="text-xs text-gray-400 ml-1">retry {d.retryCount}/5</span>
+                            )}
+                            {d.status === 'failed' && (
+                              <button
+                                onClick={() => retryMutation.mutate({ webhookId: wh.id, deliveryId: d.id })}
+                                className="text-xs text-blue-600 hover:underline ml-2"
+                                disabled={retryMutation.isPending}
+                              >
+                                Retry
+                              </button>
+                            )}
                             <span className="text-blue-700 font-medium">{d.event}</span>
                             <span className="text-gray-400 ml-auto">
                               {formatDate(d.deliveredAt ?? d.failedAt)}
