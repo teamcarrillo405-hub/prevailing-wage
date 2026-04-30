@@ -3,6 +3,7 @@
 // Separate from /api (cookie auth). Read-only scopes only in v1.
 
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { eq, and, isNull, inArray } from 'drizzle-orm';
@@ -86,16 +87,6 @@ function meta() {
   return { requestId: randomUUID(), timestamp: new Date().toISOString() };
 }
 
-// ── Rate limit constants ──────────────────────────────────────────────────────
-const RATE_LIMIT = 1000; // requests per hour (enforced at infrastructure level; headers inform callers)
-
-function addRateLimitHeaders(res: Response, remaining: number): void {
-  const resetTs = Math.floor(Date.now() / 1000) + 3600;
-  res.set('X-RateLimit-Limit', String(RATE_LIMIT));
-  res.set('X-RateLimit-Remaining', String(remaining));
-  res.set('X-RateLimit-Reset', String(resetTs));
-}
-
 // ── Pagination helpers ────────────────────────────────────────────────────────
 
 const DEFAULT_LIMIT = 20;
@@ -117,18 +108,44 @@ function paginatedMeta(page: number, limit: number, total: number) {
   };
 }
 
-// Apply API key auth to all /v1 routes
-router.use(requireApiKey);
+// ── Per-API-key rate limiter (100 req/min, draft-7 headers) ──────────────────
+const publicApiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  keyGenerator: (req) => req.apiKeyUserId ?? req.ip ?? 'unknown',
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Rate limit exceeded. Max 100 requests/minute per API key.' },
+});
 
-// Phase 82 (Gap-2): always emit rate-limit headers so consumers can build
-// backoff against documented limits. Per-route handlers can override
-// X-RateLimit-Remaining once we wire a real per-key counter; this middleware
-// guarantees auditors see the headers on every /v1 response.
-router.use((_req, res, next) => {
-  if (!res.getHeader('X-RateLimit-Limit')) {
-    addRateLimitHeaders(res, RATE_LIMIT);
-  }
-  res.setHeader('X-RateLimit-Window', '3600s');
+// Apply API key auth then rate limit to all /v1 routes
+router.use(requireApiKey);
+router.use(publicApiLimiter);
+
+// ── Per-request audit logging ─────────────────────────────────────────────────
+router.use((req, _res, next) => {
+  void (async () => {
+    try {
+      const { insertAuditLog } = await import('../services/auditService.js');
+      await insertAuditLog({
+        userId:     req.apiKeyUserId ?? null,
+        userEmail:  null,
+        ipAddress:  req.ip ?? null,
+        projectId:  (req.params['id'] as string | undefined) ?? null,
+        entityType: 'api_v1_request',
+        entityId:   req.apiKeyUserId ?? 'unknown',
+        action:     'api.v1.read',
+        meta:       {
+          path:       req.path,
+          method:     req.method,
+          scopes:     req.apiKeyScopes ?? [],
+          query:      req.query,
+        },
+      });
+    } catch {
+      // Never fail the request because of audit-log insert failure.
+    }
+  })();
   next();
 });
 
@@ -158,7 +175,6 @@ router.get('/projects', requireScope('projects:read'), async (req, res) => {
   const total = allRows.length;
   const rows = allRows.slice(offset, offset + limit);
 
-  addRateLimitHeaders(res, RATE_LIMIT);
   res.json({ data: rows, meta: paginatedMeta(page, limit, total) });
 });
 
@@ -216,7 +232,6 @@ router.get('/projects/batch', requireScope('projects:read'), async (req, res) =>
 
   const visible = (rows as Array<{ id: string; [k: string]: unknown }>).filter((r) => allowedIds.has(r.id));
 
-  addRateLimitHeaders(res, RATE_LIMIT);
   res.json({
     data: visible,
     meta: { ...meta(), requested: ids.length, returned: visible.length },
@@ -260,7 +275,6 @@ router.get('/projects/:id', requireScope('projects:read'), async (req, res) => {
     return;
   }
 
-  addRateLimitHeaders(res, RATE_LIMIT);
   res.json({ data: row, meta: meta() });
 });
 
@@ -302,7 +316,6 @@ router.get('/projects/:id/payroll-weeks', requireScope('payroll:read'), async (r
     createdAt: w.createdAt,
   }));
 
-  addRateLimitHeaders(res, RATE_LIMIT);
   res.json({ data, meta: paginatedMeta(page, limit, total) });
 });
 
@@ -347,7 +360,6 @@ router.get('/projects/:id/compliance-summary', requireScope('projects:read'), as
     }
   }
 
-  addRateLimitHeaders(res, RATE_LIMIT);
   res.json({
     data: {
       projectId,
@@ -402,7 +414,6 @@ router.get('/projects/:id/workers', requireScope('workers:read'), async (req, re
   const total = allRows.length;
   const rows = allRows.slice(offset, offset + limit);
 
-  addRateLimitHeaders(res, RATE_LIMIT);
   res.json({ data: rows, meta: paginatedMeta(page, limit, total) });
 });
 
@@ -423,7 +434,6 @@ router.get('/reports/compliance-summary', requireScope('projects:read'), async (
   const projectIds = (memberRows as Array<{ projectId: string }>).map((r) => r.projectId);
 
   if (projectIds.length === 0) {
-    addRateLimitHeaders(res, RATE_LIMIT);
     res.json({
       data: { totalProjects: 0, projectsWithViolations: 0, totalViolations: 0, perProject: [] },
       meta: meta(),
@@ -479,7 +489,6 @@ router.get('/reports/compliance-summary', requireScope('projects:read'), async (
     });
   }
 
-  addRateLimitHeaders(res, RATE_LIMIT);
   res.json({
     data: {
       totalProjects: projectRows.length,

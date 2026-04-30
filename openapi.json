@@ -1,0 +1,605 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Prevailing Wage Public API",
+    "version": "1.0.0",
+    "description": "Read-only REST API for accessing prevailing wage project, payroll, worker, and compliance data. All endpoints require Bearer API key authentication. Rate limited to 1000 req/hour per API key."
+  },
+  "servers": [
+    {
+      "url": "https://prevailingwage.app",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "Local development"
+    }
+  ],
+  "security": [
+    { "BearerAuth": [] }
+  ],
+  "tags": [
+    {
+      "name": "Public API v1",
+      "description": "Prevailing Wage Public REST API — Bearer token auth, read-only scopes"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message",
+            "example": "Invalid API key"
+          }
+        }
+      },
+      "Meta": {
+        "type": "object",
+        "required": ["requestId", "timestamp"],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique request identifier for tracing"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 response timestamp"
+          }
+        }
+      },
+      "PaginatedMeta": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Meta" },
+          {
+            "type": "object",
+            "required": ["page", "limit", "total", "hasNext"],
+            "properties": {
+              "page": { "type": "integer", "minimum": 1 },
+              "limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+              "total": { "type": "integer", "minimum": 0 },
+              "hasNext": { "type": "boolean" }
+            }
+          }
+        ]
+      },
+      "Project": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique project identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Project name"
+          },
+          "state": {
+            "type": ["string", "null"],
+            "description": "2-letter US state code"
+          },
+          "county": {
+            "type": ["string", "null"],
+            "description": "County name"
+          },
+          "contractType": {
+            "type": ["string", "null"],
+            "description": "Contract type (e.g., federal, state)"
+          },
+          "fundingType": {
+            "type": ["string", "null"],
+            "description": "Funding type (e.g., Davis-Bacon, state prevailing wage)"
+          },
+          "status": {
+            "type": ["string", "null"],
+            "description": "Project status (e.g., active, completed)"
+          },
+          "awardDate": {
+            "type": ["string", "null"],
+            "description": "Contract award date (ISO 8601)"
+          },
+          "wdIdentifier": {
+            "type": ["string", "null"],
+            "description": "Wage determination identifier (e.g., WD-2024-001)"
+          },
+          "createdAt": {
+            "type": ["string", "null"],
+            "description": "Record creation timestamp (ISO 8601)"
+          },
+          "updatedAt": {
+            "type": ["string", "null"],
+            "description": "Record last-updated timestamp (ISO 8601)"
+          }
+        }
+      },
+      "PayrollWeek": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "weekEndingDate": {
+            "type": ["string", "null"],
+            "description": "Week ending date (ISO 8601)"
+          },
+          "payrollNumber": {
+            "type": ["integer", "null"],
+            "description": "Sequential payroll number within the project"
+          },
+          "isFinal": {
+            "type": ["boolean", "null"],
+            "description": "Whether this is a final (certified) payroll"
+          },
+          "submittedAt": {
+            "type": ["string", "null"],
+            "description": "Submission timestamp (ISO 8601)"
+          },
+          "submittedTo": {
+            "type": ["string", "null"],
+            "description": "Name of agency or contact payroll was submitted to"
+          },
+          "createdAt": {
+            "type": ["string", "null"],
+            "description": "Record creation timestamp (ISO 8601)"
+          }
+        }
+      },
+      "Worker": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Worker full name"
+          },
+          "ssnLast4": {
+            "type": ["string", "null"],
+            "description": "Last 4 digits of SSN"
+          },
+          "tradeUnion": {
+            "type": ["string", "null"],
+            "description": "Trade union name or identifier"
+          },
+          "addressCity": {
+            "type": ["string", "null"]
+          },
+          "addressState": {
+            "type": ["string", "null"],
+            "description": "2-letter US state code"
+          },
+          "isActive": {
+            "type": ["boolean", "null"],
+            "description": "Whether the worker is currently active on this project"
+          },
+          "createdAt": {
+            "type": ["string", "null"],
+            "description": "Record creation timestamp (ISO 8601)"
+          }
+        }
+      },
+      "ProjectComplianceSummary": {
+        "type": "object",
+        "required": ["projectId", "weekCount", "hasViolations", "totalViolations", "status"],
+        "properties": {
+          "projectId": { "type": "string", "format": "uuid" },
+          "weekCount": {
+            "type": "integer",
+            "description": "Number of payroll weeks evaluated"
+          },
+          "hasViolations": { "type": "boolean" },
+          "totalViolations": { "type": "integer", "minimum": 0 },
+          "status": {
+            "type": "string",
+            "enum": ["clean", "violations"]
+          }
+        }
+      },
+      "PerProjectCompliance": {
+        "type": "object",
+        "required": ["projectId", "projectName", "weekCount", "totalViolations", "hasViolations", "complianceStatus"],
+        "properties": {
+          "projectId": { "type": "string", "format": "uuid" },
+          "projectName": { "type": "string" },
+          "projectStatus": { "type": ["string", "null"] },
+          "weekCount": { "type": "integer" },
+          "totalViolations": { "type": "integer" },
+          "hasViolations": { "type": "boolean" },
+          "complianceStatus": {
+            "type": "string",
+            "enum": ["clean", "violations"]
+          }
+        }
+      },
+      "ReportsComplianceSummary": {
+        "type": "object",
+        "required": ["totalProjects", "projectsWithViolations", "totalViolations", "perProject"],
+        "properties": {
+          "totalProjects": { "type": "integer" },
+          "projectsWithViolations": { "type": "integer" },
+          "totalViolations": { "type": "integer" },
+          "perProject": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PerProjectCompliance" }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "PageParam": {
+        "name": "page",
+        "in": "query",
+        "description": "Page number (1-based)",
+        "required": false,
+        "schema": { "type": "integer", "minimum": 1, "default": 1 }
+      },
+      "LimitParam": {
+        "name": "limit",
+        "in": "query",
+        "description": "Results per page (max 100)",
+        "required": false,
+        "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+      },
+      "ProjectIdParam": {
+        "name": "id",
+        "in": "path",
+        "description": "Project UUID",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid API key",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Invalid API key" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "API key lacks required scope",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Scope required: projects:read" }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded (1000 req/hour per API key)",
+        "headers": {
+          "X-RateLimit-Limit": { "schema": { "type": "integer" } },
+          "X-RateLimit-Remaining": { "schema": { "type": "integer" } },
+          "X-RateLimit-Reset": { "schema": { "type": "integer", "description": "Unix timestamp when window resets" } },
+          "X-RateLimit-Window": { "schema": { "type": "string", "example": "3600s" } }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Rate limit exceeded" }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/v1/projects": {
+      "get": {
+        "tags": ["Public API v1"],
+        "summary": "List projects",
+        "description": "Returns a paginated list of projects accessible to the authenticated API key holder. Rate limited to 1000 req/hour per API key. Required scope: `projects:read`.",
+        "operationId": "listProjects",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of projects",
+            "headers": {
+              "X-RateLimit-Limit": { "schema": { "type": "integer" } },
+              "X-RateLimit-Remaining": { "schema": { "type": "integer" } },
+              "X-RateLimit-Reset": { "schema": { "type": "integer" } },
+              "X-RateLimit-Window": { "schema": { "type": "string" } }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Project" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/projects/batch": {
+      "get": {
+        "tags": ["Public API v1"],
+        "summary": "Batch fetch projects by IDs",
+        "description": "Returns up to 20 projects by comma-separated IDs in a single request. Only projects accessible to the caller are returned — inaccessible IDs are silently omitted. Rate limited to 1000 req/hour per API key. Required scope: `projects:read`.",
+        "operationId": "batchGetProjects",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Comma-separated list of project UUIDs (max 20)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "uuid-1,uuid-2,uuid-3"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projects matching the requested IDs (only accessible ones returned)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Project" }
+                    },
+                    "meta": {
+                      "allOf": [
+                        { "$ref": "#/components/schemas/Meta" },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "requested": { "type": "integer" },
+                            "returned": { "type": "integer" }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or empty ids parameter",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/projects/{id}": {
+      "get": {
+        "tags": ["Public API v1"],
+        "summary": "Get a project by ID",
+        "description": "Returns a single project. Returns 404 if the project does not exist or the caller does not have access. Rate limited to 1000 req/hour per API key. Required scope: `projects:read`.",
+        "operationId": "getProject",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectIdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/Project" },
+                    "meta": { "$ref": "#/components/schemas/Meta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Project not found or not accessible",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/projects/{id}/payroll-weeks": {
+      "get": {
+        "tags": ["Public API v1"],
+        "summary": "List payroll weeks for a project",
+        "description": "Returns a paginated list of payroll weeks for the specified project. Rate limited to 1000 req/hour per API key. Required scope: `payroll:read`.",
+        "operationId": "listPayrollWeeks",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectIdParam" },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of payroll weeks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/PayrollWeek" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Project not found or not accessible",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/projects/{id}/compliance-summary": {
+      "get": {
+        "tags": ["Public API v1"],
+        "summary": "Get compliance summary for a project",
+        "description": "Returns compliance status and violation counts for all payroll weeks in the project. Rate limited to 1000 req/hour per API key. Required scope: `projects:read`.",
+        "operationId": "getProjectComplianceSummary",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectIdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compliance summary for the project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/ProjectComplianceSummary" },
+                    "meta": { "$ref": "#/components/schemas/Meta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Project not found or not accessible",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/projects/{id}/workers": {
+      "get": {
+        "tags": ["Public API v1"],
+        "summary": "List workers on a project",
+        "description": "Returns a paginated list of workers assigned to the specified project. Rate limited to 1000 req/hour per API key. Required scope: `workers:read`.",
+        "operationId": "listProjectWorkers",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectIdParam" },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of workers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Worker" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Project not found or not accessible",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/reports/compliance-summary": {
+      "get": {
+        "tags": ["Public API v1"],
+        "summary": "Aggregate compliance summary across all projects",
+        "description": "Returns a compliance roll-up across all projects accessible to the authenticated API key holder. Designed for enterprise dashboard consumers. Rate limited to 1000 req/hour per API key. Required scope: `projects:read`.",
+        "operationId": "getReportsComplianceSummary",
+        "responses": {
+          "200": {
+            "description": "Aggregate compliance summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/ReportsComplianceSummary" },
+                    "meta": { "$ref": "#/components/schemas/Meta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    }
+  }
+}

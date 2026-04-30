@@ -10,7 +10,7 @@ Sentry.init({
   tracesSampleRate: 0.1,
 });
 
-import express from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -48,6 +48,9 @@ import apiKeysRouter from './routes/apiKeys.js';
 import webhooksRouter from './routes/webhooks.js';
 import publicApiRouter from './routes/publicApi.js';
 import notificationsRouter from './routes/notifications.js';
+import swaggerUi from 'swagger-ui-express';
+import { readFileSync } from 'node:fs';
+import nodePath from 'node:path';
 import { dashboardRouter } from './routes/dashboard.js';
 import samGovRouter from './routes/samGov.js';
 import securityRouter from './routes/security.js';
@@ -72,6 +75,11 @@ const __dirname = dirname(__filename);
 // Ensure upload and photos directories exist at startup
 mkdirSync(process.env.UPLOAD_DIR || './uploads', { recursive: true });
 mkdirSync(process.env.PHOTOS_DIR || './var/data/photos', { recursive: true });
+
+// API-03 — Load OpenAPI spec at startup for /api/docs and /api/docs/html
+const openapiSpec = JSON.parse(
+  readFileSync(nodePath.join(process.cwd(), 'openapi.json'), 'utf-8')
+) as Record<string, unknown>;
 
 const app = express();
 app.set('trust proxy', 1);
@@ -214,6 +222,27 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/v1', publicApiRouter);
 app.use('/api/sso', ssoRouter);
 app.use('/api/apprenticeship', apprenticeshipRouter);
+
+// API-03 — OpenAPI spec + Swagger UI (mounted before SPA catch-all)
+app.get('/api/docs', (_req, res) => {
+  res.json(openapiSpec);
+});
+
+app.use(
+  '/api/docs/html',
+  (_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'",
+    );
+    next();
+  },
+  swaggerUi.serve,
+  swaggerUi.setup(openapiSpec, {
+    customSiteTitle: 'Prevailing Wage Public API',
+    swaggerOptions: { persistAuthorization: true },
+  }),
+);
 
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {
