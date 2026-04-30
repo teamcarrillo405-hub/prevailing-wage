@@ -1,5 +1,6 @@
 // src/client/pages/ReportsPage.tsx
 import { useState, useEffect } from 'react';
+import { cn } from '../lib/utils';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, TrendingUp, PieChart, Download, Printer, Shield, HardHat } from 'lucide-react';
@@ -74,21 +75,18 @@ function ReportCard({ icon, title, description, active, onClick }: ReportCardPro
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left rounded-xl border p-5 shadow-sm hover:shadow-md transition-all duration-150 space-y-2 ${
+      className={cn(
+        'w-full text-left rounded-card border p-5 transition-all duration-150 space-y-2',
         active
-          ? 'border-brand-gold bg-brand-gold/5 shadow-md'
-          : 'border-gray-200 bg-white hover:border-gray-300'
-      }`}
+          ? 'border-brand-gold bg-brand-gold/5 shadow-card-elevated'
+          : 'border-border-default bg-surface-card shadow-card hover:shadow-card-elevated hover:-translate-y-0.5'
+      )}
     >
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${active ? 'bg-brand-gold/20 text-brand-navy' : 'bg-gray-100 text-gray-500'}`}>
-          {icon}
-        </div>
-        <span className={`font-semibold text-sm ${active ? 'text-brand-navy' : 'text-gray-800'}`}>
-          {title}
-        </span>
+      <div className="w-10 h-10 rounded-lg bg-surface-muted border border-border-subtle flex items-center justify-center text-text-secondary mb-3">
+        {icon}
       </div>
-      <p className="text-xs text-gray-500 leading-relaxed">{description}</p>
+      <p className="font-headline text-sm text-text-primary">{title}</p>
+      <p className="text-xs text-text-secondary leading-relaxed">{description}</p>
     </button>
   );
 }

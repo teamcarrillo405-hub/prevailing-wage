@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -78,6 +79,29 @@ const queryClient = new QueryClient({
   },
 });
 
+// 100ms — respects prefers-reduced-motion via system preference
+const PAGE_TRANSITION = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -4 },
+  transition: { duration: 0.1, ease: 'easeOut' as const },
+};
+
+function AnimatedRoutes({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        {...PAGE_TRANSITION}
+        className="min-h-screen"
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 function WildcardRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return null;
@@ -93,6 +117,7 @@ export default function App() {
           <ErrorBoundary>
           <ToastContainer />
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><LoadingSpinner /></div>}>
+            <AnimatedRoutes>
             <Routes>
               {/* Public routes — authenticated users redirected to /dashboard */}
               <Route element={<PublicRoute />}>
@@ -162,6 +187,7 @@ export default function App() {
               {/* Auth-aware wildcard */}
               <Route path="*" element={<WildcardRedirect />} />
             </Routes>
+            </AnimatedRoutes>
           </Suspense>
           </ErrorBoundary>
           </ToastProvider>
