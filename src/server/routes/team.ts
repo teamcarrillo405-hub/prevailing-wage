@@ -196,6 +196,23 @@ router.delete('/invite', async (req, res) => {
     res.status(403).json({ error: 'Owner access required' });
     return;
   }
+
+  // TOTP gate — if caller has MFA enabled, require a valid TOTP token
+  const totpToken = (req.body as { totpToken?: string } | undefined)?.totpToken;
+  const db = getDb();
+  const [callerMfaRow] = await db
+    .select({ totpEnabled: users.totpEnabled, totpSecret: users.totpSecret })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (callerMfaRow?.totpEnabled) {
+    const { verifyTotpToken } = await import('../services/mfaService.js');
+    if (!totpToken || !verifyTotpToken(callerMfaRow.totpSecret!, totpToken)) {
+      res.status(401).json({ error: 'MFA verification required for invite revocation' });
+      return;
+    }
+  }
+
   const revoked = await revokeInvite(userId);
   if (!revoked) {
     res.status(404).json({ error: 'No pending invite to revoke' });
@@ -301,12 +318,13 @@ router.post('/transfer', validate(TransferSchema), async (req, res) => {
 const TransferOwnershipSchema = z.object({
   newOwnerId: z.string().uuid(),
   confirmPassword: z.string().min(1),
+  totpToken: z.string().optional(),
 });
 
 router.post('/:projectId/transfer-ownership', validate(TransferOwnershipSchema), async (req, res) => {
   const userId = req.user!.userId;
   const { projectId } = req.params as { projectId: string };
-  const { newOwnerId, confirmPassword } = req.body as z.infer<typeof TransferOwnershipSchema>;
+  const { newOwnerId, confirmPassword, totpToken } = req.body as z.infer<typeof TransferOwnershipSchema>;
 
   if (newOwnerId === userId) {
     res.status(400).json({ error: 'You are already the owner of this project' });
@@ -350,6 +368,20 @@ router.post('/:projectId/transfer-ownership', validate(TransferOwnershipSchema),
   if (!passwordOk) {
     res.status(401).json({ error: 'Incorrect password' });
     return;
+  }
+
+  // 2b. TOTP gate — if caller has MFA enabled, require a valid TOTP token
+  const [callerMfaRow] = await db
+    .select({ totpEnabled: users.totpEnabled, totpSecret: users.totpSecret })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (callerMfaRow?.totpEnabled) {
+    const { verifyTotpToken } = await import('../services/mfaService.js');
+    if (!totpToken || !verifyTotpToken(callerMfaRow.totpSecret!, totpToken)) {
+      res.status(401).json({ error: 'MFA verification required for ownership transfer' });
+      return;
+    }
   }
 
   // 3. Verify newOwnerId is an active member of this project

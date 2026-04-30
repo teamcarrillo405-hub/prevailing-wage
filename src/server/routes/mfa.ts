@@ -66,6 +66,11 @@ mfaRouter.post('/setup', requireAuth, async (req, res) => {
     res.status(409).json({ error: 'MFA is already enabled. Disable it first to re-enroll.' });
     return;
   }
+  // Block mid-enrollment re-setup — totpSecret already written by a prior /setup call
+  if (user.totpSecret) {
+    res.status(409).json({ error: 'MFA enrollment is already in progress. Complete verification or disable first.' });
+    return;
+  }
 
   const generated = await generateTotpSecret(email);
   const backups = generateBackupCodes(10);

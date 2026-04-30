@@ -161,14 +161,23 @@ function TransferOwnershipSection({ projectId, projectName }: { projectId: strin
 
   const eligibleMembers = members.filter((m) => m.role !== 'owner');
 
+  const { data: mfaStatus } = useQuery({
+    queryKey: ['mfa-status'],
+    queryFn: () =>
+      api.get<{ data: { enabled: boolean; backupCodesRemaining: number } }>('/mfa/status'),
+    staleTime: 60_000,
+  });
+  const mfaEnabled = mfaStatus?.data?.enabled === true;
+
   const [newOwnerId, setNewOwnerId] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [totpToken, setTotpToken] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalConfirmName, setModalConfirmName] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const transferMutation = useMutation({
-    mutationFn: (body: { newOwnerId: string; confirmPassword: string }) =>
+    mutationFn: (body: { newOwnerId: string; confirmPassword: string; totpToken?: string }) =>
       api.post<{ data: { message: string } }>(`/team/${projectId}/transfer-ownership`, body),
     onSuccess: () => {
       toast.success('Ownership transferred. You are now a member of this project.');
@@ -194,6 +203,10 @@ function TransferOwnershipSection({ projectId, projectName }: { projectId: strin
       setFormError('Enter your password to confirm this action.');
       return;
     }
+    if (mfaEnabled && !totpToken) {
+      setFormError('Enter your authenticator code to confirm this action.');
+      return;
+    }
     setModalConfirmName('');
     setShowModal(true);
   }
@@ -204,7 +217,7 @@ function TransferOwnershipSection({ projectId, projectName }: { projectId: strin
       setShowModal(false);
       return;
     }
-    transferMutation.mutate({ newOwnerId, confirmPassword });
+    transferMutation.mutate({ newOwnerId, confirmPassword, totpToken: mfaEnabled ? totpToken : undefined });
   }
 
   const selectedMember = members.find((m) => m.id === newOwnerId);
@@ -265,6 +278,26 @@ function TransferOwnershipSection({ projectId, projectName }: { projectId: strin
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
           />
         </div>
+
+        {/* TOTP input — only shown when caller has MFA enabled */}
+        {mfaEnabled && (
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Authenticator code
+            </label>
+            <input
+              id="totpToken"
+              name="totpToken"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={totpToken}
+              onChange={(e) => setTotpToken(e.target.value)}
+              placeholder="6-digit code"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+          </div>
+        )}
 
         {formError && (
           <p className="text-sm text-red-600">{formError}</p>

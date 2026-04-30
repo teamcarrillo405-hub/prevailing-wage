@@ -12,7 +12,7 @@ interface MfaStatus {
 }
 
 interface SetupResponse {
-  data: { qrUri: string; secret: string; backupCodes: string[] };
+  data: { qrUri: string; qrDataUrl: string; secret: string; backupCodes: string[] };
 }
 
 interface RegenResponse {
@@ -177,20 +177,21 @@ export function MfaSetupPage() {
               </p>
             </div>
             <div className="space-y-3">
+              {setup.qrDataUrl && (
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-1">Scan with your authenticator app</p>
+                  <img
+                    src={setup.qrDataUrl}
+                    alt="MFA QR code — scan with your authenticator app"
+                    className="w-48 h-48 rounded border border-gray-200 bg-white p-2"
+                  />
+                </div>
+              )}
               <div>
-                <p className="text-xs font-medium text-gray-700 mb-1">Manual entry secret</p>
+                <p className="text-xs font-medium text-gray-700 mb-1">Manual entry secret (if you can't scan)</p>
                 <code className="block bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm font-mono break-all select-all">
                   {setup.secret}
                 </code>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-700 mb-1">otpauth:// link</p>
-                <a
-                  href={setup.qrUri}
-                  className="block bg-gray-50 border border-gray-200 rounded px-3 py-2 text-xs font-mono break-all text-blue-700 underline select-all"
-                >
-                  {setup.qrUri}
-                </a>
               </div>
             </div>
 
