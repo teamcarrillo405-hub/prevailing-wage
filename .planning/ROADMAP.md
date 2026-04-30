@@ -2559,8 +2559,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 124-01-PLAN.md -- api_keys table + rate limiting + Settings API Keys tab + public v1 endpoints (GET only) + Vitest tests
-- [ ] 124-02-PLAN.md -- OpenAPI 3.1 spec generation + swagger-ui-express at /api/docs/html
+- [x] 124-01-PLAN.md -- api_keys table + rate limiting + Settings API Keys tab + public v1 endpoints (GET only) + Vitest tests
+- [x] 124-02-PLAN.md -- OpenAPI 3.1 spec generation + swagger-ui-express at /api/docs/html
 - [ ] 124-03-PLAN.md -- webhooks table + SSRF check + HMAC signing + webhook_deliveries queue + Settings Webhooks UI
 
 **UI hint**: yes
