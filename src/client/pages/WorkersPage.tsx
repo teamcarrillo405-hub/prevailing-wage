@@ -1,6 +1,7 @@
 // src/client/pages/WorkersPage.tsx
 // Route: /projects/:projectId/workers
 import { useState } from 'react';
+import { cn } from '../lib/utils';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '../hooks/useDebounce';
@@ -495,19 +496,17 @@ export function WorkersPage() {
         {!isLoading && !isError && workers.length === 0 && (
           <EmptyState
             illustration={<WorkersEmptyIllustration />}
-            icon={Users}
             heading="No workers on this project yet"
-            message={<>Federal law requires all workers to be registered before entering certified payroll. Each worker's trade classification and wage rate determines overtime calculations and DOL compliance — even workers who worked only one day must be logged.</>}
+            message="Add your first worker to begin tracking prevailing wage compliance."
             action={
-              <button
+              <Button
                 onClick={() => {
                   const nameInput = document.querySelector<HTMLInputElement>('#add-worker-name');
                   if (nameInput) nameInput.focus();
                 }}
-                className="inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent text-sm px-4 py-2"
               >
-                Add First Worker
-              </button>
+                Add Your First Worker
+              </Button>
             }
           />
         )}
@@ -527,11 +526,12 @@ export function WorkersPage() {
               <button
                 key={chip.key}
                 onClick={() => setLaborFilter(chip.key as typeof laborFilter)}
-                className={`px-3 py-2.5 rounded-full text-sm font-medium border transition-colors min-h-[44px] ${
+                className={cn(
+                  'px-3 py-1 rounded-full text-xs font-medium transition-colors min-h-[44px] sm:min-h-0',
                   laborFilter === chip.key
-                    ? 'bg-brand-navy text-white border-brand-navy'
-                    : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
-                }`}
+                    ? 'bg-brand-navy text-white'
+                    : 'bg-surface-muted text-text-secondary hover:bg-gray-200'
+                )}
               >
                 {chip.label}
               </button>
@@ -568,7 +568,7 @@ export function WorkersPage() {
         {displayedWorkers.length > 0 && (
           <div className="mb-8 space-y-3">
             {displayedWorkers.map((w) => (
-              <Card key={w.id} padding="sm">
+              <Card key={w.id} padding="sm" className="shadow-card-elevated hover:shadow-card-hover transition-shadow duration-150">
 
                 {editingId === w.id ? (
                   /* ── Inline edit form ── */

@@ -1,6 +1,7 @@
 // src/client/pages/PayrollWeekDetailPage.tsx
 // Route: /projects/:projectId/payroll/:weekId
-import { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { cn } from '../lib/utils';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileCheck, ExternalLink, Info } from 'lucide-react';
@@ -1545,13 +1546,13 @@ export function PayrollWeekDetailPage() {
 
             {/* Mobile card list (< sm) */}
             <div className="sm:hidden divide-y divide-gray-100">
-              {entries.map((row) => {
+              {entries.map((row, index) => {
                 const e = row.entry;
                 const totalSt = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
                 const totalOt = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
                 const violation = violationsByEntryId.get(e.id);
                 return (
-                  <div key={e.id} className="px-4 py-4 min-h-[56px]">
+                  <div key={e.id} className={cn('px-4 py-4 min-h-[56px]', index % 2 === 0 ? 'bg-white' : 'bg-surface-muted')}>
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">{row.workerName}</p>
@@ -1579,6 +1580,16 @@ export function PayrollWeekDetailPage() {
                         <p className="font-semibold text-gray-900">{e.netPay !== null ? `$${e.netPay.toFixed(2)}` : '—'}</p>
                       </div>
                     </div>
+                    {violation && violation.violationType === 'cwhssa-ot' && (
+                      <div className="mt-2 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                        CWHSSA OT: expected ${violation.expected.toFixed(2)}, paid ${violation.actual.toFixed(2)} (delta ${violation.delta.toFixed(2)})
+                      </div>
+                    )}
+                    {violation && violation.violationType === 'under-wage' && (
+                      <div className="mt-2 flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                        Under-Wage: expected ${violation.expected.toFixed(2)}, paid ${violation.actual.toFixed(2)} (delta ${violation.delta.toFixed(2)})
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1607,7 +1618,7 @@ export function PayrollWeekDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {entries.map((row) => {
+                  {entries.map((row, index) => {
                     const e = row.entry;
                     const totalSt =
                       e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
@@ -1616,7 +1627,8 @@ export function PayrollWeekDetailPage() {
                     const violation = violationsByEntryId.get(e.id);
 
                     return (
-                      <tr key={e.id} className="hover:bg-gray-50">
+                      <React.Fragment key={e.id}>
+                      <tr className={cn('hover:bg-gray-50', index % 2 === 0 ? 'bg-white' : 'bg-surface-muted')}>
                         <td className="px-5 py-3 font-medium text-gray-900">
                           <span className="inline-flex items-center gap-1.5">
                             {row.workerName}
@@ -1719,6 +1731,25 @@ export function PayrollWeekDetailPage() {
                           )}
                         </td>
                       </tr>
+                      {violation && violation.violationType === 'cwhssa-ot' && (
+                        <tr className={index % 2 === 0 ? 'bg-white' : 'bg-surface-muted'}>
+                          <td colSpan={subs.length > 0 ? 11 : 10} className="px-5 pb-3 pt-0">
+                            <div className="mt-2 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                              CWHSSA OT violation: expected ${violation.expected.toFixed(2)}, paid ${violation.actual.toFixed(2)} (delta ${violation.delta.toFixed(2)})
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      {violation && violation.violationType === 'under-wage' && (
+                        <tr className={index % 2 === 0 ? 'bg-white' : 'bg-surface-muted'}>
+                          <td colSpan={subs.length > 0 ? 11 : 10} className="px-5 pb-3 pt-0">
+                            <div className="mt-2 flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                              Under-Wage violation: expected ${violation.expected.toFixed(2)}, paid ${violation.actual.toFixed(2)} (delta ${violation.delta.toFixed(2)})
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
