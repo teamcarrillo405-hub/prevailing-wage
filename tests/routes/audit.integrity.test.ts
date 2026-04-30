@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import supertest from 'supertest';
 
 /**
@@ -178,5 +178,125 @@ describe('GET /api/audit/integrity-check', () => {
       .digest('hex');
     expect(hNull).toBe(expectedNull);
     expect(hNull).not.toBe(h1); // null vs non-null prevHash must differ
+  });
+});
+
+// ── Task 4: Backfill tests ──────────────────────────────────────────────────
+
+describe('backfill — pre-chain rows', () => {
+  // Import the backfill function (lazily, after env setup)
+  let runBackfill: (db?: ReturnType<typeof getDb>) => Promise<{
+    scanned: number;
+    alreadyHashed: number;
+    backfilled: number;
+  }>;
+
+  beforeAll(async () => {
+    const mod = await import('../../scripts/backfill-audit-hash-chain.js');
+    runBackfill = mod.runBackfill;
+  });
+
+  beforeEach(async () => {
+    const db = getDb();
+    await db.delete(auditLogs);
+  });
+
+  it('Test 5 — runBackfill computes entry_hash + previous_hash for null-hash rows; integrity-check returns valid:true', async () => {
+    const db = getDb();
+
+    // 1. Seed 3 pre-chain rows directly (bypass insertAuditLog to keep entry_hash NULL)
+    const baseTs = new Date('2026-04-25T12:00:00.000Z').getTime();
+    const seeds = [
+      { id: randomUUID(), action: 'project.created',  createdAt: new Date(baseTs).toISOString() },
+      { id: randomUUID(), action: 'project.updated',  createdAt: new Date(baseTs + 1000).toISOString() },
+      { id: randomUUID(), action: 'project.deleted',  createdAt: new Date(baseTs + 2000).toISOString() },
+    ];
+
+    for (const s of seeds) {
+      await db.insert(auditLogs).values({
+        id: s.id,
+        userId,
+        userEmail,
+        ipAddress: null,
+        projectId,
+        entityType: 'project',
+        entityId: projectId,
+        action: s.action,
+        createdAt: s.createdAt,
+        previousHash: null,
+        entryHash: null,
+        diff: null,
+        snapshot: null,
+        meta: null,
+      });
+    }
+
+    // 2. Run the backfill against the same in-memory DB handle
+    const report = await runBackfill(db);
+    expect(report.backfilled).toBe(3);
+    expect(report.alreadyHashed).toBe(0);
+    expect(report.scanned).toBe(3);
+
+    // 3. Read rows back and assert chain linkage
+    const rows = await db.select().from(auditLogs).orderBy(auditLogs.createdAt, auditLogs.id);
+    expect(rows).toHaveLength(3);
+
+    expect(rows[0].previousHash).toBeNull();
+    expect(rows[0].entryHash).toMatch(/^[a-f0-9]{64}$/);
+
+    expect(rows[1].previousHash).toBe(rows[0].entryHash);
+    expect(rows[1].entryHash).toMatch(/^[a-f0-9]{64}$/);
+
+    expect(rows[2].previousHash).toBe(rows[1].entryHash);
+    expect(rows[2].entryHash).toMatch(/^[a-f0-9]{64}$/);
+
+    // 4. Cross-check: every entry_hash equals computeAuditEntryHash(...) — proves no formula drift
+    for (const r of rows) {
+      const expected = computeAuditEntryHash(r.id, r.action, r.previousHash, r.createdAt);
+      expect(r.entryHash).toBe(expected);
+    }
+
+    // 5. integrity-check now returns valid:true, scanned:3
+    const res = await supertest(app)
+      .get('/api/audit/integrity-check')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.valid).toBe(true);
+    expect(res.body.data.scanned).toBe(3);
+  });
+
+  it('Test 6 — runBackfill is idempotent (re-running on fully-hashed table reports backfilled:0)', async () => {
+    const db = getDb();
+
+    // Seed 3 pre-chain rows
+    const baseTs = new Date('2026-04-25T14:00:00.000Z').getTime();
+    for (let i = 0; i < 3; i++) {
+      await db.insert(auditLogs).values({
+        id: randomUUID(),
+        userId,
+        userEmail,
+        ipAddress: null,
+        projectId,
+        entityType: 'project',
+        entityId: projectId,
+        action: `project.action${i}`,
+        createdAt: new Date(baseTs + i * 1000).toISOString(),
+        previousHash: null,
+        entryHash: null,
+        diff: null,
+        snapshot: null,
+        meta: null,
+      });
+    }
+
+    // First run: backfills all 3
+    const first = await runBackfill(db);
+    expect(first.backfilled).toBe(3);
+
+    // Second run: all rows already hashed → backfilled:0
+    const second = await runBackfill(db);
+    expect(second.backfilled).toBe(0);
+    expect(second.alreadyHashed).toBe(3);
+    expect(second.scanned).toBe(3);
   });
 });
