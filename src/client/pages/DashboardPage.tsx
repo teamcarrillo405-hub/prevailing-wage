@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard, FolderOpen, AlertTriangle, TrendingUp, Download, FileText } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, AlertTriangle, TrendingUp, Download, FileText, ShieldAlert } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -75,6 +75,22 @@ export function DashboardPage() {
 
   // Local controlled-input state initialized from URL (avoids useSearchParams lag on keystroke)
   const [inputValue, setInputValue] = useState(() => searchParams.get('q') ?? '');
+
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  const { data: mfaStatus } = useQuery({
+    queryKey: ['mfa-status'],
+    queryFn: () => api.get<{ data: { enabled: boolean; backupCodesRemaining: number } }>('/mfa/status'),
+    staleTime: 60_000,
+  });
+
+  const { data: teamData } = useQuery({
+    queryKey: ['team'],
+    queryFn: () => api.get<{ data: { isOwner: boolean } }>('/team'),
+    staleTime: 60_000,
+  });
+
+  const isOwner = teamData?.data?.isOwner === true;
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['projects', showArchived ? 'all' : 'active'],
@@ -279,6 +295,22 @@ export function DashboardPage() {
 
   return (
     <Layout>
+
+      {/* MFA enrollment nag banner — owners only, dismissible, advisory only */}
+      {isOwner && mfaStatus?.data?.enabled === false && !bannerDismissed && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md px-4 py-3 mb-4 flex items-center justify-between text-sm text-amber-800">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4" />
+            <span>Protect your account — enable two-factor authentication for owner operations.</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link to="/settings/mfa" className="font-medium underline">Enable MFA</Link>
+            <button onClick={() => setBannerDismissed(true)} aria-label="Dismiss" className="text-amber-700 hover:text-amber-900">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Premium dark hero — replaces photo background strip */}
       <div
