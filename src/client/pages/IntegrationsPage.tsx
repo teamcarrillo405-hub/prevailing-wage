@@ -407,8 +407,8 @@ function SyncTimesheetSection({ projectId }: { projectId: string }) {
         { credentials: 'include' },
       );
       if (taRes.ok) {
-        const taJson = await taRes.json() as { data?: { rows?: Array<{ needsDailySplit: boolean }> } };
-        const anyNeedsSplit = (taJson.data?.rows ?? []).some((r) => r.needsDailySplit === true);
+        const taJson = await taRes.json() as { data?: { activities?: Array<{ needsDailySplit: boolean }> } };
+        const anyNeedsSplit = (taJson.data?.activities ?? []).some((r) => r.needsDailySplit === true);
         setNeedsDailySplit(anyNeedsSplit);
       }
     } catch {
