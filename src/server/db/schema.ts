@@ -705,7 +705,11 @@ export const webhookDeliveries = sqliteTable('webhook_deliveries', {
   deliveredAt: text('delivered_at'),
   failedAt: text('failed_at'),
   retryCount: integer('retry_count').default(0),
-});
+  // API-05: delivery status for retry poller
+  status: text('status').notNull().default('pending').$type<'pending' | 'succeeded' | 'failed'>(),
+}, (table) => ({
+  idxDeliveryStatus: index('idx_webhook_deliveries_status').on(table.status, table.retryCount),
+}));
 
 // ── Phase 98: Offline Checklist Sync Log ──────────────────────────────────
 export const checklistSyncs = sqliteTable('checklist_syncs', {
