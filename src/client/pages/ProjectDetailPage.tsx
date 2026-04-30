@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Workflow, Settings, ChevronRight, Building2, Shield, AlertTriangle } from 'lucide-react';
+import { Workflow, Settings, ChevronRight, Building2, Shield, AlertTriangle, Pencil } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -487,8 +487,11 @@ const EMPTY_CERT_FORM = {
   certTypes: '',
   certifyingAgency: '',
   certNumber: '',
+  naicsCodes: '',
+  issueDate: '',
   expiresDate: '',
   reevaluationStatus: 'not_required' as SubcontractorCertification['reevaluationStatus'],
+  selfCertified: false,
   // Phase 82 (Gap-2): SAM.gov-derived fields
   uei: '',
   cageCode: '',
@@ -501,6 +504,11 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
   const [addCertOpen, setAddCertOpen] = useState(false);
   const [certForm, setCertForm] = useState({ ...EMPTY_CERT_FORM });
   const [certError, setCertError] = useState<string | null>(null);
+
+  // Phase 122 (DBE-02): inline edit state
+  const [editingCertId, setEditingCertId] = useState<string | null>(null);
+  const [editCertForm, setEditCertForm] = useState<typeof EMPTY_CERT_FORM>({ ...EMPTY_CERT_FORM });
+  const [editCertError, setEditCertError] = useState<string | null>(null);
 
   // Phase 82 (Gap-2) — SAM.gov verification state
   const [samQuery, setSamQuery] = useState('');
@@ -570,6 +578,7 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certifications', projectId, subId] });
+      queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
       toast.success('Certification added');
       setAddCertOpen(false);
       setCertForm({ ...EMPTY_CERT_FORM });
@@ -583,9 +592,28 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
       api.delete(`/projects/${projectId}/subcontractors/${subId}/certifications/${certId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certifications', projectId, subId] });
+      queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
       toast.success('Certification removed');
     },
     onError: () => toast.error('Could not remove certification'),
+  });
+
+  // Phase 122 (DBE-02): edit cert mutation — PATCH to server, double-invalidate both caches
+  const editCertMutation = useMutation({
+    mutationFn: ({ certId, body }: { certId: string; body: Partial<typeof EMPTY_CERT_FORM> }) =>
+      api.patch<{ data: { certification: SubcontractorCertification } }>(
+        `/projects/${projectId}/subcontractors/${subId}/certifications/${certId}`,
+        body
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['certifications', projectId, subId] });
+      queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      toast.success('Certification updated');
+      setEditingCertId(null);
+      setEditCertForm({ ...EMPTY_CERT_FORM });
+      setEditCertError(null);
+    },
+    onError: () => setEditCertError('Failed to update certification.'),
   });
 
   const certs = certData?.data?.certifications ?? [];
@@ -653,34 +681,128 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
             </thead>
             <tbody>
               {certs.map(cert => (
-                <tr key={cert.id} className="border-b border-border-default/50 last:border-0">
-                  <td className="py-1.5 pr-3 font-medium text-gray-900">{cert.certTypes}</td>
-                  <td className="py-1.5 pr-3 text-gray-600">{cert.certifyingAgency ?? '—'}</td>
-                  <td className="py-1.5 pr-3 text-gray-600">{cert.expiresDate ?? '—'}</td>
-                  <td className="py-1.5 pr-3">
-                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                      cert.reevaluationStatus === 'suspended' ? 'bg-red-100 text-red-700' :
-                      cert.reevaluationStatus === 'pending'   ? 'bg-amber-100 text-amber-700' :
-                      cert.reevaluationStatus === 'cleared'   ? 'bg-emerald-100 text-emerald-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {REEVAL_OPTIONS.find(o => o.value === cert.reevaluationStatus)?.label ?? cert.reevaluationStatus}
-                    </span>
-                  </td>
-                  <td className="py-1.5">
-                    <button
-                      className="text-xs font-medium text-status-violation hover:underline"
-                      onClick={() => {
-                        if (window.confirm('Remove this certification?')) {
-                          deleteCertMutation.mutate(cert.id);
-                        }
-                      }}
-                      disabled={deleteCertMutation.isPending}
-                    >
-                      Remove
-                    </button>
-                  </td>
-                </tr>
+                editingCertId === cert.id ? (
+                  <tr key={cert.id} className="border-b border-border-default/50 last:border-0 bg-amber-50">
+                    <td colSpan={5} className="p-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={editCertForm.certTypes}
+                          onChange={e => setEditCertForm(f => ({ ...f, certTypes: e.target.value }))}
+                          placeholder="Cert types (DBE,WBE,...)"
+                          className={INPUT_CLASSES + ' col-span-2'}
+                        />
+                        <input
+                          value={editCertForm.certifyingAgency ?? ''}
+                          onChange={e => setEditCertForm(f => ({ ...f, certifyingAgency: e.target.value }))}
+                          placeholder="Certifying agency"
+                          className={INPUT_CLASSES}
+                        />
+                        <input
+                          value={editCertForm.certNumber ?? ''}
+                          onChange={e => setEditCertForm(f => ({ ...f, certNumber: e.target.value }))}
+                          placeholder="Cert number"
+                          className={INPUT_CLASSES}
+                        />
+                        <input
+                          type="date"
+                          value={editCertForm.issueDate ?? ''}
+                          onChange={e => setEditCertForm(f => ({ ...f, issueDate: e.target.value }))}
+                          className={INPUT_CLASSES}
+                          title="Issue date"
+                        />
+                        <input
+                          type="date"
+                          value={editCertForm.expiresDate ?? ''}
+                          onChange={e => setEditCertForm(f => ({ ...f, expiresDate: e.target.value }))}
+                          className={INPUT_CLASSES}
+                          title="Expiry date"
+                        />
+                        <select
+                          value={editCertForm.reevaluationStatus}
+                          onChange={e => setEditCertForm(f => ({ ...f, reevaluationStatus: e.target.value as SubcontractorCertification['reevaluationStatus'] }))}
+                          className={INPUT_CLASSES + ' col-span-2'}
+                        >
+                          {REEVAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+                      {editCertError && <p className="text-red-600 text-xs mt-2">{editCertError}</p>}
+                      <div className="mt-2 flex gap-2 justify-end">
+                        <Button
+                          variant="secondary"
+                          onClick={() => { setEditingCertId(null); setEditCertForm({ ...EMPTY_CERT_FORM }); setEditCertError(null); }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (editCertForm.issueDate && editCertForm.expiresDate &&
+                                editCertForm.expiresDate <= editCertForm.issueDate) {
+                              setEditCertError('Expires date must be after issue date.');
+                              return;
+                            }
+                            editCertMutation.mutate({ certId: cert.id, body: editCertForm });
+                          }}
+                          disabled={!editCertForm.certTypes.trim() || editCertMutation.isPending}
+                        >
+                          {editCertMutation.isPending ? 'Saving...' : 'Save'}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={cert.id} className="border-b border-border-default/50 last:border-0">
+                    <td className="py-1.5 pr-3 font-medium text-gray-900">{cert.certTypes}</td>
+                    <td className="py-1.5 pr-3 text-gray-600">{cert.certifyingAgency ?? '—'}</td>
+                    <td className="py-1.5 pr-3 text-gray-600">{cert.expiresDate ?? '—'}</td>
+                    <td className="py-1.5 pr-3">
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                        cert.reevaluationStatus === 'suspended' ? 'bg-red-100 text-red-700' :
+                        cert.reevaluationStatus === 'pending'   ? 'bg-amber-100 text-amber-700' :
+                        cert.reevaluationStatus === 'cleared'   ? 'bg-emerald-100 text-emerald-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {REEVAL_OPTIONS.find(o => o.value === cert.reevaluationStatus)?.label ?? cert.reevaluationStatus}
+                      </span>
+                    </td>
+                    <td className="py-1.5">
+                      <button
+                        className="text-gray-500 hover:text-brand-gold mr-2"
+                        aria-label="Edit certification"
+                        title="Edit"
+                        onClick={() => {
+                          setEditingCertId(cert.id);
+                          setEditCertForm({
+                            certTypes: cert.certTypes,
+                            certifyingAgency: cert.certifyingAgency ?? '',
+                            certNumber: cert.certNumber ?? '',
+                            naicsCodes: cert.naicsCodes ?? '',
+                            issueDate: cert.issueDate ?? '',
+                            expiresDate: cert.expiresDate ?? '',
+                            reevaluationStatus: cert.reevaluationStatus,
+                            selfCertified: cert.selfCertified,
+                            uei: cert.uei ?? '',
+                            cageCode: cert.cageCode ?? '',
+                            samRegistrationStatus: cert.samRegistrationStatus ?? '',
+                          });
+                          setEditCertError(null);
+                        }}
+                      >
+                        <Pencil className="w-4 h-4 inline" />
+                      </button>
+                      <button
+                        className="text-xs font-medium text-status-violation hover:underline"
+                        onClick={() => {
+                          if (window.confirm('Remove this certification?')) {
+                            deleteCertMutation.mutate(cert.id);
+                          }
+                        }}
+                        disabled={deleteCertMutation.isPending}
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                )
               ))}
             </tbody>
           </table>
