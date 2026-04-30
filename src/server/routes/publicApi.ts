@@ -3,7 +3,7 @@
 // Separate from /api (cookie auth). Read-only scopes only in v1.
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { eq, and, isNull, inArray } from 'drizzle-orm';
@@ -112,7 +112,7 @@ function paginatedMeta(page: number, limit: number, total: number) {
 const publicApiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
-  keyGenerator: (req) => req.apiKeyUserId ?? req.ip ?? 'unknown',
+  keyGenerator: (req) => req.apiKeyUserId ?? ipKeyGenerator(req.ip ?? 'unknown'),
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Rate limit exceeded. Max 100 requests/minute per API key.' },
