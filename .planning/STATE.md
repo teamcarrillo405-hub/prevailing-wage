@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Milestone complete
-stopped_at: Completed 120-01-PLAN.md — WA add-worker inputs (APP-02), structured COMP-04 render (APP-05), 6 COMP-04/COMP-05 tests; 855 tests passing; 0 TS errors; Phase 120 complete
-last_updated: "2026-04-29T23:26:08.265Z"
+status: Ready to execute
+stopped_at: Completed 121-01-PLAN.md — POST /qbo/import-employees, EmployeeImportSection, 7 tests GREEN; 0 TS errors
+last_updated: "2026-04-30T00:04:39.262Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** GC can run a full project end-to-end — create -> workers -> payroll -> WH-347 -> submit — with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 120 — apprenticeship-enforcement-suite
+**Current focus:** Phase 121 — quickbooks-employee-time-import
 
 ## Current Position
 
-Phase: 120
-Plan: Not started
+Phase: 121 (quickbooks-employee-time-import) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -215,6 +215,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 120]: WA branch input IDs use add-wa- prefix to avoid duplicate-id HTML conflicts with hasWd branch
 - [Phase 120]: COMP-04 structured render uses ?? 0 nullish coalescing for optional WeekViolation fields excessHours/estimatedLiabilityUsd
 - [Phase 120]: Non-COMP-04 violations fall through to flat wv.detail span per RESEARCH Pitfall 3
+- [Phase 121-quickbooks-employee-time-import]: qboIds string[] in POST body forces server-side QB re-fetch; client never sees raw SSN
+- [Phase 121-quickbooks-employee-time-import]: assertProjectAccess called before getValidAccessToken in import-employees route (NFR-03 ordering)
+- [Phase 121-quickbooks-employee-time-import]: Shared selectedProjectId state in IntegrationsPage drives both EmployeeImportSection (121-01) and future SyncTimesheetSection (121-02)
 
 ### Phase Order Rationale
 
@@ -248,7 +251,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-29T23:21:32.803Z
-Stopped at: Completed 120-01-PLAN.md — WA add-worker inputs (APP-02), structured COMP-04 render (APP-05), 6 COMP-04/COMP-05 tests; 855 tests passing; 0 TS errors; Phase 120 complete
+Last session: 2026-04-30T00:04:39.255Z
+Stopped at: Completed 121-01-PLAN.md — POST /qbo/import-employees, EmployeeImportSection, 7 tests GREEN; 0 TS errors
 Resume file: None
 Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.

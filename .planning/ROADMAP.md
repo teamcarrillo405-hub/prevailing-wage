@@ -2484,8 +2484,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 121-01-PLAN.md -- GET /api/integrations/qbo/employees full implementation + IntegrationsPage employee import preview table + import action
-- [ ] 121-02-PLAN.md -- GET /api/integrations/qbo/timeactivities route + importService pipeline wiring + IntegrationsPage sync timesheet UI
+- [x] 121-01-PLAN.md -- POST /api/integrations/qbo/import-employees route (server-side SSN re-fetch + name dedup + assertProjectAccess) + EmployeeImportSection in IntegrationsPage + tests/routes/integrations.test.ts
+- [ ] 121-02-PLAN.md -- SyncTimesheetSection in IntegrationsPage (date pickers, payroll-week selector, preview, classificationId resolution, daily-split gate, commit via /api/payroll/import/commit with provider:quickbooks) + sync-time route tests
 
 **UI hint**: yes
 
