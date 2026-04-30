@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Workflow, Settings, ChevronRight, Building2, Shield, AlertTriangle, Pencil } from 'lucide-react';
@@ -1017,6 +1017,9 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
   const [addForm, setAddForm] = useState({ ...EMPTY_SUB_FORM });
   const [editForm, setEditForm] = useState({ ...EMPTY_SUB_FORM });
 
+  // DBE-05: ref for scroll-to-panel behavior from participation card click
+  const subsHeaderRef = useRef<HTMLDivElement>(null);
+
   const { data: subsData, isLoading: subsLoading } = useQuery({
     queryKey: ['subcontractors', projectId],
     queryFn: () => api.get<{ data: { subcontractors: Subcontractor[] } }>(`/projects/${projectId}/subcontractors`),
@@ -1104,11 +1107,21 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
   const expiredCount = subs.filter(s => s.certSummary?.hasExpiredCert).length;
   const pendingCount = subs.filter(s => s.certSummary?.hasPendingCert).length;
 
+  // DBE-05: Branch A — expandedSubId state exists; click scrolls to panel and expands first certified sub.
+  // If no certified sub exists, the participation card is conditionally hidden (see render gate below),
+  // so this state is unreachable in practice — still guarded with early return for safety.
+  function handleParticipationCardClick() {
+    subsHeaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const firstCertified = subs.find(s => s.certSummary?.isCertified);
+    if (!firstCertified) return;
+    setExpandedSubId(firstCertified.id);
+  }
+
   const INPUT_CLASSES = 'border border-border-default rounded px-2 py-1 text-sm bg-surface-page';
 
   return (
     <div className="mt-8">
-      <div className="flex items-center justify-between mb-3">
+      <div ref={subsHeaderRef} className="flex items-center justify-between mb-3">
         <h2 className="font-headline text-lg text-gray-900">Subcontractors</h2>
         {!addingNew && (
           <Button variant="secondary" onClick={() => setAddingNew(true)}>
@@ -1119,7 +1132,19 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
 
       {/* DBE-05: DBE Participation Summary card — shown only when there are certified subs */}
       {subs.length > 0 && subs.some(s => s.certSummary?.isCertified) && (
-        <div className="rounded-xl border border-gray-200 shadow-sm p-5 mb-5">
+        <div
+          className="rounded-xl border border-gray-200 shadow-sm p-5 mb-5 cursor-pointer hover:bg-gray-50 transition-colors"
+          role="button"
+          tabIndex={0}
+          onClick={handleParticipationCardClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleParticipationCardClick();
+            }
+          }}
+          aria-label="Open subcontractor certifications panel"
+        >
           <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
             <Shield className="w-4 h-4 text-brand-gold" />
             DBE/MBE/WBE Participation
