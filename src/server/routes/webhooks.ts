@@ -13,6 +13,7 @@ import { getDb } from '../db/index.js';
 import { webhooks, webhookDeliveries } from '../db/schema.js';
 import { encryptSsn } from '../services/cryptoService.js';
 import { deliverWebhook } from '../services/webhookService.js';
+import { assertNotPrivateIp } from '../jobs/webhookDelivery.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -56,6 +57,16 @@ router.post('/', validate(CreateWebhookSchema), async (req, res) => {
   const userId = req.user!.userId;
   const body = req.body as z.infer<typeof CreateWebhookSchema>;
   const db = getDb();
+
+  // API-04: SSRF protection — reject private/loopback URLs
+  try {
+    await assertNotPrivateIp(body.url);
+  } catch (err) {
+    res.status(422).json({
+      error: err instanceof Error ? err.message : 'URL failed SSRF check',
+    });
+    return;
+  }
 
   // Generate and encrypt HMAC signing secret
   const rawSecret = randomBytes(32).toString('hex');
@@ -195,6 +206,31 @@ router.get('/:id/deliveries', async (req, res) => {
     .limit(50);
 
   res.json({ data: deliveries });
+});
+
+// POST /api/webhooks/:id/deliveries/:deliveryId/retry — manual retry (API-05)
+router.post('/:id/deliveries/:deliveryId/retry', async (req, res) => {
+  const userId = req.user!.userId;
+  const webhookId = req.params['id'] as string;
+  const deliveryId = req.params['deliveryId'] as string;
+  const db = getDb();
+
+  const [wh] = await db.select({ id: webhooks.id }).from(webhooks)
+    .where(and(eq(webhooks.id, webhookId), eq(webhooks.userId, userId))).limit(1);
+  if (!wh) { res.status(404).json({ error: 'Webhook not found' }); return; }
+
+  const [del] = await db.select({ id: webhookDeliveries.id }).from(webhookDeliveries)
+    .where(and(
+      eq(webhookDeliveries.id, deliveryId),
+      eq(webhookDeliveries.webhookId, webhookId),
+    )).limit(1);
+  if (!del) { res.status(404).json({ error: 'Delivery not found' }); return; }
+
+  await db.update(webhookDeliveries)
+    .set({ status: 'pending', retryCount: 0, failedAt: null })
+    .where(eq(webhookDeliveries.id, deliveryId));
+
+  res.json({ message: 'Delivery requeued for retry' });
 });
 
 export default router;

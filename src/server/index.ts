@@ -64,6 +64,7 @@ import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
 import { runCertificationExpiryAlerts } from './jobs/certificationExpiryAlerts.js';
 import { runScheduledReports } from './jobs/scheduledReports.js';
+import { deliverPending } from './jobs/webhookDelivery.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
 import { fileURLToPath } from 'url';
@@ -318,6 +319,14 @@ const server = app.listen(PORT, () => {
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'UTC' });
+
+  // API-05 — webhook delivery retry poller (every 30s)
+  if (process.env.NODE_ENV !== 'test') {
+    setInterval(() => {
+      void deliverPending();
+    }, 30_000);
+    logger.info('webhook-delivery-poller: started (30s interval)');
+  }
 });
 
 // Graceful shutdown — give in-flight requests 10s to complete

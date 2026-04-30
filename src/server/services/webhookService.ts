@@ -125,6 +125,7 @@ export async function deliverWebhook(
         deliveredAt: deliveredAt ?? null,
         failedAt: failedAt ?? null,
         retryCount: 0,
+        status: deliveredAt ? 'succeeded' : 'pending',
       });
     } catch (insertErr) {
       logger.error({ err: insertErr, webhookId: wh.id }, 'webhookService: failed to record delivery');
