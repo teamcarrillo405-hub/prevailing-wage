@@ -40,6 +40,238 @@ interface QboEmployee {
   email: string | null;
 }
 
+// ── QB Employee Import (Phase 121 / QB-02) ────────────────────────────────
+
+interface QbEmployee {
+  qboId: string;
+  displayName: string;
+  email: string | null;
+  address: string | null;
+  hasSsn: boolean;
+  ssnLast4: string | null;
+}
+
+interface ImportResult {
+  created: number;
+  skipped: number;
+  errors: Array<{ qboId: string; reason: string }>;
+}
+
+function EmployeeImportSection({ projectId }: { projectId: string }) {
+  const [employees, setEmployees] = useState<QbEmployee[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [existingNamesLower, setExistingNamesLower] = useState<Set<string>>(new Set());
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
+
+  // Refresh existing worker names for client-side dedup display whenever projectId changes
+  useEffect(() => {
+    if (!projectId) return;
+    fetch(`/api/projects/${projectId}/workers`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((json: { data?: { workers?: Array<{ name: string }> } }) => {
+        const names = (json.data?.workers ?? []).map((w) => w.name.trim().toLowerCase());
+        setExistingNamesLower(new Set(names));
+      })
+      .catch(() => {
+        // Non-fatal — server deduplicates authoritatively
+      });
+    // Reset on project change
+    setEmployees([]);
+    setSelected(new Set());
+    setResult(null);
+  }, [projectId]);
+
+  async function handleLoadEmployees() {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const resp = await fetch('/api/integrations/qbo/employees', { credentials: 'include' });
+      const json = await resp.json() as { data?: { employees?: QbEmployee[] }; error?: string };
+      if (!resp.ok) {
+        setLoadError(json.error ?? 'Failed to load QB employees');
+        return;
+      }
+      setEmployees(json.data?.employees ?? []);
+      setSelected(new Set());
+    } catch {
+      setLoadError('Failed to load QB employees. Check your connection.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleImport() {
+    if (selected.size === 0 || !projectId) return;
+    setImporting(true);
+    try {
+      const resp = await fetch('/api/integrations/qbo/import-employees', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, qboIds: [...selected] }),
+      });
+      const json = await resp.json() as { data?: ImportResult; error?: string };
+      if (!resp.ok) {
+        setLoadError(json.error ?? 'Import failed');
+        return;
+      }
+      setResult(json.data ?? { created: 0, skipped: 0, errors: [] });
+      setSelected(new Set());
+      // Re-fetch existing workers to refresh dedup display
+      fetch(`/api/projects/${projectId}/workers`, { credentials: 'include' })
+        .then((r) => r.json())
+        .then((j: { data?: { workers?: Array<{ name: string }> } }) => {
+          const names = (j.data?.workers ?? []).map((w) => w.name.trim().toLowerCase());
+          setExistingNamesLower(new Set(names));
+        })
+        .catch(() => {});
+    } catch {
+      setLoadError('Import failed. Please try again.');
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function toggleRow(qboId: string, alreadyExists: boolean) {
+    if (alreadyExists) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(qboId)) next.delete(qboId);
+      else next.add(qboId);
+      return next;
+    });
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Import QB Employees as Workers</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Load employees from QuickBooks and import selected ones as Workers in the chosen project.
+            SSN is retrieved server-side at import time — it is never sent to the browser.
+          </p>
+        </div>
+      </div>
+
+      {loadError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
+
+      {result && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <span className="font-medium">{result.created} worker{result.created !== 1 ? 's' : ''} created</span>
+          {result.skipped > 0 && <span className="ml-2 text-gray-600">{result.skipped} already exist</span>}
+          {result.errors.length > 0 && (
+            <span className="ml-2">
+              <button
+                className="text-amber-700 underline text-xs"
+                onClick={() => setShowErrors((v) => !v)}
+              >
+                {result.errors.length} error{result.errors.length !== 1 ? 's' : ''}
+              </button>
+              {showErrors && (
+                <ul className="mt-1 list-disc list-inside text-xs text-red-700">
+                  {result.errors.map((e) => (
+                    <li key={e.qboId}>{e.qboId}: {e.reason}</li>
+                  ))}
+                </ul>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+
+      {employees.length === 0 && (
+        <Button variant="secondary" size="sm" onClick={handleLoadEmployees} loading={loading} disabled={loading}>
+          {loading ? 'Loading...' : 'Load QB Employees'}
+        </Button>
+      )}
+
+      {employees.length > 0 && (
+        <div className="space-y-3">
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-3 py-2 text-left w-8"></th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700">QB Name</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700">Email</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700">Address</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700">SSN (masked)</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {employees.map((emp) => {
+                  const alreadyExists = existingNamesLower.has(emp.displayName.toLowerCase());
+                  const isChecked = selected.has(emp.qboId);
+                  return (
+                    <tr
+                      key={emp.qboId}
+                      className={`${alreadyExists ? 'bg-gray-50 text-gray-400' : 'bg-white hover:bg-gray-50 cursor-pointer'}`}
+                      onClick={() => toggleRow(emp.qboId, alreadyExists)}
+                    >
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={alreadyExists}
+                          onChange={() => toggleRow(emp.qboId, alreadyExists)}
+                          className="accent-brand-gold"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </td>
+                      <td className="px-3 py-2 font-medium text-gray-900">{emp.displayName}</td>
+                      <td className="px-3 py-2 text-gray-600">{emp.email ?? '—'}</td>
+                      <td className="px-3 py-2 text-gray-600">{emp.address ?? '—'}</td>
+                      <td className="px-3 py-2 font-mono text-gray-600">
+                        {emp.hasSsn && emp.ssnLast4 ? `\u2022\u2022\u2022 \u2022\u2022 ${emp.ssnLast4}` : '—'}
+                      </td>
+                      <td className="px-3 py-2">
+                        {alreadyExists ? (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            Exists
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            New
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleImport}
+              disabled={selected.size === 0 || importing}
+              loading={importing}
+            >
+              {importing ? 'Importing...' : `Import Selected (${selected.size})`}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleLoadEmployees} loading={loading} disabled={loading}>
+              Refresh
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Employee Mapping (stored in localStorage, keyed by qboId → our workerId) ──
 const MAPPING_KEY = 'qbo_employee_mapping';
 
@@ -192,6 +424,23 @@ export function IntegrationsPage() {
   });
   const ssoConfig = ssoData?.data ?? null;
 
+  // Shared project selector for QB employee import + (future) timesheet sync
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+  const { data: projectsData } = useQuery<{ data: { projects: Array<{ id: string; name: string }> } }>({
+    queryKey: ['projects-for-integrations'],
+    queryFn: () => api.get<{ data: { projects: Array<{ id: string; name: string }> } }>('/api/projects'),
+  });
+
+  const projectsList = projectsData?.data?.projects ?? [];
+
+  // Set default selectedProjectId when projects load for the first time
+  useEffect(() => {
+    if (projectsList.length > 0 && selectedProjectId === null) {
+      setSelectedProjectId(projectsList[0].id);
+    }
+  }, [projectsList, selectedProjectId]);
+
   const status = data?.data;
   const procoreStatus = procoreData?.data;
 
@@ -270,7 +519,40 @@ export function IntegrationsPage() {
               )}
             </div>
 
-            {status?.connected && <EmployeeMappingSection />}
+            {status?.connected && (
+              <>
+                {/* Shared project selector — drives EmployeeImportSection (Phase 121) and future SyncTimesheetSection (Phase 121-02) */}
+                <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="qb-project-selector">
+                    Project
+                  </label>
+                  {projectsList.length === 0 ? (
+                    <p className="text-sm text-gray-500">No projects found. Create a project first.</p>
+                  ) : (
+                    <select
+                      id="qb-project-selector"
+                      value={selectedProjectId ?? ''}
+                      onChange={(e) => setSelectedProjectId(e.target.value || null)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                    >
+                      {projectsList.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <EmployeeMappingSection />
+
+                {selectedProjectId !== null ? (
+                  <EmployeeImportSection projectId={selectedProjectId} />
+                ) : (
+                  <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6 text-sm text-gray-500">
+                    Select a project to import QB employees.
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Procore connection success banner */}
             {procoreJustConnected && (
