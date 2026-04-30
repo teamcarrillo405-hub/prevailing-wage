@@ -1,4 +1,5 @@
 import * as OTPAuth from 'otpauth';
+import QRCode from 'qrcode';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { encryptSsn, decryptSsn } from './cryptoService.js';
 
@@ -20,15 +21,16 @@ const WINDOW = 1; // accept codes from prev/current/next 30s window
 export interface GeneratedTotp {
   secret: string;            // base32 plaintext — for QR display only, never persisted
   qrUri: string;             // otpauth:// URI suitable for QR rendering
+  qrDataUrl: string;         // data:image/png;base64,... PNG QR code for <img src> — never persisted
   encryptedSecret: string;   // AES-256-GCM envelope to persist on users.totpSecret
 }
 
 /**
- * Generate a fresh TOTP secret + otpauth:// URI.
- * Caller persists encryptedSecret; secret/qrUri are returned to the
- * client once for QR display and forgotten.
+ * Generate a fresh TOTP secret + otpauth:// URI + PNG QR data URL.
+ * Caller persists encryptedSecret; secret/qrUri/qrDataUrl are returned to the
+ * client once for QR display and forgotten. qrDataUrl is never persisted.
  */
-export function generateTotpSecret(label: string): GeneratedTotp {
+export async function generateTotpSecret(label: string): Promise<GeneratedTotp> {
   const secret = new OTPAuth.Secret({ size: 20 }); // 160-bit per RFC 4226
   const totp = new OTPAuth.TOTP({
     issuer: ISSUER,
@@ -38,9 +40,12 @@ export function generateTotpSecret(label: string): GeneratedTotp {
     period: PERIOD,
     secret,
   });
+  const qrUri = totp.toString();
+  const qrDataUrl = await QRCode.toDataURL(qrUri, { width: 200, margin: 1 });
   return {
     secret: secret.base32,
-    qrUri: totp.toString(),
+    qrUri,
+    qrDataUrl,
     encryptedSecret: encryptSsn(secret.base32),
   };
 }

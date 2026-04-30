@@ -67,7 +67,7 @@ mfaRouter.post('/setup', requireAuth, async (req, res) => {
     return;
   }
 
-  const generated = generateTotpSecret(email);
+  const generated = await generateTotpSecret(email);
   const backups = generateBackupCodes(10);
 
   await db
@@ -92,6 +92,7 @@ mfaRouter.post('/setup', requireAuth, async (req, res) => {
   res.status(200).json({
     data: {
       qrUri: generated.qrUri,
+      qrDataUrl: generated.qrDataUrl,
       secret: generated.secret,
       backupCodes: backups.plaintext,
     },
