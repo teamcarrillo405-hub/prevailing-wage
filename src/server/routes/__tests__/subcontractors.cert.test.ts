@@ -2,6 +2,7 @@
  * Integration tests for DBE certification routes:
  * - DBE-02: GET/POST/PATCH/DELETE /certifications
  * - DBE-04: POST /cpr-weeks gate (CERT_EXPIRED_OR_SUSPENDED)
+ * - DBE-04 public-portal: POST /api/sub-upload/:token gate (CERT_EXPIRED_OR_SUSPENDED)
  * - DBE-05: GET /subcontractors certSummary correctness
  * - DBE-06: Auto-pending when issueDate < '2025-10-03'
  * Plus auth/IDOR guards.
@@ -20,6 +21,7 @@ delete process.env.INVITE_CODE;
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import request from 'supertest';
 import { eq, and } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 import { app } from '../../index.js';
 import {
@@ -134,6 +136,30 @@ async function clearCerts() {
     await db.delete(subcontractorCprWeeks);
     await db.delete(subcontractorCertifications);
   }
+}
+
+/**
+ * Seed a subcontractorCprWeeks row with an upload token and a far-future expiry.
+ * The subUpload POST route does: SELECT ... WHERE uploadToken = :token AND uploadTokenExpiresAt > now()
+ * so we need a valid row to get past the 404 guard and reach the cert check.
+ */
+async function seedUploadToken(opts: {
+  subId: string;
+  weekEndingDate: string;
+  token: string;
+}): Promise<void> {
+  const db = (globalThis as any).__testDb;
+  const futureExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days from now
+  await db.insert(subcontractorCprWeeks).values({
+    id: randomUUID(),
+    subcontractorId: opts.subId,
+    weekEndingDate: opts.weekEndingDate,
+    uploadToken: opts.token,
+    uploadTokenExpiresAt: futureExpiry,
+    uploadedAt: null,
+    uploadPath: null,
+    createdAt: new Date().toISOString(),
+  });
 }
 
 // ── A: Auth + IDOR ────────────────────────────────────────────────────────────
@@ -452,5 +478,77 @@ describe('certifications — DBE-04 internal upload gate', () => {
     expect([201, 409]).toContain(res.status);
     // Must NOT be 422
     expect(res.status).not.toBe(422);
+  });
+});
+
+// ── F: DBE-04 public-portal upload gate (POST /api/sub-upload/:token) ─────────
+
+describe('DBE-04 public-portal upload gate', () => {
+  // Use a unique IP to avoid rate-limit cross-bleed with the internal gate tests above
+  const req = makeRequester('10.10.0.99');
+  let cookie = '';
+  let projectId = '';
+  let subId = '';
+
+  beforeAll(async () => {
+    const u = await registerAndLogin(req, 'portal-gate@test.local');
+    cookie = u.cookie;
+    const proj = await createProject(req, cookie, 'Portal Gate Project');
+    projectId = proj.id;
+    const sub = await createSub(req, cookie, projectId, 'Portal Gate Sub');
+    subId = sub.id;
+  });
+
+  afterEach(clearCerts);
+
+  it('returns 422 CERT_EXPIRED_OR_SUSPENDED on suspended cert (public portal)', async () => {
+    // 1. Seed a suspended cert
+    await createCert(req, cookie, projectId, subId, {
+      certTypes: 'DBE',
+      reevaluationStatus: 'suspended',
+      expiresDate: '2030-01-01',
+    });
+    // 2. Seed an upload token row (unauthenticated route reads from subcontractorCprWeeks)
+    const token = 'test-token-suspended-' + randomUUID();
+    await seedUploadToken({ subId, weekEndingDate: '2026-04-26', token });
+
+    // 3. POST multipart to the public portal — no auth header, token gates access
+    // Use application/pdf MIME type to pass the multer file filter
+    const res = await request(app)
+      .post(`/api/sub-upload/${token}`)
+      .set('Origin', ORIGIN)
+      .attach('file', Buffer.from('%PDF-1.4 minimal test file'), {
+        filename: 'payroll.pdf',
+        contentType: 'application/pdf',
+      });
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('CERT_EXPIRED_OR_SUSPENDED');
+    expect(res.body.error.toLowerCase()).toContain('suspended');
+  });
+
+  it('returns 422 CERT_EXPIRED_OR_SUSPENDED on expired cert (public portal)', async () => {
+    // 1. Seed an expired cert (expiresDate safely in the past forever)
+    await createCert(req, cookie, projectId, subId, {
+      certTypes: 'DBE',
+      reevaluationStatus: 'cleared',
+      expiresDate: '2020-01-01',
+    });
+    // 2. Seed an upload token row
+    const token = 'test-token-expired-' + randomUUID();
+    await seedUploadToken({ subId, weekEndingDate: '2026-04-26', token });
+
+    // 3. POST multipart to the public portal
+    const res = await request(app)
+      .post(`/api/sub-upload/${token}`)
+      .set('Origin', ORIGIN)
+      .attach('file', Buffer.from('%PDF-1.4 minimal test file'), {
+        filename: 'payroll.pdf',
+        contentType: 'application/pdf',
+      });
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('CERT_EXPIRED_OR_SUSPENDED');
+    expect(res.body.error.toLowerCase()).toContain('expired');
   });
 });
