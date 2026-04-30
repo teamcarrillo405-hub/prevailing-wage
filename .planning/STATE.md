@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Executing Phase 125
-stopped_at: Completed 125-02-PLAN.md
+stopped_at: Completed 125-03-PLAN.md
 last_updated: "2026-04-29T00:00:00.000Z"
 progress:
   total_phases: 37
   completed_phases: 34
   total_plans: 81
-  completed_plans: 84
+  completed_plans: 85
 ---
 
 # State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 125 — EXECUTING
-Plan: 2 of ?
+Plan: 3 of ?
 
 ## Performance Metrics
 
@@ -227,6 +227,10 @@ Key decisions locked for v5.0 scope:
 - [Phase 123-02]: vi.doMock (not vi.mock) for per-test transport isolation — vi.mock is hoisted once; vi.doMock fires at call time and survives vi.resetModules()
 - [Phase 123-02]: getDb() called inside test functions not at module scope — module-level calls run before beforeAll in setupFiles, returning wrong DB handle
 - [Phase 123]: qrcode installed with --legacy-peer-deps; generateTotpSecret made async returning qrDataUrl; TOTP gate on transfer-ownership+invite-revoke via dynamic import; bannerDismissed in-memory only for SOC 2 nag
+- [Phase 125-03]: UI-08 hamburger nav confirmed fully implemented from Phase 97 — Menu/X icons, full drawer with backdrop, all nav links with min-h-[44px]; no Layout.tsx changes needed
+- [Phase 125-03]: PayrollWeekDetailPage tables already had overflow-x-auto before this plan (desktop entries table + WH-347 Mon-Sun table both wrapped); grep count 5 satisfies acceptance criterion
+- [Phase 125-03]: WorkersPage action buttons (Edit/+Trade/Remove) already had min-h-[44px] sm:min-h-0 from prior plan — only search input needed text-base addition
+- [Phase 125-03]: ProjectDetailPage has no inline payroll weeks list — weeks data used only for workflow progress step completion indicators; no payroll empty state needed
 
 ### Phase Order Rationale
 
