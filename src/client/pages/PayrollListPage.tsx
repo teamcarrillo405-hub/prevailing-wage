@@ -1,9 +1,9 @@
 // src/client/pages/PayrollListPage.tsx
 // Route: /projects/:projectId/payroll
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileCheck, FileText } from 'lucide-react';
+import { FileCheck, FileText, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -73,6 +73,19 @@ function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T00:00:00Z');
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+function getWeekBadge(week: PayrollWeek): React.ReactNode {
+  if (week.submittedAt) {
+    return <Badge variant="neutral">Submitted</Badge>;
+  }
+  if (week.isFinal) {
+    return <Badge variant="compliant">Final</Badge>;
+  }
+  if (week.workerCount > 0) {
+    return <Badge variant="warning">In Progress</Badge>;
+  }
+  return <Badge variant="neutral">Draft</Badge>;
 }
 
 export function PayrollListPage() {
@@ -210,14 +223,6 @@ export function PayrollListPage() {
 
         <PageHeader
           title="Payroll Weeks"
-          action={
-            <button
-              onClick={handleNewWeekClick}
-              className="bg-brand-gold text-nav-dark font-semibold hover:bg-brand-gold/90 border border-transparent inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 text-sm px-4 py-2"
-            >
-              + New Week
-            </button>
-          }
         />
 
         <HelpCallout
@@ -243,73 +248,67 @@ export function PayrollListPage() {
         {!isLoading && !isError && weeks.length === 0 && (
           <EmptyState
             illustration={<PayrollEmptyIllustration />}
-            icon={FileText}
             heading="No payroll weeks yet"
-            message="Start your first payroll week to begin compliance tracking and generate certified payroll reports. You must add workers to the project before entering payroll."
+            message="Create your first payroll week to begin tracking prevailing wage compliance."
             action={
-              <Link
-                to={`/projects/${projectId}/payroll/new`}
-                className="inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent text-sm px-4 py-2"
-              >
-                Create First Payroll Week
-              </Link>
+              <Button onClick={() => navigate(`/projects/${projectId}/payroll/new`)}>
+                Start First Payroll Week
+              </Button>
             }
           />
         )}
 
         {weeks.length > 0 && (
-          <Card padding="none" className="divide-y divide-gray-100 shadow-card-elevated">
-            {weeks.map((week) => (
-              <div key={week.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-5 py-3 gap-3">
-                <div>
-                  <span className="text-sm font-medium text-gray-900">
-                    Week Ending {week.weekEndingDate}
-                  </span>
-                  <span className="ml-3 text-xs text-gray-500">
-                    Payroll #{week.payrollNumber}
-                  </span>
-                  {week.submittedAt ? (
-                    <Badge variant="neutral" className="ml-2 bg-amber-100 text-amber-800 border-amber-300 font-medium">Submitted</Badge>
-                  ) : week.isFinal ? (
-                    <Badge variant="neutral" className="ml-2 bg-emerald-100 text-emerald-800 border-emerald-300 font-medium">Final</Badge>
-                  ) : (
-                    <Badge variant="neutral" className="ml-2">Draft</Badge>
-                  )}
-                  {week.amendmentNumber != null && (
-                    <>
-                      <Badge variant="neutral" className="ml-2 bg-blue-100 text-blue-800 border-blue-300 font-medium">Amendment {week.amendmentNumber}</Badge>
-                      <TermTooltip
-                        term="Amendment"
-                        definition="A corrected re-filing of a previously submitted certified payroll. Required when you discover errors in a submitted WH-347. The amendment number increments with each correction."
-                        className="ml-1"
-                      />
-                    </>
-                  )}
-                  {week.workerCount > 0 && (
-                    <span className="ml-3 text-xs text-gray-400">
-                      {week.workerCount} worker{week.workerCount !== 1 ? 's' : ''}
-                      {week.totalGross != null && ` · $${parseFloat(week.totalGross).toFixed(2)} gross`}
-                      {week.totalNet != null && ` · $${parseFloat(week.totalNet).toFixed(2)} net`}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <a
-                    href={`/api/export/wh347/${week.id}`}
-                    className="inline-flex items-center justify-center text-xs px-3 py-2 min-h-[44px] sm:min-h-0 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
-                    onClick={() => toast.success('WH-347 downloading — submit to your contracting officer within 7 days of the week ending date.')}
-                  >
-                    Download WH-347
-                  </a>
-                  <Link
-                    to={`/projects/${projectId}/payroll/${week.id}`}
-                    className="text-xs text-gray-500 hover:text-gray-900 underline min-h-[44px] sm:min-h-0 flex items-center"
-                  >
-                    View
+          <Card padding="none" className="shadow-card-elevated overflow-hidden">
+            <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
+              <h2 className="font-headline text-base text-text-primary">Payroll Weeks</h2>
+              <button
+                onClick={handleNewWeekClick}
+                className="bg-brand-gold text-nav-dark font-semibold hover:bg-brand-gold/90 border border-transparent inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 text-sm px-4 py-2"
+              >
+                + New Week
+              </button>
+            </div>
+            <div className="p-4 space-y-2">
+              {weeks.map((week) => (
+                <Card key={week.id} padding="sm" className="shadow-card-elevated hover:shadow-card-hover cursor-pointer transition-shadow duration-150">
+                  <Link to={`/projects/${projectId}/payroll/${week.id}`} className="block">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-headline text-sm text-text-primary">
+                          Week Ending {week.weekEndingDate} — Payroll #{week.payrollNumber}
+                          {week.amendmentNumber != null ? (
+                            <span className="text-text-secondary ml-1">
+                              (Amendment {week.amendmentNumber})
+                              <TermTooltip
+                                term="Amendment"
+                                definition="A corrected re-filing of a previously submitted certified payroll. Required when you discover errors in a submitted WH-347. The amendment number increments with each correction."
+                                className="ml-1"
+                              />
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="text-xs text-text-secondary mt-0.5">
+                          {week.workerCount} worker{week.workerCount !== 1 ? 's' : ''}
+                          {week.totalGross != null ? ` · $${Number(week.totalGross).toLocaleString()} gross` : ' · No payroll entered'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {getWeekBadge(week)}
+                        <a
+                          href={`/api/export/wh347/${week.id}`}
+                          className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
+                          onClick={(e) => { e.stopPropagation(); toast.success('WH-347 downloading — submit to your contracting officer within 7 days of the week ending date.'); }}
+                        >
+                          WH-347
+                        </a>
+                        <ChevronRight className="w-4 h-4 text-text-secondary" />
+                      </div>
+                    </div>
                   </Link>
-                </div>
-              </div>
-            ))}
+                </Card>
+              ))}
+            </div>
           </Card>
         )}
 
