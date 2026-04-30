@@ -13,7 +13,7 @@ const token  = process.env.LOGTAIL_TOKEN;
  *                    -> @logtail/pino HTTPS drain to Better Stack
  *   - prod, no token -> no transport (raw JSON to stdout — Render captures)
  */
-function buildTransport() {
+export function buildTransport() {
   if (isTest) return undefined;
   if (token) {
     return pino.transport({
