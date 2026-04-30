@@ -8,7 +8,7 @@ import { FileCheck, ExternalLink, Info } from 'lucide-react';
 import { api } from '../lib/api';
 import { enqueueRequest } from '../lib/offlineQueue';
 import { Layout } from '../components/shared/Layout';
-import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { PayrollWeekDetailSkeleton } from '../components/ui/Skeleton';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
 import { Tooltip } from '../components/ui/Tooltip';
@@ -1516,7 +1516,7 @@ export function PayrollWeekDetailPage() {
         )}
 
         {/* Loading state */}
-        {isLoading && <LoadingSpinner />}
+        {isLoading && <PayrollWeekDetailSkeleton />}
 
         {/* Error state */}
         {isError && !isLoading && (
