@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
-stopped_at: Completed 121-01-PLAN.md — POST /qbo/import-employees, EmployeeImportSection, 7 tests GREEN; 0 TS errors
-last_updated: "2026-04-30T00:04:39.262Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 121-02-PLAN.md — SyncTimesheetSection + buildImportRows + 10 tests GREEN; 0 TS errors
+last_updated: "2026-04-30T00:16:16.526Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -218,6 +218,9 @@ Key decisions locked for v5.0 scope:
 - [Phase 121-quickbooks-employee-time-import]: qboIds string[] in POST body forces server-side QB re-fetch; client never sees raw SSN
 - [Phase 121-quickbooks-employee-time-import]: assertProjectAccess called before getValidAccessToken in import-employees route (NFR-03 ordering)
 - [Phase 121-quickbooks-employee-time-import]: Shared selectedProjectId state in IntegrationsPage drives both EmployeeImportSection (121-01) and future SyncTimesheetSection (121-02)
+- [Phase 121-quickbooks-employee-time-import]: buildImportRows exported not inline — enables direct unit test import without mounting IntegrationsPage (Phase 86 pattern)
+- [Phase 121-quickbooks-employee-time-import]: dailySplitConfirmed defaults false and gates commit — prevents silent acceptance of evenly-split QB weekly totals
+- [Phase 121-quickbooks-employee-time-import]: Commit posts to /api/payroll/import/commit with provider:'quickbooks' (not push-approved-hours) — audit-row + conflict-detection consistency (Pitfall 6 resolution)
 
 ### Phase Order Rationale
 
@@ -251,7 +254,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-30T00:04:39.255Z
-Stopped at: Completed 121-01-PLAN.md — POST /qbo/import-employees, EmployeeImportSection, 7 tests GREEN; 0 TS errors
+Last session: 2026-04-30T00:16:16.519Z
+Stopped at: Completed 121-02-PLAN.md — SyncTimesheetSection + buildImportRows + 10 tests GREEN; 0 TS errors
 Resume file: None
 Next action: Phase 117 complete. 838 tests passing. 0 TS errors. ApprenticeshipDashboard (per-trade ratios + IRA/IIJA 15% banner + 12-week sparkline + 5th ReportsPage tab). 100% unique vs B2Gnow, Knowify, LCPtracker. Ready for Phase 118+.
