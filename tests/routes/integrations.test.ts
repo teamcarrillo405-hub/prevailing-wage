@@ -1,6 +1,7 @@
 // tests/routes/integrations.test.ts
 // Integration tests for QB integration routes.
 // Phase 121 Plan 01 — QB Employee Import (QB-02).
+// Phase 121 Plan 02 — QB Timesheet Sync (QB-03) — sync-time auth + validation cases added below.
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import supertest from 'supertest';
@@ -37,6 +38,15 @@ async function createProject(cookie: string): Promise<string> {
     });
   expect(res.status).toBe(201);
   return res.body.data?.project?.id as string;
+}
+
+async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-01-12'): Promise<string> {
+  const res = await supertest(app)
+    .post('/api/payroll/weeks')
+    .set('Cookie', cookie)
+    .send({ projectId, weekEndingDate, payrollNumber: 1 });
+  expect(res.status).toBe(201);
+  return res.body.id as string;
 }
 
 // ── QB Integration Routes ─────────────────────────────────────────────────
@@ -114,6 +124,38 @@ describe('QB integration routes', () => {
       .post('/api/integrations/qbo/import-employees')
       .set('Cookie', cookie)
       .send({ projectId, qboIds: ['emp-1'] });
+    expect(res.status).toBe(401);
+    expect(String(res.body.error ?? '')).toContain('QuickBooks not connected');
+  });
+});
+
+// ── POST /api/integrations/qbo/sync-time validation (Phase 121 Plan 02 — QB-03) ───
+
+describe('POST /api/integrations/qbo/sync-time validation', () => {
+  // Test E: no auth cookie returns 401/403
+  it('returns 401 without auth', async () => {
+    const res = await supertest(app).post('/api/integrations/qbo/sync-time?weekId=x&projectId=y');
+    expect([401, 403]).toContain(res.status);
+  });
+
+  // Test F+G: authenticated but weekId missing returns 400 with "weekId" in error
+  it('returns 400 when weekId missing', async () => {
+    const cookie = await registerAndLogin('sync-time-no-week');
+    const res = await supertest(app)
+      .post('/api/integrations/qbo/sync-time?projectId=x')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(400);
+    expect(String(res.body.error ?? '')).toMatch(/weekId/i);
+  });
+
+  // Test H: valid weekId + projectId but no QB connection returns 401 with "QuickBooks not connected"
+  it('returns 401 when no QB connection', async () => {
+    const cookie = await registerAndLogin('sync-time-no-qb');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const res = await supertest(app)
+      .post(`/api/integrations/qbo/sync-time?weekId=${weekId}&projectId=${projectId}`)
+      .set('Cookie', cookie);
     expect(res.status).toBe(401);
     expect(String(res.body.error ?? '')).toContain('QuickBooks not connected');
   });
