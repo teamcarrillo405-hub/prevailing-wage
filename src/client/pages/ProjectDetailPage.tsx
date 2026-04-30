@@ -1120,9 +1120,8 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
   const INPUT_CLASSES = 'border border-border-default rounded px-2 py-1 text-sm bg-surface-page';
 
   return (
-    <div className="mt-8">
+    <div>
       <div ref={subsHeaderRef} className="flex items-center justify-between mb-3">
-        <h2 className="font-headline text-lg text-gray-900">Subcontractors</h2>
         {!addingNew && (
           <Button variant="secondary" onClick={() => setAddingNew(true)}>
             Add Subcontractor
@@ -1670,6 +1669,7 @@ export function ProjectDetailPage() {
           </div>{/* end overflow-x-auto */}
 
           <Card className="w-full md:max-w-lg shadow-card-elevated">
+            <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Project Details</h2>
             <dl className="space-y-3 text-sm md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-3 md:space-y-0">
               <div className="flex justify-between">
                 <dt className="text-gray-500">Contract type</dt>
@@ -1691,7 +1691,11 @@ export function ProjectDetailPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Status</dt>
-                <dd className="text-gray-900 font-medium capitalize">{project.status}</dd>
+                <dd>
+                  <Badge variant={project.status === 'active' ? 'compliant' : project.status === 'archived' ? 'neutral' : 'warning'}>
+                    {project.status}
+                  </Badge>
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Created</dt>
@@ -1726,7 +1730,7 @@ export function ProjectDetailPage() {
 
           {notifPanelOpen && (
             <Card className="mt-4 max-w-lg shadow-card-elevated">
-              <h3 className="font-headline text-base text-gray-900 mb-4">Notification Preferences</h3>
+              <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Notification Preferences</h2>
               <div className="space-y-5 text-sm font-body">
 
                 {/* Alerts group — instant notifications */}
@@ -1919,15 +1923,19 @@ export function ProjectDetailPage() {
           )}
 
           {/* Subcontractors panel */}
-          <div className="mt-8">
+          <Card className="mt-8 shadow-card-elevated">
+            <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Subcontractors</h2>
             <SubcontractorsPanel projectId={project.id} />
-          </div>
+          </Card>
 
           {/* Apprenticeship Ratios — Phase 117 (APP-01) */}
-          <ApprenticeshipSection projectId={project.id} />
+          <Card padding="none" className="mt-8 shadow-card-elevated overflow-hidden">
+            <ApprenticeshipSection projectId={project.id} />
+          </Card>
 
           {/* Wage determinations panel */}
-          <div className="mt-8">
+          <Card className="mt-8 shadow-card-elevated">
+            <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Wage Determinations</h2>
             {/* Stale WD banner — COMP-06 Phase 88 */}
             {showStaleBanner && primaryPin && (
               <StaleWdBanner lastFetchedAt={primaryPin.lastFetchedAt} />
@@ -1937,7 +1945,7 @@ export function ProjectDetailPage() {
               projectState={project.state}
               projectCounty={project.county}
             />
-          </div>
+          </Card>
 
           {/* Phase 96: Contractor Signature */}
           <div className="mt-8">
