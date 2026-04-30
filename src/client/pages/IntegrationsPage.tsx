@@ -272,6 +272,352 @@ function EmployeeImportSection({ projectId }: { projectId: string }) {
   );
 }
 
+// ── QB Timesheet Sync (Phase 121 / QB-03) ────────────────────────────────
+
+// Client-side mirror of ImportedRow (matches src/server/services/importTypes.ts)
+interface ImportedRow {
+  csvName: string;
+  workerId: string;
+  workerName: string;
+  classificationId: string;
+  classificationName: string;
+  baseRateSnapshot: number;
+  fringeRateSnapshot: number;
+  monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number;
+  monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number;
+  subcontractorId?: string | null;
+}
+
+interface SyncTimeEntry { date: string; hours: number; dayKey: string }
+interface SyncTimeMatch { workerId: string; workerName: string; qboEmployeeRef: string; entries: SyncTimeEntry[] }
+
+interface WorkerForSync {
+  id: string;
+  name: string;
+  classifications: Array<{
+    id: string;
+    isActive: boolean;
+    tradeCode: string;
+    tradeDescription: string;
+    baseRate: number | null;
+    fringeRate: number | null;
+  }>;
+}
+
+interface PayrollWeek {
+  id: string;
+  weekEndingDate: string;
+  payrollNumber: number;
+  submittedAt: string | null;
+}
+
+export function buildImportRows(
+  matched: SyncTimeMatch[],
+  workers: WorkerForSync[],
+): { rows: ImportedRow[]; missingClassWorkerIds: string[] } {
+  const missing: string[] = [];
+  const map = new Map<string, ImportedRow>();
+  for (const m of matched) {
+    const w = workers.find((x) => x.id === m.workerId);
+    const cls = w?.classifications.find((c) => c.isActive);
+    if (!cls) { missing.push(m.workerId); continue; }
+    if (!map.has(m.workerId)) {
+      map.set(m.workerId, {
+        csvName: m.qboEmployeeRef,
+        workerId: m.workerId,
+        workerName: m.workerName,
+        classificationId: cls.id,
+        classificationName: cls.tradeDescription ?? cls.tradeCode ?? '',
+        baseRateSnapshot: cls.baseRate ?? 0,
+        fringeRateSnapshot: cls.fringeRate ?? 0,
+        monSt: 0, tueSt: 0, wedSt: 0, thuSt: 0, friSt: 0, satSt: 0, sunSt: 0,
+        monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+      });
+    }
+    const row = map.get(m.workerId)!;
+    for (const e of m.entries) {
+      (row as unknown as Record<string, number | string>)[e.dayKey] =
+        ((row as unknown as Record<string, number>)[e.dayKey] ?? 0) + e.hours;
+    }
+  }
+  return { rows: [...map.values()], missingClassWorkerIds: missing };
+}
+
+function SyncTimesheetSection({ projectId }: { projectId: string }) {
+  const [weeks, setWeeks] = useState<PayrollWeek[]>([]);
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
+  const [workers, setWorkers] = useState<WorkerForSync[]>([]);
+  const [preview, setPreview] = useState<{ matched: SyncTimeMatch[]; unmatched: Array<{ employeeRef: string; totalHours: number }> } | null>(null);
+  const [needsDailySplit, setNeedsDailySplit] = useState(false);
+  const [dailySplitConfirmed, setDailySplitConfirmed] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [committing, setCommitting] = useState(false);
+  const [commitResult, setCommitResult] = useState<{ entriesCreated: number } | null>(null);
+  const [commitError, setCommitError] = useState<string | null>(null);
+
+  // Fetch open payroll weeks and workers when projectId changes
+  useEffect(() => {
+    if (!projectId) return;
+    setPreview(null);
+    setCommitResult(null);
+    setCommitError(null);
+    setNeedsDailySplit(false);
+    setDailySplitConfirmed(false);
+
+    // Fetch payroll weeks — filter out submitted ones
+    fetch(`/api/projects/${projectId}/payroll-weeks`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((json: { data?: { weeks?: PayrollWeek[] } }) => {
+        const open = (json.data?.weeks ?? []).filter((w) => w.submittedAt === null);
+        setWeeks(open);
+        setSelectedWeekId(open[0]?.id ?? null);
+      })
+      .catch(() => {
+        setWeeks([]);
+        setSelectedWeekId(null);
+      });
+
+    // Fetch workers for classification resolution
+    fetch(`/api/projects/${projectId}/workers`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((json: { data?: { workers?: WorkerForSync[] } }) => {
+        setWorkers(json.data?.workers ?? []);
+      })
+      .catch(() => setWorkers([]));
+  }, [projectId]);
+
+  async function handlePreview() {
+    if (!selectedWeekId) return;
+    setPreviewing(true);
+    setCommitError(null);
+    setPreview(null);
+    setNeedsDailySplit(false);
+    setDailySplitConfirmed(false);
+    try {
+      const res = await fetch(
+        `/api/integrations/qbo/sync-time?weekId=${selectedWeekId}&projectId=${projectId}`,
+        { method: 'POST', credentials: 'include' },
+      );
+      const json = await res.json() as { data?: { weekId: string; startDate: string; endDate: string; matched: SyncTimeMatch[]; unmatched: Array<{ employeeRef: string; totalHours: number }> }; error?: string };
+      if (!res.ok) { setCommitError(json.error ?? 'Preview failed'); return; }
+      setPreview({ matched: json.data!.matched, unmatched: json.data!.unmatched });
+      // Detect daily split via timeactivities (separate call)
+      const taRes = await fetch(
+        `/api/integrations/qbo/timeactivities?startDate=${json.data!.startDate}&endDate=${json.data!.endDate}&projectId=${projectId}`,
+        { credentials: 'include' },
+      );
+      if (taRes.ok) {
+        const taJson = await taRes.json() as { data?: { rows?: Array<{ needsDailySplit: boolean }> } };
+        const anyNeedsSplit = (taJson.data?.rows ?? []).some((r) => r.needsDailySplit === true);
+        setNeedsDailySplit(anyNeedsSplit);
+      }
+    } catch {
+      setCommitError('Preview failed. Check your QuickBooks connection.');
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
+  async function handleCommit() {
+    if (!preview || !selectedWeekId) return;
+    const { rows } = buildImportRows(preview.matched, workers);
+    setCommitting(true);
+    setCommitError(null);
+    try {
+      const res = await fetch('/api/payroll/import/commit', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weekId: selectedWeekId,
+          provider: 'quickbooks',
+          matched: rows,
+          unmatchedCount: preview.unmatched.length,
+          sourceFilename: 'QuickBooks TimeActivity',
+        }),
+      });
+      const json = await res.json() as { data?: { entriesCreated?: number }; error?: string };
+      if (!res.ok) { setCommitError(json.error ?? 'Commit failed'); return; }
+      setCommitResult({ entriesCreated: json.data?.entriesCreated ?? rows.length });
+    } catch {
+      setCommitError('Commit failed. Please try again.');
+    } finally {
+      setCommitting(false);
+    }
+  }
+
+  const { rows: previewRows, missingClassWorkerIds } = preview
+    ? buildImportRows(preview.matched, workers)
+    : { rows: [], missingClassWorkerIds: [] };
+
+  const commitDisabled =
+    !preview ||
+    (needsDailySplit && !dailySplitConfirmed) ||
+    missingClassWorkerIds.length > 0 ||
+    committing ||
+    previewRows.length === 0;
+
+  const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const DAY_KEYS_ST = ['monSt', 'tueSt', 'wedSt', 'thuSt', 'friSt', 'satSt', 'sunSt'] as const;
+
+  return (
+    <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Sync Timesheet from QB</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Preview QuickBooks time records for a payroll week and commit them as payroll entries.
+            Hours flow through the same conflict-detection pipeline as CSV imports.
+          </p>
+        </div>
+      </div>
+
+      {/* Week selector */}
+      {weeks.length === 0 ? (
+        <p className="text-sm text-gray-500 mb-4">No open payroll weeks found for this project.</p>
+      ) : (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="sync-week-selector">
+            Payroll Week
+          </label>
+          <select
+            id="sync-week-selector"
+            value={selectedWeekId ?? ''}
+            onChange={(e) => {
+              setSelectedWeekId(e.target.value || null);
+              setPreview(null);
+              setCommitResult(null);
+              setCommitError(null);
+              setNeedsDailySplit(false);
+              setDailySplitConfirmed(false);
+            }}
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+          >
+            {weeks.map((w) => (
+              <option key={w.id} value={w.id}>
+                Week ending {w.weekEndingDate} (#{w.payrollNumber})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {commitError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {commitError}
+        </div>
+      )}
+
+      {commitResult && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <span className="font-medium">{commitResult.entriesCreated} payroll {commitResult.entriesCreated === 1 ? 'entry' : 'entries'} created.</span>
+        </div>
+      )}
+
+      {/* Preview button */}
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={handlePreview}
+        disabled={!selectedWeekId || previewing}
+        loading={previewing}
+      >
+        {previewing ? 'Loading preview...' : 'Preview from QB'}
+      </Button>
+
+      {/* Preview results */}
+      {preview && (
+        <div className="mt-5 space-y-4">
+          {/* Daily-split amber callout */}
+          {needsDailySplit && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p className="font-medium mb-2">
+                QuickBooks stored weekly totals — hours have been split evenly across days. Confirm before committing.
+              </p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dailySplitConfirmed}
+                  onChange={(e) => setDailySplitConfirmed(e.target.checked)}
+                  className="accent-brand-gold"
+                />
+                <span>I understand hours were distributed evenly and wish to proceed</span>
+              </label>
+            </div>
+          )}
+
+          {/* Missing classification warnings */}
+          {missingClassWorkerIds.length > 0 && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {missingClassWorkerIds.length} worker{missingClassWorkerIds.length !== 1 ? 's have' : ' has'} no active classification. Add a classification before importing.
+            </div>
+          )}
+
+          {/* Preview table */}
+          {previewRows.length > 0 && (
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-gray-700">Worker</th>
+                    {DAY_LABELS.map((d) => (
+                      <th key={d} className="px-2 py-2 text-center font-medium text-gray-700">{d}</th>
+                    ))}
+                    <th className="px-3 py-2 text-center font-medium text-gray-700">Total</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-700">Classification</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {previewRows.map((row) => {
+                    const dayHours = DAY_KEYS_ST.map((k) => row[k] ?? 0);
+                    const total = dayHours.reduce((s, h) => s + h, 0);
+                    return (
+                      <tr key={row.workerId} className="bg-white hover:bg-gray-50">
+                        <td className="px-3 py-2 font-medium text-gray-900">{row.workerName}</td>
+                        {dayHours.map((h, i) => (
+                          <td key={i} className="px-2 py-2 text-center text-gray-600">
+                            {h > 0 ? h.toFixed(2) : '—'}
+                          </td>
+                        ))}
+                        <td className="px-3 py-2 text-center font-medium text-gray-900">{total.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-gray-600">{row.classificationName}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {previewRows.length === 0 && missingClassWorkerIds.length === 0 && (
+            <p className="text-sm text-gray-500">No matched workers found for this payroll week.</p>
+          )}
+
+          {/* Unmatched panel */}
+          {preview.unmatched.length > 0 && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+              {preview.unmatched.length} QB {preview.unmatched.length === 1 ? 'employee' : 'employees'} could not be matched. Import them first via the Employee Import section.
+            </div>
+          )}
+
+          {/* Commit button */}
+          <div className="pt-1">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleCommit}
+              disabled={commitDisabled}
+              loading={committing}
+            >
+              {committing ? 'Committing...' : 'Commit Import'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Employee Mapping (stored in localStorage, keyed by qboId → our workerId) ──
 const MAPPING_KEY = 'qbo_employee_mapping';
 
@@ -545,7 +891,10 @@ export function IntegrationsPage() {
                 <EmployeeMappingSection />
 
                 {selectedProjectId !== null ? (
-                  <EmployeeImportSection projectId={selectedProjectId} />
+                  <>
+                    <EmployeeImportSection projectId={selectedProjectId} />
+                    <SyncTimesheetSection projectId={selectedProjectId} />
+                  </>
                 ) : (
                   <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6 text-sm text-gray-500">
                     Select a project to import QB employees.
