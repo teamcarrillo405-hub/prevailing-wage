@@ -1148,7 +1148,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
             <Shield className="w-4 h-4 text-brand-gold" />
             DBE/MBE/WBE Participation
           </h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-900">{activeCertifiedCount}</p>
               <p className="text-xs text-gray-500">Active Certified</p>
@@ -1865,7 +1865,7 @@ export function ProjectDetailPage() {
                     {violationCount} active violation{violationCount !== 1 ? 's' : ''} detected
                     across payroll weeks for this project.
                   </p>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-center">
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-center">
                     <div className="rounded bg-white border border-red-100 px-3 py-2">
                       <p className="text-lg font-bold text-status-violation">{violationCount}</p>
                       <p className="text-xs text-gray-500">Violations</p>

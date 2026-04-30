@@ -549,7 +549,7 @@ export function WorkersPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search workers by name or trade union..."
-              className="w-full px-3 py-2 rounded-md border border-border-default bg-surface-card text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-gold focus:border-brand-gold"
+              className="w-full px-3 py-2 rounded-md border border-border-default bg-surface-card text-foreground text-base placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-gold focus:border-brand-gold"
               autoComplete="off"
             />
             {isSearching && searchFetching && (

@@ -272,8 +272,8 @@ export function PayrollListPage() {
             <div className="p-4 space-y-2">
               {weeks.map((week) => (
                 <Card key={week.id} padding="sm" className="shadow-card-elevated hover:shadow-card-hover cursor-pointer transition-shadow duration-150">
-                  <Link to={`/projects/${projectId}/payroll/${week.id}`} className="block">
-                    <div className="flex items-center justify-between gap-4">
+                  <Link to={`/projects/${projectId}/payroll/${week.id}`} className="block min-h-[44px] flex items-center">
+                    <div className="flex items-center justify-between gap-4 w-full">
                       <div className="min-w-0">
                         <p className="font-headline text-sm text-text-primary">
                           Week Ending {week.weekEndingDate} — Payroll #{week.payrollNumber}
@@ -391,7 +391,7 @@ export function PayrollListPage() {
                       <select
                         value={sourceWeekId}
                         onChange={(e) => handleSourceWeekChange(e.target.value)}
-                        className="border border-gray-300 rounded px-3 py-2 text-sm w-full focus:border-brand-gold focus:outline-none"
+                        className="border border-gray-300 rounded px-3 py-2 text-base min-h-[44px] w-full focus:border-brand-gold focus:outline-none"
                       >
                         {weeks.map((w) => (
                           <option key={w.id} value={w.id}>
@@ -409,7 +409,7 @@ export function PayrollListPage() {
                         min={1}
                         value={payrollNumber}
                         onChange={(e) => setPayrollNumber(Number(e.target.value))}
-                        className="border border-gray-300 rounded px-3 py-2 text-sm w-full focus:border-brand-gold focus:outline-none"
+                        className="border border-gray-300 rounded px-3 py-2 text-base min-h-[44px] w-full focus:border-brand-gold focus:outline-none"
                       />
                     </div>
                     <div>
@@ -418,7 +418,7 @@ export function PayrollListPage() {
                         type="date"
                         value={weekEndingDate}
                         onChange={(e) => setWeekEndingDate(e.target.value)}
-                        className="border border-gray-300 rounded px-3 py-2 text-sm w-full focus:border-brand-gold focus:outline-none"
+                        className="border border-gray-300 rounded px-3 py-2 text-base min-h-[44px] w-full focus:border-brand-gold focus:outline-none"
                       />
                     </div>
                     {copyError && (
