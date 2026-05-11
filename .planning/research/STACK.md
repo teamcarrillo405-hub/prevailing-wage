@@ -1,11 +1,11 @@
-# Stack Research — v6.0 Competitive Industry Leadership
+# Stack Research — v9.0 Construction ERP Integrations
 
 **Project:** HCC Prevailing Wage
-**Milestone:** v6.0 — PWA, QuickBooks OAuth, Public REST API, GPS Clock-In, SOC 2
-**Researched:** 2026-04-24
-**Confidence:** HIGH for PWA/GPS/SOC2 controls (official docs + multiple sources); MEDIUM for QB OAuth scope breadth (Payroll API still partially beta); MEDIUM for webhook delivery (SQLite queue pattern confirmed but no battle-tested library wraps it)
+**Milestone:** v9.0 — Procore, Sage 300 CRE, Viewpoint Vista bidirectional sync
+**Researched:** 2026-05-11
+**Confidence:** HIGH for Procore OAuth flow (official docs confirmed); MEDIUM for Sage 300 CRE (no public REST API — confirmed from community + official sources; file adapter only); MEDIUM for Vista AppXchange (REST API exists but gated by Trimble); HIGH for scheduler + credential vault patterns (multiple confirmed sources).
 
-> This file covers NEW stack requirements for v6.0 only. The existing stack is documented in the v5.0 STACK.md (2026-04-07). Do not re-research what is already installed.
+> This file covers NEW stack requirements for v9.0 only. Do not re-research what is already installed (Node.js/Express/TypeScript, React/Vite/TailwindCSS v4, SQLite/Drizzle, pdf-lib, node-cron, AES-256-GCM SSN encryption, pino, helmet, express-rate-limit).
 
 ---
 
@@ -13,455 +13,486 @@
 
 | Feature Area | New Libraries Needed | Confidence |
 |---|---|---|
-| PWA + Service Worker | `vite-plugin-pwa ^1.2.0`, `workbox-window ^7.4.0` (client) | HIGH |
-| Offline Queue (client) | `idb ^8` | HIGH |
-| QuickBooks OAuth 2.0 | `intuit-oauth ^4.x` (OAuth flow); `node-quickbooks ^2.x` (API calls) | MEDIUM |
-| QB token persistence | Drizzle schema addition only (no new lib) | HIGH |
-| Public REST API key auth | Express middleware (custom, ~20 lines) | HIGH |
-| Webhook delivery | SQLite-backed queue via Drizzle + cron job (custom, no external lib) | MEDIUM |
-| Webhook HMAC signing | Node.js built-in `crypto.createHmac` | HIGH |
-| GPS clock-in (client) | Browser `navigator.geolocation` (native, no library) | HIGH |
-| GPS data storage | Drizzle schema addition only | HIGH |
-| SOC 2 controls — rate limiting | `express-rate-limit ^8.3.2` (already installed or upgrade) | HIGH |
-| SOC 2 controls — security headers | `helmet` (already installed) | HIGH |
-| SOC 2 controls — audit log | Existing pino + audit_log table (already in place) | HIGH |
-| SOC 2 controls — MFA | `otplib ^12.x` + `qrcode ^1.5.x` | MEDIUM |
-| SOC 2 controls — compliance platform | Vanta or Drata (external SaaS, ~$10–15K/yr) | MEDIUM |
+| Procore OAuth2 PKCE | `openid-client ^6.8` (server-side PKCE code verifier/challenge) | HIGH |
+| HTTP client for ERP API calls | `axios ^1.8` (already likely installed; verify) | HIGH |
+| Credential vault storage | Drizzle schema + existing AES-256-GCM (no new lib) | HIGH |
+| Background sync scheduler | `node-cron ^3.x` (already installed) | HIGH |
+| Job queue persistence | Drizzle schema additions on existing SQLite (no new lib) | HIGH |
+| Field mapping persistence | Drizzle JSON column (no new lib) | HIGH |
+| Webhook/polling switch | Custom polling via `node-cron` (no new lib) | HIGH |
+| Sage 300 CRE (cloud) | No public REST API — file adapter only (CSV/TXT import format) | HIGH |
+| Sage 300 CRE (on-premise) | Watched directory pattern via `chokidar ^4` | MEDIUM |
+| Vista API (cloud) | `axios` HTTP calls to Trimble AppXchange REST API | MEDIUM |
+| Vista (on-premise fallback) | `chokidar ^4` watched directory + CSV parser | MEDIUM |
+| Multipart CSV parsing | `csv-parse ^5.5` (confirm if not installed) | HIGH |
 
-**Net new npm packages: 5** (`vite-plugin-pwa`, `workbox-window`, `idb`, `intuit-oauth`, `node-quickbooks`, `otplib`, `qrcode`). Everything else is custom Express middleware or Drizzle schema work on top of what is already installed.
+**Net new npm packages: 2** (`openid-client`, `chokidar`). Everything else is Drizzle schema work + custom logic on the existing stack. `csv-parse` may already be installed (check package.json before adding).
 
 ---
 
-## Feature 1: Progressive Web App — Offline Service Worker
+## Procore OAuth2 — Authorization Code + PKCE
 
-### Recommendation: `vite-plugin-pwa` with `injectManifest` strategy
+### What the Procore API Actually Supports
 
-**Version:** `vite-plugin-pwa ^1.2.0` (latest as of April 2026, published ~November 2025)
-**Workbox version:** Workbox 7.4.0 packages are the underlying engine (pulled in automatically)
+**Official finding (HIGH confidence):** Procore uses standard OAuth 2.0 Authorization Code Grant flow for web server apps. Authorization endpoint is `https://login.procore.com/oauth/authorize`. Token endpoint is `https://login.procore.com/oauth/token`. Sandbox base: `https://login-sandbox-monthly.procore.com/oauth`.
 
-**Why `vite-plugin-pwa` over hand-rolling a service worker:**
-The app already uses Vite as the build tool. `vite-plugin-pwa` integrates at the Vite plugin layer, generates the service worker manifest automatically from the Vite build output, and handles cache-busting on deploy. Hand-rolling a service worker means manually maintaining the asset manifest — a maintenance liability on every deploy.
+**On PKCE:** Procore's official docs describe the server-side Authorization Code Grant using `client_id` + `client_secret`. The `client_secret` is the primary security mechanism for server-to-server apps. PKCE is documented in Procore's context for installed/desktop apps (where no secret can be safely stored), but a web server app already has a secret, making PKCE an additive defense layer rather than a requirement. The milestone spec calls for PKCE — implement it as defense-in-depth regardless.
 
-**Why `injectManifest` strategy over `generateSW`:**
-`generateSW` (the default) abstracts too much. For this app, you need a custom service worker that can:
-1. Cache the React SPA shell for offline use
-2. Intercept GPS clock-in requests and queue them in IndexedDB when offline (Background Sync)
-3. Show a "You are offline — data will sync when reconnected" UI
+**Token lifecycle:**
+- Access tokens expire (exact duration not publicly documented — treat as short-lived, check expiry from token response `expires_in` field)
+- Procore issues refresh tokens; use the token endpoint with `grant_type=refresh_token` to rotate
+- Sandbox tokens are environment-specific — do not mix prod and sandbox credentials
 
-`generateSW` does not give enough control for the offline queue interception. `injectManifest` compiles your own service worker file while injecting the precache manifest, giving full control.
+**Key REST endpoints needed:**
+- `GET /rest/v1.0/me` — current user ID and email (verify connection)
+- `GET /rest/v1.0/companies/{company_id}/users` — employee directory (pull workers)
+- `GET /rest/v1.0/projects/{project_id}/timesheets` — timesheet list
+- `POST /rest/v1.0/projects/{project_id}/timesheets` — create/update timesheet
+- Custom fields API for pushing WH-347 compliance status
 
-**Update strategy: `prompt` (not `autoUpdate`)**
-This is payroll software. A silent auto-update mid-session could cause data loss for a contractor entering hourly payroll. The `prompt` strategy shows a "New version available — refresh" toast. User controls the update. Do not use `autoUpdate`.
+### Recommendation: `openid-client ^6.8` for PKCE Helpers
 
-**Client-side registration:**
-`workbox-window ^7.4.0` handles the registration and update prompt lifecycle on the React side. Import `Workbox` from `workbox-window`, register in `main.tsx`, and wire the update event to a toast component.
+**Why `openid-client` and not a hand-rolled PKCE implementation:**
+PKCE requires generating a cryptographically random `code_verifier` (43–128 characters, base64url-encoded), deriving a `code_challenge` via SHA-256, and threading both values through the OAuth redirect and callback. `openid-client` v6 exposes `randomPKCECodeVerifier()` and `calculatePKCECodeChallenge()` as standalone utilities — you get correct PKCE primitives without pulling in the entire OIDC client flow.
 
-**PWA manifest configuration (vite.config.ts):**
 ```typescript
-// vite.config.ts addition — not a new file, added to existing config
-VitePWA({
-  strategies: 'injectManifest',
-  srcDir: 'src/client',
-  filename: 'sw.ts',          // your custom service worker source
-  registerType: 'prompt',
-  manifest: {
-    name: 'HCC Prevailing Wage',
-    short_name: 'HCC PW',
-    theme_color: '#1a1a1a',
-    background_color: '#ffffff',
-    display: 'standalone',
-    start_url: '/dashboard',
-    icons: [/* 192x192, 512x512 */],
-  },
-  workbox: {
-    globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-  },
-})
+import { randomPKCECodeVerifier, calculatePKCECodeChallenge, buildAuthorizationUrl } from 'openid-client';
+
+// In the connect route handler:
+const codeVerifier = randomPKCECodeVerifier();
+const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
+
+// Store codeVerifier in server session (not client-side) keyed by state parameter
+req.session.procoreOAuth = { codeVerifier, state: randomState };
+
+const authUrl = `https://login.procore.com/oauth/authorize?` +
+  `client_id=${CLIENT_ID}` +
+  `&response_type=code` +
+  `&redirect_uri=${REDIRECT_URI}` +
+  `&code_challenge=${codeChallenge}` +
+  `&code_challenge_method=S256` +
+  `&state=${randomState}`;
 ```
 
-**What gets cached offline:**
-- The full React SPA shell (HTML, JS chunks, CSS, fonts)
-- Static assets (icons, images)
-- Do NOT cache API responses by default — payroll data must be fresh. The service worker should let API calls fall through to network; only cache the app shell.
+**Version note:** `openid-client` v6.8.4 is the latest as of May 2026 (published ~9 days ago). v6 is a complete ESM rewrite with TypeScript-native types. It requires Node.js >= 20.x for the WebCrypto and Fetch globals it depends on. This app is on Node.js 20+ (Render.com confirmed); compatible.
+
+**CJS compatibility in v6:** openid-client v6 is ESM-only, but Node.js 20.19+ supports `require(esm)`. If the existing server code is CommonJS (`"type": "module"` not set in package.json), use dynamic `import()` to load openid-client, or use a top-level async initializer. This is a known friction point — address at implementation time.
+
+**OAuth flow pattern (Express):**
+```
+GET /api/integrations/procore/connect
+  → generate codeVerifier + codeChallenge + state
+  → store { codeVerifier, state } in session
+  → redirect to Procore authorize URL
+
+GET /api/integrations/procore/callback?code=...&state=...
+  → verify state matches session
+  → POST /oauth/token with code + codeVerifier + client_secret
+  → store access_token + refresh_token encrypted in integration_connections table
+  → redirect to /integrations with success banner
+
+GET /api/integrations/procore/sync/:projectId
+  → check token expiry, refresh if needed
+  → fetch timesheets + workers from Procore REST API
+  → upsert into existing workers + payroll tables
+
+DELETE /api/integrations/procore/disconnect
+  → revoke token (Procore has a /revoke endpoint)
+  → delete connection row
+```
 
 **Installation:**
 ```bash
-npm install -D vite-plugin-pwa
-npm install workbox-window
+npm install openid-client
 ```
 
-**Confidence: HIGH** — vite-plugin-pwa is the standard Vite PWA solution, used in production by thousands of apps. Workbox 7.4.0 confirmed as latest via npm (April 2026). `injectManifest` + `prompt` is the correct strategy for data-entry apps.
+**Confidence: HIGH** — PKCE primitives in openid-client v6 confirmed via official GitHub (panva/openid-client). Procore OAuth2 endpoints confirmed via procore.github.io/documentation/oauth-auth-grant-flow. Version 6.8.4 confirmed current as of May 2026.
 
 ---
 
-## Feature 2: Offline Queue for GPS Clock-In Data
+## Credential Vault Storage
 
-### Recommendation: `idb ^8` (IndexedDB wrapper)
+### Recommendation: Drizzle Schema + Existing AES-256-GCM (No New Library)
 
-**Version:** `idb ^8` (version 8 confirmed current, authored by Jake Archibald of Google, TypeScript-native)
+The existing SSN encryption pattern (AES-256-GCM versioned envelope, established v3.0 Phase 31) is the correct approach for OAuth tokens and API keys. Tokens are credentials — treat them identically.
 
-**Why `idb` over raw IndexedDB:**
-Raw IndexedDB is callback-based and verbose. `idb` is a 1.19kB brotli'd promise-based wrapper that mirrors the IndexedDB API exactly but makes it usable from TypeScript. It is the de facto standard wrapper — authored by the same Google engineer who built Workbox, used in production at Google and referenced in every major PWA guide.
+**New table: `integration_connections`**
 
-**Why not Dexie.js:**
-Dexie adds ORM-style abstractions (`.where()`, `.filter()`, reactive queries) on top of IndexedDB. Useful for complex offline apps, but overkill here. The offline queue for this app is simple: store a pending clock-in record when offline, drain it when back online. `idb` handles this with 10 lines of code. No need for Dexie's complexity.
+```sql
+CREATE TABLE integration_connections (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  team_id INTEGER NOT NULL REFERENCES teams(id),
+  provider TEXT NOT NULL,              -- 'procore' | 'sage300cre' | 'vista'
+  connection_type TEXT NOT NULL,       -- 'oauth' | 'api_key' | 'file'
+  -- Encrypted fields (AES-256-GCM versioned envelope, same as ssnEncrypted)
+  access_token_encrypted TEXT,         -- OAuth access token
+  refresh_token_encrypted TEXT,        -- OAuth refresh token
+  api_key_encrypted TEXT,              -- For API key auth (Sage, Vista)
+  -- Non-sensitive metadata
+  token_expires_at INTEGER,            -- Unix timestamp ms
+  external_company_id TEXT,            -- e.g., Procore company_id
+  external_account_id TEXT,            -- e.g., Vista account identifier
+  status TEXT DEFAULT 'active',        -- 'active' | 'expired' | 'error' | 'disconnected'
+  last_sync_at INTEGER,
+  last_error TEXT,
+  created_at INTEGER DEFAULT (unixepoch()),
+  updated_at INTEGER DEFAULT (unixepoch()),
+  UNIQUE(team_id, provider)
+);
+```
 
-**Pattern — offline clock-in queue:**
+**Token refresh pattern (inline on every API call, no background refresher):**
 ```typescript
-// Inside the custom service worker (sw.ts)
-import { openDB } from 'idb';
+async function getValidToken(connectionId: number): Promise<string> {
+  const conn = await db.select().from(integrationConnections)
+    .where(eq(integrationConnections.id, connectionId)).get();
+  
+  const expiresAt = conn.tokenExpiresAt;
+  const fiveMinutesFromNow = Date.now() + 5 * 60 * 1000;
+  
+  if (expiresAt && expiresAt < fiveMinutesFromNow) {
+    // Inline refresh — do not background this; you need the new token right now
+    const refreshed = await refreshProcoreToken(decrypt(conn.refreshTokenEncrypted));
+    await db.update(integrationConnections)
+      .set({
+        accessTokenEncrypted: encrypt(refreshed.access_token),
+        tokenExpiresAt: Date.now() + refreshed.expires_in * 1000,
+        updatedAt: unixepoch(),
+      })
+      .where(eq(integrationConnections.id, connectionId));
+    return refreshed.access_token;
+  }
+  
+  return decrypt(conn.accessTokenEncrypted);
+}
+```
 
-const db = await openDB('pw-offline-queue', 1, {
-  upgrade(db) {
-    db.createObjectStore('clockEvents', { keyPath: 'id', autoIncrement: true });
-  },
-});
+**Why not a secrets manager (HashiCorp Vault, AWS KMS):**
+This is a single-instance Render.com SQLite app. Introducing an external secrets service adds a network dependency, cost, and operational complexity that is not justified at this scale. The existing AES-256-GCM + env-var key pattern is the correct approach. If the app moves to multi-tenant SaaS at scale, revisit.
 
-// Store when offline
-await db.add('clockEvents', {
-  workerId, projectId, type: 'clock-in',
-  lat, lng, accuracy, timestamp: Date.now(),
-});
+**Confidence: HIGH** — Pattern mirrors existing SSN encryption established in v3.0. No new library needed. Schema is additive to existing Drizzle migrations.
 
-// Drain on sync (Background Sync API or online event)
-self.addEventListener('sync', async (event) => {
-  if (event.tag === 'clock-sync') {
-    const all = await db.getAll('clockEvents');
-    for (const event of all) {
-      await fetch('/api/clock-events', { method: 'POST', body: JSON.stringify(event) });
-      await db.delete('clockEvents', event.id);
+---
+
+## Background Sync Scheduler
+
+### Recommendation: `node-cron` (Already Installed) + SQLite Job Queue Table
+
+**node-cron is already in the stack** (confirmed via v6.0 research — used for WD sync and webhook delivery). No new scheduler package is needed.
+
+**Job queue pattern (SQLite-backed, no Redis):**
+Rather than polling Procore on a fixed cron (which doesn't track job state), maintain an `integration_sync_jobs` table. The cron wakes up every minute, claims unclaimed pending jobs, executes them, and records results.
+
+```sql
+CREATE TABLE integration_sync_jobs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  connection_id INTEGER NOT NULL REFERENCES integration_connections(id),
+  job_type TEXT NOT NULL,    -- 'pull_workers' | 'pull_timesheets' | 'push_compliance' | 'pull_projects'
+  status TEXT DEFAULT 'pending',  -- 'pending' | 'running' | 'done' | 'failed'
+  scheduled_for INTEGER NOT NULL,  -- Unix timestamp — when to run
+  started_at INTEGER,
+  completed_at INTEGER,
+  attempts INTEGER DEFAULT 0,
+  max_attempts INTEGER DEFAULT 3,
+  error TEXT,
+  result_summary TEXT,       -- JSON: { pulled: 12, skipped: 2, errors: 0 }
+  created_at INTEGER DEFAULT (unixepoch())
+);
+```
+
+**Cron wiring (existing node-cron, no new package):**
+```typescript
+// In server startup — add to existing cron initialization
+cron.schedule('* * * * *', async () => {
+  // Claim up to 5 pending jobs due now
+  const jobs = await db.select().from(integrationSyncJobs)
+    .where(
+      and(
+        eq(integrationSyncJobs.status, 'pending'),
+        lte(integrationSyncJobs.scheduledFor, Math.floor(Date.now() / 1000))
+      )
+    )
+    .limit(5)
+    .all();
+
+  for (const job of jobs) {
+    // Mark as running (optimistic lock — SQLite single-writer, safe)
+    await db.update(integrationSyncJobs)
+      .set({ status: 'running', startedAt: Math.floor(Date.now() / 1000) })
+      .where(eq(integrationSyncJobs.id, job.id));
+    
+    try {
+      const summary = await runJob(job);
+      await db.update(integrationSyncJobs)
+        .set({ status: 'done', completedAt: Math.floor(Date.now() / 1000), resultSummary: JSON.stringify(summary) })
+        .where(eq(integrationSyncJobs.id, job.id));
+    } catch (err) {
+      const nextAttempt = job.attempts + 1 >= job.maxAttempts ? null : 
+        Math.floor(Date.now() / 1000) + Math.pow(2, job.attempts) * 60;
+      await db.update(integrationSyncJobs)
+        .set({
+          status: job.attempts + 1 >= job.maxAttempts ? 'failed' : 'pending',
+          attempts: job.attempts + 1,
+          scheduledFor: nextAttempt ?? job.scheduledFor,
+          error: String(err),
+        })
+        .where(eq(integrationSyncJobs.id, job.id));
     }
   }
 });
 ```
 
-**Installation:**
-```bash
-npm install idb
+**Why SQLite advisory locks are not needed here:**
+SQLite is single-writer by design. On Render.com (single instance), there will never be two cron processes competing for the same job row. The `status: 'running'` update serves as an in-process lock. If the app ever scales to multiple instances, graduate to a proper queue (pg-boss for Postgres, or BullMQ for Redis) — for now, SQLite single-writer is the correct constraint.
+
+**Nightly sync scheduling pattern:**
+Register nightly jobs on startup and after each successful sync:
+```typescript
+// Schedule a nightly pull for each active connection
+await db.insert(integrationSyncJobs).values({
+  connectionId: conn.id,
+  jobType: 'pull_timesheets',
+  scheduledFor: nextMidnightUtc(),
+});
 ```
 
-**Confidence: HIGH** — idb v8 is confirmed as current, actively maintained, TypeScript-native. This pattern is the documented standard in every major PWA offline guide (web.dev, MDN, Workbox docs).
+**Confidence: HIGH** — node-cron already installed. SQLite single-writer advisory lock pattern is correct for single-instance Render.com deployment. Pattern derived from v6.0 webhook queue research (same architecture).
 
 ---
 
-## Feature 3: QuickBooks Online OAuth 2.0 + Payroll Sync
+## Field Mapping Persistence
 
-### What the QB API Actually Provides
+### Recommendation: JSON Column on `integration_connections` (No New Library)
 
-This is the most important research finding for the QB integration. There are two distinct QB APIs:
-
-**QB Accounting REST API** (`com.intuit.quickbooks.accounting` scope):
-- Employees (name, address, SSN last 4)
-- TimeActivity (hours logged by employee, by day, billable/non-billable)
-- Vendor (subcontractor records)
-- This is what the existing CSV import reads manually. The OAuth integration makes this real-time.
-
-**QB Payroll API** (separate, partially beta as of 2026-04):
-- `payroll.compensation.read` scope — compensation types, pay rates
-- `com.intuit.quickbooks.payroll.timetracking` — time entry submission
-- **Caveat:** Payroll API data is only available for companies using QB Payroll (not QB Online alone). Many contractors use QB Online without QB Payroll. Do not make payroll scope a hard requirement.
-
-**Practical scope recommendation:**
-Request only `com.intuit.quickbooks.accounting` for v6.0. This gives Employees + TimeActivity, which is sufficient to pull hours by worker by week — the core payroll sync use case. Add payroll scope as an optional upgrade if the user has QB Payroll.
-
-### Recommendation: `intuit-oauth` + `node-quickbooks`
-
-**`intuit-oauth ^4.x`** — Intuit's official Node.js OAuth 2.0 client
-- Handles authorization code flow, token exchange, token refresh
-- CSRF protection via state parameter is built in
-- Published on npm as `intuit-oauth`; maintained by Intuit engineering
-- Last confirmed update: community notes indicate active maintenance as of early 2026
-
-**`node-quickbooks ^2.x`** — Community-maintained QB API client
-- Wraps all QB Accounting REST API endpoints
-- Updated as of February 2026 (confirmed from npm search results)
-- Used by thousands of QB integrations; the most widely used QB Node.js client
-- Handles `Employee`, `TimeActivity`, query language (`SELECT * FROM Employee`)
-
-**Why not raw `axios` calls to QB API:**
-`node-quickbooks` provides typed QB-entity query methods and handles the QB query syntax (SQL-like but QB-specific). Rolling raw HTTP calls to QB's REST API means manually implementing query pagination, entity-specific URL patterns, and QB's minor version header (`minorversion=70`). The library handles all of this.
-
-**Token storage — Drizzle schema addition:**
-QB OAuth tokens (access token, refresh token, realm ID, expiry) must be stored per user. Add a `quickbooks_connections` table via Drizzle migration:
+Field mapping (e.g., "Procore cost_code_id 1234 → HCC trade classification Carpenter") is configuration data that belongs to each connection. Store it as a JSON blob in the connection row — no separate table needed for v9.0.
 
 ```sql
--- Migration: add quickbooks_connections table
-CREATE TABLE quickbooks_connections (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id),
-  realm_id TEXT NOT NULL,
-  access_token TEXT NOT NULL,          -- store encrypted (AES-256-GCM, same pattern as SSN)
-  refresh_token TEXT NOT NULL,         -- store encrypted
-  token_expiry INTEGER NOT NULL,       -- Unix timestamp ms
-  created_at INTEGER DEFAULT (unixepoch()),
-  updated_at INTEGER DEFAULT (unixepoch())
+ALTER TABLE integration_connections ADD COLUMN field_mappings TEXT;
+-- Stores JSON: { "costCodes": { "1234": "carpenter" }, "projectIds": { "abc": 42 } }
+```
+
+**Drizzle schema type:**
+```typescript
+fieldMappings: text('field_mappings', { mode: 'json' })
+  .$type<{
+    costCodes?: Record<string, string>;  // externalId → HCC trade classification
+    projectIds?: Record<number, number>; // externalProjectId → HCC projectId
+    employeeIds?: Record<string, number>; // externalEmployeeId → HCC workerId
+  }>(),
+```
+
+**Why not a separate `field_mapping_rules` table:**
+A normalized table adds JOIN complexity for what is read-once-per-sync config. JSON blob in the connection row is correct for v9.0 volume. If field mapping becomes multi-user editable or versioned, normalize in a future milestone.
+
+**Confidence: HIGH** — Drizzle supports `text('col', { mode: 'json' })` natively. No new library.
+
+---
+
+## Sage 300 CRE Integration
+
+### Critical Finding: No Public REST API
+
+**Confirmed (HIGH confidence):** Sage 300 CRE (Construction and Real Estate) does **not** have a public REST API. This was confirmed by:
+1. Sage Community Hub post (communityhub.sage.com) — official community confirmation that CRE uses ODBC drivers, not a web API
+2. Sage 300 standard ERP does have a Web API (SData/OData-based), but CRE is a distinct product line that uses the Pervasive database with ODBC-only external access
+
+**What Sage 300 CRE does provide:**
+- ODBC driver for direct database reads (requires on-premise installation, VPN access — not viable for a cloud app)
+- CSV/TXT file-based import via the Payroll module `Tools > Import Time` menu
+- SQL Replicator (replicates Pervasive DB to SQL Server — requires on-premise middleware)
+- Procore has a documented Sage 300 CRE Payroll Export that produces a `.txt` file in a specific format accepted by Sage's import function
+
+**Integration pattern: file-based adapter for both cloud and on-premise**
+
+Cloud path (contractor downloads from app, imports manually):
+1. Generate a Sage 300 CRE-compatible TXT/CSV file from HCC payroll data
+2. User downloads it from the Integrations page
+3. User imports via Sage 300 CRE `Tools > Import Time`
+4. Push path (compliance data back to CRE): not feasible without ODBC/SQL access — document this limitation
+
+On-premise path (for contractors with local Sage instance accessible via network share):
+1. HCC app watches a network-accessible directory for export files from Sage (CSV exports from Crystal Reports)
+2. Parse incoming files → upsert workers/timesheets
+3. Write compliance export files to a watched output directory → Sage auto-import
+
+**Sage 300 CRE payroll import file format (confirmed from Procore and Sage documentation):**
+- Format: comma-delimited TXT (not CSV — must be `.txt` extension)
+- Fields: `employee_id, date, hours, pay_type, job_number, cost_code, equipment_code`
+- No extra blank spaces — CRE rejects files with extra spaces between commas
+- Blank fields: `field1,,field3` (no space between commas)
+
+**Recommendation: `chokidar ^4` for file watching (on-premise adapter)**
+
+`chokidar` is the standard Node.js file watcher — the underlying library used by Webpack, Vite, and every major build tool. It handles cross-platform file watching with proper event debouncing.
+
+```typescript
+import chokidar from 'chokidar';
+
+const watcher = chokidar.watch(watchDir, {
+  persistent: true,
+  ignoreInitial: false,
+  awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 100 },
+});
+
+watcher.on('add', (filePath) => {
+  if (filePath.endsWith('.txt') || filePath.endsWith('.csv')) {
+    parseSageExportFile(filePath, connectionId);
+  }
+});
+```
+
+`awaitWriteFinish` prevents reading a file while Sage is still writing it — critical for large exports.
+
+**Version:** `chokidar ^4.0.3` (confirmed current as of mid-2026; v4 dropped CommonJS in favor of pure ESM; verify your server module format compatibility — may need dynamic import or `"type": "module"` in package.json).
+
+**Installation:**
+```bash
+npm install chokidar
+```
+
+**Cloud vs on-premise adapter pattern:**
+```typescript
+// integration_connections.connection_type determines which adapter runs
+type SageAdapter = 'file_download' | 'watched_directory';
+
+// 'file_download': generate export file, serve via GET /api/integrations/sage/export
+// 'watched_directory': chokidar watches configured path, parses on file add
+```
+
+**Confidence: HIGH for the no-REST-API finding.** MEDIUM for file format details (Sage import format confirmed via Procore support docs and Sage KB, but exact field order should be validated against a test import before shipping). MEDIUM for chokidar v4 ESM compatibility (chokidar v4 is ESM-only — same issue as openid-client v6, needs dynamic import if server is CJS).
+
+---
+
+## Viewpoint Vista Integration
+
+### What the Vista API Actually Provides
+
+**Confirmed (MEDIUM confidence):** Viewpoint Vista (now Trimble) supports REST APIs via two paths:
+
+**AppXchange (preferred, cloud-hosted Vista only):**
+- Bidirectional REST API via `https://direct-api.xchange.trimble.com`
+- 17 modules including HR, Payroll, Project Management
+- Rate limit: 2,000 requests/minute
+- Historical data limited to 12 months on most GET endpoints
+- Authentication: API key or OAuth (details require Trimble developer registration)
+- Must select which endpoints to enable during setup — not all endpoints are on by default
+
+**Legacy Viewpoint API (on-premise only, deprecated):**
+- Swagger: `https://integrations-qa.centralus.cloudapp.azure.com/swagger/index.html`
+- No longer actively developed
+- Still functional, but Trimble recommends AppXchange for new integrations
+
+**On-premise fallback (no API access):**
+- ODBC via VPN/TLS endpoint
+- CSV and Excel file imports with automated scanning
+- Same `chokidar` file-watcher pattern as Sage 300 CRE
+
+**Critical limitation:** AppXchange requires registering as a Trimble developer and a contracting relationship to get API credentials. This is NOT a self-service API — there is a sales/onboarding step. Do not promise "one-click Vista connect" in the UI without confirming customer has AppXchange access.
+
+**Integration pattern recommendation:**
+- Phase 132 (Foundation): implement file-based adapter first (chokidar + CSV) — works for all Vista customers regardless of hosting
+- Phase 133 (API): add AppXchange REST adapter behind a feature flag; expose only when customer provides AppXchange credentials
+- The `integration_connections.connection_type` field distinguishes `'api'` vs `'file'`
+
+**HTTP calls to AppXchange (using axios):**
+```typescript
+import axios from 'axios';
+
+const vistaClient = axios.create({
+  baseURL: 'https://direct-api.xchange.trimble.com',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+  timeout: 30_000,
+});
+
+// Add response interceptor for 401 → auto-refresh
+vistaClient.interceptors.response.use(
+  (res) => res,
+  async (err) => {
+    if (err.response?.status === 401) {
+      const newToken = await refreshVistaToken(connectionId);
+      err.config.headers['Authorization'] = `Bearer ${newToken}`;
+      return vistaClient.request(err.config);
+    }
+    throw err;
+  }
 );
 ```
 
-**Encrypt tokens at rest** using the existing AES-256-GCM pattern established in v3.0 Phase 31. Tokens are credentials — treat them the same as SSNs.
-
-**OAuth flow in Express:**
-```
-GET /api/integrations/qbo/connect  → redirect to Intuit auth URL (intuit-oauth)
-GET /api/integrations/qbo/callback → exchange code for tokens, store in quickbooks_connections
-GET /api/integrations/qbo/sync/:projectId → pull Employee + TimeActivity, upsert payroll data
-DELETE /api/integrations/qbo/disconnect → revoke + delete tokens
-```
-
-**Refresh token handling:**
-QB access tokens expire in 1 hour; refresh tokens expire in 100 days. Add a token refresh check before every API call (not a background cron — check on request, refresh inline if within 5 minutes of expiry). Store the new tokens immediately after refresh.
-
-**Installation:**
-```bash
-npm install intuit-oauth node-quickbooks
-```
-
-**Confidence: MEDIUM** — OAuth flow with `intuit-oauth` is HIGH confidence (official Intuit library). The scope of payroll data available via API is MEDIUM confidence — Payroll API is partially beta; TimeActivity via Accounting scope is confirmed. Recommend building against Accounting scope first and treating Payroll scope as an optional extension.
+**Confidence: MEDIUM** — AppXchange REST API existence confirmed via Trimble official FAQ. Specific endpoints for employees/timesheets not documented publicly — requires Trimble developer account to access full API reference. File-based adapter is HIGH confidence (standard pattern, no API gating).
 
 ---
 
-## Feature 4: Public REST API — Key Auth + Webhook Delivery
+## HTTP Client for ERP API Calls
 
-### API Key Authentication
+### Recommendation: `axios ^1.8` (Likely Already Installed — Verify)
 
-**Recommendation: Custom Express middleware (no library)**
+Check `package.json` — if `axios` is already installed (it often is in Express apps of this vintage), no new package is needed.
 
-The `passport-headerapikey` library exists but adds Passport as a dependency — unnecessary for a simple static key check. A custom middleware is 20 lines and has zero dependencies:
+**Why axios over native fetch for ERP calls:**
+- Axios interceptors handle token refresh transparently (attach once, all requests benefit)
+- Automatic JSON serialization/deserialization
+- Built-in timeout configuration (`timeout: 30_000` — ERP APIs can be slow)
+- Error objects include `error.response.data` for ERP API error bodies (native fetch requires manual `.json()` on the error response)
+- TypeScript types built-in
 
+**Why not `got`:**
+`got` v14 is ESM-only, excellent for pure-ESM projects, but adds ESM migration friction on a CJS server. Axios works in both module systems. Use axios.
+
+**Axios client factory pattern (one instance per integration):**
 ```typescript
-// src/server/middleware/apiKeyAuth.ts
-export function apiKeyAuth(req, res, next) {
-  const key = req.headers['x-api-key'] as string;
-  if (!key) return res.status(401).json({ error: 'Missing X-Api-Key header' });
+function createErpClient(baseURL: string, getToken: () => Promise<string>) {
+  const client = axios.create({ baseURL, timeout: 30_000 });
   
-  // Timing-safe comparison (prevents timing attacks)
-  const row = await db.select().from(apiKeys)
-    .where(eq(apiKeys.keyHash, hashApiKey(key)))
-    .get();
-    
-  if (!row || !row.isActive) return res.status(401).json({ error: 'Invalid API key' });
-  req.apiKeyId = row.id;
-  req.apiUserId = row.userId;
-  next();
-}
-```
-
-**API key schema (Drizzle):**
-```sql
-CREATE TABLE api_keys (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id),
-  key_hash TEXT NOT NULL UNIQUE,   -- SHA-256 of the key; never store plaintext
-  label TEXT,
-  is_active INTEGER DEFAULT 1,
-  last_used_at INTEGER,
-  created_at INTEGER DEFAULT (unixepoch())
-);
-```
-
-Store only a SHA-256 hash of the key. Present the full key to the user once at creation time (same pattern as GitHub PATs). Use `crypto.createHash('sha256')` from Node.js built-ins — no library needed.
-
-Rate limit the public API via `express-rate-limit ^8.3.2` (already installed or upgrade; currently at 8.3.2 confirmed April 2026) with a separate limiter instance for public API routes:
-```typescript
-const publicApiLimiter = rateLimit({ windowMs: 60_000, max: 60 }); // 60 req/min per key
-router.use('/api/public/v1', apiKeyAuth, publicApiLimiter);
-```
-
-### Webhook Delivery
-
-**Recommendation: SQLite-backed queue via Drizzle + node-cron (no external queue)**
-
-BullMQ (Redis-backed) and pg-boss (Postgres-backed) are the standard solutions but require infrastructure that does not exist in this app — adding Redis to Render.com introduces a new service ($) and operational complexity. For the webhook volume this app will see in v6.0 (tens to hundreds of webhook deliveries per day, not thousands per minute), a SQLite-backed retry queue is appropriate.
-
-Pattern confirmed by a January 2026 production reference (oneuptime.com blog) — SQLite webhook queue with exponential backoff, no Redis. Exactly the right pattern for a Render.com single-instance SQLite deployment.
-
-**Webhook schema (Drizzle):**
-```sql
-CREATE TABLE webhook_subscriptions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id),
-  url TEXT NOT NULL,
-  secret TEXT NOT NULL,              -- HMAC signing secret, store encrypted
-  events TEXT NOT NULL,             -- JSON array: ["payroll.submitted", "violation.detected"]
-  is_active INTEGER DEFAULT 1,
-  created_at INTEGER DEFAULT (unixepoch())
-);
-
-CREATE TABLE webhook_deliveries (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  subscription_id INTEGER NOT NULL REFERENCES webhook_subscriptions(id),
-  event_type TEXT NOT NULL,
-  payload TEXT NOT NULL,            -- JSON
-  status TEXT DEFAULT 'pending',   -- pending | delivered | failed | dead
-  attempts INTEGER DEFAULT 0,
-  next_attempt_at INTEGER,          -- Unix timestamp
-  last_response_status INTEGER,
-  last_response_body TEXT,
-  created_at INTEGER DEFAULT (unixepoch())
-);
-```
-
-**Delivery process:**
-1. On event (payroll submitted, violation detected), insert a row into `webhook_deliveries` for each matching subscription
-2. `node-cron` job runs every 30 seconds: `SELECT * FROM webhook_deliveries WHERE status='pending' AND next_attempt_at <= unixepoch()`
-3. For each row: POST to `url` with HMAC-SHA256 signature header, update status/attempts
-4. Exponential backoff: `next_attempt_at = unixepoch() + (2^attempts * 60)` — retries at 1min, 2min, 4min, 8min, 16min
-5. After 5 failed attempts: set `status = 'dead'`
-
-**HMAC signing (no library):**
-```typescript
-import { createHmac } from 'crypto';
-const signature = createHmac('sha256', secret)
-  .update(JSON.stringify(payload))
-  .digest('hex');
-// Header: X-HCC-Signature: sha256=<signature>
-```
-
-This is the same pattern used by GitHub and Stripe webhooks. Node.js `crypto` is built-in — no library needed.
-
-**node-cron is already installed** (confirmed in existing package.json from v5.0 research — used for WD sync scheduling). No new package needed for the delivery loop.
-
-**When to graduate to BullMQ:** If webhook volume exceeds ~1,000 deliveries/day or if the app moves to multi-instance (horizontal scaling on Render.com). For v6.0, SQLite queue is correct and avoids Redis dependency.
-
-**Installation:**
-```bash
-# No new packages — node-cron already installed, crypto is built-in
-```
-
-**Confidence: MEDIUM** — Custom SQLite webhook queue pattern confirmed via January 2026 production reference. HMAC signing with Node.js crypto is HIGH confidence (standard pattern). The risk is reliability of the cron-based poller vs. a dedicated queue consumer — acceptable for v6.0 volume.
-
----
-
-## Feature 5: GPS Geolocation — Browser-Based Clock-In
-
-### Recommendation: Native Browser API (no library)
-
-`navigator.geolocation` is available in all modern browsers, including iOS Safari and Android Chrome. No library adds meaningful value over the native API for this use case.
-
-**Critical requirements for GPS clock-in:**
-1. **HTTPS only** — Geolocation API is blocked on HTTP. This app is already served over HTTPS on Render.com.
-2. **Permission prompt** — Browser requires explicit user consent; this cannot be bypassed or pre-requested silently.
-3. **Accuracy is NOT guaranteed** — This is the most important pitfall: iOS 14+ introduced "Approximate Location" (privacy setting), which returns accuracy between 3,000–9,000 meters (3–9 km). Do not use GPS for hard geofencing enforcement (e.g., "you must be within 100m of the job site to clock in"). Use it for best-effort site verification and audit trail only.
-
-**Practical implementation:**
-```typescript
-// In the React clock-in component
-async function captureLocation(): Promise<GeolocationCoordinates | null> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(null); return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve(pos.coords),
-      () => resolve(null),           // permission denied → proceed without GPS
-      { timeout: 10000, maximumAge: 30000, enableHighAccuracy: true }
-    );
+  // Attach token before every request
+  client.interceptors.request.use(async (config) => {
+    config.headers['Authorization'] = `Bearer ${await getToken()}`;
+    return config;
   });
+  
+  return client;
 }
+
+const procoreClient = createErpClient('https://api.procore.com', () => getValidToken(procoreConnectionId));
+const vistaClient = createEprClient('https://direct-api.xchange.trimble.com', () => getValidToken(vistaConnectionId));
 ```
 
-If the user denies permission or is on a device with approximate location, the clock-in proceeds without GPS — geolocation is an audit enhancement, not a gate. Surface the `accuracy` value in the UI so the GC can see "±50m" vs "±5000m".
-
-**Clock event schema (Drizzle):**
-```sql
-CREATE TABLE clock_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  worker_id INTEGER NOT NULL REFERENCES workers(id),
-  project_id INTEGER NOT NULL REFERENCES projects(id),
-  type TEXT NOT NULL,            -- 'clock-in' | 'clock-out'
-  lat REAL,                      -- nullable — may be absent if permission denied
-  lng REAL,
-  accuracy REAL,                 -- meters radius
-  source TEXT DEFAULT 'browser', -- 'browser' | 'offline-sync'
-  client_timestamp INTEGER,      -- Unix ms from the device (may differ from server_timestamp if offline)
-  server_timestamp INTEGER DEFAULT (unixepoch()),
-  synced_from_offline INTEGER DEFAULT 0,  -- flag if this came from the IndexedDB queue
-  created_at INTEGER DEFAULT (unixepoch())
-);
-```
-
-**Offline scenario:** Worker clocks in while offline → `idb` stores the event with `client_timestamp` → service worker syncs to server when back online → server records `server_timestamp` and sets `synced_from_offline = 1`. Both timestamps are preserved for audit purposes.
-
-**No new library needed.** GPS capture is native; clock event storage is Drizzle schema.
-
-**Confidence: HIGH** — `navigator.geolocation` is a W3C standard, supported everywhere. Accuracy limitation on iOS confirmed via March 2025 blog post and Apple developer forums. HTTPS requirement confirmed via MDN. No library adds value here.
+**Confidence: HIGH** — Axios is the dominant Node.js HTTP client, TypeScript-native, actively maintained. Pattern confirmed across multiple sources.
 
 ---
 
-## Feature 6: SOC 2 Type II Technical Controls
+## CSV Parsing for File Adapters
 
-### What SOC 2 Type II Actually Requires
+### Recommendation: `csv-parse ^5.5` (Verify If Already Installed)
 
-SOC 2 is not a technical spec — it is a process audit. An auditor spends 3–12 months observing that your stated controls actually operate as described. The technical controls are a subset of the total requirement. The non-technical requirements (access review process, incident response plan, vendor risk management, HR onboarding/offboarding procedures) are equally important but outside the scope of npm packages.
+The existing payroll import stack (QuickBooks, ADP, Gusto, Paychex, Sage 300 CSV) uses a CSV parser. Check if `csv-parse` is already installed. If not, install it — it is the right choice for streaming large Sage/Vista export files.
 
-**Technical controls SOC 2 Type II auditors look for in a web app:**
+**Why `csv-parse` over manual split:**
+Large ERP exports (thousands of timecard rows) should be streamed, not buffered. `csv-parse` supports streaming mode, handles quoted fields, BOM stripping, and encoding conversion.
 
-| Control | Category | Status in This App | Action Needed |
-|---------|---------|-------------------|--------------|
-| Encryption at rest (AES-256) | CC6.1 | DONE — SSN AES-256-GCM (v3.0) | Extend to QB tokens |
-| Encryption in transit (TLS 1.2+) | CC6.7 | DONE — Render.com terminates TLS | Document it |
-| Rate limiting | CC6.6 | express-rate-limit on auth routes | Add to all public API routes |
-| Security headers (HSTS, CSP, X-Frame) | CC6.7 | helmet already installed | Verify config is strict |
-| Audit log — user actions | CC7.2 | DONE — audit_log table + pino (v3.0) | Ensure completeness |
-| Audit log — immutable / tamper-evident | CC7.2 | PARTIAL — DB rows deletable | Add log rotation to S3 or write-once sink |
-| MFA for admin accounts | CC6.3 | NOT DONE | Add TOTP |
-| Least-privilege access | CC6.3 | DONE — assertProjectAccess, IDOR guards | Document it |
-| Automated vulnerability scanning | CC7.1 | NOT DONE | Add `npm audit` to CI |
-| Dependency monitoring | CC7.1 | NOT DONE | Add Dependabot or Snyk |
-| Incident response plan | CC7.3 | NOT DONE | Process document (not npm) |
-| Backup and recovery | A1.2 | PARTIAL — Render.com disk snapshots | Define RTO/RPO, test restore |
+```typescript
+import { parse } from 'csv-parse';
+import { createReadStream } from 'fs';
 
-### MFA — Recommend `otplib` + `qrcode`
-
-**`otplib ^12.x`** — TOTP (Time-based One-Time Password) generation and verification
-- Generates secrets and verifies 6-digit TOTP codes from Google Authenticator / Authy
-- Standard RFC 6238 implementation
-- No external dependency on an auth service (no Auth0, no Okta) — keeps costs at zero
-- 12k weekly npm downloads; actively maintained
-
-**`qrcode ^1.5.x`** — Generate QR code for the authenticator app setup
-- Server-side QR code generation as a data URL → rendered in the React MFA setup modal
-- No external service needed
-
-**MFA flow:**
-```
-User enables MFA → server generates TOTP secret (otplib) → encode as QR (qrcode) →
-show QR in modal → user scans with Authenticator app → user enters 6-digit code to verify →
-store encrypted secret in users.totp_secret → all future logins require TOTP code
+async function parseSageExport(filePath: string) {
+  const parser = createReadStream(filePath).pipe(
+    parse({
+      delimiter: ',',
+      trim: true,
+      skip_empty_lines: true,
+      bom: true,
+    })
+  );
+  
+  for await (const row of parser) {
+    await upsertTimecardRow(row);
+  }
+}
 ```
 
-**Why TOTP and not SMS/email OTP:**
-SMS OTP requires a Twilio/SNS account (cost + vendor dependency). Email OTP is weaker (email accounts are phishable). TOTP authenticator apps are the SOC 2-acceptable standard for MFA in a SaaS product.
-
-**Installation:**
-```bash
-npm install otplib qrcode
-npm install -D @types/qrcode
-```
-
-### Immutable Audit Log — Route to S3 or Structured Log Drain
-
-The existing `audit_log` SQLite table is deletable by a DB admin — SOC 2 auditors want write-once-read-many (WORM) evidence. Two options:
-
-**Option A (simple): Pino log drain to Render.com log sink or Papertrail**
-Pino is already installed. Add a Pino transport that ships structured logs (including audit events) to a log aggregation service with immutable retention (Papertrail, Better Stack, Datadog). Cost: ~$0–$20/month for the log volume this app produces. The external log sink is the WORM storage. This requires zero new npm packages.
-
-**Option B (complete): Append-only S3 sink with Object Lock**
-Write audit events to S3 with Object Lock (WORM). Requires `@aws-sdk/client-s3` + AWS credentials. Over-engineered for v6.0.
-
-**Recommendation: Option A** — Pino drain to a log aggregation service. Add the Pino transport config and a structured `auditLog()` helper that logs to both the SQLite table (for in-app display) and the external sink (for SOC 2 evidence). Zero new npm packages.
-
-### Compliance Platform — Vanta or Drata
-
-SOC 2 Type II certification requires an accredited auditor. The compliance platform (Vanta, Drata, Secureframe) automates evidence collection (Git commit logs, access reviews, uptime data) and prepares the audit package. The auditor's fee is separate.
-
-**Estimated costs (2026):**
-- Vanta: ~$10,000–$15,000/year (best for early-stage, fast setup)
-- Drata: ~$7,500–$15,000/year (more structured, better for multi-framework)
-- Auditor fee: ~$15,000–$30,000 for Type II
-- **Total first-year: ~$25,000–$45,000**
-
-**Timeline:** SOC 2 Type II requires 3–12 months of observation period after controls are in place. Start technical controls implementation now; engage Vanta/Drata after controls are live; target Type II report in 6 months.
-
-**Confidence: MEDIUM** — SOC 2 process requirements are well-documented and HIGH confidence. Specific tool pricing is MEDIUM confidence (pricing changes; verify with vendor before commitment). TOTP/otplib recommendation is HIGH confidence.
+**Confidence: HIGH** — csv-parse is the most-used CSV library in the Node.js ecosystem; v5 is the current stable with streaming support.
 
 ---
 
@@ -469,40 +500,15 @@ SOC 2 Type II certification requires an accredited auditor. The compliance platf
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `bullmq` (Redis queue) | Requires Redis — new infrastructure, new cost on Render.com. Not justified for v6.0 webhook volume. | SQLite + Drizzle webhook queue (custom, ~100 lines) |
-| `passport` + `passport-headerapikey` | Passport adds abstraction and dependency overhead for what is a 20-line middleware check. | Custom Express `apiKeyAuth` middleware |
-| `jose` / `jsonwebtoken` for API keys | API keys are not JWTs. JWT complexity (expiry, signature, claims) is wrong for this use case. Static keys with SHA-256 hashing is correct. | `crypto.createHash('sha256')` (built-in) |
-| `workbox-background-sync` (standalone) | `vite-plugin-pwa` with `injectManifest` gives access to Background Sync API directly in the custom service worker. The standalone package is redundant. | Custom `sync` event handler in sw.ts |
-| `Dexie.js` for offline storage | Adds ORM complexity to IndexedDB that is not needed for a simple clock-event queue. | `idb ^8` (~1.2kB) |
-| Auth0 / Okta for MFA | $240+/month minimum. Overkill for TOTP, which is 50 lines of code with `otplib`. | `otplib ^12.x` (self-hosted TOTP) |
-| Redis session store for API keys | API keys are stateless — look up hash in SQLite on every request. No session needed. | Drizzle `api_keys` table + SHA-256 lookup |
-| Stripe Radar / fraud tooling | Not relevant to this app's SOC 2 scope. | Existing Sentry + pino for monitoring |
-| AWS S3 for audit log immutability | Over-engineered for v6.0. Adds AWS credentials, IAM, S3 SDK. | Pino drain to Papertrail / Better Stack |
-| `twilio` / SMS OTP for MFA | Cost, vendor dependency, SIM-swap attack surface. Authenticator apps are the correct choice. | `otplib` TOTP |
-
----
-
-## Installation Summary
-
-```bash
-# PWA + Offline
-npm install -D vite-plugin-pwa
-npm install workbox-window idb
-
-# QuickBooks OAuth
-npm install intuit-oauth node-quickbooks
-
-# SOC 2 MFA
-npm install otplib qrcode
-npm install -D @types/qrcode
-
-# Already installed — no action needed:
-# express-rate-limit (upgrade to ^8.3.2 if below that)
-# helmet
-# node-cron
-# pino
-# crypto (Node.js built-in)
-```
+| `bullmq` (Redis-backed queue) | Requires Redis — new infrastructure, new Render.com service, cost. Volume is tens to hundreds of syncs/day, not thousands. | SQLite `integration_sync_jobs` table + existing `node-cron` |
+| `passport` + `passport-oauth2` | Adds framework abstraction for what is 3 Express routes and `openid-client` PKCE primitives. Passport couples authentication into middleware chains that complicate the stateless sync-job flow. | Custom Express routes + `openid-client` PKCE utilities |
+| `@procore/js-sdk` | Procore's official JS SDK exists but is browser-targeted and wraps `fetch`. On a Node.js server, direct `axios` calls with proper typing are simpler and more debuggable. | `axios` + typed request/response interfaces |
+| `node-sage-api` / community Sage libs | None have active maintenance or significant adoption. Sage 300 CRE has no REST API to wrap anyway. | Custom file adapter (generate/parse TXT) |
+| `agenda` (MongoDB job queue) | Requires MongoDB — a different DB than the SQLite/Drizzle stack. Switching to MongoDB for job scheduling only is wrong. | SQLite job queue table |
+| HashiCorp Vault / AWS KMS | External secret stores add network dependency, operational complexity, and cost. Not justified for single-instance Render.com app. | Existing AES-256-GCM with env-var key |
+| `dotenv-vault` / `infisical` | Same rationale — external secret management is over-engineering for this deployment model. | Existing `.env` + Render.com environment variables |
+| `p-queue` (concurrency limiter) | Useful for rate-limiting concurrent API calls, but Procore's 2,000 req/min and Vista's 2,000 req/min limits are generous for nightly sync volumes. Add only if rate-limit errors appear in production. | Implement simple delay (`await new Promise(r => setTimeout(r, 500))`) between batches if needed |
+| Separate microservice for integrations | This is a monolith. A separate sync service adds deployment complexity, cross-service auth, and network calls for what is a background cron task in the same process. | Cron-driven job runner in the existing Express server |
 
 ---
 
@@ -510,16 +516,88 @@ npm install -D @types/qrcode
 
 | New Capability | Integrates With | Integration Pattern |
 |---|---|---|
-| PWA manifest | Vite config (`vite.config.ts`) | Add `VitePWA()` plugin alongside existing plugins |
-| Service worker | React `main.tsx` | Register `workbox-window` Workbox instance on mount |
-| Offline queue | Service worker `sw.ts` | `idb` in service worker scope (not in React) |
-| QB OAuth tokens | Drizzle schema | New `quickbooks_connections` table, encrypted same as SSN |
-| QB sync data | Existing worker + payroll tables | Upsert into existing schema via `payroll_imports` pattern |
-| API keys | Drizzle schema | New `api_keys` table, SHA-256 hash lookup |
-| Webhook queue | Drizzle schema + existing `node-cron` | New `webhook_deliveries` table, cron runs every 30s |
-| Clock events | Drizzle schema | New `clock_events` table, FK to workers + projects |
-| TOTP secret | Drizzle schema | New `totp_secret` column on `users` table, encrypted |
-| Pino audit drain | Existing pino config | Add Pino transport in `logger.ts` |
+| Procore OAuth PKCE | Express auth routes | New `/api/integrations/procore/connect` + `/callback` routes; session for state/verifier |
+| Token storage | Drizzle migrations | New `integration_connections` table; AES-256-GCM encrypt same as SSNs |
+| Sync job queue | Drizzle migrations | New `integration_sync_jobs` table; existing `node-cron` polls every minute |
+| Field mappings | `integration_connections.field_mappings` | JSON column — read at sync start, write from UI configuration |
+| Worker upsert (pull) | Existing `workers` table | Match by `externalId` → update, or create new worker with `source: 'procore'` column |
+| Timecard upsert (pull) | Existing `payrollEntries` table | Match by `(workerId, weekId, dayIndex)` — conflict detection same as existing CSV import |
+| Compliance push (to Procore) | Existing compliance engine | Read computed violations → PATCH Procore custom fields |
+| Sage file export | Existing payroll data | Generate TXT from `payrollEntries` in Sage import format |
+| Sage file import (chokidar) | New `chokidar` watcher + existing DB | Watched dir → parse → upsert workers/timecards |
+| Vista API calls | `axios` client factory | Per-connection axios instance with token interceptor |
+| Audit trail | Existing `audit_log` table | Log all sync events (provider, type, rows affected, errors) |
+
+---
+
+## DB Schema Summary (New Tables/Columns for v9.0)
+
+All via Drizzle add-only migrations:
+
+```sql
+-- New table: one row per ERP connection per team
+CREATE TABLE integration_connections (
+  id, team_id, provider, connection_type,
+  access_token_encrypted, refresh_token_encrypted, api_key_encrypted,
+  token_expires_at, external_company_id, external_account_id,
+  field_mappings TEXT,   -- JSON: { costCodes, projectIds, employeeIds }
+  status, last_sync_at, last_error, created_at, updated_at,
+  UNIQUE(team_id, provider)
+);
+
+-- New table: persistent job queue (no Redis)
+CREATE TABLE integration_sync_jobs (
+  id, connection_id, job_type, status,
+  scheduled_for, started_at, completed_at,
+  attempts, max_attempts, error, result_summary, created_at
+);
+
+-- New column on workers (track ERP source)
+ALTER TABLE workers ADD COLUMN external_source TEXT;          -- 'procore' | 'sage300cre' | 'vista' | null
+ALTER TABLE workers ADD COLUMN external_id TEXT;              -- ERP-side employee ID
+ALTER TABLE workers ADD COLUMN external_updated_at INTEGER;   -- last sync timestamp from ERP
+
+-- New column on projects (track ERP project mapping)
+ALTER TABLE projects ADD COLUMN external_source TEXT;
+ALTER TABLE projects ADD COLUMN external_id TEXT;
+```
+
+---
+
+## Installation Summary
+
+```bash
+# New packages
+npm install openid-client          # v6.8.4 — PKCE primitives for Procore OAuth
+npm install chokidar               # v4.x — file watcher for Sage/Vista on-premise adapter
+
+# Verify these are already installed (check package.json before running)
+npm install axios                  # HTTP client for ERP API calls
+npm install csv-parse              # CSV/TXT parser for file adapters
+
+# No new packages — already in stack:
+# node-cron (job scheduler — existing)
+# crypto (Node.js built-in — HMAC, AES-256-GCM)
+# drizzle-orm (schema additions only)
+# pino (audit logging for sync events)
+```
+
+---
+
+## ESM Compatibility Warning
+
+Both `openid-client ^6` and `chokidar ^4` are **ESM-only** packages. If the server currently runs as CommonJS (no `"type": "module"` in `package.json`), you must either:
+
+1. **Use dynamic import()** for both packages at initialization time (simplest, no migration needed):
+```typescript
+// At server startup
+const { randomPKCECodeVerifier, calculatePKCECodeChallenge } = await import('openid-client');
+const { watch } = await import('chokidar');
+```
+
+2. **Migrate server to ESM** — change `"type": "module"` in package.json, update all `require()` to `import`, update `__dirname` references to `import.meta.dirname`. This is a larger change — worth considering for a future milestone if the ESM migration pays off elsewhere.
+
+Check the existing codebase for `require()` calls before deciding. If the project already uses `"type": "module"`, both packages work directly with no workaround.
 
 ---
 
@@ -527,39 +605,35 @@ npm install -D @types/qrcode
 
 | Package | Version | Purpose | Install Status |
 |---------|---------|---------|---------------|
-| `vite-plugin-pwa` | ^1.2.0 | PWA manifest + SW build integration | NEW — dev dependency |
-| `workbox-window` | ^7.4.0 | SW registration + update prompt in React | NEW — client runtime |
-| `idb` | ^8` | IndexedDB offline queue (clock events) | NEW — client runtime |
-| `intuit-oauth` | ^4.x | QB OAuth 2.0 authorization code flow | NEW — server runtime |
-| `node-quickbooks` | ^2.x | QB Accounting REST API client | NEW — server runtime |
-| `otplib` | ^12.x | TOTP generation + verification for MFA | NEW — server runtime |
-| `qrcode` | ^1.5.x | QR code generation for MFA setup | NEW — server runtime |
-| `express-rate-limit` | ^8.3.2 | Rate limit public API routes | UPGRADE if below 8.3.2 |
-| `helmet` | already installed | Security headers (verify strict config) | ALREADY INSTALLED |
-| `node-cron` | already installed | Webhook delivery cron loop | ALREADY INSTALLED |
-| `pino` | already installed | Audit log + structured logging | ALREADY INSTALLED |
-| `crypto` | Node.js built-in | HMAC signing, SHA-256 API key hashing | BUILT-IN |
+| `openid-client` | ^6.8.4 | PKCE code_verifier/challenge generation for Procore OAuth | NEW — server runtime |
+| `chokidar` | ^4.0.3 | File watcher for Sage 300 CRE / Vista on-premise file adapter | NEW — server runtime |
+| `axios` | ^1.8.x | HTTP client for Procore and Vista REST API calls | VERIFY — likely installed |
+| `csv-parse` | ^5.5.x | Streaming CSV/TXT parser for file-based adapters | VERIFY — likely installed |
+| `node-cron` | already installed | Sync job scheduler (poll `integration_sync_jobs` every minute) | ALREADY INSTALLED |
+| `crypto` | Node.js built-in | AES-256-GCM token encryption; HMAC for webhook signing | BUILT-IN |
+| `drizzle-orm` | already installed | Schema additions for integration_connections + sync_jobs | ALREADY INSTALLED |
+| `pino` | already installed | Audit logging for sync events | ALREADY INSTALLED |
 
 ---
 
 ## Sources
 
-- vite-plugin-pwa npm page — latest version 1.2.0, published ~November 2025; confirmed April 2026 (MEDIUM confidence — npm page 403'd, version reported via WebSearch result from npmjs.com)
-- Workbox npm (workbox-strategies, workbox-window) — version 7.4.0, both packages, last published 3 months ago as of April 2026 (HIGH confidence — WebSearch npm search result)
-- vite-pwa-org.netlify.app — official documentation; `injectManifest` vs `generateSW` strategy guidance; `prompt` vs `autoUpdate` strategy comparison (HIGH confidence — official project docs)
-- idb GitHub (jakearchibald/idb) — version 8 confirmed, 1.19kB brotli, TypeScript-native (HIGH confidence — GitHub + npm references consistent)
-- Intuit Developer Portal (developer.intuit.com) — `intuit-oauth` is official Intuit Node.js OAuth library; QB Accounting scope `com.intuit.quickbooks.accounting` gives Employee + TimeActivity access (HIGH confidence for OAuth; MEDIUM for Payroll API scope — partially beta)
-- Intuit Developer Blog, November 2025 — "Powerful time & payroll tracking with the Time API + Payroll Compensation" — confirms `payroll.compensation.read` scope is available but requires QB Payroll subscription (MEDIUM confidence)
-- node-quickbooks GitHub (mcohen01/node-quickbooks) — community maintained, updated February 2026, most widely used QB Node.js client (MEDIUM confidence — community maintained, not official Intuit)
-- WebSearch (express-rate-limit npm) — version 8.3.2, 29.9M weekly downloads, last published 22 days ago as of April 2026 (HIGH confidence)
-- oneuptime.com blog (January 2026) — "How to Build a Webhook Service with Retry Logic in Node.js" — confirms SQLite webhook queue with exponential backoff is a production-viable pattern without Redis (MEDIUM confidence — single source, production reference)
-- MDN Web Docs — `navigator.geolocation` requires HTTPS; `getCurrentPosition` options; Background Sync API in service workers (HIGH confidence — official spec reference)
-- magicbell.com / poespas.me blog (2025-2026) — iOS Safari approximate location returns 3,000–9,000m accuracy; Safari geolocation permission state inconsistency; confirmed HTTPS requirement (HIGH confidence — multiple independent sources, consistent findings)
-- SOC 2 controls sources (complyjet.com, secureframe.com, brightdefense.com — 2025-2026) — CC6.1 encryption, CC6.3 MFA + least privilege, CC6.6 rate limiting, CC6.7 TLS + headers, CC7.2 audit logs; AES-256 + TLS 1.2+ are the required standards (HIGH confidence — multiple compliance sources consistent)
-- secureleap.tech / complyjet.com — Vanta ~$10–15K/year, Drata ~$7.5–15K/year; total first-year SOC 2 cost $25–45K for startup (MEDIUM confidence — vendor pricing changes; verify before commitment)
-- otplib npm — RFC 6238 TOTP, actively maintained, standard for self-hosted MFA (HIGH confidence)
+- [Procore OAuth Authorization Code Grant Flow](https://procore.github.io/documentation/oauth-auth-grant-flow) — Authorization URL `login.procore.com/oauth/authorize`, token endpoint `login.procore.com/oauth/token`, standard code grant flow confirmed (HIGH confidence — official Procore developer docs)
+- [Procore OAuth Endpoints](https://procore.github.io/documentation/oauth-endpoints) — environment-specific base URLs for sandbox vs production (HIGH confidence)
+- [Procore REST API — Timesheets](https://developers.procore.com/reference/rest/timesheets) — `GET/POST /rest/v1.0/projects/{project_id}/timesheets` confirmed (HIGH confidence — official API reference)
+- [Procore REST API — Users](https://www.stitchflow.com/user-management/procore/api) — `GET /rest/v1.0/companies/{company_id}/users` confirmed (MEDIUM confidence — third-party guide cross-referenced with Procore docs)
+- [openid-client npm](https://www.npmjs.com/package/openid-client) — version 6.8.4 current as of May 2026; ESM-only; Node.js >= 20.x required; `randomPKCECodeVerifier()` and `calculatePKCECodeChallenge()` confirmed (HIGH confidence — official npm page)
+- [panva/openid-client GitHub](https://github.com/panva/openid-client) — TypeScript-native, actively maintained, Web Crypto + Fetch globals required (HIGH confidence)
+- [Sage 300 CRE Community Hub — API question](https://communityhub.sage.com/us/sage_construction_and_real_estate/f/sage-300-construction-and-real-estate/194254/sage-300-cre-integration-does-this-software-include-a-web-api) — confirmed no public REST API; ODBC + SQL Replicator are the only programmatic access methods (HIGH confidence — official Sage community)
+- [Sage 300 CRE Payroll Import — Workyard docs](https://help.workyard.com/en/articles/7282899-how-to-set-up-download-payroll-file-for-sage-300-cre) — TXT format, comma-delimited, no extra spaces, blank fields as `,,` (MEDIUM confidence — third-party guide)
+- [Procore — Set Up Payroll Export for Sage 300 CRE](https://support.procore.com/products/online/user-guide/company-level/timesheets/tutorials/set-up-your-payroll-export-for-use-with-sage-300-cre) — confirms file-based integration pattern between Procore and Sage 300 CRE (HIGH confidence — official Procore support)
+- [Vista API — Trimble official FAQ](https://sites.google.com/trimble.com/vista-cloud-faq/home/integration-technology/vista-apis) — AppXchange REST API confirmed; 5 integration methods documented; legacy API no longer developed (HIGH confidence — official Trimble page)
+- [Vista AppXchange API overview](https://direct-api.xchange.trimble.com/docs/vista-api-overview) — bidirectional REST, 17 modules, 2,000 req/min rate limit, 12-month historical data limit (MEDIUM confidence — official docs, but requires Trimble account for full reference)
+- [chokidar npm](https://www.npmjs.com/package/chokidar) — v4.x current, ESM-only, standard file watcher used by Vite/Webpack (HIGH confidence)
+- [node-cron npm](https://www.npmjs.com/package/node-cron) — v3 current, TypeScript support, no Redis required (HIGH confidence — already in stack)
+- [SQLite job queue pattern](https://jasongorman.uk/writing/sqlite-background-job-system/) — SQLite-backed job queue without Redis confirmed as production-viable pattern (MEDIUM confidence — single source, but consistent with v6.0 webhook queue research)
 
 ---
 
-*Stack research for: HCC Prevailing Wage v6.0 — PWA, QB OAuth, Public API, GPS, SOC 2*
-*Researched: 2026-04-24*
+*Stack research for: HCC Prevailing Wage v9.0 — Construction ERP Integrations*
+*Researched: 2026-05-11*

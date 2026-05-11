@@ -1,660 +1,607 @@
-# Architecture Patterns — v6.0 Integration Analysis
+# Architecture: Bidirectional ERP Integration — v9.0 Milestone
 
-**Project:** HCC Prevailing Wage
-**Researched:** 2026-04-24
-**Scope:** How PWA service worker, QuickBooks OAuth, public REST API, GPS field tools, DBE/MBE tracking, and SOC 2 controls integrate with the existing Express 5 / React 19 / SQLite / Drizzle monolith.
-
----
-
-## Existing Architecture Baseline (Do Not Re-Research)
-
-- Express 5 monolith, `/api/*` route files per domain, `requireAuth` + `assertProjectAccess` middleware pattern
-- React 19 SPA, Vite, React Router, TanStack Query
-- SQLite WAL mode, Drizzle ORM, add-only migrations, 18 tables
-- AES-256-GCM SSN encryption, session auth via HTTP-only cookie (7-day)
-- Single process on Render.com with persistent disk at `/var/data`
-- 25 pages, 80+ endpoints, `auditLogs` table already exists with `diff`, `snapshot`, `meta` JSONB columns
+**Project:** HCC Prevailing Wage — ERP Integrations (Phases 126–134)
+**Researched:** 2026-05-11
+**Confidence:** HIGH (codebase inspection + verified Procore docs + confirmed existing patterns)
 
 ---
 
-## 1. PWA Service Worker — Vite + Workbox Integration
+## What Already Exists (Do Not Rebuild)
 
-### Integration Pattern
+Before designing new components, these are confirmed already-shipped building blocks that v9.0 must extend, not replace:
 
-Use `vite-plugin-pwa` (wraps Workbox's `generateSW` mode). Install:
-
-```bash
-npm install -D vite-plugin-pwa
-```
-
-Add to `vite.config.ts`:
-
-```typescript
-import { VitePWA } from 'vite-plugin-pwa';
-
-VitePWA({
-  registerType: 'autoUpdate',
-  manifest: {
-    name: 'HCC Prevailing Wage',
-    short_name: 'HCC PW',
-    theme_color: '#1a1a1a',
-    display: 'standalone',
-  },
-  workbox: {
-    // Cache static assets — app shell
-    globPatterns: ['**/*.{js,css,html,ico,png,woff2}'],
-    navigateFallback: '/index.html',
-    navigateFallbackDenylist: [/^\/api\//],   // never intercept API routes with nav fallback
-
-    runtimeCaching: [
-      // Wage determination cache — long TTL, stale-while-revalidate
-      {
-        urlPattern: /^\/api\/wage-determinations\/.*/i,
-        handler: 'StaleWhileRevalidate',
-        options: {
-          cacheName: 'wd-cache',
-          expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
-        },
-      },
-      // Offline write queue — GPS clock events and field payroll entries
-      {
-        urlPattern: /^\/api\/clock-events$/i,
-        method: 'POST',
-        handler: 'NetworkOnly',
-        options: {
-          backgroundSync: {
-            name: 'clockEventQueue',
-            options: { maxRetentionTime: 24 * 60 },  // 24 hours in minutes
-          },
-        },
-      },
-      {
-        urlPattern: /^\/api\/payroll-entries$/i,
-        method: 'POST',
-        handler: 'NetworkOnly',
-        options: {
-          backgroundSync: {
-            name: 'payrollEntryQueue',
-            options: { maxRetentionTime: 7 * 24 * 60 },  // 7 days
-          },
-        },
-      },
-    ],
-  },
-})
-```
-
-### Offline Queue Sync Behavior
-
-**How reconnect works:** `BackgroundSyncPlugin` hooks into `fetchDidFail` — it only queues requests that fail due to a real network exception, NOT 4xx/5xx HTTP errors. On reconnect, the browser (Chrome, Edge, Samsung Internet) fires a native `sync` event to the service worker, which replays queued requests. Firefox and Safari fall back to replaying when the SW next starts up (i.e., user opens the app tab).
-
-**Critical limitation:** Requests are stored in IndexedDB under `workbox-background-sync` keyed by queue name. Requests older than `maxRetentionTime` are silently discarded. For payroll entries use 7-day retention. For clock events use 24-hour retention.
-
-**Auth cookies:** HTTP-only session cookies are automatically included in replayed requests — no special handling needed because `NetworkOnly` passes the original request headers through.
-
-**Conflict detection on Express side:** When a queued POST arrives on reconnect, the server must handle idempotency. Add a client-generated `idempotencyKey` (UUID v4 created at form submission) to GPS clock and payroll entry bodies. Express checks the key in DB before inserting:
-
-```typescript
-// Pseudocode — add to clock-events route
-const existing = await db.select().from(clockEvents)
-  .where(eq(clockEvents.idempotencyKey, body.idempotencyKey)).limit(1);
-if (existing.length) { res.json({ data: existing[0] }); return; }
-```
-
-### New Files Needed
-
-- `vite.config.ts` — add `VitePWA()` plugin
-- `src/client/hooks/useOfflineStatus.ts` — wrapper around `navigator.onLine` + `online`/`offline` events
-- `src/client/components/OfflineBanner.tsx` — visible indicator when offline
-- No server changes for SW itself; only endpoint-level idempotency keys
-
-**Confidence: HIGH** — `vite-plugin-pwa` generateSW mode is the documented pattern; Workbox `BackgroundSyncPlugin` behavior verified against Chrome for Developers docs.
+| Component | File | What It Does |
+|-----------|------|-------------|
+| OAuth2 connect+callback+refresh | `routes/integrations.ts` (lines 609–727) | Procore OAuth2 Authorization Code flow — full working implementation with state param, token exchange, `/me` company fetch, encrypted save |
+| Procore token CRUD | `services/procoreService.ts` | `saveProcoreTokens`, `getValidProcoreToken` (with auto-refresh), `deleteProcoreTokens`, `getProcoreConnection` |
+| AES-256-GCM credential encryption | `services/cryptoService.ts` | `encryptSsn`/`decryptSsn` — versioned JSON envelope, reusable for any secret |
+| `procore_tokens` DB table | `migrations/0056_procore_connections.sql` | `user_id`, `company_id`, `access_token_encrypted`, `refresh_token_encrypted`, both expiry timestamps |
+| QBO token table + pattern | `migrations/0041_qbo_tokens.sql` | Identical shape to Procore tokens — field mapping pattern for Sage/Viewpoint |
+| In-process cron scheduler | `index.ts` (lines 267–350) | `node-cron` already imported and running 5 scheduled jobs. Confirmed pattern: wrap in try/catch, never rethrow |
+| Timesheet pull + worker upsert | `routes/integrations.ts` (GET `/procore/timesheet-entries`, POST `/procore/import`) | Procore timesheet fetch + group-by-worker-day + `upsertPayrollEntry` call |
+| Worker dedup by name | `routes/integrations.ts` (lines 251–281) | Case-insensitive name match before `createWorker` — same pattern for Sage/Viewpoint |
+| `insertSecurityEvent` audit trail | `db/auditHelpers.ts` | Called on every connect/disconnect — must be called for Sage/Viewpoint too |
+| `assertProjectAccess` | `utils/assertProjectAccess.ts` | Called before any write — cross-tenant IDOR protection |
+| `upsertPayrollEntry` | `services/payrollService.ts` | Idempotent write for payroll entries — safe to call from scheduler |
 
 ---
 
-## 2. QuickBooks Online OAuth 2.0
+## What Is Missing (Phases 126–134 Must Build)
 
-### Token Lifecycle (Verified)
+### New DB Tables Required
 
-| Token | Lifetime | Notes |
-|-------|----------|-------|
-| Access token | 3,600 seconds (1 hour) | Use for QBO API calls |
-| Refresh token | 101 days | **Rotates on every refresh call** — always persist the new one |
+```
+integration_connections     — Multi-ERP credential vault (replaces per-ERP token tables for new providers)
+integration_field_mappings  — JSON field map per (userId, provider)
+integration_sync_runs       — Sync history/log with status, counts, error detail
+```
 
-The refresh token changes on each use. If you don't persist the new value, the connection breaks and the user must re-authorize. This is the single most common QBO integration failure.
+See schema definitions in the DB Schema section below.
 
-### Token Storage — New DB Table
+### New Server Components
 
-Add to `schema.ts`:
+```
+src/server/services/integrationVault.ts      — Unified encrypt/decrypt for multi-ERP credentials
+src/server/services/erpAdapter.ts            — IErpAdapter interface (shared across all 3 ERPs)
+src/server/services/procoreAdapter.ts        — Procore implementation of IErpAdapter
+src/server/services/sageAdapter.ts           — Sage 300 implementation (REST + file modes)
+src/server/services/viewpointAdapter.ts      — Viewpoint Vista implementation (REST + file modes)
+src/server/services/syncOrchestrator.ts      — Runs pull/push cycle for one connection
+src/server/jobs/erpSync.ts                   — Cron-scheduled nightly sync job
+src/server/routes/integrationsV2.ts          — New routes for Sage/Viewpoint + sync triggers
+```
+
+### New Client Components
+
+```
+src/client/pages/IntegrationsPage.tsx        — Connection management hub (Phase 126)
+src/client/pages/IntegrationDashboard.tsx    — Sync history + field mapping UI (Phase 134)
+src/client/components/ConnectionCard.tsx     — Per-ERP status/connect/disconnect card
+src/client/components/FieldMappingEditor.tsx — JSON field map builder
+src/client/components/SyncHistoryTable.tsx   — Paginated sync run log
+```
+
+---
+
+## OAuth2 Authorization Code Flow — Confirmed Pattern
+
+The Procore OAuth2 callback implementation in `routes/integrations.ts` is already production-grade. It is the canonical pattern for Sage 300 cloud and Viewpoint REST adapters. Do not introduce PKCE for server-side flows — PKCE is for public clients (SPAs, mobile apps). This is a confidential client (Express with client secret). The existing pattern is correct per RFC 6749 and the Procore documentation.
+
+**Flow steps (existing code, confirmed working):**
+
+```
+1. GET /api/integrations/{provider}/connect
+   - requireAuth middleware gates this — userId is available
+   - Generate state = base64url(JSON.stringify({ userId, nonce: crypto.randomBytes(16).toString('hex') }))
+     NOTE: Upgrade nonce from Math.random() to crypto.randomBytes(16) — Math.random() is not CSPRNG
+   - Build authUrl with client_id, response_type=code, redirect_uri, state
+   - res.redirect(authUrl)
+
+2. Provider redirects to GET /api/integrations/{provider}/callback?code=&state=
+   - No requireAuth — this is the OAuth redirect (no cookie context)
+   - Decode state → validate userId exists and is a real user (currently not validated — add DB check)
+   - POST to provider token endpoint with code + redirect_uri (Basic auth with clientId:clientSecret)
+   - GET /me or equivalent to resolve company/tenant ID
+   - integrationVault.save(userId, provider, { accessToken, refreshToken, companyId, expiresAt })
+   - insertSecurityEvent({ userId, eventType: 'connect_{provider}' })
+   - res.redirect('/settings/integrations?{provider}=connected')
+
+3. Token refresh (inline, on demand)
+   - getValidToken(userId, provider) checks expiry with 5-min buffer
+   - If expired: POST refresh_token grant → save updated tokens → return new access token
+   - Called at start of every adapter method — caller never sees expired token
+```
+
+**State Parameter Security Gap (existing code):** The current QBO and Procore connect handlers use `Math.random().toString(36)` as the nonce. Phase 126 must upgrade to `crypto.randomBytes(16).toString('hex')` when building the new integration vault. The decoded userId is not verified against the DB before use — add a `users` table lookup in the callback before saving tokens.
+
+---
+
+## Adapter Interface — IErpAdapter
+
+The adapter interface is the critical shared boundary. All three ERP adapters implement it. The `syncOrchestrator.ts` calls only interface methods — it never calls Procore/Sage/Viewpoint APIs directly.
 
 ```typescript
-export const qboConnections = sqliteTable('qbo_connections', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  realmId: text('realm_id').notNull(),            // QBO company ID
-  accessToken: text('access_token').notNull(),     // AES-256-GCM encrypted (same key as SSN)
-  refreshToken: text('refresh_token').notNull(),   // AES-256-GCM encrypted
-  accessTokenExpiresAt: text('access_token_expires_at').notNull(),
-  refreshTokenExpiresAt: text('refresh_token_expires_at').notNull(),
-  environment: text('environment').notNull().$type<'sandbox' | 'production'>(),
-  connectedAt: text('connected_at').notNull(),
-  lastRefreshedAt: text('last_refreshed_at'),
-  disconnectedAt: text('disconnected_at'),         // soft-delete; null = active
-}, (table) => ({
-  qboUserUnique: uniqueIndex('qbo_user_unique').on(table.userId, table.realmId),
-}));
+// src/server/services/erpAdapter.ts
+
+export interface ErpWorker {
+  externalId: string;         // ERP's native ID
+  name: string;               // "Last, First" or "First Last"
+  tradeClassification?: string; // ERP cost code or craft code
+  email?: string;
+  ssnLast4?: string;
+  address?: { street?: string; city?: string; state?: string; zip?: string };
+}
+
+export interface ErpTimeEntry {
+  externalId: string;         // ERP timesheet entry ID
+  workerId: string;           // maps to ErpWorker.externalId
+  projectExternalId: string;  // ERP project/job ID
+  date: string;               // YYYY-MM-DD
+  regularHours: number;
+  overtimeHours: number;
+  doubleTimeHours: number;
+  costCode?: string;
+}
+
+export interface ErpProject {
+  externalId: string;
+  name: string;
+  jobNumber?: string;
+}
+
+export interface CompliancePushPayload {
+  projectExternalId: string;
+  weekEndingDate: string;
+  status: 'compliant' | 'violation' | 'pending';
+  violations: Array<{ workerId: string; type: string; detail: string }>;
+  wh347Url?: string;          // signed URL or attachment reference
+}
+
+export interface SyncResult {
+  workersUpserted: number;
+  timesheetEntriesImported: number;
+  compliancePushed: number;
+  errors: Array<{ externalId?: string; message: string }>;
+  ranAt: string;              // ISO timestamp
+}
+
+export interface IErpAdapter {
+  readonly provider: 'procore' | 'sage300' | 'viewpoint';
+
+  // Pull operations
+  listProjects(): Promise<ErpProject[]>;
+  listWorkers(projectExternalId: string): Promise<ErpWorker[]>;
+  listTimeEntries(projectExternalId: string, weekEndingDate: string): Promise<ErpTimeEntry[]>;
+
+  // Push operations
+  pushComplianceStatus(payload: CompliancePushPayload): Promise<void>;
+
+  // Health check — returns true if credentials are valid and API is reachable
+  healthCheck(): Promise<boolean>;
+}
 ```
 
-**Encrypt both tokens at rest** using the existing `encryptSsn` / `decryptSsn` utility (or a renamed peer) — same AES-256-GCM envelope pattern already established in Phase 31.
+**Why this shape:** The pull/push split mirrors the data flow: ERP is authoritative on workers and time, this app is authoritative on compliance status. The adapter owns all credential retrieval internally — the orchestrator receives a userId and provider, calls `getAdapter(userId, provider)`, and gets back a ready-to-use IErpAdapter with tokens already resolved.
 
-### OAuth Flow Architecture
+---
 
-```
-Browser → GET /api/qbo/connect
-  → Server builds Intuit auth URL (client_id, redirect_uri, scope=com.intuit.quickbooks.accounting, state=CSRF token)
-  → Browser redirects to Intuit
+## Adapter Implementations — Cloud REST vs On-Premise File
 
-Intuit → GET /api/qbo/callback?code=...&realmId=...&state=...
-  → Server validates CSRF state
-  → Server POST to https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer
-  → Encrypt and upsert into qbo_connections
-  → Redirect to /settings?qbo=connected
-```
+### Procore Adapter (REST-only, cloud)
 
-Library recommendation: `intuit-oauth` (Intuit's official JS client). Avoids manual token exchange.
+Procore is cloud-only. All calls go to `https://api.procore.com/rest/v1.0/`. The existing code in `routes/integrations.ts` lines 732–868 is essentially the prototype of this adapter. The adapter wraps those patterns into the `IErpAdapter` interface.
 
-```bash
-npm install intuit-oauth
-```
+**Key Procore endpoints:**
+- `GET /rest/v1.0/companies/{company_id}/projects` — `listProjects()`
+- `GET /rest/v1.0/projects/{project_id}/workers` or `/manpower_logs` — `listWorkers()`
+- `GET /rest/v1.0/projects/{project_id}/timesheet_entries?filters[start_datetime]=...` — `listTimeEntries()`
+- `PATCH /rest/v1.0/projects/{project_id}/custom_fields/{field_id}` — `pushComplianceStatus()`
 
-### Token Refresh Strategy
+**Required header:** `Procore-Company-Id: {companyId}` on every request — already present in existing route code.
 
-Do NOT use a background cron on Render (single-process, no reliable scheduler). Use a **lazy refresh** — check expiry on every QBO API call:
+**Classification authority rule:** Procore is authoritative on `tradeClassification` (cost code). When a worker exists in both systems and Procore has a cost code, the adapter must emit that cost code in `ErpWorker.tradeClassification`. The sync orchestrator must not override a Procore-sourced classification with a blank value.
 
+### Sage 300 CRE Adapter (REST + file modes)
+
+Sage 300 CRE supports both cloud REST (Sage 300 Web API / OData endpoint) and on-premise file-based integration (CSV export from Sage 300 drop directories).
+
+**Mode detection:** The `integration_connections` table stores a `mode` column: `'rest' | 'file'`. The adapter constructor reads this and selects the transport.
+
+**REST mode** (Sage 300 cloud, Sage Intacct Construction):
+- Base URL: customer-specific (stored in connection metadata)
+- Auth: OAuth2 (same pattern as Procore) or Basic HTTP depending on Sage 300 version
+- Endpoints: `/HR/Employees`, `/PR/Timecards`, `/JC/Jobs`
+
+**File mode** (on-premise Sage 300 CRE):
+- Sage 300 writes CSV exports to a shared pickup directory
+- The adapter reads from a configured SFTP path or a local directory mounted via Render persistent disk
+- Format: Sage 300 Aatrix-style employee/timecard CSV
+- The existing `sage300Mapper.ts` service already parses Sage 300 CSV rows — the file-mode adapter wraps that mapper
+- File mode cannot push compliance status back (read-only) — `pushComplianceStatus()` returns a structured stub response with `mode: 'file'` noting that manual entry is required
+
+**Implementation note:** `sage300Mapper.ts` already exists and handles the CSV parsing. The file-mode adapter is a thin wrapper: read CSV from SFTP/path, call mapper, return `ErpWorker[]` and `ErpTimeEntry[]`.
+
+### Viewpoint Vista Adapter (REST + file modes)
+
+Viewpoint Vista (Trimble) has two distinct API tiers:
+1. **AppXchange REST API** — cloud-hosted Vista customers only. Bidirectional. Requires purchase of the Vista API module from Trimble marketplace. Authentication is OAuth2 via AppXchange.
+2. **Legacy Viewpoint API** — "a small, defined data set" of workflow items, no longer actively developed. Not suitable for employee/timesheet data.
+3. **File-based (CSV/XML export)** — universal fallback, works for both on-premise and cloud.
+
+**Implementation strategy:** Default to file mode for Phase 132 (broad compatibility). REST mode is optional and gated by a `mode: 'rest'` flag in the connection. Do not assume AppXchange API access — most mid-market Vista customers will use file-based exports initially.
+
+**File mode data:** Vista exports are tab-delimited or CSV. Common formats: PR Timecard Export, Employee Master Export. These do not have a pre-existing mapper in the codebase — `viewpointAdapter.ts` must implement its own parser alongside the adapter.
+
+---
+
+## In-Process Scheduler — node-cron (Confirmed Existing Pattern)
+
+`node-cron` is already installed and running 5 jobs in `index.ts`. Adding ERP sync follows the exact same pattern.
+
+**Existing pattern (canonical — copy exactly):**
 ```typescript
-async function getValidQboToken(userId: string) {
-  const conn = await db.select().from(qboConnections)
-    .where(and(eq(qboConnections.userId, userId), isNull(qboConnections.disconnectedAt)))
-    .limit(1);
-  if (!conn.length) throw new Error('QBO not connected');
-
-  const expiresAt = new Date(conn[0].accessTokenExpiresAt).getTime();
-  if (Date.now() > expiresAt - 300_000) {  // refresh 5 min before expiry
-    const newTokens = await oauthClient.refresh();
-    await db.update(qboConnections).set({
-      accessToken: encrypt(newTokens.access_token),
-      refreshToken: encrypt(newTokens.refresh_token),
-      accessTokenExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
-      refreshTokenExpiresAt: new Date(Date.now() + 101 * 86400_000).toISOString(),
-      lastRefreshedAt: new Date().toISOString(),
-    }).where(eq(qboConnections.userId, userId));
+cron.schedule('0 2 * * *', async () => {
+  logger.info('erp-sync: starting nightly sync');
+  try {
+    await runNightlyErpSync();
+  } catch (err) {
+    logger.error({ err }, 'erp-sync: failed');
+    // Never rethrow — cron failures must not crash Express
   }
-  return decrypt(conn[0].accessToken);
+}, { timezone: 'UTC' });
+```
+
+**When to add:** In `index.ts` inside the `app.listen()` callback, after the existing cron registrations.
+
+**Nightly sync job design (`jobs/erpSync.ts`):**
+```typescript
+export async function runNightlyErpSync(): Promise<void> {
+  const db = getDb();
+  // Query all active integration_connections
+  const connections = await db.select().from(integrationConnections)
+    .where(eq(integrationConnections.status, 'active'));
+
+  // Process sequentially — SQLite single-writer constraint means parallel writes
+  // would produce SQLITE_BUSY errors. Sequential processing is the correct pattern.
+  for (const conn of connections) {
+    try {
+      const result = await syncOrchestrator.run(conn.userId, conn.provider);
+      await db.insert(integrationSyncRuns).values({
+        id: randomUUID(),
+        connectionId: conn.id,
+        ranAt: new Date().toISOString(),
+        status: 'success',
+        workersUpserted: result.workersUpserted,
+        timesheetEntriesImported: result.timesheetEntriesImported,
+        compliancePushed: result.compliancePushed,
+        errors: JSON.stringify(result.errors),
+      });
+    } catch (err) {
+      logger.error({ err, connectionId: conn.id }, '[erp-sync] connection failed');
+      await db.insert(integrationSyncRuns).values({
+        id: randomUUID(),
+        connectionId: conn.id,
+        ranAt: new Date().toISOString(),
+        status: 'error',
+        errors: JSON.stringify([{ message: String(err) }]),
+      });
+      // Continue to next connection — never throw
+    }
+  }
 }
 ```
 
-### Sandbox vs Production
-
-- `environment: 'sandbox'` uses `https://sandbox-quickbooks.api.intuit.com`
-- `environment: 'production'` uses `https://quickbooks.api.intuit.com`
-- Store per-connection; allow users to switch. Never hard-code the base URL.
-
-### Webhook Subscription (Payroll Changes)
-
-QBO webhooks notify on entity changes. Register via Intuit Developer Portal (one URL per app, not per company). Your Express endpoint:
-
-```
-POST /api/qbo/webhook
-```
-
-Verification:
-```typescript
-import crypto from 'crypto';
-const sig = req.headers['intuit-signature'] as string;
-const body = req.rawBody;  // need express raw body for webhook route
-const hash = crypto.createHmac('sha256', process.env.QBO_WEBHOOK_VERIFIER_TOKEN!)
-  .update(body).digest('base64');
-if (hash !== sig) { res.status(401).end(); return; }
-```
-
-**Important:** QBO webhooks deliver change notifications, not full payloads. The payload contains `{ eventNotifications: [{ realmId, dataChangeEvent: { entities: [{ name, id, operation, lastUpdated }] } }] }`. You must then call the QBO API to fetch the changed entity.
-
-Relevant entity types for payroll sync: `Employee`, `TimeActivity`, `JournalEntry`.
-
-**New route files needed:**
-- `src/server/routes/qbo.ts` — `/connect`, `/callback`, `/disconnect`, `/webhook`, `/sync`
-
-**Confidence: HIGH** — Token lifetime and rotation confirmed via Intuit developer docs. HMAC verification pattern confirmed via multiple sources.
+**Manual trigger route:** `POST /api/integrations/{provider}/sync-now` calls `syncOrchestrator.run(userId, provider)` directly with `requireAuth`. Returns the `SyncResult` object. This is Phase 126's "Test connection" capability and Phase 134's dashboard trigger.
 
 ---
 
-## 3. Public REST API — Design on Top of Existing Routes
+## SQLite Single-Writer Constraint
 
-### API Key Table Schema
+SQLite in WAL mode allows concurrent readers but serializes all writers. The existing app already runs correctly under this constraint because all write paths are single-process. The ERP sync adds write pressure but does not change the constraint.
 
-```typescript
-export const apiKeys = sqliteTable('api_keys', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  keyHash: text('key_hash').notNull().unique(),   // SHA-256 of raw key — never store raw
-  keyPrefix: text('key_prefix').notNull(),        // first 8 chars for display (e.g. "hccpw_ab")
-  name: text('name').notNull(),                   // user-given label
-  scopes: text('scopes').notNull(),               // JSON array: ["projects:read","payroll:read"]
-  rateLimitTier: text('rate_limit_tier').notNull().default('standard')
-    .$type<'standard' | 'premium' | 'internal'>(),
-  lastUsedAt: text('last_used_at'),
-  expiresAt: text('expires_at'),                  // null = never
-  revokedAt: text('revoked_at'),                  // null = active
-  createdAt: text('created_at').notNull(),
-}, (table) => ({
-  idxApiKeyHash: index('idx_api_key_hash').on(table.keyHash),
-}));
-```
+**Rules for sync writes:**
+1. The nightly sync job runs sequentially across connections (for loop, not Promise.all) — this is intentional, not a bug.
+2. The sync orchestrator must not use `Promise.all` for payroll entry writes — use a sequential for loop.
+3. `upsertPayrollEntry` in `payrollService.ts` is already safe to call from the scheduler — it does not check session/auth context.
+4. All sync writes must go through Drizzle ORM's `db` instance from `getDb()` — never open a second SQLite connection.
+5. If a sync run is long (many timesheets), there is no blocking concern for HTTP handlers because SQLite reads do not block during a write transaction, and writes are fast (sub-millisecond for individual rows).
 
-Key generation: `hccpw_` prefix + 32 random bytes as hex. Show raw key once at creation; store only the SHA-256 hash.
+**SQLITE_BUSY risk is LOW** for this use case: the sync runs at 02:00 UTC, concurrent user writes at that hour are near zero for a single-tenant tool. No retry loop needed for MVP.
 
-### Rate Limiting Per Key
+---
 
-Use `express-rate-limit` with a custom `keyGenerator` based on the API key hash rather than IP:
+## Field Mapping Config Store
 
-```bash
-npm install express-rate-limit
-```
+Field mappings are stored as JSON documents in the `integration_field_mappings` table, one row per `(userId, provider)`. The JSON document maps ERP field paths to our internal field names.
 
-```typescript
-import rateLimit from 'express-rate-limit';
-
-const apiKeyLimiter = rateLimit({
-  windowMs: 60_000,
-  max: (req) => {
-    const tier = (req as any).apiKeyTier;
-    return tier === 'premium' ? 600 : tier === 'internal' ? 10_000 : 100;
+**Schema of the JSON config doc:**
+```json
+{
+  "worker": {
+    "name": "$.EmployeeName",
+    "ssnLast4": "$.SSN_Last4",
+    "tradeClassification": "$.CostCode.Description",
+    "email": "$.PrimaryEmail"
   },
-  keyGenerator: (req) => (req as any).apiKeyHash ?? req.ip,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Rate limit exceeded' },
-});
-```
-
-Apply to `/api/v1/*` routes only. Session-authed routes remain on existing `/api/*` paths.
-
-### Versioning Strategy
-
-Mount public API under `/api/v1/` as a separate Express Router. Do not version existing session-based routes — those are internal UI routes, not public contract.
-
-```typescript
-// src/server/routes/publicApi.ts
-const v1Router = Router();
-v1Router.use(authenticateApiKey);   // middleware that hashes key, looks up apiKeys table
-v1Router.use(apiKeyLimiter);
-v1Router.get('/projects', ...);
-v1Router.get('/projects/:id/payroll-weeks', ...);
-// Reuse existing service functions, not route handlers
-app.use('/api/v1', v1Router);
-```
-
-This avoids duplicating business logic — public API calls the same Drizzle queries already backing the UI routes but with API key auth instead of session auth.
-
-### Webhook Delivery Queue (SQLite-Based)
-
-External queue services (SQS, Redis) are overkill for this deployment tier. Use SQLite with a polling loop:
-
-```typescript
-export const webhookSubscriptions = sqliteTable('webhook_subscriptions', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  url: text('url').notNull(),
-  events: text('events').notNull(),               // JSON array: ["payroll.week.submitted","project.created"]
-  signingSecret: text('signing_secret').notNull(), // random 32-byte hex for HMAC
-  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull(),
-});
-
-export const webhookDeliveries = sqliteTable('webhook_deliveries', {
-  id: text('id').primaryKey(),
-  subscriptionId: text('subscription_id').notNull().references(() => webhookSubscriptions.id),
-  event: text('event').notNull(),
-  payload: text('payload').notNull(),             // JSON
-  status: text('status').notNull().default('pending').$type<'pending' | 'delivered' | 'failed'>(),
-  attemptCount: integer('attempt_count').notNull().default(0),
-  nextAttemptAt: text('next_attempt_at').notNull(),
-  lastAttemptAt: text('last_attempt_at'),
-  lastResponseCode: integer('last_response_code'),
-  lastErrorMessage: text('last_error_message'),
-  deliveredAt: text('delivered_at'),
-  createdAt: text('created_at').notNull(),
-}, (table) => ({
-  idxDeliveryStatus: index('idx_delivery_status').on(table.status, table.nextAttemptAt),
-}));
-```
-
-Delivery worker: `setInterval` every 30 seconds in the Express process (acceptable for Render single-process). Use exponential backoff: attempt 1 = now, attempt 2 = +1 min, attempt 3 = +5 min, attempt 4 = +30 min, attempt 5 = fail permanently. Maximum 5 attempts.
-
-**Confidence: HIGH** for schema design. MEDIUM for SQLite polling approach — works correctly at this scale, but creates a ceiling around ~500 active webhook subscriptions before query latency becomes noticeable. Acceptable for Phase D scope.
-
----
-
-## 4. GPS Geolocation — Browser PWA to Server Audit
-
-### Accuracy Reality
-
-| Method | Typical Accuracy | Notes |
-|--------|-----------------|-------|
-| GPS (mobile outdoors) | 3–10 meters | Best; requires `enableHighAccuracy: true` |
-| Wi-Fi triangulation | 20–100 meters | Indoor buildings |
-| Cellular | 100–1000 meters | Fallback only |
-
-For job-site clock-in, `enableHighAccuracy: true` is appropriate. Expect 5–15 second warm-up on cold GPS. Accuracy property on `GeolocationCoordinates` represents 95% confidence radius in meters.
-
-### Browser API Pattern
-
-```typescript
-// src/client/hooks/useGeolocation.ts
-export function getHighAccuracyPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 15_000,
-      maximumAge: 0,
-    });
-  });
+  "timeEntry": {
+    "regularHours": "$.RegularHours",
+    "overtimeHours": "$.OvertimeHours",
+    "date": "$.WorkDate"
+  },
+  "classificationOverrides": {
+    "procore_authoritative": true
+  }
 }
 ```
 
-Return `coords.latitude`, `coords.longitude`, `coords.accuracy` (meters), and `timestamp` to the server.
+**Storage:** Stored as `TEXT` in SQLite (JSON string). Read by the adapter at sync time. Default mappings are hardcoded in each adapter and used when no custom mapping exists for the user. The `FieldMappingEditor` UI in Phase 134 reads and writes this row.
 
-### Server-Side Storage and Verification
-
-New table:
-
-```typescript
-export const clockEvents = sqliteTable('clock_events', {
-  id: text('id').primaryKey(),
-  workerId: text('worker_id').notNull().references(() => workers.id),
-  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  eventType: text('event_type').notNull().$type<'clock_in' | 'clock_out'>(),
-  // GPS data from client
-  latitude: real('latitude'),
-  longitude: real('longitude'),
-  accuracyMeters: real('accuracy_meters'),
-  clientTimestamp: text('client_timestamp').notNull(),    // ISO 8601 from device
-  serverTimestamp: text('server_timestamp').notNull(),    // server time — authoritative
-  idempotencyKey: text('idempotency_key').notNull().unique(),
-  // Verification fields
-  geofenceResult: text('geofence_result').$type<'inside' | 'outside' | 'low_accuracy' | 'no_gps'>(),
-  geofenceRadiusMeters: real('geofence_radius_meters'),
-  capturedByUserId: text('captured_by_user_id').references(() => users.id),
-  offlineSynced: integer('offline_synced', { mode: 'boolean' }).notNull().default(false),
-  createdAt: text('created_at').notNull(),
-}, (table) => ({
-  idxClockProject: index('idx_clock_project').on(table.projectId, table.clientTimestamp),
-  idxClockWorker: index('idx_clock_worker').on(table.workerId, table.clientTimestamp),
-}));
-```
-
-### Server-Side Geofence Check
-
-Projects store a `siteLatitude`, `siteLongitude`, `siteRadiusMeters` (add to `projects` table). On clock-in POST, compute Haversine distance server-side:
-
-```typescript
-function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6_371_000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-```
-
-Accept the event regardless (audit trail matters more than gate-keeping), but set `geofenceResult` accordingly. Flag `outside` events on the compliance dashboard.
-
-**Battery Impact:** `getCurrentPosition` (one-shot) has negligible battery impact. Avoid `watchPosition` (continuous polling) for clock-in use cases — just call once at tap.
-
-**Confidence: MEDIUM** — Geolocation API behavior verified via MDN and Chrome docs. Accuracy values are real-world estimates from multiple sources.
+**Do not build a general-purpose JSONPath engine.** The adapters know their ERP's schema. The field mapping config only controls which ERP field maps to which internal field for edge cases (e.g., a customer using a custom Procore cost code field instead of the standard one). The default mapping covers 90% of customers.
 
 ---
 
-## 5. DBE/MBE/WBE Certification Tracking
+## DB Schema — New Tables
 
-### Regulatory Context (2025)
+### `integration_connections`
 
-An Intuit Interim Final Rule (October 2025) changed federal DBE certification to require individualized demonstrations — no longer race/sex presumption-based. Annual renewal required. This means expiration tracking is now more operationally critical than before.
-
-### Table Schema
-
-Attach to existing `subcontractors` table (project-scoped). The subcontractor entity already exists — add a companion `subcontractorCertifications` table rather than cramming columns into the wide `subcontractors` row:
-
-```typescript
-export const subcontractorCertifications = sqliteTable('subcontractor_certifications', {
-  id: text('id').primaryKey(),
-  subcontractorId: text('subcontractor_id').notNull()
-    .references(() => subcontractors.id, { onDelete: 'cascade' }),
-  certType: text('cert_type').notNull()
-    .$type<'DBE' | 'MBE' | 'WBE' | 'ACDBE' | 'SBE' | 'DVBE' | 'HUBZone' | 'other'>(),
-  certNumber: text('cert_number'),
-  certifyingAgency: text('certifying_agency').notNull(),   // e.g. "CA CUCP", "USDOT", "NYC SBS"
-  issuedDate: text('issued_date'),
-  expiresDate: text('expires_date'),                       // null = perpetual (rare)
-  verificationUrl: text('verification_url'),               // link to public registry
-  verifiedAt: text('verified_at'),                         // when we last confirmed via registry
-  verifiedByUserId: text('verified_by_user_id').references(() => users.id),
-  status: text('status').notNull().default('active')
-    .$type<'active' | 'expired' | 'suspended' | 'revoked' | 'pending_renewal'>(),
-  documentPath: text('document_path'),                     // uploaded certificate file path
-  notes: text('notes'),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-}, (table) => ({
-  idxCertSub: index('idx_cert_sub').on(table.subcontractorId, table.certType),
-  idxCertExpiry: index('idx_cert_expiry').on(table.expiresDate, table.status),
-}));
-```
-
-### Expiration Warning Workflow
-
-- `idxCertExpiry` index enables efficient query: `WHERE expires_date BETWEEN today AND today+30 AND status='active'`
-- Dashboard badge: "3 certifications expiring within 30 days" — reuse existing `Badge` primitive
-- Email notification via existing nodemailer infrastructure: trigger on nightly check (or lazy on page load if Render cron not available)
-- `status` field transitions: `active` → `pending_renewal` (at 30-day warning) → `expired` (past `expiresDate`) — update via server-side check, not trigger
-
-### Integration with Existing subcontractors Table
-
-`subcontractors` is already project-scoped. `subcontractorCertifications` references `subcontractors.id` — no schema change to `subcontractors` needed. The sub detail page gains a "Certifications" tab.
-
-**Confidence: HIGH** for schema design. MEDIUM for regulatory context (federal rule confirmed via search, specific state variations require additional research per state).
-
----
-
-## 6. SOC 2 Type II Controls Architecture
-
-### Gap Analysis Against Existing `auditLogs` Table
-
-The existing table is structurally good (`userId`, `userEmail`, `ipAddress`, `entityType`, `action`, `diff`, `snapshot`, `meta`). SOC 2 Type II requires:
-
-1. **Tamper-evidence** — existing rows can be updated or deleted by anyone with DB access
-2. **Authentication events** — login, logout, failed login must be logged (check if currently written)
-3. **Access control changes** — team member add/remove, role change (check coverage)
-4. **Data export events** — every WH-347 PDF, CSV, XML export must be logged
-5. **Retention policy** — logs must be retained for minimum 1 year (SOC 2 standard)
-6. **Monitoring** — anomaly detection on `failed_login` frequency
-
-### Additional Tables Needed
-
-**Security events table** (separate from `auditLogs` to avoid schema pollution):
-
-```typescript
-export const securityEvents = sqliteTable('security_events', {
-  id: text('id').primaryKey(),
-  eventType: text('event_type').notNull()
-    .$type<
-      | 'login_success' | 'login_failure' | 'logout'
-      | 'password_change' | 'invite_sent' | 'invite_accepted'
-      | 'member_removed' | 'role_changed' | 'ownership_transferred'
-      | 'api_key_created' | 'api_key_revoked'
-      | 'qbo_connected' | 'qbo_disconnected'
-      | 'export_wh347' | 'export_csv' | 'export_xml'
-      | 'ssn_decrypted'                              // each time full SSN accessed server-side
-    >(),
-  userId: text('user_id').references(() => users.id),
-  userEmail: text('user_email'),
-  ipAddress: text('ip_address').notNull(),
-  userAgent: text('user_agent'),
-  projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
-  entityType: text('entity_type'),
-  entityId: text('entity_id'),
-  outcome: text('outcome').notNull().$type<'success' | 'failure' | 'blocked'>(),
-  meta: text('meta'),                                // JSON — additional context
-  createdAt: text('created_at').notNull(),
-}, (table) => ({
-  idxSecEventType: index('idx_sec_event_type').on(table.eventType, table.createdAt),
-  idxSecUser: index('idx_sec_user').on(table.userId, table.createdAt),
-  idxSecIp: index('idx_sec_ip').on(table.ipAddress, table.createdAt),
-}));
-```
-
-**Tamper-evidence via hash chain** (append to `auditLogs`):
-
-Add two columns to `auditLogs` via migration:
+Replaces the per-ERP token tables (`qbo_tokens`, `procore_tokens`) for Sage and Viewpoint. Procore and QBO keep their existing tables for backward compatibility.
 
 ```sql
-ALTER TABLE audit_logs ADD COLUMN prev_hash TEXT;
-ALTER TABLE audit_logs ADD COLUMN row_hash TEXT;
+CREATE TABLE integration_connections (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,         -- 'sage300' | 'viewpoint'
+  mode TEXT NOT NULL DEFAULT 'rest', -- 'rest' | 'file'
+  status TEXT NOT NULL DEFAULT 'active', -- 'active' | 'disconnected' | 'error'
+  credentials_encrypted TEXT NOT NULL,  -- AES-256-GCM envelope (JSON with access_token, refresh_token, api_key etc.)
+  metadata TEXT,                  -- JSON: company_id, base_url, sftp_path, etc.
+  connected_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_integration_connections_user ON integration_connections(user_id);
+CREATE UNIQUE INDEX idx_integration_connections_user_provider
+  ON integration_connections(user_id, provider);
 ```
 
-On insert, compute:
-```
-row_hash = SHA-256(id + created_at + entity_type + entity_id + action + prev_hash_of_last_row)
-```
+### `integration_field_mappings`
 
-This makes deletion or modification detectable. Store `prev_hash` of the last-inserted row. A periodic integrity check job can walk the chain.
-
-**Rate limit / brute force table** (for SOC 2 CC6.1 — logical access):
-
-```typescript
-export const loginAttempts = sqliteTable('login_attempts', {
-  id: text('id').primaryKey(),
-  email: text('email').notNull(),
-  ipAddress: text('ip_address').notNull(),
-  success: integer('success', { mode: 'boolean' }).notNull(),
-  attemptedAt: text('attempted_at').notNull(),
-}, (table) => ({
-  idxAttemptIp: index('idx_attempt_ip').on(table.ipAddress, table.attemptedAt),
-  idxAttemptEmail: index('idx_attempt_email').on(table.email, table.attemptedAt),
-}));
+```sql
+CREATE TABLE integration_field_mappings (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,         -- 'procore' | 'sage300' | 'viewpoint'
+  mapping_json TEXT NOT NULL,     -- JSON config doc as described above
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX idx_field_mappings_user_provider
+  ON integration_field_mappings(user_id, provider);
 ```
 
-Gate login: if 5+ failures from same IP in 15 minutes, return 429 before checking password.
+### `integration_sync_runs`
 
-### Controls Coverage Map
+```sql
+CREATE TABLE integration_sync_runs (
+  id TEXT PRIMARY KEY NOT NULL,
+  connection_id TEXT NOT NULL,    -- FK to integration_connections OR 'procore'/'qbo' (legacy)
+  provider TEXT NOT NULL,         -- denormalized for query convenience
+  ran_at TEXT NOT NULL,
+  trigger TEXT NOT NULL DEFAULT 'scheduled', -- 'scheduled' | 'manual'
+  status TEXT NOT NULL,           -- 'success' | 'error' | 'partial'
+  workers_upserted INTEGER NOT NULL DEFAULT 0,
+  timesheet_entries_imported INTEGER NOT NULL DEFAULT 0,
+  compliance_pushed INTEGER NOT NULL DEFAULT 0,
+  errors TEXT,                    -- JSON array of { externalId?, message }
+  duration_ms INTEGER             -- wall-clock duration
+);
+CREATE INDEX idx_sync_runs_connection ON integration_sync_runs(connection_id);
+CREATE INDEX idx_sync_runs_ran_at ON integration_sync_runs(ran_at DESC);
+```
 
-| SOC 2 Criterion | Control | Implementation |
-|----------------|---------|---------------|
-| CC6.1 Logical access | Password hash (bcrypt), HTTP-only session cookie | Already done |
-| CC6.1 Brute force | `loginAttempts` table + 429 gate | New — `loginAttempts` table |
-| CC6.2 Access provisioning | Team invite flow with token | Already done |
-| CC6.3 Access removal | `removedAt` on `projectMembers` | Already done |
-| CC7.2 Anomaly monitoring | `securityEvents` query for failed_login spikes | New — `securityEvents` table |
-| CC8.1 Change management | Drizzle migrations in version control | Already done |
-| A1.2 Data retention | Explicit 1-year retention policy on `audit_logs` | New — scheduled purge after 1 year |
-| C1.1 Confidentiality | AES-256-GCM SSN encryption | Already done |
-| C1.1 API token confidentiality | SHA-256 hash of API keys, encrypted QBO tokens | New — `apiKeys` + `qboConnections` tables |
-| PI1.4 Completeness | Export events in `securityEvents` | New |
-
-### Log What Is Currently Missing
-
-Based on the existing route code pattern, these events likely need explicit `auditLogs` / `securityEvents` writes added:
-
-- Every `POST /api/auth/login` (success + failure)
-- Every `POST /api/auth/logout`
-- Every PDF/CSV/XML generation endpoint
-- Every SSN decryption (already flagged above as `ssn_decrypted`)
-- Every team invite send, accept, revoke
-
-**Confidence: MEDIUM** — SOC 2 control requirements verified across multiple authoritative sources (AICPA Trust Services Criteria). Hash-chain tamper-evidence pattern verified via SQLite forum and security engineering sources. Specific auditor interpretation may vary.
+**Note on FK flexibility:** `connection_id` is not a hard FK because Procore sync runs reference `procore_tokens.userId` (different table). Store the userId or a synthetic key for Procore runs. A soft reference is preferable to a hard FK that would require migrating Procore to the new table.
 
 ---
 
-## New DB Tables Summary
+## Integration Points with Existing Tables and Services
 
-| Table | Phase | Purpose |
-|-------|-------|---------|
-| `qbo_connections` | B | QBO OAuth token storage (encrypted) |
-| `clock_events` | C | GPS clock-in/out with geofence results |
-| `subcontractor_certifications` | B | DBE/MBE/WBE cert tracking with expiry |
-| `api_keys` | D | Public API key auth |
-| `webhook_subscriptions` | D | Webhook endpoint registrations |
-| `webhook_deliveries` | D | Webhook delivery queue and retry log |
-| `security_events` | D | SOC 2 security event audit trail |
-| `login_attempts` | D | Brute-force rate limiting log |
-
-**Columns to add to existing tables:**
-
-| Table | New Columns | Phase |
-|-------|-------------|-------|
-| `projects` | `siteLatitude`, `siteLongitude`, `siteRadiusMeters` | C |
-| `audit_logs` | `prev_hash`, `row_hash` | D |
+| Existing Component | How ERP Sync Touches It | Required Change |
+|-------------------|------------------------|-----------------|
+| `workers` table | `listWorkers()` result deduped by case-insensitive name match. `createWorker()` called for new workers. Same logic as QBO import (integrations.ts lines 230–281). | No schema change needed for MVP. Optional: add `erp_external_id TEXT` column per worker for reliable dedup |
+| `payroll_entries` table | `listTimeEntries()` → `upsertPayrollEntry()`. Rate snapshots fetched from `wage_determinations`, never from ERP. | No schema change |
+| `payroll_weeks` table | Time entries bucketed by week-ending date. Sync creates `payroll_weeks` row if none exists. Must check `submittedAt` — never write to submitted weeks. | No schema change |
+| `projects` table | `listProjects()` pulls ERP projects for mapping UI. Matched by name. | Optional: add `erp_external_id TEXT` column via additive migration |
+| `audit_log` table | Each sync run writes one audit event via `insertSecurityEvent`. Use `eventType: 'erp_sync_procore'` etc. | No schema change |
+| `procore_tokens` table | Used by Procore adapter. Not replaced. `procoreService.getValidProcoreToken()` is called by procoreAdapter. | No change |
+| `complianceService.ts` | `computeCompliance(projectId, weekId)` called by sync orchestrator to build `CompliancePushPayload`. Already returns `violations[]` and `weekViolations[]`. | No change |
+| `payrollService.upsertPayrollEntry` | Called by sync orchestrator for timesheet import. Already idempotent. | No change |
+| `workerService.createWorker` | Called by sync orchestrator for new worker import. Handles SSN encryption, audit trail. | No change |
+| `classificationRates.getRate()` | Must be called by orchestrator to resolve `baseRateSnapshot` — ERP rates are never used. | Verify this function exists and is callable without HTTP context |
 
 ---
 
-## New Route Files Summary
+## Data Flow — Pull vs Push
 
-| File | Routes | Phase |
-|------|--------|-------|
-| `src/server/routes/qbo.ts` | `/connect`, `/callback`, `/disconnect`, `/webhook`, `/sync` | B |
-| `src/server/routes/clock-events.ts` | `POST /`, `GET /?workerId=` | C |
-| `src/server/routes/subcontractor-certifications.ts` | CRUD on certs, expiry query | B |
-| `src/server/routes/api-keys.ts` | Create, list, revoke | D |
-| `src/server/routes/webhook-subscriptions.ts` | CRUD + delivery log | D |
-| `src/server/routes/public-api.ts` | V1 public router | D |
+### Pull (ERP → This App)
+
+```
+node-cron (02:00 UTC nightly)
+  → erpSync.runNightlyErpSync()
+    → for each active connection (sequential):
+      → syncOrchestrator.run(userId, provider)
+        → adapter.listProjects() → match to local projects table by name
+        → for each matched project:
+          → adapter.listWorkers(projectExternalId)
+            → dedup by name against workers table
+            → createWorker() for new workers (sets ssnLast4 if available)
+          → adapter.listTimeEntries(projectExternalId, weekEndingDate)
+            → resolve local workerId by name match
+            → look up baseRateSnapshot from wage_determinations for project
+            → upsertPayrollEntry() — idempotent, safe to call repeatedly
+        → write integration_sync_runs row (status=success, counts)
+```
+
+**Rate snapshot policy:** The ERP never provides the prevailing wage rate. The sync orchestrator must call `classificationRates.getRate(projectId, classificationId)` to fetch the current rate from `wage_determinations`. This is the same rate resolution logic used in the payroll entry wizard.
+
+### Push (This App → ERP)
+
+```
+POST /api/integrations/{provider}/sync-now (manual trigger)
+OR node-cron (after pull phase completes for same connection)
+  → syncOrchestrator.push(userId, provider, projectId, weekId)
+    → complianceService.computeCompliance(projectId, weekId)
+    → build CompliancePushPayload from violations[]
+    → adapter.pushComplianceStatus(payload)
+      → Procore: PATCH custom fields on project
+      → Sage300 REST: PATCH compliance note field
+      → Sage300 file: write compliance-report.csv to SFTP drop directory
+      → Viewpoint REST: PATCH via AppXchange API
+      → Viewpoint file: write compliance-export.csv
+```
+
+**Procore Classification Authority:** When pulling workers from Procore, the `tradeClassification` field from Procore's cost code is written to `workers.tradeClassification`. If the worker already exists in this app with a different classification, Procore wins. This is the "Procore authoritative on classification" rule. The field mapping config has `classificationOverrides.procore_authoritative: true` by default. Other ERPs do not override classification — they only set classification on new workers.
 
 ---
 
-## Build Order Recommendation (Phases A–D)
+## Recommended Build Order (Phase Sequencing)
 
-**Phase A — UI Polish:** No new tables or routes. Pure React + CSS work.
+The adapter interface must exist before any ERP-specific phase. Procore's existing inline route code must be refactored into the adapter pattern before adding Sage/Viewpoint. This creates a hard dependency chain.
 
-**Phase B — Power Features:**
-1. `subcontractor_certifications` table + route (no external dependency — safe to ship first)
-2. `qbo_connections` table + QBO OAuth routes (requires Intuit Developer app registration)
-3. Apprenticeship ratio enforcement extends existing `payrollEntries` compliance engine
+```
+Phase 126 — Integration Foundation
+  NEW: integration_connections table (migration 0070)
+  NEW: integration_field_mappings table (migration 0070)
+  NEW: integration_sync_runs table (migration 0070)
+  NEW: IErpAdapter interface in erpAdapter.ts
+  NEW: integrationVault.ts (wraps cryptoService for multi-provider credential storage)
+  NEW: IntegrationsPage.tsx (connection management UI with per-ERP ConnectionCard)
+  MODIFY: integrations.ts — add Sage/Viewpoint connect/callback/disconnect stubs
+  DEPENDS ON: cryptoService.ts (existing), procoreService.ts (existing)
 
-**Phase C — Mobile/Field PWA:**
-1. Add `vite-plugin-pwa` + manifest (isolated to `vite.config.ts` — zero server risk)
-2. `OfflineBanner` component + `useOfflineStatus` hook
-3. `clock_events` table + route + GPS hook
-4. Wire offline queue (Workbox backgroundSync config)
+Phase 127 — Procore Project/Employee Sync
+  NEW: procoreAdapter.ts (wraps existing procoreService + integrations.ts patterns into IErpAdapter)
+  NEW: syncOrchestrator.ts (pull phase only, Procore)
+  NEW: erpSync.ts (nightly cron job — exports runNightlyErpSync())
+  MODIFY: index.ts — register nightly ERP sync cron at 02:00 UTC
+  MODIFY: integrations.ts — add POST /procore/sync-now manual trigger
+  DEPENDS ON: Phase 126 (IErpAdapter, integration_sync_runs table must exist)
 
-**Phase D — Market Credibility:**
-1. `login_attempts` + brute-force gate (security prerequisite for SOC 2)
-2. `security_events` table + instrument existing auth routes
-3. Hash chain on `audit_logs`
-4. `api_keys` table + public API router
-5. `webhook_subscriptions` + `webhook_deliveries` + delivery worker
+Phase 128 — Procore Timesheet Pull
+  MODIFY: procoreAdapter.ts — implement listTimeEntries()
+    (prototype already in integrations.ts lines 732–789 — extract and formalize)
+  MODIFY: syncOrchestrator.ts — add timesheet pull + upsertPayrollEntry sequential loop
+  DEPENDS ON: Phase 127 (procoreAdapter skeleton)
+
+Phase 129 — Procore Compliance Push
+  MODIFY: procoreAdapter.ts — implement pushComplianceStatus() (Procore custom fields)
+  MODIFY: syncOrchestrator.ts — add push phase after pull completes
+  DEPENDS ON: Phase 127, Phase 128
+
+Phase 130 — Sage 300 CRE Adapter Foundation
+  NEW: sageAdapter.ts (implements IErpAdapter, REST + file modes)
+  MODIFY: integrations.ts — complete Sage connect/callback/apikey routes
+  DEPENDS ON: Phase 126 (IErpAdapter must exist)
+  NOTE: sage300Mapper.ts already exists — file-mode adapter wraps it
+
+Phase 131 — Sage 300 Payroll Sync + Compliance Push
+  MODIFY: sageAdapter.ts — implement listTimeEntries(), pushComplianceStatus()
+  MODIFY: syncOrchestrator.ts — register Sage provider
+  DEPENDS ON: Phase 130
+
+Phase 132 — Viewpoint Vista Foundation
+  NEW: viewpointAdapter.ts (implements IErpAdapter, file-mode first)
+  MODIFY: integrations.ts — complete Viewpoint connect/callback/apikey routes
+  DEPENDS ON: Phase 126 (IErpAdapter)
+  NOTE: No existing parser for Viewpoint CSV — adapter implements its own parser
+
+Phase 133 — Viewpoint Timesheet + Compliance Push
+  MODIFY: viewpointAdapter.ts — implement listTimeEntries(), pushComplianceStatus()
+  MODIFY: syncOrchestrator.ts — register Viewpoint provider
+  DEPENDS ON: Phase 132
+
+Phase 134 — Integration Dashboard
+  NEW: IntegrationDashboard.tsx
+  NEW: SyncHistoryTable.tsx (reads integration_sync_runs)
+  NEW: FieldMappingEditor.tsx (reads/writes integration_field_mappings)
+  NEW: GET /api/integrations/sync-runs route
+  NEW: PUT /api/integrations/{provider}/field-mapping route
+  DEPENDS ON: All prior phases (needs data to display)
+```
 
 ---
 
-## Critical Integration Constraints
+## New Routes to Add
 
-1. **No new auth model** — API key auth is a new middleware path (`authenticateApiKey`) parallel to session auth (`requireAuth`), not a replacement.
-2. **Encrypt QBO tokens** — Use the same AES-256-GCM encrypt/decrypt utility from Phase 31. Never store plaintext OAuth tokens.
-3. **Refresh token rotation** — On every QBO API call, check `accessTokenExpiresAt`; if within 5 minutes of expiry, refresh and persist the new refresh token immediately. Failure to do this causes irreversible disconnection after 101 days.
-4. **Idempotency on offline sync** — GPS clock events and any payroll entry submitted via offline queue must include client-generated `idempotencyKey` (UUID v4). Express checks before inserting.
-5. **BackgroundSync only queues network failures** — 4xx/5xx responses are NOT retried. Server validation errors must be surfaced before offline queue submission (validate client-side first).
-6. **SQLite single-writer constraint** — Webhook delivery worker runs in the same process. Use `setInterval` not a spawned child process. WAL mode already mitigates reader/writer contention.
-7. **Render.com single-process** — No background cron available. Token refresh is lazy (per-request). Webhook delivery loop is `setInterval`. This is the correct pattern for this hosting tier.
+```
+GET  /api/integrations/sage300/connect            — initiate OAuth or show API key form
+GET  /api/integrations/sage300/callback           — OAuth callback (REST mode)
+POST /api/integrations/sage300/connect-apikey     — save API key (file/basic auth mode)
+DELETE /api/integrations/sage300                  — disconnect
+GET  /api/integrations/sage300/status             — connection status
+
+GET  /api/integrations/viewpoint/connect          — same pattern
+GET  /api/integrations/viewpoint/callback
+POST /api/integrations/viewpoint/connect-apikey
+DELETE /api/integrations/viewpoint
+GET  /api/integrations/viewpoint/status
+
+POST /api/integrations/procore/sync-now           — manual trigger (returns SyncResult)
+POST /api/integrations/sage300/sync-now
+POST /api/integrations/viewpoint/sync-now
+
+GET  /api/integrations/sync-runs                  — paginated history (Phase 134)
+PUT  /api/integrations/:provider/field-mapping    — save mapping JSON (Phase 134)
+GET  /api/integrations/:provider/field-mapping    — read mapping JSON (Phase 134)
+```
+
+---
+
+## Helmet CSP Impact
+
+The existing Helmet config in `index.ts` (lines 93–113) has `connectSrc: ["'self'"]`. Procore/Sage/Viewpoint API calls are made server-side — they originate from the Express process, not the browser. No CSP change needed for REST adapter calls. OAuth redirects are full-page navigations (`res.redirect()`), not XHR, so `connectSrc` is also not relevant.
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Per-ERP credential tables for Sage and Viewpoint
+**What:** Creating a `sage_tokens` table and a `viewpoint_tokens` table (as was done for QBO and Procore).
+**Why bad:** The existing `qbo_tokens` and `procore_tokens` tables are a debt pattern. Adding two more creates four disconnected credential stores with no unified management UI or revocation path.
+**Instead:** Use `integration_connections` for Sage and Viewpoint. Leave `qbo_tokens` and `procore_tokens` as-is for backward compatibility.
+
+### Anti-Pattern 2: Inline API calls in route handlers for scheduled sync
+**What:** Putting the nightly Procore/Sage fetch logic directly in an Express route handler.
+**Why bad:** Route handlers can time out (Render's 30s HTTP timeout). Nightly sync may take minutes for large datasets.
+**Instead:** The nightly cron job calls `runNightlyErpSync()` — no HTTP request involved. For manual "sync now," the route awaits `syncOrchestrator.run()` directly (< 30 seconds for typical datasets) and returns the `SyncResult` synchronously.
+
+### Anti-Pattern 3: Parallel writes during sync
+**What:** `await Promise.all(timeEntries.map(entry => upsertPayrollEntry(entry)))`
+**Why bad:** SQLite serializes writes internally but issuing many concurrent write transactions causes SQLITE_BUSY errors.
+**Instead:** Sequential for loop for all DB writes in sync paths.
+
+### Anti-Pattern 4: Trusting ERP wage rates
+**What:** Using the pay rate from a Procore/Sage timesheet entry as the `baseRateSnapshot`.
+**Why bad:** ERP pay rates are what the contractor paid, which may differ from the prevailing wage. Compliance requires the Davis-Bacon rate, not the contractor's rate.
+**Instead:** Always resolve `baseRateSnapshot` and `fringeRateSnapshot` from `wage_determinations` via `classificationRates.getRate()`. The ERP's rate is ignored.
+
+### Anti-Pattern 5: PKCE for the server-side OAuth flow
+**What:** Adding code_verifier/code_challenge to the Procore/Sage/Viewpoint authorization URL.
+**Why bad:** PKCE protects public clients (browser SPAs, native apps) that cannot keep a client secret. This is a confidential client — the Express server holds the client secret. PKCE adds no security benefit here and Procore does not require it for server-side flows.
+**Instead:** Use the existing state parameter pattern (upgraded to `crypto.randomBytes(16)` nonce). The client secret provides sufficient protection.
+
+### Anti-Pattern 6: Writing to submitted payroll weeks
+**What:** ERP sync upserts time entries into a week that has `submittedAt IS NOT NULL`.
+**Why bad:** Federal requirement (29 CFR Part 3) prohibits modifying submitted certified payroll. Violates audit trail integrity.
+**Instead:** Sync orchestrator must check `payrollWeeks.submittedAt` before writing entries. Log skipped entries in `SyncResult.errors` with a descriptive message.
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Source |
+|------|------------|--------|
+| Procore OAuth2 flow | HIGH | Existing working code in integrations.ts + Procore developer docs |
+| Procore timesheet endpoints | HIGH | Existing code (lines 732–868) confirmed working |
+| node-cron scheduling pattern | HIGH | Already running 5 jobs in index.ts — confirmed import and pattern |
+| SQLite single-writer constraint | HIGH | Official SQLite WAL docs + existing sequential patterns in codebase |
+| AES-256-GCM credential vault | HIGH | cryptoService.ts already in production for SSN + OAuth tokens |
+| IErpAdapter interface design | MEDIUM | Derived from existing QBO/Procore patterns + standard adapter pattern |
+| Sage 300 REST endpoints | MEDIUM | Sage developer portal docs + Greytrix integration guide |
+| Sage 300 file-mode CSV format | MEDIUM | sage300Mapper.ts exists — confirms format is known and parseable |
+| Viewpoint Vista REST (AppXchange) | LOW | API requires purchased module; exact endpoints not publicly documented |
+| Viewpoint Vista file-mode format | LOW | No existing parser; Vista CSV exports are documented but not locally verified |
 
 ---
 
 ## Sources
 
-- [Workbox BackgroundSyncPlugin — Chrome for Developers](https://developer.chrome.com/docs/workbox/modules/workbox-background-sync)
-- [vite-plugin-pwa generateSW docs](https://vite-pwa-org.netlify.app/workbox/generate-sw)
-- [QBO OAuth 2.0 token expiration handling — Intuit Help](https://help.developer.intuit.com/s/article/Handling-OAuth-token-expiration)
-- [QBO OAuth 2.0 FAQ — Intuit Developer](https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/faq)
-- [QuickBooks Webhooks — Coefficient](https://coefficient.io/quickbooks-api/quickbooks-webhooks)
-- [express-rate-limit npm](https://www.npmjs.com/package/express-rate-limit)
-- [GeolocationCoordinates.accuracy — MDN](https://developer.mozilla.org/en-US/docs/Web/API/GeolocationCoordinates/accuracy)
-- [Immutability for SOC 2 — hoop.dev](https://hoop.dev/blog/immutability-for-soc-2-how-to-protect-evidence-logs-and-records-permanently/)
-- [SOC 2 Compliance for Database Security — Liquibase](https://www.liquibase.com/resources/guides/soc-2-compliance-for-database-security-trust-services-criteria-best-practices)
-- [DBE Federal Rule Oct 2025 — BidFinds](https://bidfinds.com/blog/small-business-dbe-mbe-certification-guide)
+- Procore OAuth2 Implementation: https://developers.procore.com/documentation/oauth-auth-grant-flow
+- Procore Timesheet API: https://developers.procore.com/reference/rest/timesheets?version=latest
+- Procore Custom Fields: https://developers.procore.com/reference/rest/custom-fields?version=latest
+- Vista API Documentation: https://help.trimble.com/en/vista/vista/vista-api-documentation/vista-api-documentation-resources
+- Vista API (AppXchange): https://marketplace.trimble.com/integrations/viewpoint-vista/api
+- Vista Cloud/On-Premise FAQ: https://sites.google.com/trimble.com/vista-cloud-faq/home/integration-technology/vista-apis
+- Sage 300 Integration Guide: https://satvasolutions.com/blog/sage-300-integration-guide
+- Sage 300 Developer Portal: https://developer.sage.com/300
+- node-cron: https://github.com/node-cron/node-cron
+- SQLite WAL mode: https://sqlite.org/wal.html
+- OAuth2 State Parameter: https://auth0.com/docs/secure/attack-protection/state-parameters
+- Adapter Pattern in TypeScript: https://refactoring.guru/design-patterns/adapter/typescript/example

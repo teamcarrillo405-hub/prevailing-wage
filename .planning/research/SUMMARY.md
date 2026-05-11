@@ -1,293 +1,183 @@
-# Research Summary — v5.0 State Coverage + Subcontractors + Reporting
+# Research Summary -- v9.0 Construction ERP Integrations
 
 **Project:** HCC Prevailing Wage
-**Milestone:** v5.0 — TX/FL/MA/NJ State Forms, Subcontractor CPR Tracking, Enhanced Reporting
-**Researched:** 2026-04-07
-**Confidence:** HIGH overall (stack findings from direct code reads; state form requirements from official government sources; architecture from direct codebase analysis)
+**Domain:** Bidirectional ERP sync for prevailing wage compliance (Procore, Sage 300 CRE, Viewpoint Vista)
+**Researched:** 2026-05-11
+**Confidence:** MEDIUM-HIGH -- Procore is HIGH (working code exists), Sage/Vista are MEDIUM (APIs gated or absent)
 
 ---
 
 ## Executive Summary
 
-v5.0 adds four states (TX, FL, MA, NJ) to a compliance SaaS that already supports CA, WA, NY, and IL. The headline discovery is that this is really a two-state form build, not four: Texas uses the federal WH-347 (no TX-specific form exists) and Florida has no state prevailing wage law at all (repealed 1979, local ordinances preempted by HB 705 in July 2024). Only Massachusetts and New Jersey require purpose-built state PDF generators. This materially reduces the form-building scope while TX and FL become pattern-validated state gate additions using the existing WH-347 generator.
+The v9.0 milestone adds bidirectional sync with three construction ERPs to an existing compliance tool. The critical finding that reframes the entire effort: significant Procore infrastructure already exists in the codebase. The OAuth2 connect/callback/token-refresh flow is production-grade in routes/integrations.ts (lines 609-727), and the timesheet pull and worker upsert patterns live at lines 732-868. Phases 127-129 are extraction, formalization, and extension of working code into the IErpAdapter interface -- not greenfield development. This substantially de-risks the Procore track.
 
-Zero new npm packages are needed for v5.0. All capabilities — pdf-lib for MA/NJ PDF generation, csv-stringify for audit log CSV export, Drizzle ORM for subcontractor schema additions — are already installed. The recommended build path is to follow the IL `ilPdfGenerator.ts` programmatic-draw pattern (not the template-overlay pattern) for both MA and NJ, because neither state provides a fillable official PDF template suitable for pdf-lib's `loadPdf()` + AcroForm fill approach. All report PDFs (multi-project compliance summary, enhanced fringe report) use the same programmatic draw pattern.
+The two other ERPs present a starkly different picture. Sage 300 CRE has no public REST API -- it is an on-premise Windows application with ODBC-only programmatic access. The only viable integration path for cloud-hosted contractors is a file-based adapter: generate Sage-compatible .txt payroll import files and parse Sage CSV exports. Viewpoint Vista (Trimble) does have a REST API (AppXchange) but it requires purchasing a Trimble developer account and a sales/onboarding relationship -- it is not self-service. Build the file adapter first and gate the REST path behind a feature flag requiring customer-provided AppXchange credentials.
 
-The top risks for this milestone are: (1) inconsistent state case normalization already confirmed in the codebase that will silently break new state gates if not fixed as a pre-flight step; (2) the state detection boolean sprawl in `PayrollWeekDetailPage.tsx` (currently 4 booleans, going to 8) that requires a state registry refactor before adding new states; (3) the subcontractor data model must be per-sub-per-week from the start, or the compliance tracking value is lost; and (4) the CA A-1-131 Phase 24 Task 3 browser verification gap has been open since v2.4 and must be closed before v5.0 ships.
+Net new package footprint is deliberately minimal: only openid-client (PKCE utilities for Procore OAuth hardening) and chokidar (file watching for the Sage/Vista on-premise adapter). Everything else -- scheduling, credential encryption, CSV parsing, audit logging -- reuses existing stack. Two architectural requirements must be in place before any sync work: WAL mode must be enabled in Phase 126 to prevent SQLITE_BUSY errors when the nightly sync job overlaps with user payroll entry, and the Vista API async 202 Accepted + polling pattern requires a vista_pending_actions table from Phase 132 forward. SSN data must never appear in any outbound ERP payload -- enforce via explicit inclusion lists on all sync payloads, not exclusion lists.
 
 ---
 
 ## Key Findings
 
-### Stack Additions — What's New vs Already Installed
+### Recommended Stack
 
-**Zero new npm packages needed.** All v5.0 capabilities are covered by the installed stack.
+The stack for v9.0 is almost entirely additive configuration on the existing codebase. The only new runtime dependencies are openid-client ^6.8 for PKCE code verifier/challenge generation, and chokidar ^4 for file watching. Both are ESM-only packages. axios and csv-parse are likely already installed; verify in package.json before adding.
 
-| Capability | Package | Status |
-|-----------|---------|--------|
-| MA and NJ PDF generation | pdf-lib ^1.17.1 | INSTALLED |
-| Multi-project compliance PDF | pdf-lib ^1.17.1 | INSTALLED |
-| Enhanced fringe report PDF | pdf-lib ^1.17.1 | INSTALLED |
-| Audit log CSV export | csv-stringify ^6.7.0 | INSTALLED |
-| Subcontractor schema additions | drizzle-orm ^0.45.1 + better-sqlite3 ^12.8.0 | INSTALLED |
-| Sub document upload (future only) | multer ^2.1.1 | INSTALLED — no v5.0 usage |
+node-cron is already installed and running 5 scheduled jobs. The nightly ERP sync is job #6. No Redis, no BullMQ, no external queue service.
 
-**New service files to create** (all following the `ilPdfGenerator.ts` programmatic-draw pattern):
-- `src/server/services/maCprGenerator.ts` — MA Weekly Certified Payroll Report + Statement of Compliance
-- `src/server/services/njCprGenerator.ts` — NJ MW-562 Payroll Certification for Public Works Projects
-- `src/server/services/complianceSummaryPdfGenerator.ts` — Multi-project compliance snapshot PDF
-- `src/server/services/fringeReportGenerator.ts` — Enhanced fringe report by fund type / union / J-RA
+**Core technologies:**
+- openid-client ^6.8: PKCE code verifier + challenge generation -- NEW package
+- chokidar ^4: File watcher for Sage/Vista on-premise adapter; awaitWriteFinish prevents reads mid-write -- NEW package
+- node-cron (already installed): Nightly sync job #6; existing pattern is canonical
+- drizzle-orm (already installed): 3 new tables via add-only migrations (integration_connections, integration_field_mappings, integration_sync_runs)
+- crypto (Node.js built-in): AES-256-GCM token encryption via existing cryptoService.ts
+- axios (verify installed): ERP HTTP client; one axios instance per provider with token interceptor
+- csv-parse (verify installed): Streaming CSV/TXT parser for Sage and Vista file adapters
 
-TX and FL do NOT need new generator files — they use the existing WH-347 generator with state-gate routing.
+**Explicit non-additions:** No BullMQ/Redis, no Passport.js, no @procore/js-sdk, no external secrets manager, no separate microservice.
 
-**Explicitly do NOT add:** pdfmake, jsPDF, @pdfme/generator (PROJECT.md constraint: pdf-lib only), multer-s3 or any S3/CDN file storage (metadata-only sub tracking for v5.0), portal automation for NJ Wage Hub or TX LCPtracker (no public API; manual upload pattern).
+### Expected Features
 
----
+**Must have (table stakes) -- v9.0:**
+- Pull workers from Procore -- eliminates re-keying; Procore is authoritative on worker roster
+- Pull timesheets/hours from Procore daily -- primary value driver; eliminates duplicate time entry
+- Sage 300 CRE file-based adapter -- reaches majority of Sage contractors who cannot expose on-premise Sage
+- Vista file-based adapter -- universal fallback covering both cloud and on-premise Vista
+- Connection status UI per ERP -- silent broken connections cause compliance gaps
+- AES-256-GCM encrypted credential storage -- reuse existing SSN encryption pattern
+- Sync history log -- auditors need to see when data last synced
+- Manual Sync Now trigger -- nightly-only is insufficient before payroll runs
+- Worker deduplication by erp_external_id + erp_source -- not by name
 
-### Feature Scope — Table Stakes vs Differentiators by Area
+**Should have (differentiators) -- v9.0:**
+- Push WH-347 compliance status back to Procore custom fields -- closes the bidirectional loop
+- Push compliance violations as Procore Observations -- surfaces inside native Procore issue tracking
+- Nightly automatic sync at 02:00 UTC with configurable schedule
+- Integration Dashboard with sync health banners -- Phase 134 is compliance-critical, not optional polish
 
-#### Texas (LOW complexity — WH-347 reuse)
+**Defer to v10.0:**
+- Vista AppXchange REST adapter (gated -- requires Trimble developer account purchase)
+- Procore webhooks-driven sync (nightly + manual trigger ships first)
+- Vista ODBC fallback for on-premise (high complexity, narrow market)
+- Per-project ERP connection override (single company-level connection covers v9.0)
 
-| Feature | Category |
-|---------|----------|
-| TX project flag + state gate + WH-347 routing | Table Stakes |
-| TX-specific project fields (txdotProjectId, txContractorLicense) | Table Stakes |
-| TxDOT LCPtracker submission guide modal | Differentiator |
+**Explicit anti-features:**
+- No SSN sync from any ERP (PHI exposure; use ERP employee ID as sync key only)
+- No writing wage rates or net pay back to ERP (regulatory liability)
+- No creating workers in ERP from this app (data ownership inversion)
+- No deprecating existing CSV import pipeline (additive only)
 
-TX uses WH-347. TxDOT projects submit via LCPtracker portal (no API — manual upload). Three TX-specific project header fields are needed but no per-worker differences from WH-347.
+### Architecture Approach
 
-#### Florida (VERY LOW complexity — informational only)
+The architecture centers on an IErpAdapter interface in src/server/services/erpAdapter.ts that all three ERP adapters implement. The syncOrchestrator.ts calls only interface methods. The Procore adapter wraps already-working code from procoreService.ts and routes/integrations.ts -- it is a formalization step, not a rewrite.
 
-| Feature | Category |
-|---------|----------|
-| FL project flag + WH-347 routing | Table Stakes |
-| "Florida uses federal WH-347 only" HelpCallout | Differentiator |
+**Major components:**
+1. integrationVault.ts -- Unified encrypt/decrypt for multi-provider credentials; wraps existing cryptoService.ts
+2. erpAdapter.ts + provider implementations (procoreAdapter.ts, sageAdapter.ts, viewpointAdapter.ts) -- IErpAdapter interface; each adapter handles credential retrieval internally
+3. syncOrchestrator.ts -- Pull/push cycle for one connection; sequential DB writes (never Promise.all against SQLite)
+4. erpSync.ts (cron job) -- Nightly job registered in index.ts as cron job #6; iterates active connections sequentially; writes integration_sync_runs on every exit path
+5. IntegrationsPage.tsx + IntegrationDashboard.tsx -- Connection management UI + sync health/history; persistent failure banner on main Dashboard after 2+ consecutive failures
 
-FL is a 1-2 plan addition. No new form. No new generator. Add "FL" to the state enum and show an informational callout explaining FL has no state prevailing wage law.
+**Procore classification authority rule:** Procore tradeClassification (cost code) wins when pulling workers. Other ERPs set classification only for new workers, never overwrite existing local classification. Implement via classification_source column: erp | manual | compliance_app.
 
-#### Massachusetts (HIGH complexity — most different from WH-347)
+**Rate snapshot policy (non-negotiable):** ERP pay rates are never used as baseRateSnapshot. The orchestrator always calls classificationRates.getRate(projectId, classificationId) from wage_determinations. ERP rates reflect what the contractor paid; compliance requires the Davis-Bacon rate.
 
-| Feature | Category |
-|---------|----------|
-| MA project flag + state gate | Table Stakes |
-| MA Weekly Certified Payroll PDF generator (maCprGenerator.ts) | Table Stakes |
-| Workforce participation fields per worker (isWoman, isMinority booleans) | Table Stakes |
-| OSHA 10 certified field per worker | Table Stakes |
-| "All other hours" column on payroll entries (non-project hours) | Table Stakes |
-| Supplemental unemployment as explicit fringe sub-column (Column E) | Table Stakes |
-| Project gross wages vs total gross wages (Column G vs Column H) | Table Stakes |
-| MA Statement of Compliance companion PDF | Table Stakes |
-| MA project fields (maDlsProjectId, maSicCode) | Table Stakes |
-| MA submission guide modal (awarding authority + 3-year retention) | Differentiator |
+### Critical Pitfalls
 
-MA has the most new DB columns: `workers` gets `isOsha10Certified`, `isMinority`, `isWoman`; `payroll_entries` gets `allOtherHours`, `checkNumber`. MA uses Mon-Sat columns (not Mon-Sun like WH-347). MA requires OSHA 10 documentation on first payroll listing and tracks workforce participation (15.3% minority / 6.9% women goals) per worker. No statewide portal — submit to awarding authority by mail/email.
+1. **SQLite write lock during nightly sync** -- Enable PRAGMA journal_mode=WAL and PRAGMA busy_timeout=5000 in DB init at Phase 126. Use BEGIN IMMEDIATE for sync writes. Commit every 50-100 rows. Must happen in Phase 126 before any sync code runs. (CRITICAL-4)
 
-#### New Jersey (HIGH complexity — EEO demographic fields)
+2. **SSN in outbound ERP payloads** -- Build all worker payloads using explicit inclusion lists, never by spreading the full worker row. Write unit tests asserting no /ssn/i field appears in any serialized payload. Add outbound request middleware that regex-checks for 9-digit SSN patterns before dispatch. (CRITICAL-2)
 
-| Feature | Category |
-|---------|----------|
-| NJ project flag + state gate | Table Stakes |
-| NJ MW-562 PDF generator (njCprGenerator.ts) | Table Stakes |
-| NJ Contractor Registration Number on projects (njPwcNumber) | Table Stakes |
-| Sex field per worker (M/F/N including non-binary option) | Table Stakes |
-| Race field per worker (6-code NJ set: W/B/A/N/I/M) | Table Stakes |
-| Ethnicity field per worker (H/N) | Table Stakes |
-| NJ project fields (njPwcNumber, njContractId) | Table Stakes |
-| NJ Wage Hub submission guide modal (10-day deadline) | Differentiator |
+3. **Duplicate workers on re-sync** -- Add erp_external_id + erp_source columns to workers in Phase 126 migration with unique constraint. Upsert via ON CONFLICT (erp_external_id, erp_source) DO UPDATE. Name-based dedup breaks on shared names and name changes. (CRITICAL-3)
 
-NJ MW-562 (February 2025 revision) is required — WH-347 does not satisfy NJ requirements. Key differentiator: NJ requires EEO demographic data (sex/race/ethnicity) per worker, including a non-binary sex option. IL demographic columns (`race`, `ethnicity`, `gender`) shipped in v4.0 can be reused — NJ uses the same columns with slightly different code values. NJ Wage Hub (njwages.nj.gov) is a mandatory portal as of August 2024 but has no public API — generate PDF, user uploads manually.
+4. **Vista 202 Accepted treated as success** -- Vista AppXchange writes are async: 202 Accepted + queue ID immediately; actual DB write happens 30-40 seconds later via Xchange Agent. A vista_pending_actions table must exist from Phase 132 day one. Never report a Vista write as successful until polling confirms it. (HIGH-6)
 
-#### Subcontractor CPR Tracking (MEDIUM complexity — new entity type)
+5. **Silent sync failures invisible to contractors** -- Phase 134 Integration Dashboard is compliance-critical. Persistent banner when consecutive_failure_count >= 2. Email notification via existing nodemailer after 2nd consecutive failure. Contractors must see failures before submitting WH-347 with missing hours. (HIGH-7)
 
-| Feature | Category |
-|---------|----------|
-| Add subcontractors to a project (name, license, trade, FEIN) | Table Stakes |
-| Per-week CPR receipt tracking (pending/received/rejected) | Table Stakes |
-| Overdue flag per sub per week (computed from week_ending vs received_at) | Table Stakes |
-| Sub CPR summary view on ProjectDetailPage | Table Stakes |
-| "Mark CPR Received/Rejected" action | Table Stakes |
-| Notes/deficiency field per week | Table Stakes |
-| Automated overdue email alerts | Differentiator |
-| Sub CPR history export CSV | Differentiator |
-| Sub CPR document upload/storage | Anti-Feature (v5.0) — defer; multer already installed |
-
-Federal regulatory basis (29 CFR 5.5(a)(6)): prime contractors are strictly liable for subcontractor violations. Model as "GC compliance tracker" not "sub payroll entry" — GC records receipt/compliance status only, does not re-enter sub payroll data.
-
-#### Enhanced Reporting (LOW-MEDIUM complexity — reuses existing infrastructure)
-
-| Feature | Category |
-|---------|----------|
-| Multi-project compliance PDF (account-scoped, from DashboardPage) | Table Stakes |
-| Audit log CSV export (project-scoped, from ProjectActivityPage) | Table Stakes |
-| Enhanced fringe report (fund type / union local / J-RA split) | Table Stakes |
-| Email delivery of compliance summary | Differentiator |
-| Historical compliance report archive | Anti-Feature — generate on demand only |
-
----
-
-### Architecture — Key Decisions
-
-**State gate pattern (8-step, must not be altered):** Every new state PDF route follows the established pattern from `export.ts`: (1) load week, (2) `assertProjectAccess`, (3) state gate → 400 if wrong state, (4) load entries, (5) map to input type, (6) generate PDF, (7) stream response, (8) best-effort audit log. The state gate is always step 3 — never before `assertProjectAccess` (that would leak project existence to unauthorized users).
-
-**Critical pre-flight refactor before any new state is added:** The existing codebase has confirmed mixed case normalization — CA/WA use exact uppercase (`project.state === 'CA'`) while NY/IL use `.toUpperCase()`. The `projects` table has no enforced case constraint. All state comparisons — both client and server — must be standardized to `.toUpperCase()` on both sides before Phase 47 begins. One-line fix per comparison; must be done first.
-
-**State registry for PayrollWeekDetailPage:** Currently 4 individual booleans (`isCA`, `isWA`, `isNY`, `isIL`) at lines 461-464. Adding TX, FL, MA, NJ brings this to 8. The download button rendering block must be replaced with a `STATE_FORMS` registry object keyed by state code. The 4 individual booleans can remain for other conditional logic (compliance rules, form fields) where they are established contracts — only the download section uses the registry.
-
-**Subcontractor two-table model:**
-- `subcontractors`: id, projectId (FK CASCADE DELETE), companyName, contactName, contactEmail, licenseNumber, fein, createdByUserId, createdAt, updatedAt
-- `subcontractor_cprs`: id, subcontractorId (FK CASCADE DELETE), payrollWeekId (FK CASCADE DELETE), status ('pending'/'received'/'rejected'), receivedAt, notes, createdByUserId, createdAt, updatedAt — with UNIQUE INDEX on (subcontractorId, payrollWeekId)
-
-Per-project scoping is intentional (not global): subs have different contacts/licenses per project, and `assertProjectAccess` scopes all data to project membership without a separate access layer.
-
-**New routes:**
-- `GET /api/export/tx-cpr/:weekId`, `fl-cpr/:weekId`, `ma-cpr/:weekId`, `nj-cpr/:weekId` — on export router, each state-gated
-- `GET /api/export/compliance-summary` — cross-project, user-scoped (no weekId, no state gate)
-- `GET /api/audit/:projectId/csv` — on audit router, registered BEFORE the `/:projectId` wildcard (route ordering constraint)
-- `GET /api/projects/:projectId/reports/fringe-enhanced` — parallel to existing fringe-summary route
-- Full CRUD + CPR routes on new `src/server/routes/subcontractors.ts`
-
-**Schema additions per state** (all nullable — missing field produces blank on PDF, not a generation error):
-
-| State | New columns on `projects` | New column on `payroll_weeks` |
-|-------|--------------------------|-------------------------------|
-| TX | txdotProjectId, txContractorLicense | txCprSubmittedAt |
-| FL | flDbeNumber, flContractId | flCprSubmittedAt |
-| MA | maDlsProjectId, maSicCode | maCprSubmittedAt |
-| NJ | njPwcNumber, njContractId | njCprSubmittedAt |
-
-Workers table additions (MA): `isOsha10Certified`, `isMinority`, `isWoman` (nullable booleans).
-Payroll entries additions (MA): `allOtherHours`, `checkNumber` (nullable).
-Workers table additions (NJ): `sex` as a new nullable column — do not reuse `gender`; the values are semantically different (legal sex on a compliance form vs gender identity).
-
----
-
-### Top 5 Pitfalls to Avoid
-
-**1. CRITICAL — Inconsistent case normalization silently breaks new state gates**
-Mixed `.toUpperCase()` usage confirmed by grep across `PayrollWeekDetailPage.tsx` and `export.ts`. A project stored as `'tx'` passes the frontend button check but gets a 400 from the server gate if the route uses exact `'TX'`. Fix: standardize ALL state comparisons (client and server) to `.toUpperCase()` as a pre-flight task at the start of Phase 47 before any new state is added.
-
-**2. CRITICAL — isXX boolean sprawl at 8 states makes PayrollWeekDetailPage unmaintainable**
-Eight individual booleans with 8 separate conditional JSX blocks for download buttons introduces silent state leakage bugs (TX button visible on FL project) and makes compliance coverage unauditable by inspection. Fix: introduce a `STATE_FORMS` registry object for download button rendering at the start of Phase 47. Confirmed observation: booleans exist at lines 461-464 of `PayrollWeekDetailPage.tsx`.
-
-**3. CRITICAL — PDF coordinate measurement is a blocking prerequisite, not optional**
-Phase 24 Plan 03 SUMMARY documented this trap exactly: the A-1-131 was assumed to be 8.5x11 but is actually 8.5x14 (612x1008 pt), making all assumed coordinates wrong. For MA (dense portrait layout) and NJ (compact single-page format), the same trap applies compounded. Fix: for each state form phase, load the official PDF via pdf-lib, read actual page dimensions, and measure exact (x, y) field positions as a blocking prerequisite — no coordinates from screenshots or guessing.
-
-**4. CRITICAL — Subcontractor data model must be per-sub-per-week from day one**
-A naive model with one record per subcontractor becomes a static address book, not a compliance tool. A GC cannot answer "which subs are missing CPRs for week 7?" without the week axis. Fix: the two-table model (`subcontractors` + `subcontractor_cprs` with payrollWeekId FK and UNIQUE INDEX on subcontractorId+payrollWeekId) must be designed correctly in Phase 52 before any route is written. The schema is the critical decision.
-
-**5. CRITICAL — CSV formula injection via audit log data**
-csv-stringify does not sanitize formula-prefix characters. Worker names, project names, notes, and meta JSON are all user-controlled. A cell starting with `=`, `+`, `-`, or `@` executes as an Excel formula when opened by an auditor. Fix: define and apply a `sanitizeCsvCell()` prefixer function to all user-controlled string fields before passing to csv-stringify. This must be an explicit acceptance criterion for Phase 55.
-
-**Also watch for:**
-- Server-side state gate missing on new routes (never rely on frontend button visibility alone — the server gate is non-negotiable; test with wrong-state weekId must return 400)
-- IDOR on subcontractor routes (every sub route calls `assertProjectAccess` before any data access — same established pattern as workers routes; cross-tenant 403 test is a required acceptance criterion)
-- Missing UTF-8 BOM on audit log CSV (copy `'\uFEFF' + csvString` pattern verbatim from `compliance.ts:145`)
-- Multi-project compliance PDF memory spike (summary table only — never bundle individual per-week PDF objects in memory simultaneously)
-- CA A-1-131 Task 3 browser verification still outstanding (Phase 24 Plan 03 Tasks 1 and 2 shipped; Task 3 was deferred and never completed)
+6. **OAuth token rot undetected** -- Store refresh_token_acquired_at. Surface proactive re-auth warning after 25 days. On 401 from refresh endpoint, mark integration credential_expired and show banner on next dashboard load. (CRITICAL-1)
 
 ---
 
 ## Implications for Roadmap
 
-Research suggests 12 phases (47–58), continuing from v4.0's Phase 46. State forms are independent of each other and of subcontractor tracking. Reporting phases benefit from sub tracking data being live but have no hard blocking dependency.
+### Phase 126: Integration Foundation
+**Rationale:** Every subsequent phase depends on the credential vault, adapter interface, and new DB tables. WAL mode must be enabled here before any sync writes occur.
+**Delivers:** integration_connections, integration_field_mappings, integration_sync_runs tables; IErpAdapter interface; integrationVault.ts; IntegrationsPage.tsx with per-ERP ConnectionCard; PRAGMA journal_mode=WAL + busy_timeout=5000; Dashboard sync failure banner infrastructure
+**Must address:** CRITICAL-4 (WAL mode), CRITICAL-2 (outbound payload contracts with explicit inclusion lists), CRITICAL-3 (schema: erp_external_id, erp_source, classification_source columns on workers table), MIN-1 (AES-256-GCM from day one), CRITICAL-1 (credential vault columns: token_expires_at, refresh_token_acquired_at, consecutive_failure_count, last_successful_at)
+**Research flag:** None -- patterns established from existing codebase
 
-### Phase 47: TX Certified Payroll PDF
-**Rationale:** TX is the largest prevailing wage construction market; WH-347 reuse makes it the lowest-risk first phase. This phase also carries the pre-flight work that all subsequent phases depend on.
-**Delivers:** Pre-flight case normalization fix across all existing state comparisons; `STATE_FORMS` registry in PayrollWeekDetailPage; TX state gate + WH-347 routing; TX project fields migration (txdotProjectId, txContractorLicense, txCprSubmittedAt); TxDOT LCPtracker submission guide modal.
-**Key pitfalls:** isXX boolean sprawl (use registry); case normalization fix first; server-side state gate test.
-**Research flag:** Standard patterns — no deeper research needed. TX uses WH-347 exactly.
+### Phase 127: Procore OAuth + Worker Sync
+**Rationale:** Procore has highest market penetration and working code exists -- lowest risk, highest value first. Worker sync must precede timesheet sync.
+**Delivers:** procoreAdapter.ts wrapping existing procoreService.ts; OAuth nonce upgrade from Math.random() to crypto.randomBytes(16); Procore company selection UI; worker upsert via erp_external_id conflict target; nightly ERP sync cron registration in index.ts as job #6; POST /api/integrations/procore/sync-now
+**Important:** OAuth connect/callback/token-refresh in routes/integrations.ts lines 609-727 is working production code. Extract into procoreAdapter.ts and harden -- do not rewrite.
+**Must address:** MOD-1 (store code_verifier in DB not session), MOD-3 (company selection dropdown), CRITICAL-3 (worker upsert idempotency), HIGH-5 (per-tenant OAuth tokens)
+**Research flag:** None -- working code confirmed in codebase
 
-### Phase 48: FL Certified Payroll PDF
-**Rationale:** FL is a 1-2 plan addition with zero PDF generator work. Confirms the state gate pattern is clean after Phase 47 fixes before heavier form builds.
-**Delivers:** FL state gate + WH-347 routing; FL informational HelpCallout; FL project fields migration (flDbeNumber, flContractId, flCprSubmittedAt).
-**Key pitfalls:** Server-side state gate test required even though no new form.
-**Research flag:** Standard patterns — no deeper research needed.
+### Phase 128: Procore Timesheet Pull
+**Rationale:** Primary value driver -- eliminating duplicate time entry. Prototype exists in integrations.ts lines 732-868. Depends on Phase 127 workers.
+**Delivers:** listTimeEntries() in procoreAdapter.ts (extract from lines 732-789); timezone-aware week bucketing; sequential upsert loop via upsertPayrollEntry(); exponential backoff with X-Rate-Limit-Reset header on 429
+**Must address:** MOD-4 (timezone mismatch -- test Sunday 11 PM edge case), HIGH-5 (rate limit backoff), sequential writes only
+**Research flag:** None -- prototype confirmed in existing code
 
-### Phase 49: MA Certified Payroll PDF
-**Rationale:** MA is the most complex state form (most new DB columns, most MA-specific per-worker fields). Build after TX/FL confirm the state gate pattern is clean. DB columns must land before the PDF generator can be written.
-**Delivers:** MA worker and payroll entry schema migration (isOsha10Certified, isMinority, isWoman, allOtherHours, checkNumber); MA project fields migration; maCprGenerator.ts (two-page: payroll table + Statement of Compliance); MA state gate route; MA pre-download modal with missing-field advisory.
-**Key MA-specific requirements:** OSHA 10 per worker; workforce participation (isMinority, isWoman); allOtherHours on payroll entries; supplemental unemployment as explicit fringe column (Column E); project gross vs total gross (Column G vs H); Mon-Sat hour columns; check number field.
-**Key pitfalls:** Measure MA form dimensions from official mass.gov download BEFORE writing coordinates; Column B/E/G/H naming requires validation against current form download (MEDIUM-HIGH confidence).
-**Research flag:** MEDIUM-HIGH — MA column naming must be validated against the current official download before coding.
+### Phase 129: Procore Compliance Push
+**Rationale:** Closes the bidirectional loop. Custom fields on Timesheets or Observations confirmed viable.
+**Delivers:** pushComplianceStatus() in procoreAdapter.ts; run_configurable_validations: true on all custom field writes; post-write re-fetch verification; push phase in syncOrchestrator.ts
+**Must address:** HIGH-1 (re-fetch verification after custom field write), MIN-3 (filter webhook events by source_application_id to prevent re-sync loop)
+**Research flag:** None -- Procore custom fields API confirmed
 
-### Phase 50: NJ Certified Payroll PDF
-**Rationale:** NJ form leverages IL demographic columns (race, ethnicity, gender) shipped in v4.0, reducing new schema work compared to MA. Build after MA confirms the generator pattern.
-**Delivers:** NJ project schema migration (njPwcNumber, njContractId, njCprSubmittedAt, workers.sex); njCprGenerator.ts (MW-562 with EEO columns, FICA/tax deduction columns); NJ state gate route; NJ Wage Hub submission guide modal.
-**Key NJ-specific requirements:** EEO demographic columns per worker (sex M/F/N, race 6-code W/B/A/N/I/M, ethnicity H/N); NJ Contractor Registration Number (njPwcNumber) on projects; FICA/Federal/State tax deduction columns; Mon-Sat daily hours; 10-day Wage Hub submission deadline.
-**Key pitfalls:** Measure NJ MW-562 dimensions from official NJ DOL download; fringe disaggregation null handling (treat null sub-fields as 0; show advisory when all four are null); separate `sex` column, not reusing `gender`.
-**Research flag:** MEDIUM — EEO codes confirmed; column widths/positions require test rendering. Confirm MW-562 is still on February 2025 revision at build time.
+### Phase 130: Sage 300 CRE Adapter Foundation
+**Rationale:** Second-highest GC market penetration. File-based adapter covers majority of Sage shops.
+**Delivers:** sageAdapter.ts implementing IErpAdapter; chokidar ^4 file watching with awaitWriteFinish; wraps existing sage300Mapper.ts; sync_file_log table for file hash deduplication; Sage connect routes
+**Critical finding:** Sage 300 CRE has NO public REST API. File format: comma-delimited .txt (not .csv), no extra spaces between commas, blank fields as adjacent commas.
+**Must address:** HIGH-4 (file path injection -- allowlist validation + path.resolve() prefix check), HIGH-4 (stale file dedup via file hash), HIGH-2 (parse by column header name not index), MOD-2 (health check before sync)
+**Research flag:** Validate exact Sage 300 CRE payroll import .txt field order against a live test import before Phase 130 ships
 
-### Phase 51: CA A-1-131 Gap Close
-**Rationale:** Phase 24 Plan 03 Task 3 (browser verification) was deferred and never completed. Closes this gap before v5.0 ships.
-**Delivers:** Browser-verified CA A-1-131 PDF coordinate correctness; verified UI flow (CSLB/WC advisory modal, DT columns on CA projects only, WH-347 still works alongside CA button); audit of a1131Generator.ts against v3.0/v4.0 schema additions.
-**Key pitfalls:** Do not re-execute Plan 03 code samples verbatim — they use the old `project.userId !== userId` ownership pattern; read current `export.ts` first. Check for A-1-131 template revision since calibration date.
-**Research flag:** Standard patterns — no new research needed. This is verification work, not a new build.
+### Phase 131: Sage 300 Payroll Sync + Compliance Push
+**Rationale:** Worker sync (Phase 130) must exist first.
+**Delivers:** listTimeEntries() in sageAdapter.ts; compliance push for file mode generates compliance-report.csv to SFTP drop directory (structured stub noting manual import required -- no programmatic push without ODBC)
+**Must address:** HIGH-3 (classification conflict: this app is authoritative for trade classification, not Sage)
+**Research flag:** None for file mode; Sage REST mode deferred to v10.0
 
-### Phase 52: Subcontractor Schema + API
-**Rationale:** Subcontractor tracking is independent of state forms. Schema must land before UI can be built or tested. Two-table model is the critical design decision.
-**Delivers:** `subcontractors` and `subcontractor_cprs` tables with migrations; `src/server/routes/subcontractors.ts` (POST/GET/DELETE for subs, POST/GET for CPR records); audit log entries for sub events; UNIQUE INDEX on (subcontractorId, payrollWeekId).
-**Key pitfalls:** Per-sub-per-week model (not per-sub static record); `assertProjectAccess` on every route before any data access; cross-tenant 403 test is a required acceptance criterion.
-**Research flag:** Standard patterns — two-table model confirmed by regulatory analysis (29 CFR 5) and industry compliance tools.
+### Phase 132: Viewpoint Vista Adapter Foundation
+**Rationale:** File mode first -- most mid-market Vista customers will not have AppXchange REST API access.
+**Delivers:** viewpointAdapter.ts implementing IErpAdapter with file mode; Vista CSV/tab-delimited parser (no existing mapper -- implement in adapter); vista_pending_actions table (required infrastructure even before REST writes ship); Vista connect routes
+**Critical finding:** Vista AppXchange REST requires registering as a Trimble developer -- not self-service. REST mode gated behind connection_type: rest feature flag.
+**Critical finding:** Vista API is async -- 202 Accepted + queue ID on all writes. vista_pending_actions table must exist from day one of this phase.
+**Must address:** HIGH-6 (polling harness for 202 Accepted), MOD-5 (1-hour cache lag -- document in Dashboard)
+**Research flag:** Vista CSV export format documented but not locally verified -- validate against an actual Vista export before Phase 132 ships; AppXchange REST endpoint schemas require Trimble developer account
 
-### Phase 53: Subcontractor UI
-**Rationale:** Builds the GC-facing compliance tracker panel on top of Phase 52's API.
-**Delivers:** `SubcontractorPanel.tsx` embedded in `ProjectDetailPage.tsx`; "Subcontractors" tab; add/remove sub form; per-week CPR receipt table with overdue flags; Mark Received/Rejected action with notes field.
-**Key pitfalls:** Panel is project-scoped (not a new top-level page — no new routing needed); GC workers and sub workers must never be conflated in any totals or counts displayed.
-**Research flag:** Standard patterns.
+### Phase 133: Viewpoint Vista Timesheet + Compliance Push
+**Rationale:** Worker sync (Phase 132) must exist first.
+**Delivers:** listTimeEntries() in viewpointAdapter.ts; pushComplianceStatus() using vista_pending_actions polling harness; syncOrchestrator.ts registered for Viewpoint provider
+**Must address:** HIGH-6 (always poll action queue; never report 202 as success), MOD-5 (cache lag documented in Dashboard tooltip)
+**Research flag:** AppXchange REST endpoints require Trimble developer account; file mode ships first; REST mode validated against actual AppXchange access
 
-### Phase 54: Subcontractor Integration with State Forms
-**Rationale:** Connects live sub data to existing state form generators. The IL Certified Transcript `IlPdfInput` already has a `subcontractors: Array<{name, address}>` field currently passed as an empty array — Phase 54 populates it.
-**Delivers:** Auto-populate subcontractor fields in IL transcript affidavit and applicable new state form certification pages; sub CPR overdue count shown on project compliance status.
-**Research flag:** Standard patterns.
-
-### Phase 55: Audit Log CSV Export
-**Rationale:** Purely additive to existing `audit_logs` table (v4.0). csv-stringify already installed. Lowest-risk reporting phase.
-**Delivers:** `GET /api/audit/:projectId/csv` route (registered before `/:projectId` wildcard in audit.ts); CSV download button on ProjectActivityPage; 1,000-row default limit with optional `?since=` date filter; UTF-8 BOM output.
-**Key pitfalls:** CSV formula injection sanitization (required acceptance criterion); UTF-8 BOM (copy from compliance.ts:145); route registration order (specific before wildcard).
-**Research flag:** Standard patterns.
-
-### Phase 56: Enhanced Fringe Report
-**Rationale:** Independent of subcontractor tracking. All required data columns (`fringeHealthWelfare`, `fringePension`, `fringeVacation`, `fringeTraining`, `workers.unionLocal`) already exist from prior milestones.
-**Delivers:** `getEnhancedFringeSummary()` in reportsService.ts (non-destructive — does not modify existing `getFringeSummary()`); `GET /api/projects/:projectId/reports/fringe-enhanced` route; third tab on ReportsPage.tsx.
-**Research flag:** Standard patterns. All data columns already exist; no new schema work.
-
-### Phase 57: Multi-Project Compliance PDF
-**Rationale:** Benefits from sub tracking (Phases 52–54) being live so it can include sub CPR overdue counts per project in the report. Place last in reporting group.
-**Delivers:** `complianceSummaryPdfGenerator.ts` (summary table, pdf-lib programmatic draw); `GET /api/export/compliance-summary` route (cross-project, user-scoped, no weekId, no state gate); download button on DashboardPage.
-**Key pitfalls:** Summary table only — never bundle per-week PDF objects (memory spike on Render.com 512MB ceiling); compute compliance fresh at generation time (no caching); print snapshot timestamp on every PDF; 50-project hard cap with advisory.
-**Research flag:** MEDIUM — multi-project PDF format has no official standard; section structure (cover/project rows/violation detail/sub gap) needs planning validation.
-
-### Phase 58: v5.0 Integration + Polish
-**Rationale:** Buffer phase for cross-cutting cleanup easier to finalize after all features exist.
-**Delivers:** ACTION_LABELS additions for sub events in ProjectActivityPage.tsx; filename consistency audit across all new download endpoints; PROJECT.md update for v5.0; final test pass (560+ tests target); cross-state compliance validation.
-**Research flag:** No research needed.
+### Phase 134: Integration Dashboard
+**Rationale:** Compliance-critical, not optional UI polish. Contractors must detect silent sync failures before submitting WH-347 forms with missing hours.
+**Delivers:** IntegrationDashboard.tsx; SyncHistoryTable.tsx (paginated integration_sync_runs); FieldMappingEditor.tsx; persistent failure banner on main Dashboard when consecutive_failure_count >= 2; email notification via nodemailer after 2nd consecutive failure; last-sync timestamp warning badge when >26 hours old
+**Must address:** HIGH-7 (sync failure visibility), HIGH-3 (classification conflict resolution UI)
+**Research flag:** None -- standard UI patterns
 
 ### Phase Ordering Rationale
 
-- TX first (47): validates the mandatory pre-flight refactors (case normalization, state registry) under the lowest-risk scope possible
-- FL second (48): so trivial it doubles as a smoke test confirming the Phase 47 refactors are clean
-- MA before NJ (49, 50): MA has more new DB columns; build first so NJ can follow the established migration pattern; NJ reuses IL demographic columns reducing its new-column count
-- CA gap (51) after new states: does not block any v5.0 feature; placed to close the long-open Task 3 before final integration
-- Sub schema before sub UI (52, 53): API must exist before the panel can be built or tested
-- Sub integration (54) after UI: confirms real data flows correctly through the form generators
-- Reporting (55-57) at end: benefits from all prior data being live; ordering within reporting is lowest-risk first (55 audit CSV) then independent feature (56 fringe) then most-dependent (57 compliance PDF needs sub data from Phase 52)
-- Integration phase (58) as buffer: cross-cutting work is faster when all features exist
+- Phase 126 must be first: DB schema, adapter interface, WAL mode, and credential vault are prerequisites for all other phases.
+- Phases 127-129 (Procore) run second: working code already exists, reducing risk and delivering value fastest.
+- Phases 130-131 (Sage) run third: file adapter is independently developable after Phase 126 with no Procore dependency.
+- Phases 132-133 (Vista) run last: no existing code, REST API requires third-party access to validate, highest risk.
+- Phase 134 (Dashboard) runs last for full feature display, but sync_health infrastructure and failure banner must be wired incrementally as each sync job phase ships.
 
 ### Research Flags
 
-Phases needing attention during plan creation:
+Phases needing deeper research during planning:
+- **Phase 130 (Sage file adapter):** Validate exact Sage 300 CRE payroll import .txt field order against a live test import before implementation.
+- **Phase 132-133 (Vista):** Vista CSV export format documented but not locally verified. AppXchange REST endpoint schemas require Trimble developer account -- flag as a dependency gate before Phase 133 REST work begins.
 
-- **Phase 49 (MA):** MA form column naming convention (Columns B/E/G/H) requires downloading and reading the current official form from mass.gov before writing coordinate constants. URL: `mass.gov/doc/weekly-certified-payroll-report/download`. Do not use third-party mirror as sole source for column naming.
-- **Phase 50 (NJ):** Confirm NJ MW-562 is still on the February 2025 revision at time of build. URL: `nj.gov/labor/wageandhour/tools-resources/forms-publications/`. EEO race codes (W/B/A/N/I/M) confirmed; column widths require test rendering.
-- **Phase 57 (multi-project PDF):** Section layout needs planning validation — no official standard exists for this report format. Propose layout during planning; validate with a single-project smoke test before multi-project expansion.
-
-Phases with standard established patterns (skip additional research):
-- **Phase 47 (TX):** WH-347 reuse fully confirmed. State gate pattern established by 4 existing implementations.
-- **Phase 48 (FL):** Informational flag only. No form to design.
-- **Phase 51 (CA gap):** Verification work, not a new build. Read existing files before touching anything.
-- **Phases 52–54 (sub tracking):** Two-table model confirmed by 29 CFR 5 regulatory analysis. API pattern mirrors existing workers routes.
-- **Phase 55 (audit CSV):** csv-stringify pattern established in compliance.ts. Column set derivable from audit_logs schema.
-- **Phase 56 (fringe report):** All data columns exist. New function alongside existing getFringeSummary(); non-destructive.
+Phases with standard patterns (skip research-phase):
+- **Phase 126:** Drizzle add-only migrations, AES-256-GCM credential vault -- established codebase patterns
+- **Phase 127:** Procore OAuth is working code -- extraction and hardening only
+- **Phase 128:** Procore timesheet prototype confirmed in integrations.ts lines 732-868
+- **Phase 129:** Procore custom fields API confirmed; standard PATCH pattern
+- **Phase 134:** Standard table + dashboard UI; no novel technical elements
 
 ---
 
@@ -295,64 +185,53 @@ Phases with standard established patterns (skip additional research):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack (no new packages) | HIGH | Confirmed from direct package.json read. Zero new packages is definitive. |
-| TX form requirements | HIGH | Multiple official sources (TxDOT, TWC, Texas Gov Code §2258). No ambiguity — WH-347 only. |
-| FL no state law | HIGH | Florida statutes + HB 705 (July 2024). Confirmed by multiple consistent independent sources. |
-| MA form structure | MEDIUM-HIGH | Official mass.gov form confirmed. Column naming (B/E/G/H) verified via official mirror but must be re-confirmed against current download at build time. |
-| NJ MW-562 structure | MEDIUM-HIGH | Official NJ DOL form (Feb 2025 revision) confirmed. EEO codes confirmed. Column widths require test rendering. |
-| NJ Wage Hub | MEDIUM | Portal existence and August 2024 launch confirmed; no public API confirmed; assumes manual upload pattern consistent with CA DIR / WA L&I v3.0 finding. |
-| Subcontractor regulatory basis | HIGH | 29 CFR 5.5(a)(6) + DOL Fact Sheet #66C confirm prime strict liability. Two-table model derived from industry standards (LCPtracker, b2gnow, Caltrans CA model). |
-| Architecture patterns | HIGH | All findings from direct code reads of export.ts, schema.ts, ilPdfGenerator.ts, audit.ts, reportsService.ts. No inference needed. |
-| Pitfalls | HIGH | Directly observed in codebase (mixed case normalization confirmed by grep; PayrollWeekDetailPage lines 461-464 observed; Phase 24 Task 3 gap confirmed in SUMMARY). |
-| Multi-project PDF format | MEDIUM | No official standard. Structure based on eMars/LCPtracker industry patterns. Needs planning validation. |
+| Stack | HIGH | Only 2 net-new packages. ESM compatibility friction known and solvable. Existing patterns cover 95% of the work. |
+| Features (Procore) | HIGH | Working code in codebase + official Procore docs confirmed. |
+| Features (Sage 300 CRE) | MEDIUM | No public REST API confirmed (HIGH). File format confirmed but field order needs live test validation. |
+| Features (Vista) | LOW-MEDIUM | AppXchange REST gated behind Trimble developer account. File mode is HIGH confidence. |
+| Architecture | HIGH | IErpAdapter interface derived from existing QBO/Procore patterns. SQLite single-writer constraint well-documented. |
+| Pitfalls | HIGH | Critical pitfalls sourced from official docs: SQLite WAL, Procore rate limits, RFC 9700 OAuth, Trimble Vista async API. |
 
-**Overall confidence: HIGH**
+**Overall confidence:** MEDIUM-HIGH -- Procore track is high confidence end-to-end. Sage and Vista file adapters are medium confidence. Vista REST adapter is low confidence pending Trimble developer access.
 
----
+### Gaps to Address
 
-## Open Questions to Resolve Before or During Planning
-
-1. **Should TX and FL share one phase?** Both are minimal builds (WH-347 reuse). Combining saves a phase number but Phase 47 carries the pre-flight refactor load (case normalization, state registry) that FL benefits from without contribution. Recommendation: keep separate. Phase 47 does the pre-flight work; Phase 48 is a clean confirmation.
-
-2. **Should Phase 54 (sub form integration) merge into Phase 53?** The IL transcript sub array field is already defined and passing an empty array. Wiring it up is low complexity. Recommendation: keep separate for deliverable boundary clarity — Phase 53 ships working UI; Phase 54 ships form integration. Can be merged during planning if the phase count is a concern.
-
-3. **Multi-project PDF violation detail scope:** Should Phase 57 include per-violation detail rows (list of specific violations per project) or counts + status badges only? Violation detail requires joining compliance checks or re-running `computeCompliance()` per week per project. Recommendation: v5.0 ships counts + status badges only; violation detail listing is a future enhancement.
-
-4. **workers.sex vs workers.gender for NJ:** Decide before Phase 50 migration. Recommendation: add `sex` as a new separate nullable column on workers, NJ-gated in UI. Reusing `gender` conflates legally-required sex on a compliance form with gender identity — semantically different, different code sets.
-
-5. **FL project fields scope:** ARCHITECTURE.md suggests `flDbeNumber` and `flContractId` as FL project columns, but FL has no state form requiring them. These would be informational only. Decide during Phase 48 planning whether these add user value or over-engineer a flag addition.
-
-6. **Fringe disaggregation advisory design for FL/NJ:** Both forms have fringe sections; existing entries for non-CA projects have null sub-fields. Settle the advisory pattern ("fringe detail not entered — form will show $0 for individual fringe lines") during Phase 48 or Phase 50 planning so it is applied consistently.
+- **Vista AppXchange endpoint schemas:** Not publicly documented. Obtain Trimble developer account before Phase 133 REST implementation. File mode ships first.
+- **Sage 300 CRE .txt field order:** Confirm exact field positions against a live test import before Phase 130 ships. Parse by column header name, not index, to be resilient.
+- **ESM compatibility:** Both openid-client ^6 and chokidar ^4 are ESM-only. Verify package.json for "type": "module". If absent, use await import(). Resolve at Phase 126 start.
+- **axios and csv-parse installation status:** Check package.json before Phase 126 -- likely already installed. Do not add duplicates.
+- **WAL mode already enabled?** Confirm PRAGMA journal_mode=WAL is not already set in existing DB init before applying in Phase 126.
 
 ---
 
 ## Sources
 
-### Primary (HIGH confidence — official government sources and direct code reads)
+### Primary (HIGH confidence)
+- Procore OAuth Authorization Code Grant Flow -- procore.github.io/documentation/oauth-auth-grant-flow
+- Procore REST API Timesheets -- developers.procore.com/reference/rest/timesheets
+- Procore Rate Limiting -- procore.github.io/documentation/rate-limiting
+- Procore Sage 300 CRE Payroll Export -- support.procore.com/products/online/user-guide/company-level/timesheets/tutorials/set-up-your-payroll-export-for-use-with-sage-300-cre
+- Trimble Vista Cloud FAQ (APIs) -- sites.google.com/trimble.com/vista-cloud-faq/home/integration-technology/vista-apis
+- Trimble Vista API Concepts -- direct-api.xchange.trimble.com/docs/vista-api-concepts
+- Sage Community Hub (no REST API confirmation) -- communityhub.sage.com/us/sage_construction_and_real_estate/f/sage-300-construction-and-real-estate/194254
+- SQLite WAL Mode -- sqlite.org/wal.html
+- RFC 9700 OAuth 2.0 Best Current Practice -- datatracker.ietf.org/doc/rfc9700/
+- openid-client npm v6.8.4 -- npmjs.com/package/openid-client
+- Existing codebase: routes/integrations.ts (lines 609-868), services/procoreService.ts, services/cryptoService.ts, db/migrations/0056_procore_connections.sql, index.ts (lines 267-350)
 
-- `C:/Users/glcar/prevailing-wage/package.json` — confirmed installed packages (pdf-lib ^1.17.1, csv-stringify ^6.7.0, multer ^2.1.1, drizzle-orm ^0.45.1)
-- `src/server/services/ilPdfGenerator.ts` — programmatic draw pattern; two-page structure; IlPdfInput interface fields
-- `src/server/routes/export.ts` — 8-step state gate pattern; all existing state routes confirmed
-- `src/server/db/schema.ts` — existing state-specific columns; table structure; audit_logs shape
-- `src/server/routes/audit.ts` — paginated audit log; route ordering constraint confirmed
-- `src/server/services/reportsService.ts` — getFringeSummary shape; fringe disaggregation columns
-- `src/client/pages/PayrollWeekDetailPage.tsx` — isCA/isWA/isNY/isIL booleans at lines 461-464 confirmed
-- Texas Government Code Chapter 2258 + TxDOT manuals + TDHCA Davis-Bacon page — TX uses WH-347; LCPtracker is portal-only
-- Florida statutes + HB 705 (July 2024) + FL labor law guides — FL no state prevailing wage law; local ordinances preempted
-- mass.gov/doc/weekly-certified-payroll-report/download + MA DLS prevailing wage guide — MA form structure; OSHA 10; workforce participation (15.3% minority / 6.9% women) confirmed
-- nj.gov/labor/wageandhour (NJ DOL forms page) — MW-562 February 2025 revision is current; NJ Wage Hub mandatory as of August 2024
-- njwages.nj.gov MW-564 instructions document — NJ Wage Hub portal-only submission, no machine-to-machine API
-- 29 CFR Part 5 + DOL Fact Sheet #66C — prime contractor strict liability for sub violations
+### Secondary (MEDIUM confidence)
+- Vista AppXchange Connectors -- appxchange.trimble.com/connectors/viewpoint-vista
+- Sage 300 CRE via Agave API -- useagave.com/integrations/sage-300-cre
+- Sage 300 CRE Payroll Import Format (Workyard) -- help.workyard.com/en/articles/7282899-how-to-set-up-download-payroll-file-for-sage-300-cre
+- Procore User Management API (Stitchflow) -- stitchflow.com/user-management/procore/api
+- chokidar npm v4.x -- npmjs.com/package/chokidar
+- Enterprise Integration Patterns -- Idempotent Receiver -- enterpriseintegrationpatterns.com
 
-### Secondary (MEDIUM-HIGH confidence — official mirrors and cross-referenced sources)
-
-- srtabus.com MA Weekly Certified Payroll PDF mirror — MA column naming (B/E/G/H); OSHA 10 checkbox details. Consistent with official DLS guide but requires re-validation against current mass.gov download.
-- construction-business-forms.com + templateroller.com NJ MW-562 — NJ form structure; EEO column code set. Consistent with official NJ DOL form description.
-- Caltrans Labor Compliance Manual Chapter 13 — GC sub CPR tracking model (CA as strongest prime retention example)
-- eMars, LCPtracker, b2gnow industry patterns — multi-project compliance report format; GC sub CPR tracking data points
+### Tertiary (LOW confidence -- needs validation)
+- Vista AppXchange API overview -- direct-api.xchange.trimble.com/docs/vista-api-overview (requires Trimble account for full reference)
+- Sage 300 CRE Web API REST endpoints -- described in Agave and Greytrix docs; exact schemas require live Sage 300 CRE installation
 
 ---
 
-*Research completed: 2026-04-07*
+*Research completed: 2026-05-11*
 *Ready for roadmap: yes*
-*Next step: roadmap creation for Phases 47–58*

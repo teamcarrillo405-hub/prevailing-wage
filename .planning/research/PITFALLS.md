@@ -1,517 +1,400 @@
-# Domain Pitfalls — v6.0 Competitive Upgrade
+# Domain Pitfalls — v9.0 ERP Integrations
 
-**Project:** HCC Prevailing Wage — v6.0 Competitive Industry Leadership
-**Researched:** 2026-04-24
+**Project:** HCC Prevailing Wage — v9.0 Construction ERP Integrations
+**Researched:** 2026-05-11
 **Stack context:** Node.js + Express + TypeScript, React + Vite + TailwindCSS v4, SQLite + Drizzle ORM
-**Phases:** A (UI Polish), B (Power Features), C (Mobile/Field PWA), D (Market Credibility)
+**Phases in scope:** 126 (Foundation), 127–129 (Procore), 130–131 (Sage 300), 132–133 (Vista), 134 (Dashboard)
+
+This document covers pitfalls specific to adding bidirectional ERP sync to an existing compliance app. Generic integration advice is excluded; every entry below has direct consequences for this codebase.
 
 ---
 
-## 1. PWA + Offline Sync for Compliance Data
+## CRITICAL Pitfalls
 
-### CRITICAL — Sync Conflict Corrupts Frozen Rate Snapshots
+Mistakes in this tier cause data corruption, compliance violations, or require full rewrites of the integration layer.
 
-**What goes wrong:** A worker enters payroll hours offline on Monday. The GC's office edits the same payroll week online Tuesday before the field device reconnects. On reconnect, the Background Sync API fires and the client POSTs the offline payload. Without explicit conflict detection, the server either silently overwrites the office edit or the offline edit is dropped. Either outcome corrupts the frozen `baseRateSnapshot` / `fringeRateSnapshot` values — the exact fields that make a WH-347 legally defensible.
+---
 
-**Why it happens:** The Background Sync API guarantees at-least-once delivery with no built-in conflict semantics. It fires the queued sync tag when connectivity returns, regardless of whether the server-side record changed in the interim.
+### CRITICAL-1: OAuth Token Expiry Goes Undetected Until a Nightly Sync Fails Silently
 
-**Consequences:** Compliance violation badges become unreliable. Submitted WH-347s contain incorrect wage data. DOL audit fails.
+**What goes wrong:** Procore is reducing access token lifetime from 2 hours to 15 minutes to align with OAuth 2.0 security best practices (confirmed in Procore API documentation, 2025). When your nightly sync job starts, the access token acquired during the day-before OAuth flow is expired. The job issues a token refresh, gets a new access token, and continues — until the refresh token itself has expired (typically 30 days of inactivity) or has been administratively revoked (Procore admin resets credentials, user account deleted, app re-authorized). At that point, the refresh call returns `401 Unauthorized`. If there is no alerting on this path, the sync job silently exits with zero records processed. The contractor does not know for 3+ days.
+
+**Why it happens:** Credential rot is invisible. The token is persisted in the credential vault table, appears valid, but the ERP has invalidated it server-side. There is no push notification from Procore when a refresh token is revoked.
+
+**Consequences:** Timesheet records are not pulled for days. Compliance violations are not pushed to Procore. WH-347 compliance dashboard shows stale data. If the contractor submits a WH-347 based on incomplete pulled timesheets, the federal form contains errors.
 
 **Prevention:**
-- Store a `clientMutatedAt` timestamp with every offline write in IndexedDB.
-- On sync, send `If-Unmodified-Since` (or an ETag equivalent using the row's `updatedAt`) with every PUT.
-- Server returns `409 Conflict` when the server version is newer; surface a resolution UI — not a silent merge.
-- Never allow offline writes to override a submitted payroll week (`submitted_at IS NOT NULL`). Lock the local record the moment submission status arrives from the server.
+- Store `access_token`, `refresh_token`, `token_expires_at`, `refresh_token_acquired_at` in the credential vault table.
+- Before every sync run, proactively check `token_expires_at`. If expired or within 60 seconds of expiry, refresh first.
+- Wrap the refresh call in its own try/catch. On `401` from the refresh endpoint, mark the integration `status = 'credential_expired'` in the DB and immediately write a `sync_events` row with `severity = 'error'`.
+- Emit a UI toast / in-app banner on next dashboard load when any integration is in `credential_expired` state. Do not wait for the contractor to notice missing data.
+- Re-auth flow must be reachable from the Integration Dashboard without re-entering all configuration.
+- For Procore: store `refresh_token_acquired_at`. After 25 days, surface a proactive warning: "Procore credentials will expire in 5 days — re-authorize to prevent sync interruption."
 
-**Detection warning signs:**
-- Two users report different numbers for the same payroll week.
-- Compliance badge flips between states without a user action.
-- `payroll_imports` audit table shows entries with timestamps predating the `payroll_weeks.updated_at`.
+**Detection warning signs:** Sync job logs show 0 records processed but exit code 0. `sync_events.duration_ms` is abnormally short. Last successful sync timestamp is more than 24 hours ago.
 
-**Phase:** C — lock the conflict protocol before writing a single line of service worker code.
+**Phase assignment:** Phase 126 (credential vault schema must support all these columns from day one), Phase 127 (implement token refresh logic for Procore).
 
 ---
 
-### CRITICAL — iOS Storage Eviction Loses Queued Offline Data
+### CRITICAL-2: SSN Data Written to ERP in Worker Sync Payload
 
-**What goes wrong:** Field workers on iPhones add clock-in/clock-out records all week. Safari limits PWA IndexedDB + Cache Storage to approximately 50 MB and aggressively evicts data if the PWA is not opened for 7 days. A worker who only opens the app on Fridays to sync may find their queued records gone.
+**What goes wrong:** The Procore employee sync endpoint (`POST /rest/v1.0/workers`) accepts arbitrary metadata fields. When building the worker payload from this app's worker records, it is easy to accidentally include `ssnEncrypted` (even in its encrypted form) or derive and include `ssnLast4`. Even though the encrypted ciphertext is not a raw SSN, transmitting it outside the system boundary violates the data sovereignty rule and creates an audit trail in Procore's servers of a field that should never leave this app.
 
-**Why it happens:** iOS Safari enforces strict per-origin storage limits and does not distinguish between "important unsynced data" and "expendable cache." The eviction is LRU-based and silent — no error is thrown to the application.
+**Why it happens:** Payload construction often starts by spreading or serializing the worker row, then removing sensitive fields. Missing a field in the exclusion list is a single-line mistake. The code compiles and tests pass because the test fixtures use fake SSNs.
 
-**Consequences:** A week of GPS clock-in records disappears. The payroll week shows incomplete hours. GC faces compliance gap.
+**Consequences:** SSN data (even partial or encrypted) now lives in Procore's cloud. This app's AES-256-GCM encryption is irrelevant once the data exits the system. GDPR, CCPA, and Davis-Bacon audit risk all increase. Contractors face liability if Procore suffers a breach.
 
 **Prevention:**
-- Display a persistent "unsynced records: N" counter in the PWA header. Workers can see risk before it materializes.
-- Implement a `syncQueue` table in IndexedDB with `createdAt` and `syncedAt`. Warn the user via badge if any record is older than 3 days and not yet synced.
-- For compliance-critical records (payroll entry, clock-in), also POST a draft to the server immediately if any connectivity exists, even before the user taps "submit." Use status `draft` to distinguish from finalized entries.
-- Document clearly in user-facing help: "PWA requires at least one weekly open to preserve offline data on iPhone."
+- Build worker payloads for ERP sync using an **explicit inclusion list**, not an exclusion list. Enumerate exactly the fields to send: name, trade classification, union status, hire date. Never spread from the full worker record.
+- Write a unit test that constructs every ERP payload type and asserts that neither `ssnEncrypted`, `ssnLast4`, nor any field matching `/ssn/i` appears anywhere in the serialized output.
+- Add an integration-layer middleware that inspects all outbound request bodies for SSN patterns (`/\d{3}-\d{2}-\d{4}/`, `/\d{9}/`) before dispatching, throwing hard if found.
+- Document in Phase 126 schema comments: "The `erp_workers` mapping table stores the ERP's external ID only. SSN columns from the workers table are never joined into sync payloads."
 
-**Detection warning signs:**
-- Field workers report disappearing entries on iOS but not Android.
-- Unsynced record count drops to zero without a sync event in logs.
+**Detection warning signs:** Any outbound HTTP log that contains a string of 9+ consecutive digits or matching SSN regex.
 
-**Phase:** C — test on real iOS devices, not simulators. Simulators do not enforce the same eviction policy.
+**Phase assignment:** Phase 126 (define outbound payload contracts with explicit inclusion lists), Phase 127 (worker sync — test suite must include SSN leakage assertions).
 
 ---
 
-### MODERATE — Service Worker Update Lag Serves Stale Wage Rates
+### CRITICAL-3: Duplicate Worker Creation on Re-Sync (Idempotency Failure)
 
-**What goes wrong:** The DOL monthly wage determination sync runs and updates rates in the database. Field workers on PWA are served the old service worker (cache-first strategy) and see the previous month's rates for the entire next week, until the browser decides to check for a new service worker (at most once per 24 hours, or on hard refresh).
+**What goes wrong:** The nightly sync pulls workers from Procore and upserts them into the local `workers` table. On the first run, 45 workers are created. On the second run, the Procore API returns the same 45 workers. If the upsert key is wrong (e.g., matching on `name` alone instead of the stable Procore employee ID), 45 duplicate workers are created. Subsequent payroll entries are split across the original and duplicate records. WH-347 compliance computation counts hours incorrectly. The contractor sees duplicate worker cards.
 
-**Consequences:** Workers see and submit payroll against stale prevailing wage rates — a compliance violation source that is invisible at time of entry.
+**Why it happens:** Name-based matching is a common first-pass approach. It breaks immediately for workers who share a name, or when a name changes (marriage, data correction). The Procore employee object has a stable numeric `id` field that must be the join key.
+
+**Consequences:** Payroll hours are orphaned on duplicate records. Compliance engine under-counts total hours worked. WH-347 includes some workers twice or omits hours.
 
 **Prevention:**
-- Wage rates must always come from the server API, never from the service worker cache. Only cache static assets (JS bundles, CSS, images). All `/api/` routes must be NetworkFirst or NetworkOnly in Workbox config.
-- Use Workbox `clientsClaim()` and `skipWaiting()` so new service workers activate immediately on deploy.
-- Show a "New version available — refresh" banner when a waiting service worker is detected.
+- Add an `erp_external_id` column to the `workers` table in the Phase 126 migration. This is the foreign key into Procore's namespace.
+- Upsert logic: `INSERT INTO workers (...) ON CONFLICT (erp_external_id, erp_source) DO UPDATE SET ...`. The conflict target is `(erp_external_id, erp_source)`, not name.
+- Before creating a new worker row, always query `WHERE erp_external_id = ? AND erp_source = ?`. If found, update. Never insert without checking.
+- Write a test: run the full worker sync twice with identical Procore response fixtures. Assert `workers` table count equals the number of unique Procore IDs, not 2x.
+- For Sage 300 and Vista: use their equivalent stable employee number fields as the `erp_external_id`.
 
-**Phase:** C.
-
----
-
-### MINOR — Background Sync API Not Supported on All Browsers
-
-**What goes wrong:** The Background Sync API (for syncing while the app is not open) is not available in Safari or Firefox. Workers who close the tab entirely will have queued records stuck in IndexedDB with no mechanism to fire them.
-
-**Prevention:** Fall back to foreground sync on tab open. Display a warning in the install prompt: "For best offline sync, use Chrome on Android." Do not architect the sync flow to depend on background sync as the only path — foreground sync on reconnect must be the reliable baseline.
-
-**Phase:** C.
+**Phase assignment:** Phase 126 (schema: add `erp_external_id`, `erp_source` columns with unique constraint), Phase 127 (Procore worker upsert), Phase 130 (Sage 300 worker upsert), Phase 132 (Vista worker upsert).
 
 ---
 
-## 2. QuickBooks Online OAuth Integration
+### CRITICAL-4: SQLite Write Lock During Nightly Sync Blocks User Payroll Entry
 
-### CRITICAL — Refresh Token Silent Expiry After 100 Days
+**What goes wrong:** A contractor is entering payroll data at 6:00 AM (early start on a job site). The nightly sync runs at 5:00 AM and is still processing a large timesheet batch. Both operations attempt write transactions on the same SQLite database. SQLite allows only one writer at a time. Without `WAL` mode and an adequate `busy_timeout`, the user's payroll write fails immediately with `SQLITE_BUSY`. With WAL mode but no `busy_timeout`, it still fails immediately. The contractor sees a 500 error mid-entry and loses unsaved data.
 
-**What goes wrong:** The QBO OAuth 2.0 refresh token expires after exactly 100 days. If no QBO sync occurs during that window (seasonal contractor, project pause, holidays), the token expires silently. The next sync attempt calls the refresh endpoint, gets `400 invalid_grant`, and has no token to fall back to. The GC must re-authorize from scratch — but the app may not surface a clear re-auth UI, leaving the user stuck.
+**Why it happens:** The app currently runs SQLite in default journal mode. Background sync jobs are added without considering that the DB already has concurrent read traffic from Express API routes. Once sync adds write traffic, the contention window widens significantly.
 
-**Why it happens:** QBO rotates the refresh token every 24 hours (the old token expires when a new one is issued). If zero syncs occur for 100 days, the token simply goes cold. The 100-day clock is per-company — a GC with a winter shutdown gap hits this every year.
-
-**Consequences:** QBO sync silently breaks. GC reverts to manual CSV import. Trust in the integration erodes.
+**Consequences:** Payroll entry fails with cryptic error. Data is lost if the form was not auto-saving. Contractor loses trust in the tool.
 
 **Prevention:**
-- Store `qbo_token_expires_at` in the database. Run a daily job that identifies tokens expiring within 14 days and emails the GC: "Your QuickBooks connection needs to be refreshed."
-- Build a `/settings/integrations` page showing token health: connected, days remaining, last sync timestamp.
-- On any QBO API call returning `400 invalid_grant`, redirect immediately to the re-auth flow with a clear message — not a generic 500.
-- Implement proactive refresh: if `expires_at - now < 7 days`, attempt a refresh on the next sync regardless of whether the current token is still valid.
+- Enable WAL mode at app startup: `PRAGMA journal_mode=WAL` applied once on DB open.
+- Set `PRAGMA busy_timeout=5000` (5 seconds). In benchmarks, anything below 5 seconds shows occasional failures under concurrent write load.
+- Use `BEGIN IMMEDIATE` for all write transactions in the sync job (not the default `BEGIN DEFERRED`). This acquires the write lock at transaction start, preventing mid-transaction upgrade failures.
+- Keep sync batch transactions small: commit every 50–100 rows rather than wrapping the entire sync in one transaction. This releases the write lock more frequently.
+- Schedule nightly sync at 2:00–3:00 AM when user activity is near zero. Make the schedule configurable from the Integration Dashboard.
+- Add a circuit-breaker: if the sync job detects `SQLITE_BUSY` more than 3 times in a single batch, it pauses for 30 seconds and logs a warning before resuming.
 
-**Detection warning signs:**
-- QBO sync endpoint returns 400 with `invalid_grant` in the error body.
-- `qbo_tokens` table has rows where `refreshed_at` is older than 90 days.
+**Detection warning signs:** Express API error logs show `SQLITE_BUSY` or `database is locked`. `sync_events` table shows abnormally short durations coinciding with user activity.
 
-**Phase:** B.
+**Phase assignment:** Phase 126 (WAL mode + busy_timeout set in DB init), Phase 127 (first sync job — enforce BEGIN IMMEDIATE + small batches).
 
 ---
 
-### CRITICAL — Access Token Expires Mid-Sync on Large Imports
+## HIGH Pitfalls
 
-**What goes wrong:** A GC with 80 workers kicks off a QBO sync. The access token is 55 minutes old at sync start. The sync iterates employee time records page by page, and 10 minutes later the token expires mid-loop. The sync fails partway through, leaving a partial import that commits some workers' hours but not others — a gap that is invisible unless the GC audits row counts.
+These mistakes produce incorrect behavior that may not be caught until contractor or auditor review.
 
-**Why it happens:** QBO access tokens have a hard 1-hour TTL. Sync code that fetches a token once at the start of a job will not refresh mid-job.
+---
+
+### HIGH-1: Procore Custom Field Write Is Silently Rejected
+
+**What goes wrong:** Phase 129 pushes WH-347 compliance status and violation data back to Procore custom fields. Procore's configurable fieldsets have validation rules. If a required field in the fieldset is missing from the payload, Procore returns a `422 Unprocessable Entity` with a validation error body. However, if `run_configurable_validations` is absent from the request body, Procore silently ignores custom field validation — meaning the write appears to succeed (200 OK) but the custom field data is rejected. Alternatively, if the custom field ID has changed (e.g., Procore admin rebuilt the fieldset), the write silently drops the value.
+
+**Why it happens:** Procore's API documentation notes that `run_configurable_validations: true` must be present in the body when fieldsets have required fields. This is easy to miss in initial implementation. Custom field IDs are integers assigned at fieldset creation — they change if the Procore admin deletes and recreates the field.
+
+**Consequences:** Compliance violations appear to be pushed to Procore successfully, but the Procore project shows no compliance data. Contractor's Procore team cannot see violations. The integration appears functional.
 
 **Prevention:**
-- Wrap every QBO API call in a token-aware client that checks `expires_at - now < 5 minutes` before each request and refreshes if needed.
-- Design the sync to be resumable: record a `sync_cursor` (last processed employee ID or page token) so a failure mid-job can resume from the checkpoint rather than restart from zero.
-- Never commit partial payroll imports without a database transaction that either commits all rows for a given week or none.
+- Always include `run_configurable_validations: true` in every PATCH/POST to Procore resources that use custom fields.
+- After writing custom fields, immediately re-fetch the resource and assert the custom field value matches what was written. Log a warning if it does not.
+- Store Procore custom field IDs in the `erp_field_mappings` table (Phase 126 schema). Include a `last_verified_at` column. On each sync run, verify field IDs still resolve. If a 404 or empty value comes back from the field definition endpoint, mark the mapping as `stale` and halt the compliance push with an error in `sync_events`.
 
-**Detection warning signs:**
-- Sync logs show a `401 Unauthorized` mid-job followed by a partial row count.
-- `payroll_imports` table shows status `partial`.
-
-**Phase:** B.
+**Phase assignment:** Phase 126 (field mapping table schema), Phase 129 (compliance push — must include re-fetch verification).
 
 ---
 
-### MODERATE — Sandbox vs. Production Base URL Mismatch
+### HIGH-2: Field Mapping Drift When ERP Upgrades Between Versions
 
-**What goes wrong:** During development, QBO sandbox uses a different base URL (`sandbox-quickbooks.api.intuit.com`) from production (`quickbooks.api.intuit.com`). Developers who test exclusively in sandbox and hardcode the sandbox URL will break production sync. The authentication layer is identical across both environments (there is no sandbox OAuth) — the difference is only the API base URL and which company data is returned.
+**What goes wrong:** Sage 300 CRE releases an update. The `employee_id` field in their export format changes from a 6-digit numeric code to an 8-digit alphanumeric code. The file adapter's column index mapping breaks silently. The sync job still runs, reads the wrong column, and either fails to match workers or creates new duplicate records under the wrong ID.
+
+The same happens with Procore API versioning: Procore releases a new API version (`v1.1`), the old endpoint still works but a field is renamed or a new required field added. Your adapter targeting `v1.0` continues to work until Procore sunsets the version.
+
+**Why it happens:** Hard-coded column positions or field names in adapter code. No version contract tracking. The ERP vendor does not notify integration partners when schema changes.
+
+**Consequences:** Worker matching breaks. Duplicate workers created. Sync appears to succeed (no crash) but data is wrong.
 
 **Prevention:**
-- `QBO_BASE_URL` must be an environment variable: sandbox value for dev/staging, production value for prod. Never hardcode either URL.
-- The `realmId` must always come from the OAuth callback and be stored per-user in the database.
-- Add a CI assertion: the `QBO_BASE_URL` in the production environment does not contain "sandbox."
+- For Sage 300 file-based: map by column header name, not column index. Parse the CSV header row and build a column-to-index map at runtime. If an expected column is missing, fail loudly and write a `sync_events` error rather than falling back to a positional guess.
+- Store the expected ERP API version in the integration config (`erp_api_version` column). When a sync run detects a version mismatch via the API response headers, set integration status to `version_mismatch` and halt.
+- Write integration adapter smoke tests that use real-shaped ERP fixtures (not simplified mocks). When an ERP vendor publishes a changelog, check these fixtures against the new format before the sync adapter breaks in production.
 
-**Phase:** B.
+**Phase assignment:** Phase 130 (Sage 300 file adapter — column-name-based parsing), Phase 126 (store `erp_api_version` in integration config table).
 
 ---
 
-### MODERATE — QBO Payroll Fields Do Not Map Cleanly to WH-347
+### HIGH-3: Conflict Resolution — ERP Has Wrong Worker Classification
 
-**What goes wrong:** QBO payroll exports hours as weekly totals per employee, not as the daily breakdown (Monday–Sunday) required by WH-347 Column 5. QBO job classifications ("Carpenter") do not match DOL trade codes ("Carpenter - Rough" vs. "Carpenter - Finish"). QBO stores a single pay rate that does not distinguish base wage from fringe — the WH-347 requires them disaggregated per 29 CFR Part 5.
+**What goes wrong:** Procore has a worker classified as "Laborer" but your app has them classified as "Carpenter" (the prevailing wage rate). During a sync pull, your adapter must decide which classification wins. If the ERP classification overwrites the compliance-app classification, the worker's `baseRateSnapshot` on future payroll entries is set to the Laborer rate, producing an under-wage violation on every subsequent week — but the violation flag is correct, the underlying data is now wrong.
 
-**Consequences:** Auto-populated WH-347 fields are wrong. GC submits incorrect certified payroll. Davis-Bacon violation risk.
+**Why it happens:** Bidirectional sync without a defined source-of-truth policy defaults to "last write wins" or "ERP wins" because the ERP is the system initiating the sync. Neither is correct for a compliance app where classification has legal standing.
+
+**Consequences:** WH-347 contains wrong wage rates. Contractor faces back-wage liability. DOL audit flags the entire project.
 
 **Prevention:**
-- Do not attempt full auto-population of WH-347 from QBO data. Use QBO to populate weekly gross and hours only; require the GC to confirm trade classification mapping and fringe disaggregation manually.
-- Build a persistent `qbo_worker_classification_map` table storing the GC's confirmed mapping from QBO job code to DOL trade code — survives across syncs.
-- Surface a "Review before committing" step in the QBO sync modal that highlights fields requiring human confirmation.
-- Document explicitly in the UI: "QuickBooks Online provides weekly totals only. Daily hour breakdown must be entered or confirmed manually."
+- Establish an explicit source-of-truth policy per field at Phase 126 design time:
+  - **ERP is authoritative:** worker name, hire date, employee ID
+  - **This app is authoritative:** trade classification, prevailing wage rates, compliance status
+- Implement a `classification_source` column on `workers`: values `'erp'` | `'manual'` | `'compliance_app'`. Only overwrite classification from ERP pull if `classification_source = 'erp'`. If `classification_source = 'manual'` or `'compliance_app'`, log the conflict in `sync_events` as a warning and preserve the local value.
+- Surface classification conflicts in the Integration Dashboard: "Procore shows this worker as Laborer, but your classification is Carpenter. [Keep local] [Accept ERP]"
 
-**Detection warning signs:**
-- `under-wage` violations fire on QBO-imported entries where the GC believes rates are correct — root cause is fringe not disaggregated.
-- Duplicate worker records because QBO name format ("Last, First") differs from stored worker name ("First Last").
-
-**Phase:** B.
+**Phase assignment:** Phase 126 (conflict policy schema + `classification_source` column), Phase 127 (Procore worker pull — conflict detection), Phase 134 (conflict resolution UI in Integration Dashboard).
 
 ---
 
-### MINOR — QBO Rate Limits (500 Requests/Minute Per Company)
+### HIGH-4: On-Premise Sage 300 File Adapter — File Path Injection and Stale File Detection
 
-**What goes wrong:** Syncing a large company with many workers across multiple projects can exhaust QBO's rate limit of 500 requests per minute per `realmId`. The API returns `429 Too Many Requests`. Retry without backoff hammers the limit further and extends the outage.
+**What goes wrong:** The Sage 300 on-premise adapter reads export files from a contractor-configured directory path. If the path is user-controlled and not validated, a malicious or misconfigured path like `../../../../etc/passwd` or a Windows UNC path pointing to a network share outside the server can be accessed by the Node.js process. Separately, if the file watcher does not detect whether an export file is "new" (by comparing modification timestamp or a content hash), it will re-process the same file on every sync run, creating duplicate records.
 
-**Prevention:** Implement exponential backoff with jitter on all QBO API calls. Batch employee queries using the QBO query endpoint (`SELECT * FROM Employee MAXRESULTS 100`). Log rate limit hits to a metrics counter — if it fires more than 3 times per sync, the sync design needs pagination adjustment.
+**Why it happens:** File path input is treated as a string to concatenate into a `fs.readFile()` call. Stale file detection is skipped because "it works in testing" — the test uses a fresh file every time.
 
-**Phase:** B.
-
----
-
-## 3. Public REST API on Existing Express Routes
-
-### CRITICAL — Existing Internal Routes Become Public Attack Surface
-
-**What goes wrong:** The Phase D public API is bolted onto the same Express app and shares route prefixes with internal routes. API key auth middleware is added alongside the existing JWT cookie check using an `||` condition. A subtle logic error leaves internal routes reachable via Bearer token — file upload endpoints, admin endpoints, or routes that were never hardened for untrusted callers become accessible to any API key holder or attacker with a leaked key.
-
-**Consequences:** Cross-tenant data exposure (IDOR via public API). Internal endpoints triggered by external actors. SSN data reachable without JWT session.
+**Consequences:** Path injection: arbitrary file read from the server filesystem. Stale file: every sync produces duplicate workers and timesheet entries, triggering the idempotency failure described in CRITICAL-3.
 
 **Prevention:**
-- Mount the public API on a dedicated router prefix: `/api/v1/public/`. Internal routes stay on `/api/` and must never accept Bearer token auth. The two auth middleware stacks must be completely separate and tested in isolation.
-- Enumerate all Express routes at startup and log which auth middleware applies to each. A CI test should assert no internal route accepts API key auth.
-- Rate-limit the public API per API key: 100 req/min using `express-rate-limit` keyed by the hashed API key value.
+- Validate the configured directory path against an allowlist of safe base directories (e.g., `process.env.ALLOWED_SYNC_BASE_DIRS`). Use `path.resolve()` and assert the resolved path still starts with an allowed prefix before any file I/O.
+- Reject paths that contain `..`, null bytes, or UNC prefixes (`\\`).
+- Track processed files in a `sync_file_log` table: `(integration_id, file_name, file_mtime, file_hash, processed_at)`. Before processing, check if `file_hash` already exists. Skip if it does. This makes the file adapter idempotent regardless of how many times the sync runs.
+- Test: configure the adapter with a path containing `../` and assert it refuses to read the file, not that it reads it successfully.
 
-**Detection warning signs:**
-- API key holder can read data from another tenant's projects.
-- Public API responds to routes that were not in the published spec.
-
-**Phase:** D.
+**Phase assignment:** Phase 130 (Sage 300 on-premise file adapter implementation).
 
 ---
 
-### CRITICAL — SSRF via User-Supplied Webhook URLs
+### HIGH-5: Procore Rate Limit Exhaustion Halts All Users on a Shared App Token
 
-**What goes wrong:** The public API allows callers to register webhook endpoints. An attacker registers a webhook pointing to an internal URL: `http://localhost:4099/api/admin/reset` or `http://169.254.169.254/latest/meta-data/` (cloud metadata endpoint). When a WH-347 submission event fires, the server makes an outbound HTTP request to the attacker-controlled internal URL.
+**What goes wrong:** Procore's default rate limit is 3,600 calls per hour. If this app uses a single OAuth app credential (one `client_id`/`client_secret`) shared across all contractor accounts (multi-tenant), one contractor with 200 workers and 5 active projects can exhaust the hourly limit during their sync, blocking all other tenants' syncs for the remainder of the hour. When the limit is exceeded, Procore returns `429 Too Many Requests` with an `X-Rate-Limit-Reset` timestamp.
 
-**Consequences:** Internal admin endpoints triggered by external actors. Cloud metadata exfiltration. Internal network traversal on Render.com infrastructure.
+**Why it happens:** Developers assume 3,600 requests/hour is "more than enough" for a single contractor. It is, but not for N contractors sharing one token. Multi-tenant rate limit pooling is rarely considered in MVP integration design.
+
+**Consequences:** Other contractors cannot sync for up to 60 minutes. Sync jobs fail with 429 and, if not handled with backoff, they retry immediately and exhaust even more of the remaining limit.
 
 **Prevention:**
-- Validate webhook URLs at registration time: must use `https://`, must not resolve to RFC 1918 addresses (10.x, 172.16–31.x, 192.168.x), must not be `localhost`, `127.x`, or link-local addresses.
-- Use a DNS pre-resolution check at registration: resolve the hostname and reject if it maps to a private IP range.
-- Make webhook delivery calls from an HTTP client with strict allowlist (HTTPS only) and a 10-second connection timeout.
+- Each contractor who connects Procore must go through the OAuth flow with their own Procore account, resulting in per-tenant refresh tokens. The app token (client_id/secret) is shared, but Procore rate limits per company — each company has its own 3,600/hour bucket when using OAuth authorization code flow.
+- Implement exponential backoff with jitter on 429 responses: `baseDelay * 2^attempt + random(0, 1000ms)`.
+- Read `X-Rate-Limit-Reset` from the 429 response. Wait until that timestamp, not a fixed delay.
+- Implement a sync queue: if a 429 is received, re-enqueue the remaining batch items with a delay derived from `X-Rate-Limit-Reset`. Do not retry in-process.
+- Log all 429 events to `sync_events` with the reset timestamp. Surface in Integration Dashboard as "Rate limited — resuming at [time]."
+- For large accounts, contact Procore to request elevated limits (up to 14,400/hour with spike limit at 100/10s).
 
-**Detection warning signs:**
-- Webhook registration for `localhost` or `169.254.*` addresses succeeds without error.
-- Outbound HTTP requests to internal IPs appear in server logs.
-
-**Phase:** D.
+**Phase assignment:** Phase 127 (Procore OAuth — per-tenant token model), Phase 128 (timesheet sync — exponential backoff + queue).
 
 ---
 
-### CRITICAL — API Key Rotation With No Grace Period Breaks Integrations
+### HIGH-6: Viewpoint Vista Action Queue Latency Causes False "Success" on Writes
 
-**What goes wrong:** A GC rotates their API key (leaked key, security audit, staff departure). The app immediately invalidates the old key and issues a new one. The GC's integration is still using the old key in 12 different automation scripts. All automation breaks simultaneously. Because the app has no webhook delivery failure alerting, the GC does not know their integration is broken until a compliance deadline is missed.
+**What goes wrong:** The Vista API does not write synchronously. When you POST a compliance status update or worker record to Vista, the API immediately returns `202 Accepted` with a queue ID and `status: "queued"`. The actual write to the Vista database happens 30–40 seconds later, executed by the Xchange Agent service. If your sync job treats the `202` as a success and moves on, it has no confirmation that the write actually committed. If the Vista write fails (validation error, duplicate key, locked record), the failure is only discoverable by polling the queue ID — which most first-pass implementations skip.
+
+**Why it happens:** `202 Accepted` feels like a success response. The polling step requires a second API call and a wait, which is inconvenient and easy to omit.
+
+**Consequences:** Compliance push appears successful in your sync logs. Vista shows no updated data. The contractor's Vista team reports missing compliance flags 30 minutes after the sync completes.
 
 **Prevention:**
-- Implement a 48-hour grace period on key rotation: old key remains valid for 48 hours, new key is immediately usable. Show both keys in the settings UI with an expiry countdown on the old key.
-- Store API keys as a salted hash (`sha256(key)`). Never store the raw key. Show the full key only once at generation time.
-- Emit a webhook event when a key is rotated (to any other configured endpoint) so integrators can detect rotation programmatically.
+- For every POST to Vista that returns `202 Accepted`, store the `queue_id` in a `vista_pending_actions` table with the original payload and a `due_after` timestamp (now + 40 seconds).
+- Run a follow-up polling job that checks all pending actions past their `due_after` time, calls `GET /actions/{queue_id}`, and reads the final status.
+- On confirmed success: mark `sync_events` row as `completed`. On failure: mark as `failed`, store the error from the action result, and surface in Integration Dashboard.
+- Never report a Vista write as successful until the polling step confirms it.
 
-**Phase:** D.
+**Phase assignment:** Phase 132 (Vista foundation — implement polling harness), Phase 133 (Vista compliance push — must use pending actions table).
 
 ---
 
-### MODERATE — API Versioning Breaks Existing Callers
+### HIGH-7: Sync Failure Is Invisible to the Contractor for Days
 
-**What goes wrong:** Phase D ships `/api/v1/` endpoints. A subsequent milestone renames a field (`weekEnding` to `periodEndDate`). The team bumps to `/api/v2/` but decommissions `/api/v1/` immediately. Two GC integrations built on v1 break silently — payroll automation stops pushing data and compliance records go unsubmitted.
+**What goes wrong:** The nightly sync fails at 2:00 AM due to a network timeout. The `sync_events` table records the failure, but the contractor has no way to see it unless they actively navigate to the Integration Dashboard. Three days later, the GC asks why the WH-347 shows missing timesheet hours for the week. The answer is that three nightly syncs failed.
+
+**Why it happens:** Sync is a background process. Background failures require proactive surfacing; developers assume the contractor will "check the dashboard." They do not check the dashboard unless something is obviously broken.
+
+**Consequences:** Compliance data is stale for days without contractor awareness. WH-347 generated during the silent failure window may be incomplete.
 
 **Prevention:**
-- Define a deprecation policy before shipping v1: minimum 6-month deprecation window, `Sunset` response header on deprecated routes, email notification to all key holders 60 days before sunset.
-- Never remove a field from a v1 response — only add. Removals require a version bump with migration guide.
-- Maintain a changelog at `/api/v1/changelog` updated with every release.
+- Write a `sync_health` summary per integration: `last_successful_at`, `consecutive_failure_count`, `last_error_message`.
+- On the main Dashboard page, show a persistent banner when any integration has `consecutive_failure_count >= 2`. The banner should name which integration failed and show the last error.
+- On the Integration Dashboard, prominently show the last sync timestamp with a warning badge if it is more than 26 hours old (nightly sync should have run within 24h).
+- Send an email notification (using the existing nodemailer pipeline) after the second consecutive sync failure. Subject: "Procore sync failed — action may be required." Include the integration name, last successful sync time, and link to the dashboard.
+- Phase 134 (Integration Dashboard) is not optional polish — it is the mechanism by which contractors detect silent failures. Treat it as a compliance-critical feature.
 
-**Phase:** D.
+**Phase assignment:** Phase 126 (sync_health schema + Dashboard banner), Phase 134 (Integration Dashboard with failure visibility), any phase that adds a new sync job (must write to sync_events on every exit path).
 
 ---
 
-### MODERATE — Webhook Delivery Failures Create Silent Compliance Gaps
+## MODERATE Pitfalls
 
-**What goes wrong:** The app sends a webhook on WH-347 submission. The integrator's endpoint returns `500`. The app retries three times, all fail, and drops the event. The integrator's system never records the submission. Months later a DOL audit requests submission confirmation records — the integrator's system shows a gap.
+These are real problems but have cleaner recovery paths.
+
+---
+
+### MOD-1: OAuth PKCE Code Verifier Mismatch in Procore's Installed App Flow
+
+**What goes wrong:** Procore supports PKCE for installed applications. If `code_verifier` is generated once and cached (e.g., stored in session), then the session expires between the redirect and the token exchange, the `code_verifier` is gone. The token exchange call succeeds in constructing the request but sends a blank or mismatched verifier, causing Procore to return `400 Bad Request: "The provided authorization grant is invalid."` This error message is identical to the one returned for other grant failures, making it hard to diagnose.
 
 **Prevention:**
-- Retry with exponential backoff: 1 min, 5 min, 30 min, 2 hr, 24 hr.
-- Move failed events to a dead-letter queue (DLQ) table in SQLite after all retries exhausted. Surface DLQ events in the admin UI.
-- Include a unique `eventId` in every webhook payload so integrators can deduplicate retries.
-- Sign all webhook payloads with `HMAC-SHA256` using a per-tenant secret. Integrators verify the signature before processing.
+- Store `code_verifier` with the `state` parameter in the integration config row in the DB (not in session). Both `state` and `code_verifier` have a `created_at` timestamp. Expire them after 10 minutes.
+- On OAuth callback, retrieve `code_verifier` by matching the `state` parameter from the DB row, not from session.
+- Log the exact error body from Procore's token endpoint on any `400` or `401`. This is the only way to distinguish a PKCE failure from a credential rotation.
 
-**Phase:** D.
+**Phase assignment:** Phase 127 (Procore OAuth implementation).
 
 ---
 
-## 4. GPS Clock-In for Field Workers
+### MOD-2: Sage 300 On-Premise Connector Must Stay Running — Service Interruption Halts Sync
 
-### CRITICAL — Browser Permission Denial Blocks the Entire Feature
-
-**What goes wrong:** A field worker opens the PWA for the first time and taps "Block" on the browser geolocation permission prompt (common when workers are privacy-conscious or confused by the prompt). The browser permanently blocks geolocation for the origin. All subsequent clock-in attempts fail with `GeolocationPositionError.PERMISSION_DENIED`. The worker cannot clock in for the rest of the project unless they manually reset browser permissions — a step most workers will not take.
-
-**Why it happens:** Browser geolocation permission is sticky and cannot be re-prompted after denial without the user explicitly resetting it in browser settings.
+**What goes wrong:** The Sage 300 CRE on-premise connector (whether Agave-based or custom Windows service) must remain open and running to serve API requests. If the contractor's server reboots, the connector is not configured to auto-start, or the Sage 300 application is closed, API requests to Sage fail immediately. Unlike a cloud API, there is no redundancy.
 
 **Prevention:**
-- Before calling `navigator.geolocation.getCurrentPosition()`, show an in-app modal explaining why GPS is needed ("to verify your location at the job site for certified payroll compliance"). Prime the worker before the browser prompt appears.
-- After a denial, show a recovery screen with step-by-step instructions for the specific browser (Chrome Android, Safari iOS, Samsung Internet) on how to reset permissions.
-- Make GPS a soft requirement: allow clock-in without GPS but flag the entry as "location unverified" in the audit trail. Do not block the entire workflow — flag it for supervisor review instead.
+- Document clearly in the Phase 130 setup guide that the connector service must be configured as a Windows Task Scheduler task or Windows Service set to auto-restart on failure.
+- The sync job should test connectivity before attempting a full sync. If the test call fails, immediately write a `sync_events` error and trigger the sync failure visibility path from HIGH-7 rather than attempting 500 records against a dead connector.
+- Surface connector health (last successful ping) in the Integration Dashboard per integration instance.
 
-**Detection warning signs:**
-- Spike in clock-ins with `gps_status: 'denied'` on Mondays (first day workers install PWA).
-
-**Phase:** C.
+**Phase assignment:** Phase 130 (connector setup documentation and health check).
 
 ---
 
-### CRITICAL — VPN and Mock GPS Spoofing Undermines Compliance Attestation
+### MOD-3: Multi-Company Procore Accounts — Wrong `company_id` Scope
 
-**What goes wrong:** A worker uses a mock GPS app (freely available on Android, trivially enabled on jailbroken iPhones) to report being at the job site while working elsewhere. The payroll record shows compliant certified payroll hours for work not performed on the prevailing wage site — a Davis-Bacon violation and potential fraud.
-
-**Why it happens:** The browser Geolocation API reads from the device's location provider, which mock GPS apps can override at the OS level. There is no browser-level mechanism to detect mock GPS on Android.
-
-**Consequences:** GC held liable for fraudulent certified payroll. Davis-Bacon audit uncovers discrepancies between GPS records and site access logs. Potential debarment.
+**What goes wrong:** Large GC firms manage multiple Procore companies under one Procore login. When the OAuth token is used to call `GET /rest/v1.0/companies`, it returns all companies the user can access. The first integration implementation often hardcodes using the first company in the list. If the user's primary company is index 1 but their active projects live in company index 0, all sync operations target the wrong company. Workers pulled are from the wrong company. Compliance pushes go to the wrong project.
 
 **Prevention:**
-- Do not claim GPS clock-in as a fraud-proof system. Frame it as a compliance assist, not a fraud prevention control. This manages GC expectations and limits liability.
-- Record `accuracy` (meters) from the Geolocation API. Flag entries where `accuracy > 500m` as "low confidence" — accuracy this poor often indicates mock GPS or pure network triangulation.
-- Store the IP address at clock-in time. Flag clock-ins where IP geolocation (city level) differs from GPS-reported city by more than 50 miles.
-- Log haversine speed between consecutive clock events: if a worker clocks out at location A and clocks in 5 minutes later at a location 300 miles away, flag for supervisor review.
-- Include a legal disclaimer in the clock-in UI: "By clocking in, you confirm you are physically present at the job site."
+- During the Procore OAuth connect flow, present the user with a dropdown of all companies returned by the `/companies` endpoint. Store the chosen `company_id` in the integration config. Never default to the first company.
+- Assert `company_id` is present in the integration config before every sync run.
 
-**Phase:** C.
+**Phase assignment:** Phase 127 (Procore OAuth connect flow — company selection step).
 
 ---
 
-### MODERATE — GPS Accuracy Degrades on Construction Sites
+### MOD-4: Timesheet Pull Timezone Mismatch Doubles or Drops Hours
 
-**What goes wrong:** Construction sites in urban canyons, underground (tunnels, below-grade parking), or large metal structures (steel fabrication yards) degrade GPS accuracy to 35–100m+. The app may record a worker as being 200m from the job site boundary — a geofence failure — when they are actually inside the building.
-
-**Why it happens:** Browser geolocation blends GPS, WiFi triangulation, and cell tower data. Construction environments systematically degrade all three signal types.
+**What goes wrong:** Procore stores timesheet entries with ISO 8601 timestamps in UTC. This app stores payroll week start/end dates as plain date strings (no timezone). A worker in a Central time zone clocking out at 11:30 PM Monday CST appears in Procore as 5:30 AM Tuesday UTC. When grouping by week, the Tuesday UTC entry is counted in the wrong payroll week.
 
 **Prevention:**
-- Do not use tight geofencing (10m radius) for clock-in verification. Use a 200–500m radius buffer, or make the job site boundary radius configurable per project.
-- Always store the raw `accuracy` value. Clock-in verification logic should use: `distance_from_site <= (geofence_radius + reported_accuracy)`.
-- Offer WiFi SSID as an alternative site-presence signal: if the worker is connected to the job site's configured WiFi network, treat it as equivalent to GPS geofence compliance.
+- At sync time, always convert Procore timestamps using the project's timezone (store `project_timezone` on the project or integration config).
+- Test edge cases: clocking out at 11:00 PM local time on Sunday (the last day of the payroll week) must land in the current week, not the next.
+- Use a library like `date-fns-tz` (already common in this stack) for all timezone conversions.
 
-**Phase:** C.
+**Phase assignment:** Phase 128 (Procore timesheet pull — timezone handling required from day one, not deferred).
 
 ---
 
-### MODERATE — GDPR and CCPA Privacy Exposure for Location Data
+### MOD-5: Vista's 1-Hour Cache Lag Produces Stale Pull Data
 
-**What goes wrong:** The app collects GPS coordinates at clock-in for all workers. California's proposed AB 1355 (Location Privacy Act) would require opt-in consent for any location data collection. GDPR requires a Data Protection Impact Assessment (DPIA) and a lawful basis — consent is problematic in employment contexts due to power imbalance; legitimate interest requires proportionality analysis. The app stores raw coordinates indefinitely with no retention policy. A regulatory complaint requires producing all location data for a specific worker — the app has no data export or deletion capability for this data.
+**What goes wrong:** The Vista Data Xchange API serves data from a cache that is refreshed on a scheduled basis, typically every hour. If you trigger a timesheet sync immediately after a worker clocks out in Vista, the sync may miss the last hour of entries. Worse, if you then generate a WH-347 from the just-synced data, it is missing those hours. The worker's actual hours are correct in Vista but missing from your app.
 
 **Prevention:**
-- Write a privacy notice specifically for location data collection before shipping Phase C. Include: what is collected, why, retention period, who can access it.
-- Enforce a data retention policy: GPS records older than 3 years (matching Davis-Bacon record retention requirements) are automatically purged.
-- Implement a "Delete my location history" flow accessible to workers (CCPA right to delete).
-- Store coordinates at reduced precision for general use (2 decimal places, approximately 1.1km accuracy) and store full-precision coordinates only in the immutable audit log, access-controlled to Owner role.
-- Make GPS clock-in opt-in per project, with the GC accepting a privacy responsibility acknowledgment before enabling it.
+- Sync jobs pulling from Vista should be scheduled with at least a 1-hour lag after the end of the work day (e.g., sync at 2:00 AM for work that ended at 5:00 PM). This ensures the cache has been refreshed at least once after the last timesheet entry.
+- Document the 1-hour cache lag prominently in the Integration Dashboard tooltip for Vista connections. Contractors expecting real-time sync from Vista will be confused without this explanation.
+- For the compliance push path (writing to Vista): always poll the action queue (see HIGH-6). The cache update after a write takes 30–40 seconds; reads immediately after write will return stale data.
 
-**Phase:** C.
+**Phase assignment:** Phase 132 (Vista foundation), Phase 133 (Vista timesheet pull).
 
 ---
 
-### MINOR — Battery Drain Complaints From Field Workers
+## MINOR Pitfalls
 
-**What goes wrong:** Continuous GPS polling (`watchPosition()`) drains phone battery 20–30% faster than normal use. Workers on 10-hour shifts with no charging access run out of battery mid-shift and stop using the PWA.
+Real issues but limited in blast radius.
+
+---
+
+### MIN-1: Integration Config Stores Credentials in Plain Text
+
+**What goes wrong:** During Phase 126, the `integrations` table stores `client_secret`, `access_token`, and `refresh_token` as plain text VARCHAR columns. If the SQLite file is ever accessed by someone with file-system access (developer debugging, backup restore, support request), all integration credentials are exposed.
 
 **Prevention:**
-- Use `getCurrentPosition()` (single-shot) only at clock-in and clock-out events. Never use `watchPosition()`.
-- Set `maximumAge: 60000` to accept a cached position up to 60 seconds old, avoiding a fresh GPS fix on every clock event.
-- Set `timeout: 10000` and `enableHighAccuracy: false` for the initial position — high accuracy mode keeps the GPS radio active longer.
+- Encrypt `client_secret`, `access_token`, and `refresh_token` at rest using the same AES-256-GCM envelope already implemented for SSN storage (`ssnEncrypted` pattern). Reuse `encryptValue()` / `decryptValue()` utilities.
+- Never log token values, even at DEBUG level. Log token length or first-4 chars only.
 
-**Phase:** C.
+**Phase assignment:** Phase 126 (credential vault must use AES-256-GCM from day one).
 
 ---
 
-## 5. SOC 2 Type II Audit Prep
+### MIN-2: Sync Job Has No Timeout — Hangs Indefinitely on Network Issues
 
-### CRITICAL — Policy-Practice Misalignment Is Worse Than No Policy
-
-**What goes wrong:** The team writes a security policy: "all production deployments require two-person approval via pull request review." In practice, hotfixes are deployed by pushing directly to `main` via the Render.com auto-deploy hook. The written policy exists; the practice contradicts it. When auditors sample production deployment events, they find deployments with no corresponding approved PR. This is an audit finding that can fail the certification — it demonstrates controls are documented but not operating.
-
-**Why it happens:** Startups write policies to check a compliance box and build their actual processes separately.
+**What goes wrong:** A network partition causes the Procore API call to hang waiting for a response. The sync job has no request timeout set. The job never completes. The next nightly sync is blocked because the previous run is still "in progress."
 
 **Prevention:**
-- Do not write policies until you understand your actual current practice. Document what you do, then tighten it to what the policy will say.
-- For deployment approval: configure Render.com to deploy only from tagged releases, not raw `main` pushes. Require PR approval from a second team member via GitHub branch protection. The GitHub PR approval log is tamper-resistant and is valid audit evidence.
-- For this Express/Node app: add a `DEPLOYMENT_APPROVED_BY` environment variable required in the Render.com deploy hook — forces a named approver identity for every deploy.
+- Set `AbortController` + `signal` with a 30-second timeout on every outbound HTTP request to ERP APIs.
+- Set an overall sync job timeout: if a full sync run exceeds 20 minutes, abort it, write a `sync_events` error, and release any held DB transactions.
+- Use a `sync_runs` table with a `started_at` and `completed_at` column. Before starting a new run, check for in-progress runs older than 30 minutes and mark them as `timed_out`.
 
-**Detection warning signs:**
-- Production deploy timestamps in Render.com logs do not match any PR merge timestamp in GitHub.
-
-**Phase:** D — but begin accumulating evidence from Phase A onward. Every month of consistent practice matters for Type II.
+**Phase assignment:** Phase 127 (first sync job must include timeouts — establish pattern for all subsequent phases).
 
 ---
 
-### CRITICAL — Logging Gaps: What Auditors Actually Request
+### MIN-3: Compliance Push to Procore Triggers an Infinite Re-Sync Loop
 
-**What goes wrong:** The app uses Pino structured logging (already shipped). But auditors request: (1) all login attempts with success/failure, IP, and timestamp; (2) all access to SSN data with who accessed it and when; (3) all role and permission changes; (4) all production deployments with approver identity; (5) evidence of monthly access reviews showing who has production database access. The current audit log captures payroll mutations but not auth events at the granularity auditors expect. Logs written to stdout on Render.com disappear after the platform's log retention window.
+**What goes wrong:** This app writes compliance status to a Procore custom field. Procore webhooks fire an event when that field changes. If this app is subscribed to Procore webhooks for employee/project changes, the compliance write triggers an inbound webhook, which triggers a data pull, which triggers another compliance evaluation, which triggers another write.
 
 **Prevention:**
-- Export Pino logs from Render.com to a log aggregation service (Logtail, Papertrail, or Datadog free tier). Retain for minimum 12 months. Auditors need point-in-time queries: "show me all logins on March 15."
-- Add a dedicated `security_events` table (or Pino log category) for: `login_success`, `login_failure`, `logout`, `ssn_accessed`, `role_changed`, `member_invited`, `member_removed`, `api_key_created`, `api_key_revoked`. Each row: `timestamp, user_id, event_type, detail_json, ip_address`.
-- The existing `audit_log` table already captures payroll mutations — that satisfies Processing Integrity. The gap is Security (auth events) and Availability (uptime/incident log).
-- Schedule a monthly access review calendar event. Export the list of users with database and deployment access and confirm it matches the intended list. Document with a dated screenshot. This is the most-commonly-missed evidence artifact in SOC 2 audits.
+- Filter webhook events by `source_application_id`. When the Procore webhook payload's `source_application_id` matches your app's Procore client ID, skip the sync — this event was caused by your own write.
+- Alternatively, use a write-lock flag: set `sync_in_progress = true` on the integration config row during a push, and skip any inbound webhook processing while the flag is set.
 
-**Detection warning signs:**
-- Auditor asks "show me all failed logins in January" and the answer is "we don't log that."
-- The last access review document is from initial setup.
-
-**Phase:** D — but begin logging security events in Phase A. Every month of evidence accumulates for the Type II observation period.
+**Phase assignment:** Phase 129 (compliance push, if webhooks are used), Phase 134 (integration dashboard — document the loop risk).
 
 ---
 
-### MODERATE — Access Termination Timing Failures
+### MIN-4: ERP Worker Count Exceeds Expectation — Sync Imports Entire Company Roster
 
-**What goes wrong:** A GC's employee leaves the company. The GC removes them from the HCC Prevailing Wage team via the TeamPage. But the removal happens 3 days after the actual termination date. Auditors check: was access revoked on the day of termination? The 3-day gap is a finding.
+**What goes wrong:** The Procore company has 800 employees across all projects. The worker sync pulls all 800 into this app, creating 800 worker records even though the current project only has 12 relevant workers. The workers table is now polluted with irrelevant workers. WH-347 worker selection becomes unwieldy.
 
 **Prevention:**
-- When an Owner removes a member, display a confirmation modal that includes: "Confirm this user's access has been revoked from all related systems." Require the Owner to check a box. Log the acknowledgment with a timestamp.
-- Revoke all active sessions for the removed user immediately on removal (invalidate JWT). Verify that session validation checks `project_members` membership on every request — not only at login.
-- Add a SOC 2 evidence report endpoint (admin-only): exportable list of all member add/remove events with timestamps.
+- Scope the Procore worker pull to the specific project: `GET /rest/v1.0/projects/{project_id}/workers` rather than the company-level endpoint.
+- Present a worker selection step in the Integration Dashboard after the first sync: "Procore returned 800 employees. Select which ones to import into project [X]." Bulk-select with search filter.
 
-**Phase:** D.
-
----
-
-### MODERATE — Change Management Evidence Gap for Production Deploys
-
-**What goes wrong:** Auditors sample 10 production deployments during the audit period. They want: change description, who approved it, what was tested, and when it went live. GitHub PRs cover approval, but the link between a PR and the exact Render.com deploy timestamp is not automated. The team cannot show auditors which deploy corresponded to which PR without manual reconstruction.
-
-**Prevention:**
-- Tag every production deploy with the Git SHA and PR number. Render.com exposes a `SOURCE_VERSION` environment variable on deploy — log this to the `security_events` table on app startup.
-- Use conventional commit messages that include a phase number: `feat(phase-B): QBO OAuth integration (#42)`. This makes the deploy log navigable for auditors.
-- Use GitHub Releases — each release tagged, with release notes, and linked to the Render.com deploy timestamp.
-
-**Phase:** D.
-
----
-
-### MINOR — Manual Evidence Collection Fails Under Audit Deadline
-
-**What goes wrong:** The audit period ends and the team spends two weeks manually pulling screenshots from GitHub, Render.com, and the database to answer auditor requests. Evidence is inconsistently formatted, some screenshots lack timestamps, and some requests cannot be satisfied because the data was not retained.
-
-**Prevention:**
-- Use a compliance automation platform (Vanta or Drata) at startup scale. They auto-connect to GitHub, Render.com, and Google Workspace to continuously collect evidence. Cost is $500–$1,500/month — less expensive than the engineering time for manual collection.
-- If budget-constrained, build a simple admin page at `/admin/soc2-evidence` that auto-generates the most-requested reports: current user list, access change history, login event count by month, deployment log.
-
-**Phase:** D.
-
----
-
-## 6. DBE/MBE/WBE Certification Tracking
-
-### CRITICAL — Stale Certification Status Creates GC Liability
-
-**What goes wrong:** A subcontractor uploads their DBE certificate at project start. The certificate expires 12 months later. The app stores the certificate and expiry date but does not proactively notify the GC. The GC submits a DBE utilization report to the funding agency claiming DBE participation for the full project duration — including months after the certificate expired. The funding agency's compliance office discovers the lapse. The GC faces a DBE goal non-compliance finding, potential project disqualification, and reputational damage.
-
-**Prevention:**
-- Store `certification_expires_at` for every DBE/MBE/WBE certificate. Run a daily job that identifies certificates expiring within 30 days and emails both the GC (Owner) and the subcontractor contact.
-- Block the GC from claiming DBE participation credit for any payroll week where the sub's certificate was expired. Surface a `certification_expired` compliance violation badge — same pattern as the existing `under-wage` badge.
-- Do not auto-renew or auto-verify. The certification authority is the state UCP, not this app. The app's role is to track and alert, not to certify.
-
-**Detection warning signs:**
-- Sub's `certification_expires_at` is in the past but the sub still appears as "DBE-verified" on project reports.
-- GC is reporting DBE participation for weeks where the certification was expired.
-
-**Phase:** B.
-
----
-
-### CRITICAL — October 2025 DOT DBE Rule Changes Invalidate Pre-Change Certificates
-
-**What goes wrong:** The U.S. DOT issued a Final Rule effective October 3, 2025 removing race- and sex-based presumptions of social and economic disadvantage for DBE/ACDBE eligibility. Firms previously certified under the old presumption standard must now provide individualized showings of disadvantage. An app that displays "DBE Certified" based on a pre-October-2025 certificate may be showing a status that no longer reflects actual eligibility under the new standard — depending on whether the firm has been re-evaluated by its jurisdiction of original certification (JOC).
-
-**Prevention:**
-- Store the `certification_issued_date` and `issuing_ucp` (jurisdiction) alongside each certificate. Display a notice on any certificate issued before October 3, 2025: "This certificate was issued under prior DBE eligibility standards. Confirm current eligibility with the issuing UCP before claiming DBE credit."
-- Do not make eligibility determinations — only track what the GC uploads and flag staleness.
-
-**Phase:** B.
-
----
-
-### MODERATE — Interstate Certification Recognition Gaps
-
-**What goes wrong:** A sub is DBE-certified in Texas. The project is in California. The GC assumes the Texas certification transfers. Under DOT Uniform Certification, interstate recognition is supposed to be honored, but: Georgia DOT has paused processing interstate applications entirely as of 2025; receiving-state UCPs have no set deadline to complete re-evaluation; some states add requirements on top of the federal standard. The GC claims DBE credit for this sub on a California federal-aid project. California DOT audits and rejects the credit because interstate recognition was not formally completed.
-
-**Prevention:**
-- When a GC adds a sub with a certificate from State A on a project in State B, display a warning: "DBE certification is issued by [State A] UCP. Verify that [State B] recognizes this certification before claiming DBE credit on this project."
-- Maintain a static lookup table of known interstate recognition issues (e.g., GA not currently accepting applications). Update when rules change.
-- Store `project_state` alongside certification records so the app can flag mismatches automatically.
-
-**Phase:** B.
-
----
-
-### MODERATE — Document Privacy Risk From Full Certification Package Uploads
-
-**What goes wrong:** GCs request that subcontractors upload their full DBE certification package — which includes personal financial statements, tax returns, personal net worth affidavits, and business ownership documentation. A data breach exposes personal financial data for hundreds of subcontractor business owners. Additionally, employees named in the certification package have no knowledge that their employer uploaded their personal data to a third-party platform.
-
-**Prevention:**
-- Do not store full DBE certification packages. Store only: certificate number, issuing authority, certification type (DBE/MBE/WBE/SBE), expiry date, and a GC-provided upload of the certificate summary page only (single-page PDF).
-- Encrypt all uploaded certification documents at rest using the same AES-256-GCM envelope already in use for SSNs.
-- Add a data retention policy: certification documents are automatically purged 3 years after project closeout (matching Davis-Bacon record retention requirements).
-
-**Phase:** B.
-
----
-
-### MINOR — No Public API Exists for Real-Time DBE Verification
-
-**What goes wrong:** The team considers building real-time DBE verification by calling state UCP directories via API. There is no standardized public API for DBE certification lookup across state UCPs. The DOT FHWA maintains a directory as a web portal only, not a machine-readable API. Attempting to scrape it violates terms of service and is brittle.
-
-**Prevention:** Do not promise real-time automated DBE verification. This feature does not exist in any competitor (B2Gnow's certified supplier database is a privately maintained dataset requiring vendor partnerships). Manual upload + expiry tracking is the correct approach for v6.0. Monitor the DOT developer portal for future API availability.
-
-**Phase:** B — explicitly out of scope for automated real-time verification.
+**Phase assignment:** Phase 127 (Procore worker sync — project-scoped endpoint from the start).
 
 ---
 
 ## Phase-Specific Warning Summary
 
-| Phase | Topic | Primary Pitfall | Mitigation Priority |
-|-------|-------|----------------|-------------------|
-| A | UI Polish | SOC 2 logging gaps accumulate if not started now | Begin `security_events` logging in Phase A — every month of evidence counts for Type II |
-| B | QBO OAuth | Refresh token silent expiry after 100 days | Token health dashboard + proactive 14-day expiry warning email |
-| B | QBO sync | Access token expires mid-import | Token-aware HTTP client that refreshes before every request |
-| B | QBO data | Field mapping mismatches (daily hours, fringe) | Mandatory human review step before committing QBO imports |
-| B | DBE tracking | Stale certificates create GC liability | `certification_expires_at` column + daily expiry alert job |
-| B | DBE tracking | October 2025 DOT rule changes | Flag pre-2025-10-03 certificates with re-evaluation notice |
-| B | DBE tracking | Interstate recognition gaps | Per-project state mismatch warning on certificate add |
-| C | PWA sync | Sync conflict corrupts frozen rate snapshots | `If-Unmodified-Since` protocol + 409 Conflict UI before writing any service worker code |
-| C | PWA sync | iOS IndexedDB eviction loses queued records | Draft-to-server on any connectivity + unsynced record counter in PWA header |
-| C | PWA cache | Service worker serves stale wage rates | All `/api/` routes must be NetworkFirst or NetworkOnly — never cache wage data |
-| C | GPS | Permission denial blocks feature entirely | In-app priming modal before browser prompt + soft-failure fallback path |
-| C | GPS | Mock GPS spoofing | Accuracy flag + IP cross-check + legal disclaimer; never claim fraud-proof |
-| C | GPS | Privacy (CCPA/GDPR) | Opt-in per project, privacy notice, 3-year retention purge, reduced-precision storage |
-| C | GPS | Battery drain | Single-shot `getCurrentPosition()` only, never `watchPosition()` |
-| D | Public API | Internal routes exposed via API key auth | Dedicated `/api/v1/public/` prefix + completely separate auth middleware |
-| D | Public API | SSRF via webhook URL registration | DNS pre-resolution + RFC 1918 blocklist at webhook registration |
-| D | Public API | API key rotation breaks integrations | 48-hour grace period for old keys + rotation webhook event |
-| D | SOC 2 | Policy-practice misalignment | Document actual practices first; enforce via GitHub branch protection |
-| D | SOC 2 | Auth event logging gaps | `security_events` table for login, SSN access, role changes from Phase A |
-| D | SOC 2 | Access review never happens | Monthly calendar event + admin evidence export page |
+| Phase | Topic | Primary Pitfall Risk | Mitigation |
+|-------|-------|----------------------|------------|
+| 126 | Integration Foundation | Credential vault stores plain text tokens | AES-256-GCM encryption from day one (reuse SSN pattern) |
+| 126 | Integration Foundation | Schema misses columns needed later | Include: `erp_external_id`, `erp_source`, `erp_api_version`, `token_expires_at`, `refresh_token_acquired_at`, `consecutive_failure_count`, `last_successful_at` |
+| 126 | Integration Foundation | SQLite write contention | Enable WAL mode + busy_timeout=5000 in DB init |
+| 127 | Procore OAuth | PKCE verifier stored in session (expires) | Store `code_verifier` in DB with `state`, expire after 10 min |
+| 127 | Procore Worker Sync | Duplicate workers on re-sync | `ON CONFLICT (erp_external_id, erp_source) DO UPDATE` |
+| 127 | Procore OAuth | Shared app token rate-limited across tenants | Per-tenant OAuth flow; each contractor has own refresh token |
+| 127 | Procore Multi-Company | Wrong company_id defaulted | Company selection UI in connect flow |
+| 128 | Procore Timesheet Pull | Timezone mismatch assigns hours to wrong week | Convert using project timezone; test Sunday 11 PM edge case |
+| 128 | Procore Rate Limits | 429 retried immediately, exhausts limit faster | Exponential backoff + read `X-Rate-Limit-Reset` |
+| 129 | Procore Compliance Push | Custom field write silently rejected | Include `run_configurable_validations: true`; re-fetch to verify |
+| 129 | Procore Webhooks | Compliance push triggers re-sync loop | Filter by `source_application_id` |
+| 130 | Sage 300 File Adapter | File path injection | Allowlist validation + `path.resolve()` prefix check |
+| 130 | Sage 300 File Adapter | Stale file re-processed | `sync_file_log` table with file hash deduplication |
+| 130 | Sage 300 On-Premise | Connector not running, sync fails silently | Health check ping before sync; surface in Dashboard |
+| 130 | Sage 300 Field Mapping | Column index breaks on Sage upgrade | Parse by column header name, not index |
+| 131 | Sage 300 Payroll Sync | Worker classification overwritten from ERP | `classification_source` column; policy: this app is authoritative for classification |
+| 132 | Vista Foundation | `202 Accepted` treated as success | Implement action queue polling via `vista_pending_actions` table |
+| 132 | Vista Foundation | 1-hour cache lag misses recent entries | Schedule sync with lag; document in Dashboard |
+| 133 | Vista Timesheet Pull | Cache stale after pull, write reads stale | Always poll action queue; document expected latency |
+| 134 | Integration Dashboard | Silent failures invisible for days | `sync_health` summary; Dashboard banner; email on 2nd consecutive failure |
 
 ---
 
 ## Sources
 
-- [QuickBooks OAuth 2.0 FAQ — Intuit Developer](https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/faq)
-- [Handling OAuth Token Expiration — Intuit Help](https://help.developer.intuit.com/s/article/Handling-OAuth-token-expiration)
-- [The Pain of Integrating with QuickBooks' OAuth 2.0 — DEV Community](https://dev.to/bstewart/the-pain-of-integrating-with-quickbooks-oauth-20-api-1mb0)
-- [5 Things That Will Fail Your SOC 2 Audit — DEV Community](https://dev.to/robertatkinson3570/5-things-that-will-fail-your-soc-2-audit-that-nobody-warns-you-about-5apo)
-- [SOC 2 Type II Readiness Checklist — Securance](https://www.securance.com/blog/soc-2-type-ii-readiness-checklist-8-steps-for-saas-teams/)
-- [SOC 2 Logging Pipelines — Konfirmity](https://www.konfirmity.com/blog/soc-2-logging-pipelines-for-soc-2)
-- [GPS Spoofing Detection and Audit Guide — DATABASICS](https://blog.data-basics.com/clock-in/out-gps-spoofing-detection-and-audit-guide-1)
-- [GPS Tracking Compliance: GDPR, DPDP — Appit Software](https://www.appitsoftware.com/blog/gps-tracking-compliance-gdpr-employee-privacy-2025)
-- [California Location Privacy Act AB 1355 — CyberAdviser](https://www.cyberadviserblog.com/2025/03/california-proposes-ccpa-update-on-location-data-rules/)
-- [U.S. DOT DBE Program Changes October 2025 — ACEC MA](https://www.acecma.org/news/u-s-dot-announces-significant-changes-to-dbe-program/)
-- [Securing APIs Against SSRF — Stytch](https://stytch.com/blog/securing-identity-apis-against-ssrf/)
-- [Webhook Retry Best Practices — Hookdeck](https://hookdeck.com/outpost/guides/outbound-webhook-retry-best-practices)
-- [GeolocationCoordinates accuracy — MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/API/GeolocationCoordinates/accuracy)
-- [PWA iOS Limitations and Safari Support — Magicbell](https://www.magicbell.com/blog/pwa-ios-limitations-safari-support-complete-guide)
-- [Data Synchronization in PWAs — GTCSys](https://gtcsys.com/comprehensive-faqs-guide-data-synchronization-in-pwas-offline-first-strategies-and-conflict-resolution/)
-- [Background Sync PWA Backbone — Excellarate](https://www.excellarate.com/blogs/background-sync-pwas-backbone/)
+- [Procore Rate Limiting Documentation](https://procore.github.io/documentation/rate-limiting) — HIGH confidence (official docs)
+- [Procore OAuth Access Tokens](https://procore.github.io/documentation/oauth-access-tokens) — HIGH confidence (official docs)
+- [Trimble Vista API Concepts](https://direct-api.xchange.trimble.com/docs/vista-api-concepts) — HIGH confidence (official Trimble docs)
+- [Sage 300 CRE Agave Connector](https://docs.agaveapi.com/source-systems/sage-300-cre) — MEDIUM confidence (third-party integration partner docs, consistent with Sage official)
+- [HingePoint ProConnector Throttle Limits](https://proconnector.hingepoint.com/support/throttle-limits/) — MEDIUM confidence (Procore integration partner, consistent with official rate limit headers)
+- [SQLite WAL Mode Concurrency](https://sqlite.org/wal.html) — HIGH confidence (official SQLite documentation)
+- [SQLite Concurrent Writes and Database Locked Errors](https://tenthousandmeters.com/blog/sqlite-concurrent-writes-and-database-is-locked-errors/) — MEDIUM confidence (verified against official SQLite docs)
+- [RFC 9700 OAuth 2.0 Best Current Practice](https://datatracker.ietf.org/doc/rfc9700/) — HIGH confidence (IETF standard, January 2025)
+- [Procore Ruby SDK Token Refresh Issue](https://github.com/procore-oss/ruby-sdk/issues/36) — MEDIUM confidence (real-world issue report from official Procore OSS repo)
+- [Enterprise Integration Patterns — Idempotent Receiver](https://www.enterpriseintegrationpatterns.com/patterns/messaging/IdempotentReceiver.html) — HIGH confidence (foundational reference)
