@@ -10,6 +10,8 @@ mkdirSync(dirname(dbPath), { recursive: true });
 const sqlite = new Database(dbPath);
 sqlite.pragma('journal_mode = WAL');
 sqlite.pragma('foreign_keys = ON');
+// INTG-03: prevent SQLITE_BUSY when nightly ERP sync overlaps payroll writes (Phase 126)
+sqlite.pragma('busy_timeout = 5000');
 const _db = drizzle(sqlite, { schema });
 
 // Auto-apply pending migrations on startup (skipped in test env — tests use in-memory DB)
