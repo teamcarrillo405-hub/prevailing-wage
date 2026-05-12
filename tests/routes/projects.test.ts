@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import supertest from 'supertest';
+import { randomUUID } from 'crypto';
 import { app } from '../../src/server/index.js';
 
 // Helper: register a user and return cookie header
@@ -9,6 +10,17 @@ async function registerUser(email: string, password = 'password123') {
     .send({ email, password });
   const cookies = res.headers['set-cookie'] as string[] | string;
   return Array.isArray(cookies) ? cookies.join('; ') : cookies;
+}
+
+async function registerUserWithId(email: string, password = 'password123') {
+  const res = await supertest(app)
+    .post('/api/auth/register')
+    .send({ email, password });
+  const cookies = res.headers['set-cookie'] as string[] | string;
+  return {
+    cookie: Array.isArray(cookies) ? cookies.join('; ') : cookies,
+    userId: res.body.data?.user?.id as string,
+  };
 }
 
 // Helper: create a project and return it
@@ -162,6 +174,47 @@ describe('GET /api/projects/:id', () => {
       .get(`/api/projects/${projectId}`)
       .set('Cookie', cookieB);
     expect(res.status).toBe(403);
+  });
+});
+
+describe('POST /api/projects/:id/review', () => {
+  it('allows an auditor to record a review decision without payroll write access', async () => {
+    const ts = Date.now();
+    const owner = await registerUserWithId(`review-owner-${ts}@test.com`);
+    const auditor = await registerUserWithId(`review-auditor-${ts}@test.com`);
+    const createRes = await createProject(owner.cookie, { name: 'Reviewable Project' });
+    const projectId = createRes.body.data?.project?.id as string;
+
+    const { projectMembers } = await import('../../src/server/db/schema.js');
+    const { getDb } = await import('../../src/server/db/index.js');
+    await getDb().insert(projectMembers).values({
+      id: randomUUID(),
+      projectId,
+      userId: auditor.userId,
+      role: 'auditor',
+      joinedAt: new Date().toISOString(),
+    });
+
+    const reviewRes = await supertest(app)
+      .post(`/api/projects/${projectId}/review`)
+      .set('Cookie', auditor.cookie)
+      .send({ status: 'approved', note: 'Package reviewed by agency auditor' });
+
+    expect(reviewRes.status).toBe(200);
+    expect(reviewRes.body.data.reviewState).toEqual(
+      expect.objectContaining({
+        status: 'approved',
+        note: 'Package reviewed by agency auditor',
+        reviewedByRole: 'auditor',
+      }),
+    );
+
+    const patchRes = await supertest(app)
+      .patch(`/api/projects/${projectId}`)
+      .set('Cookie', auditor.cookie)
+      .send({ name: 'Auditor Should Not Edit' });
+
+    expect(patchRes.status).toBe(403);
   });
 });
 

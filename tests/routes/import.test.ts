@@ -121,6 +121,20 @@ describe('POST /api/payroll/import/preview', () => {
     expect(res.text).toContain('Maria Santos');
   });
 
+  it('downloads CSV templates for every supported import provider', async () => {
+    const cookie = await registerAndLogin('template-all-providers');
+
+    for (const provider of ['quickbooks', 'adp', 'gusto', 'paychex', 'sage_300', 'sage_100']) {
+      const res = await supertest(app)
+        .get(`/api/payroll/import/templates/${provider}.csv`)
+        .set('Cookie', cookie);
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-disposition']).toContain(`${provider}-payroll-import-template.csv`);
+      expect(res.text.split('\n')[0].length).toBeGreaterThan(10);
+    }
+  });
+
   it('returns 401 when not authenticated', async () => {
     const res = await supertest(app)
       .post('/api/payroll/import/preview')

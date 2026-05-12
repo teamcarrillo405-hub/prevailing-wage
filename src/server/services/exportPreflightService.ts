@@ -18,6 +18,10 @@ export interface ExportPreflightIssue {
   detail: string;
   workerId?: string;
   entryId?: string;
+  fix?: {
+    label: string;
+    href: string;
+  };
 }
 
 export interface ExportPreflightResult {
@@ -52,6 +56,18 @@ const EXPORT_LABELS: Record<ExportPreflightFormat, string> = {
 
 function addIssue(issues: ExportPreflightIssue[], issue: ExportPreflightIssue) {
   issues.push(issue);
+}
+
+function projectSettingsFix(projectId: string, field: string, label = 'Complete project field') {
+  return { label, href: `/projects/${projectId}/settings?field=${encodeURIComponent(field)}` };
+}
+
+function workerFix(projectId: string, workerId: string, label = 'Open worker') {
+  return { label, href: `/projects/${projectId}/workers?workerId=${encodeURIComponent(workerId)}` };
+}
+
+function payrollEntryFix(projectId: string, weekId: string, entryId: string, label = 'Open payroll row') {
+  return { label, href: `/projects/${projectId}/payroll/${weekId}/edit?entryId=${encodeURIComponent(entryId)}` };
 }
 
 function addPass(issues: ExportPreflightIssue[], id: string, title: string, detail: string) {
@@ -101,13 +117,14 @@ export async function computeExportPreflight(
   const state = project.state.toUpperCase();
 
   if (rows.length === 0) {
-    addIssue(issues, {
-      id: 'payroll-no-entries',
-      category: 'payroll',
-      severity: 'blocker',
-      title: 'No payroll entries',
-      detail: 'Add payroll entries before generating a certified payroll export.',
-    });
+      addIssue(issues, {
+        id: 'payroll-no-entries',
+        category: 'payroll',
+        severity: 'blocker',
+        title: 'No payroll entries',
+        detail: 'Add payroll entries before generating a certified payroll export.',
+        fix: { label: 'Add payroll entries', href: `/projects/${week.projectId}/payroll/${weekId}/edit` },
+      });
   } else {
     addPass(issues, 'payroll-entries-present', 'Payroll entries present', `${rows.length} payroll row(s) will be reviewed.`);
   }
@@ -123,6 +140,7 @@ export async function computeExportPreflight(
         detail: `${row.workerName} is missing gross wages or net pay required by the export.`,
         workerId: e.workerId,
         entryId: e.id,
+        fix: payrollEntryFix(week.projectId, weekId, e.id, 'Enter gross/net pay'),
       });
     }
 
@@ -135,6 +153,7 @@ export async function computeExportPreflight(
         detail: `${row.workerName} needs a trade, classification code, and labor type before export.`,
         workerId: e.workerId,
         entryId: e.id,
+        fix: workerFix(week.projectId, e.workerId, 'Fix classification'),
       });
     }
 
@@ -147,6 +166,7 @@ export async function computeExportPreflight(
         detail: `${row.workerName} needs street, city, state, and ZIP before California export.`,
         workerId: e.workerId,
         entryId: e.id,
+        fix: workerFix(week.projectId, e.workerId, 'Complete worker address'),
       });
     }
 
@@ -159,6 +179,7 @@ export async function computeExportPreflight(
         detail: `${row.workerName} does not have SSN last-four on file; confirm the WH-347 identifying number before submission.`,
         workerId: e.workerId,
         entryId: e.id,
+        fix: workerFix(week.projectId, e.workerId, 'Add worker identifier'),
       });
     }
 
@@ -171,6 +192,7 @@ export async function computeExportPreflight(
         detail: `${row.workerName} is marked apprentice but has no registered program name.`,
         workerId: e.workerId,
         entryId: e.id,
+        fix: workerFix(week.projectId, e.workerId, 'Add apprentice program'),
       });
     }
 
@@ -193,6 +215,7 @@ export async function computeExportPreflight(
           detail: `${row.workerName} has a fringe rate but no health, pension, vacation, or training split for eCPR.`,
           workerId: e.workerId,
           entryId: e.id,
+          fix: payrollEntryFix(week.projectId, weekId, e.id, 'Add fringe split'),
         });
       } else if (hasBreakdown && Math.abs(breakdownTotal - snapshot) > 0.01) {
         addIssue(issues, {
@@ -203,6 +226,7 @@ export async function computeExportPreflight(
           detail: `${row.workerName} has fringe subfields totaling $${breakdownTotal.toFixed(2)}, but the frozen fringe snapshot is $${snapshot.toFixed(2)}.`,
           workerId: e.workerId,
           entryId: e.id,
+          fix: payrollEntryFix(week.projectId, weekId, e.id, 'Fix fringe split'),
         });
       }
     }
@@ -217,6 +241,7 @@ export async function computeExportPreflight(
         severity: 'blocker',
         title: 'Wage determination missing',
         detail: 'Federal WH-347 exports should be tied to the locked wage determination used for the payroll calculation.',
+        fix: { label: 'Pin wage determination', href: `/projects/${week.projectId}#wage-determinations` },
       });
     }
   }
@@ -229,6 +254,7 @@ export async function computeExportPreflight(
         severity: 'blocker',
         title: 'California project required',
         detail: `${EXPORT_LABELS[format]} is only available for California projects.`,
+        fix: projectSettingsFix(week.projectId, 'state', 'Review project state'),
       });
     }
     if (!present(project.cslbLicense)) {
@@ -238,6 +264,7 @@ export async function computeExportPreflight(
         severity: 'blocker',
         title: 'CSLB license missing',
         detail: 'Add the contractor CSLB license number to the project before California export.',
+        fix: projectSettingsFix(week.projectId, 'cslbLicense', 'Add CSLB license'),
       });
     }
     if (!present(project.wcPolicyNumber)) {
@@ -247,6 +274,7 @@ export async function computeExportPreflight(
         severity: 'blocker',
         title: 'Workers compensation policy missing',
         detail: 'Add the workers compensation policy number before California export.',
+        fix: projectSettingsFix(week.projectId, 'wcPolicyNumber', 'Add WC policy'),
       });
     }
   }
@@ -264,6 +292,7 @@ export async function computeExportPreflight(
         severity: 'blocker',
         title: 'Contractor FEIN required',
         detail: 'Enter a 9-digit contractor FEIN before generating California eCPR XML.',
+        fix: projectSettingsFix(week.projectId, 'contractorFein', 'Add FEIN'),
       });
     }
     if (!present(dirProjectId)) {
@@ -273,6 +302,7 @@ export async function computeExportPreflight(
         severity: 'blocker',
         title: 'DIR project ID missing',
         detail: 'Enter the California DIR project ID before generating eCPR XML.',
+        fix: projectSettingsFix(week.projectId, 'dirProjectId', 'Add DIR ID'),
       });
     }
     if (!present(awardingAgency)) {
@@ -282,6 +312,7 @@ export async function computeExportPreflight(
         severity: 'blocker',
         title: 'Awarding agency missing',
         detail: 'Enter the awarding agency name before generating eCPR XML.',
+        fix: projectSettingsFix(week.projectId, 'awardingAgency', 'Add agency'),
       });
     }
     if (!present(contractNumber)) {
@@ -291,6 +322,7 @@ export async function computeExportPreflight(
         severity: 'blocker',
         title: 'Contract number missing',
         detail: 'Enter the contract number before generating eCPR XML.',
+        fix: projectSettingsFix(week.projectId, 'contractNumber', 'Add contract number'),
       });
     }
   }
@@ -302,6 +334,7 @@ export async function computeExportPreflight(
       severity: 'blocker',
       title: 'Compliance violations detected',
       detail: `${countComplianceViolations(compliance)} wage, overtime, apprentice, or deduction issue(s) must be resolved before export.`,
+      fix: { label: 'Review compliance issues', href: `/projects/${week.projectId}/payroll/${weekId}#compliance` },
     });
   } else {
     addPass(issues, 'compliance-clear', 'Compliance checks clear', 'No wage, overtime, apprentice, or deduction violations were found for this week.');

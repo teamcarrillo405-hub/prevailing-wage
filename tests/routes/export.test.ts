@@ -158,6 +158,24 @@ describe('GET /api/export/preflight/:format/:weekId', () => {
     expect(issueIds).toContain('ecpr-dir-project-id');
     expect(issueIds).toContain(`worker-address-${workerId}`);
     expect(issueIds.some((id: string) => id.startsWith('ecpr-fringe-breakdown-'))).toBe(true);
+    expect(res.body.data.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'ecpr-contractor-fein',
+          fix: expect.objectContaining({
+            label: 'Add FEIN',
+            href: expect.stringContaining('/settings?field=contractorFein'),
+          }),
+        }),
+        expect.objectContaining({
+          id: `worker-address-${workerId}`,
+          fix: expect.objectContaining({
+            label: 'Complete worker address',
+            href: expect.stringContaining(`/workers?workerId=${workerId}`),
+          }),
+        }),
+      ]),
+    );
   });
 
   it('returns needs_review for a clean eCPR export with only human certification warning', async () => {

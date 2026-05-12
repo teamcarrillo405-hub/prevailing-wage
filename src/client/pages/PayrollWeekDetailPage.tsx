@@ -166,6 +166,10 @@ interface ExportPreflightIssue {
   detail: string;
   workerId?: string;
   entryId?: string;
+  fix?: {
+    label: string;
+    href: string;
+  };
 }
 
 interface ExportPreflightResult {
@@ -1287,6 +1291,11 @@ export function PayrollWeekDetailPage() {
   function handlePreflightFix(issue: ExportPreflightIssue) {
     setShowPreflight(false);
     setPendingExportAction(null);
+
+    if (issue.fix?.href) {
+      navigate(issue.fix.href);
+      return;
+    }
 
     if (issue.entryId) {
       scrollToPayrollEntry(issue.entryId);
@@ -4110,7 +4119,7 @@ export function PayrollWeekDetailPage() {
                             variant="ghost"
                             onClick={() => handlePreflightFix(issue)}
                           >
-                            Fix
+                            {issue.fix?.label ?? 'Fix'}
                           </Button>
                         )}
                       </li>

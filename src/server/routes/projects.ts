@@ -6,7 +6,7 @@ import { getDb } from '../db/index.js';
 import { projects, projectMembers, users } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { assertProjectAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
+import { assertProjectAccess, assertProjectReviewAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 import type { Project } from '../utils/assertProjectAccess.js';
 import { getLimits, type PlanTier } from '../utils/planLimits.js';
 
@@ -307,9 +307,10 @@ router.post('/:id/review', validate(ReviewProjectSchema), async (req, res) => {
   const userId = req.user!.userId;
   const projectId = String(req.params.id);
   const db = getDb();
+  let role: Awaited<ReturnType<typeof assertProjectReviewAccess>>['role'];
 
   try {
-    await assertProjectWriteAccess(db, projectId, userId);
+    ({ role } = await assertProjectReviewAccess(db, projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -330,6 +331,7 @@ router.post('/:id/review', validate(ReviewProjectSchema), async (req, res) => {
     note: body.note ?? null,
     reviewedAt: now,
     reviewedBy: userId,
+    reviewedByRole: role,
   };
 
   await db.update(projects)

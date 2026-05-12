@@ -13,7 +13,8 @@ Run this checklist before every production deployment and after any data-model, 
 
 - Start the production build or deployed environment.
 - Run `QA_BASE_URL=https://your-domain.example npm run qa:deployment`.
-- Confirm `/`, `/methodology`, `/security`, and `/api-docs` return successful responses.
+- Confirm `/`, `/api/health`, `/api/ready`, `/methodology`, `/security`, and `/api-docs` return expected responses.
+- Treat `/api/ready` returning `503 not_ready` as a release blocker in production unless the only missing checks are optional drains such as Sentry, Logtail, or email.
 
 ## Workflow Checks
 

@@ -163,7 +163,7 @@ app.use((req, res, next) => {
   // Skip SSO ACS — IdP sends form POST from external origin
   if (req.path.startsWith('/api/sso/acs')) return next();
   // Skip health check
-  if (req.path === '/api/health') return next();
+  if (req.path === '/api/health' || req.path === '/api/ready') return next();
   // Skip public REST API — uses Bearer token auth, no browser origin
   if (req.path.startsWith('/v1/')) return next();
 
@@ -182,6 +182,30 @@ app.get('/api/health', (_req, res) => {
   } catch {
     res.status(503).json({ status: 'degraded', db: 'error' });
   }
+});
+
+app.get('/api/ready', (_req, res) => {
+  const checks = {
+    db: 'unknown',
+    jwtSecret: process.env.JWT_SECRET ? 'ok' : 'missing',
+    encryptionKey: process.env.ENCRYPTION_KEY_V1 ? 'ok' : 'missing',
+    sentry: process.env.SENTRY_DSN ? 'configured' : 'not_configured',
+    logDrain: process.env.LOGTAIL_TOKEN ? 'configured' : 'not_configured',
+    email: process.env.RESEND_API_KEY ? 'configured' : 'not_configured',
+  };
+
+  try {
+    pingDb();
+    checks.db = 'ok';
+  } catch {
+    checks.db = 'error';
+  }
+
+  const requiredOk = checks.db === 'ok' && checks.jwtSecret === 'ok' && checks.encryptionKey === 'ok';
+  res.status(requiredOk ? 200 : 503).json({
+    status: requiredOk ? 'ready' : 'not_ready',
+    checks,
+  });
 });
 app.use('/api/sub-upload', subUploadRouter); // public — no auth required
 app.use('/api/roi-leads', roiLeadsRouter); // public — no auth required

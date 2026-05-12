@@ -48,3 +48,11 @@ export async function assertProjectWriteAccess(
   }
   return access as { project: Project; role: Exclude<ProjectRole, 'auditor'> };
 }
+
+export async function assertProjectReviewAccess(
+  db: DrizzleDb,
+  projectId: string,
+  userId: string,
+): Promise<{ project: Project; role: ProjectRole }> {
+  return assertProjectAccess(db, projectId, userId);
+}
