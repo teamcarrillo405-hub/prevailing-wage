@@ -2583,3 +2583,223 @@ Plans:
 - [ ] 125-03-PLAN.md -- UI-07 to UI-09 mobile responsive audit (375/768/1024px, 44px tap targets, font-size 16px inputs); UI-10 skeleton loading on 5 pages; UI-11 contextual empty states on all list views
 
 **UI hint**: yes
+
+
+---
+
+## v9.0 Construction ERP Integrations (Phases 126-134)
+
+**Milestone goal:** Bidirectional sync with Procore, Sage 300 CRE, and Viewpoint Vista -- pulling workers, timesheets, and projects in; pushing WH-347 status and compliance violations back out. Every phase builds on a shared IErpAdapter interface and credential vault established in Phase 126. Procore uses existing working code (routes/integrations.ts lines 609-868) extracted into procoreAdapter.ts. Sage 300 CRE and Viewpoint Vista use file-based adapters (no live REST API available without third-party accounts). SSN never appears in any outbound ERP payload.
+
+**Entering v9.0:** Phase 125 complete (v6.0 shipped). SQLite WAL mode not yet enabled (required before any sync job runs -- Phase 126 responsibility).
+
+---
+
+## Phases (v9.0)
+
+- [ ] **Phase 126: Integration Foundation** - Credential vault, DB tables, IErpAdapter interface, IntegrationsPage, SQLite WAL mode, nightly cron slot
+- [ ] **Phase 127: Procore OAuth + Worker Sync** - Extract and harden working OAuth code; employee pull; nightly cron job #6 registered
+- [ ] **Phase 128: Procore Timesheet Pull** - Daily timesheet sync from Procore; timezone-aware bucketing; rate limit backoff
+- [ ] **Phase 129: Procore Compliance Push** - WH-347 status + violation summary pushed to Procore custom fields; bidirectional loop closed
+- [ ] **Phase 130: Sage 300 CRE Adapter** - File-based adapter (no REST API); import directory config; existing sage300Mapper.ts reuse; UI messaging
+- [ ] **Phase 131: Sage 300 Payroll Sync + Compliance Export** - Timesheet file import; compliance status export file; file hash dedup
+- [ ] **Phase 132: Viewpoint Vista Adapter Foundation** - File-based adapter; vista_pending_actions table; import directory config
+- [ ] **Phase 133: Viewpoint Vista Compliance Push** - Timesheet file import; compliance export file; async 202 polling harness
+- [ ] **Phase 134: Integration Dashboard** - Sync history table; failure alert banners; email notifications; field mapping editor
+
+---
+
+## Phase Details (v9.0)
+
+### Phase 126: Integration Foundation
+
+**Goal**: The shared infrastructure every ERP phase depends on is in place -- credential vault, DB tables, adapter interface, IntegrationsPage connection UI, SQLite WAL mode, and nightly sync cron slot -- so no subsequent phase can ship broken sync that blocks payroll entry or leaks SSN
+
+**Depends on**: Phase 125 (v6.0 complete)
+
+**Requirements**: INTG-01, INTG-02, INTG-03, INTG-04, INTG-05, INTG-06, INTG-07, SEC-01, SEC-02
+
+**Success Criteria** (what must be TRUE):
+  1. User navigates to IntegrationsPage and sees three ERP connection cards (Procore, Sage 300 CRE, Viewpoint Vista) each showing connection status (Not Connected / Connected / Error) with Connect and Disconnect buttons and a last-sync timestamp
+  2. User triggers "Sync Now" from any ERP card on IntegrationsPage and sees a loading indicator followed by a success or error toast -- the sync attempt is recorded in integration_sync_runs and visible in the UI
+  3. SQLite WAL mode (PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;) is active at startup -- payroll entry and nightly ERP sync can run concurrently without SQLITE_BUSY errors; verifiable by checking DB pragma values
+  4. No outbound ERP payload (tested by unit assertions) contains any field matching /ssn/i or a 9-digit numeric pattern -- all worker serializers use explicit inclusion lists, never row spread
+  5. AES-256-GCM encryption wraps all OAuth tokens and API keys before DB storage; tokens are decrypted only at the sync call site via integrationVault.ts; the IErpAdapter TypeScript interface is defined with pullWorkers(), pullTimesheets(), and pushComplianceStatus() method signatures
+
+**Plans:** 1/4 plans executed
+- [x] 126-01-PLAN.md — DB migration 0070 (integration_connections + integration_sync_runs) + WAL busy_timeout pragma + Drizzle schema
+- [ ] 126-02-PLAN.md — IErpAdapter interface + integrationVault credential wrapper + SSN-exclusion serializer stub + Math.random nonce hot-fix
+- [ ] 126-03-PLAN.md — /api/erp-integrations router (GET/POST config/POST sync) + syncOrchestrator + cron job #6 (nightly UTC)
+- [ ] 126-04-PLAN.md — IntegrationsPage FileErpCard (Sage 300 CRE + Viewpoint Vista cards) + extended security footnote
+
+**UI hint**: yes
+
+---
+
+### Phase 127: Procore OAuth + Worker Sync
+
+**Goal**: Contractors can connect their Procore account via a hardened OAuth2 PKCE flow and their Procore employee roster syncs into the app with idempotent upserts -- extracting and formalizing working code from routes/integrations.ts without rewriting it
+
+**Depends on**: Phase 126
+
+**Requirements**: PRO-01, PRO-02, PRO-06, SEC-03
+
+**Success Criteria** (what must be TRUE):
+  1. User clicks "Connect Procore" on IntegrationsPage, is redirected to Procore OAuth, authorizes, and returns to IntegrationsPage with status "Connected" -- OAuth state nonce uses crypto.randomBytes(16) (not Math.random()), and the PKCE code_verifier survives a server restart because it is stored in the DB (not in-memory session)
+  2. After OAuth connect, the nightly sync (or "Sync Now") pulls Procore employees and creates or updates workers in the app -- a worker already in the app with a matching erp_external_id is updated, not duplicated; a new Procore employee creates a new worker row
+  3. When Procore and the app disagree on a worker trade classification, Procore classification is treated as authoritative and the app record is updated -- this behavior is observable by changing a classification in Procore and running sync
+  4. The nightly ERP sync cron job is registered in src/server/index.ts as job #6 alongside the existing 5 cron jobs; it runs sequentially per connection (not parallel) and writes a row to integration_sync_runs on every exit path (success or failure)
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 128: Procore Timesheet Pull
+
+**Goal**: Daily timesheet hours from Procore flow automatically into payroll entries -- the primary value driver of the milestone -- eliminating duplicate time entry for Procore-connected contractors
+
+**Depends on**: Phase 127 (workers must exist before timesheet entries can be upserted against them)
+
+**Requirements**: PRO-03
+
+**Success Criteria** (what must be TRUE):
+  1. After a sync, payroll hour entries exist in the app matching Procore timecard entries for the same date range -- hours are bucketed into the correct payroll week using timezone-aware date handling (Sunday 11 PM edge case handled correctly)
+  2. A Procore timecard entry that was previously synced and not locally modified is updated (not duplicated) on the next sync -- upsert via a stable conflict target derived from erp_external_id and erp_source
+  3. When Procore returns HTTP 429 (rate limit), the sync backs off using the X-Rate-Limit-Reset header value and retries -- the sync does not fail permanently on a temporary rate limit; the delay is logged
+
+**Plans**: TBD
+
+**UI hint**: no
+
+---
+
+### Phase 129: Procore Compliance Push
+
+**Goal**: WH-347 submission status and compliance violations are pushed back to Procore as custom fields -- closing the bidirectional sync loop so Procore becomes a live compliance signal, not just a data source
+
+**Depends on**: Phase 128 (timesheet pull must work before compliance data has anything to push against)
+
+**Requirements**: PRO-04, PRO-05
+
+**Success Criteria** (what must be TRUE):
+  1. After a user submits a WH-347 for a payroll week, the next sync (or manual "Sync Now") updates a Procore custom field on the relevant timecard or project resource reflecting the submission status -- the field value is verifiable inside Procore
+  2. When a payroll week has compliance violations, the sync pushes a violation summary (count, type, week ending date) to Procore via a custom field or the Observations API -- a contractor can see open violations from within Procore without opening the app
+  3. After writing a custom field, the sync re-fetches the Procore record to verify the write succeeded -- a write accepted by Procore API but not reflected on re-fetch triggers an error entry in integration_sync_runs
+
+**Plans**: TBD
+
+**UI hint**: no
+
+---
+
+### Phase 130: Sage 300 CRE Adapter
+
+**Goal**: Contractors using Sage 300 CRE can configure file exchange paths and import employee data from Sage-format CSV/TXT files -- with IntegrationsPage messaging that makes the file-based workflow explicit and unsurprising
+
+**Depends on**: Phase 126 (IErpAdapter interface and credential vault must exist before any adapter can be built)
+
+**Requirements**: SAGE-01, SAGE-02, SAGE-04
+
+**Success Criteria** (what must be TRUE):
+  1. User enters import and export directory paths in Sage 300 CRE connection settings on IntegrationsPage and saves them -- paths are validated to be within an allowlisted prefix (path injection protection); saved paths are shown on the connection card
+  2. Placing a Sage-format employee CSV/TXT file in the configured import directory and triggering sync results in workers being created or updated in the app -- the sync uses the existing sage300Mapper.ts parser; files already processed (by hash) are skipped
+  3. IntegrationsPage displays a persistent informational message on the Sage 300 CRE card explaining that sync is file-based (not live) and describing the import directory workflow -- a first-time user cannot miss this explanation
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 131: Sage 300 Payroll Sync + Compliance Export
+
+**Goal**: Sage timesheet data imports from files into payroll entries, and a compliance status export file is generated to the configured export directory when the contractor triggers a compliance push -- completing the file-based Sage 300 CRE integration
+
+**Depends on**: Phase 130 (Sage adapter and worker import must exist before timesheet import can run)
+
+**Requirements**: SAGE-03
+
+**Success Criteria** (what must be TRUE):
+  1. Placing a Sage timesheet export file in the configured import directory and triggering sync results in payroll hour entries created or updated in the app -- hours are mapped to the correct payroll week; previously imported files (matched by file hash) are not re-imported
+  2. User triggers a "Compliance Push" from the Sage 300 CRE connection card on IntegrationsPage and a compliance status export file appears in the configured export directory -- the file contains WH-347 submission status and violation summary in a Sage-compatible format; the sync run is recorded in integration_sync_runs
+
+**Plans**: TBD
+
+**UI hint**: no
+
+---
+
+### Phase 132: Viewpoint Vista Adapter Foundation
+
+**Goal**: Contractors using Viewpoint Vista can configure file exchange paths and import employee data from Vista CSV files -- with the async 202-polling infrastructure in place from day one so Vista REST writes (if enabled in future) can never falsely report success
+
+**Depends on**: Phase 126 (IErpAdapter interface must exist; file adapter pattern established by Phase 130 is reference)
+
+**Requirements**: VISTA-01, VISTA-02
+
+**Success Criteria** (what must be TRUE):
+  1. User enters import and export directory paths in Viewpoint Vista connection settings on IntegrationsPage and saves them -- path validation matches the Sage 300 adapter pattern; saved paths displayed on the connection card
+  2. Placing a Vista employee CSV export file in the configured import directory and triggering sync results in workers being created or updated in the app -- the Vista CSV parser handles Vista column header format; previously processed files (by hash) are skipped
+  3. The vista_pending_actions table exists in the database from this phase forward -- it is the required infrastructure for the async 202-polling pattern that Vista AppXchange API uses; the table is queryable even if no Vista REST writes occur in this phase
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 133: Viewpoint Vista Compliance Push
+
+**Goal**: Vista timesheet data imports from files and a compliance status export file is generated -- completing the file-based Vista integration with the 202-polling harness wired so any future REST writes are handled correctly
+
+**Depends on**: Phase 132 (Vista adapter foundation and worker import must exist before timesheet import can run)
+
+**Requirements**: VISTA-03
+
+**Success Criteria** (what must be TRUE):
+  1. Placing a Vista timesheet export file in the configured import directory and triggering sync results in payroll hour entries created or updated in the app -- hours are mapped to the correct payroll week; previously imported files are skipped by hash
+  2. User triggers a "Compliance Push" from the Vista connection card on IntegrationsPage and a Vista-compatible compliance status export file appears in the configured export directory; the sync run is recorded in integration_sync_runs
+  3. Any Vista write operation using the AppXchange async API (202 Accepted response) is never reported as successful until polling confirms the action completed -- the vista_pending_actions table is checked on each sync cycle and unresolved actions are surfaced as warnings, not successes
+
+**Plans**: TBD
+
+**UI hint**: no
+
+---
+
+### Phase 134: Integration Dashboard
+
+**Goal**: Contractors can see the full health of their ERP integrations at a glance -- sync history, failure alerts, and field mappings -- and are proactively notified when a broken sync could cause them to submit a WH-347 with missing hours
+
+**Depends on**: Phase 133 (all three ERP adapters must ship before the dashboard can show meaningful history across all of them)
+
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04
+
+**Success Criteria** (what must be TRUE):
+  1. The Integration Dashboard (accessible from IntegrationsPage) shows a per-ERP sync history table with timestamp, records synced count, errors encountered count, and duration for each run -- data from integration_sync_runs; table is paginated; most recent run shown first
+  2. When any connected ERP sync has failed 2 or more consecutive times, a persistent failure alert banner appears on the main app Dashboard (not only on IntegrationsPage) -- the banner names the ERP and links to the Integration Dashboard; banner resolves automatically on next successful sync
+  3. When a connected ERP sync fails for the second consecutive time, an email notification is sent to the account owner via the existing nodemailer infrastructure -- email names the ERP, timestamp of last failure, and links to the Integration Dashboard
+  4. User can configure field mappings between ERP fields and prevailing wage fields (e.g., Procore classification_id to app tradeClassification) from IntegrationsPage -- mappings are saved per ERP connection and applied on the next sync; the field mapping editor shows current mappings with edit and delete controls
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+## v9.0 Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 126. Integration Foundation | v9.0 | 1/4 | In Progress|  |
+| 127. Procore OAuth + Worker Sync | v9.0 | 0/TBD | Not started | - |
+| 128. Procore Timesheet Pull | v9.0 | 0/TBD | Not started | - |
+| 129. Procore Compliance Push | v9.0 | 0/TBD | Not started | - |
+| 130. Sage 300 CRE Adapter | v9.0 | 0/TBD | Not started | - |
+| 131. Sage 300 Payroll Sync + Compliance Export | v9.0 | 0/TBD | Not started | - |
+| 132. Viewpoint Vista Adapter Foundation | v9.0 | 0/TBD | Not started | - |
+| 133. Viewpoint Vista Compliance Push | v9.0 | 0/TBD | Not started | - |
+| 134. Integration Dashboard | v9.0 | 0/TBD | Not started | - |
+
