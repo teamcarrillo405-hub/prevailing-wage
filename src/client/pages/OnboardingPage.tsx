@@ -61,6 +61,7 @@ export function OnboardingPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<OnboardingAnswers>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
+  const [creatingSample, setCreatingSample] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -115,6 +116,20 @@ export function OnboardingPage() {
       setError(err instanceof Error ? err.message : 'Could not save onboarding.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function createSampleProject() {
+    setError(null);
+    setCreatingSample(true);
+    try {
+      const res = await api.post<{ data: { projectId: string; weekId: string } }>('/onboarding/sample-project', {});
+      await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      navigate(`/projects/${res.data.projectId}/payroll/${res.data.weekId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create sample project.');
+    } finally {
+      setCreatingSample(false);
     }
   }
 
@@ -299,6 +314,9 @@ export function OnboardingPage() {
             <Button type="button" onClick={saveOnboarding} loading={saving} className="min-h-11 px-5">
               Finish onboarding
               <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <Button type="button" variant="secondary" onClick={createSampleProject} loading={creatingSample} className="min-h-11 px-5">
+              Open sample project
             </Button>
             <Link to="/settings/integrations" className="inline-flex min-h-11 items-center justify-center rounded-sm border border-gray-300 px-5 text-sm font-semibold text-gray-700 hover:bg-white">
               Review integrations

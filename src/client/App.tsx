@@ -74,6 +74,9 @@ const CopilotAuditPage = React.lazy(() =>
 const ComplianceMethodologyPage = React.lazy(() =>
   import('./pages/ComplianceMethodologyPage').then(m => ({ default: m.ComplianceMethodologyPage }))
 );
+const PublicComplianceMethodologyPage = React.lazy(() =>
+  import('./pages/PublicComplianceMethodologyPage').then(m => ({ default: m.PublicComplianceMethodologyPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -188,6 +191,7 @@ export default function App() {
               <Route path="/roi" element={<RoiCalculatorPage />} />
               <Route path="/testimonials" element={<TestimonialsPage />} />
               <Route path="/reviews" element={<TestimonialsPage />} />
+              <Route path="/methodology" element={<PublicComplianceMethodologyPage />} />
 
               {/* Public accept-invite route — no auth wrapper per D-09 */}
               <Route path="/accept-invite" element={<AcceptInvitePage />} />

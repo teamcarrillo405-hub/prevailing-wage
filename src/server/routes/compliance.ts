@@ -21,7 +21,7 @@ import { buildWeekComplianceEvidence, getComplianceMethodology } from '../servic
 
 export const complianceRouter = Router();
 
-complianceRouter.get('/methodology', requireAuth, (_req, res) => {
+complianceRouter.get('/methodology', (_req, res) => {
   res.json({ data: getComplianceMethodology() });
 });
 

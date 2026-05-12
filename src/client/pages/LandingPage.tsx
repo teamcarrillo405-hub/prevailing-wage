@@ -79,6 +79,7 @@ function LandingNav() {
           <a href="#workflow" className="hover:text-white">Workflow</a>
           <a href="#proof" className="hover:text-white">Proof</a>
           <a href="#compare" className="hover:text-white">Compare</a>
+          <Link to="/methodology" className="hover:text-white">Methodology</Link>
         </div>
         <Link
           to="/login"

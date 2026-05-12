@@ -18,6 +18,7 @@ import { fillWh347, getWh347TemplateBytes } from '../services/wh347Generator.js'
 import type { Wh347Data, Wh347WorkerRow } from '../services/wh347Generator.js';
 import { computeCompliance } from '../services/complianceService.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { computeExportPreflight } from '../services/exportPreflightService.js';
 
 export const auditExportRouter = Router();
 
@@ -89,6 +90,29 @@ auditExportRouter.get('/:projectId', async (req, res) => {
   const contractorAddress = `${project.county}, ${project.state}`;
   const projectLocation = `${project.county}, ${project.state}`;
   const projectContractNo = project.contractNumber ?? project.wdIdentifier ?? '';
+
+  const manifest: {
+    projectId: string;
+    projectName: string;
+    generatedAt: string;
+    weekCount: number;
+    weeks: Array<{
+      weekId: string;
+      weekEndingDate: string;
+      payrollNumber: number;
+      submittedAt: string | null;
+      complianceIssueCount: number;
+      wh347PreflightStatus: string;
+      blockers: number;
+      warnings: number;
+    }>;
+  } = {
+    projectId,
+    projectName: project.name,
+    generatedAt: new Date().toISOString(),
+    weekCount: weeks.length,
+    weeks: [],
+  };
 
   // 6. For each payroll week: generate PDF and compliance report
   for (const week of weeks) {
@@ -195,6 +219,22 @@ auditExportRouter.get('/:projectId', async (req, res) => {
 
     // 6e. Run compliance check
     const compliance = await computeCompliance(db, week.id);
+    const preflight = await computeExportPreflight(db, week.id, 'wh347');
+    const complianceIssueCount =
+      (compliance?.violations.length ?? 0) +
+      (compliance?.weekViolations.length ?? 0) +
+      (compliance?.deductionViolations.length ?? 0);
+
+    manifest.weeks.push({
+      weekId: week.id,
+      weekEndingDate: week.weekEndingDate,
+      payrollNumber: week.payrollNumber,
+      submittedAt: week.submittedAt,
+      complianceIssueCount,
+      wh347PreflightStatus: preflight?.status ?? 'unavailable',
+      blockers: preflight?.blockers ?? 0,
+      warnings: preflight?.warnings ?? 0,
+    });
 
     // 6f. Append both files to the archive
     archive.append(Buffer.from(pdfBytes), {
@@ -211,5 +251,9 @@ auditExportRouter.get('/:projectId', async (req, res) => {
   }
 
   // 7. Finalize — flushes all appended entries and ends the response stream
+  archive.append(JSON.stringify(manifest, null, 2), {
+    name: 'audit-manifest.json',
+  });
+
   await archive.finalize();
 });

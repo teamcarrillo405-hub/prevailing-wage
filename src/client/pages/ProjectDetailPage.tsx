@@ -376,7 +376,7 @@ function ProjectAuditDefensePanel({ projectId }: { projectId: string }) {
           className="rounded-lg border border-gray-200 p-4 hover:border-brand-gold hover:shadow-sm transition-colors"
         >
           <p className="text-sm font-semibold text-gray-900">Full Audit ZIP</p>
-          <p className="mt-1 text-xs text-gray-500">Download the full project response package.</p>
+          <p className="mt-1 text-xs text-gray-500">Includes WH-347 PDFs, compliance JSON, and audit-manifest.json.</p>
         </a>
       </div>
     </Card>

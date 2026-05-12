@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { onboardingProfiles, users } from '../db/schema.js';
+import { onboardingProfiles, users, projects, projectMembers, workerClassifications } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { insertSecurityEvent } from '../db/auditHelpers.js';
+import { createWorker } from '../services/workerService.js';
+import { createPayrollWeek, upsertPayrollEntry } from '../services/payrollService.js';
 
 const ProviderSchema = z.enum(['quickbooks', 'adp', 'gusto', 'paychex', 'sage_300', 'sage_100', 'other', 'none']);
 
@@ -195,3 +198,165 @@ onboardingRouter.put('/', requireAuth, validate(OnboardingSchema), async (req, r
   res.json({ data: { completedAt: now, recommendedNextSteps } });
 });
 
+onboardingRouter.post('/sample-project', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const userEmail = req.user!.email;
+  const db = getDb();
+  const now = new Date().toISOString();
+  const projectId = randomUUID();
+
+  await db.insert(projects).values({
+    id: projectId,
+    userId,
+    name: 'Sample Federal Civic Center',
+    state: 'CA',
+    county: 'Los Angeles',
+    contractType: 'federal-davis-bacon',
+    awardDate: '2026-01-15',
+    fundingType: 'mixed',
+    wdIdentifier: 'CA20260001',
+    wdModNumber: 1,
+    wdLockedAt: now,
+    status: 'active',
+    cslbLicense: 'SAMPLE-123456',
+    wcPolicyNumber: 'WC-SAMPLE-2026',
+    contractorFein: '123456789',
+    dirProjectId: 'DIR-SAMPLE-001',
+    awardingAgency: 'Sample Public Agency',
+    contractNumber: 'HCC-SAMPLE-001',
+    projectSettings: JSON.stringify({ sampleProject: true }),
+    apprenticeshipRequirements: JSON.stringify({ Carpenter: { maxRatio: '1:3' } }),
+    isIraIijaProject: true,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await db.insert(projectMembers).values({
+    id: randomUUID(),
+    projectId,
+    userId,
+    role: 'owner',
+    joinedAt: now,
+  });
+
+  const carpenter = await createWorker(db as never, {
+    userId,
+    userEmail,
+    ipAddress: req.ip ?? null,
+    projectId,
+    name: 'Maria Santos',
+    ssn: '123456789',
+    addressStreet: '100 Main St',
+    addressCity: 'Los Angeles',
+    addressState: 'CA',
+    addressZip: '90012',
+  }) as unknown as { id: string };
+  const apprentice = await createWorker(db as never, {
+    userId,
+    userEmail,
+    ipAddress: req.ip ?? null,
+    projectId,
+    name: 'Daniel Ruiz',
+    ssn: '987654321',
+    addressStreet: '200 Alameda Ave',
+    addressCity: 'Los Angeles',
+    addressState: 'CA',
+    addressZip: '90012',
+    apprenticeshipProgramName: 'Sample Registered Apprenticeship Program',
+    rapidsNumber: 'RAPIDS-SAMPLE',
+  }) as unknown as { id: string };
+
+  const carpenterClassificationId = randomUUID();
+  const apprenticeClassificationId = randomUUID();
+  await db.insert(workerClassifications).values([
+    {
+      id: carpenterClassificationId,
+      workerId: carpenter.id,
+      projectId,
+      tradeCode: 'CARP',
+      tradeDescription: 'Carpenter',
+      laborType: 'journeyworker',
+      apprenticePercent: null,
+      programName: null,
+      isActive: true,
+      waManualRate: null,
+      waTradeCode: null,
+      createdAt: now,
+    },
+    {
+      id: apprenticeClassificationId,
+      workerId: apprentice.id,
+      projectId,
+      tradeCode: 'CARP',
+      tradeDescription: 'Carpenter',
+      laborType: 'apprentice',
+      apprenticePercent: 65,
+      programName: 'Sample Registered Apprenticeship Program',
+      isActive: true,
+      waManualRate: null,
+      waTradeCode: null,
+      createdAt: now,
+    },
+  ]);
+
+  const week = await createPayrollWeek({
+    projectId,
+    weekEndingDate: '2026-02-01',
+    payrollNumber: 1,
+  });
+
+  await upsertPayrollEntry({
+    payrollWeekId: week.id,
+    workerId: carpenter.id,
+    classificationId: carpenterClassificationId,
+    monSt: 8,
+    tueSt: 8,
+    wedSt: 8,
+    thuSt: 8,
+    friSt: 8,
+    baseRateSnapshot: 52,
+    fringeRateSnapshot: 18,
+    fringeHealthWelfare: 8,
+    fringePension: 6,
+    fringeVacation: 2,
+    fringeTraining: 2,
+    deductions: 420,
+    userId,
+    userEmail,
+    ipAddress: req.ip ?? null,
+    workerName: 'Maria Santos',
+    payrollNumber: week.payrollNumber,
+  });
+  await upsertPayrollEntry({
+    payrollWeekId: week.id,
+    workerId: apprentice.id,
+    classificationId: apprenticeClassificationId,
+    monSt: 8,
+    tueSt: 8,
+    wedSt: 8,
+    thuSt: 8,
+    friSt: 0,
+    baseRateSnapshot: 34,
+    fringeRateSnapshot: 12,
+    fringeHealthWelfare: 5,
+    fringePension: 4,
+    fringeVacation: 1.5,
+    fringeTraining: 1.5,
+    deductions: 250,
+    userId,
+    userEmail,
+    ipAddress: req.ip ?? null,
+    workerName: 'Daniel Ruiz',
+    payrollNumber: week.payrollNumber,
+  });
+
+  void insertSecurityEvent({
+    userId,
+    eventType: 'sample_project_created',
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'] as string | undefined,
+    metadata: { projectId, weekId: week.id },
+  });
+
+  res.status(201).json({ data: { projectId, weekId: week.id } });
+});

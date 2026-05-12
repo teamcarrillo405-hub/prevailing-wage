@@ -20,6 +20,39 @@ importRouter.use(requireAuth);
 
 type ReconciliationSeverity = 'blocker' | 'warning' | 'pass';
 
+const PROVIDER_GUIDANCE: Record<string, { label: string; requiredColumns: string[]; notes: string[] }> = {
+  quickbooks: {
+    label: 'QuickBooks',
+    requiredColumns: ['Employee', 'Project/Customer', 'Class/Trade', 'Regular Hours', 'Overtime Hours'],
+    notes: ['Export payroll or time activity by employee and project.', 'Confirm project/customer names match the project before preview.'],
+  },
+  adp: {
+    label: 'ADP',
+    requiredColumns: ['Employee ID', 'Employee Name', 'Job', 'Earnings Code', 'Hours'],
+    notes: ['ADP weekly total exports may require daily split review before commit.', 'Save employee ID mappings after the first import.'],
+  },
+  gusto: {
+    label: 'Gusto',
+    requiredColumns: ['Employee', 'Work Location/Project', 'Regular Hours', 'Overtime Hours'],
+    notes: ['Confirm weekly totals are split by work day when certified payroll requires daily detail.'],
+  },
+  paychex: {
+    label: 'Paychex',
+    requiredColumns: ['Employee ID', 'Employee Name', 'Labor Assignment', 'Hours', 'Pay Type'],
+    notes: ['Use provider worker IDs for stable matching.', 'Review unmatched workers before committing.'],
+  },
+  sage_300: {
+    label: 'Sage 300 CRE',
+    requiredColumns: ['Employee', 'Job', 'Cost Code', 'Pay ID', 'Hours'],
+    notes: ['Export job-costed payroll detail, not summarized payroll registers.'],
+  },
+  sage_100: {
+    label: 'Sage 100 Contractor',
+    requiredColumns: ['Employee', 'Job', 'Cost Code', 'Pay Type', 'Hours'],
+    notes: ['Confirm cost code maps to the worker classification used for certified payroll.'],
+  },
+};
+
 function entryHours(entry: typeof payrollEntries.$inferSelect): number {
   return (
     entry.monSt + entry.tueSt + entry.wedSt + entry.thuSt + entry.friSt + entry.satSt + entry.sunSt
@@ -400,9 +433,20 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
         missingPayCount,
         providerMappingCount: providerMappings.length,
       },
+      providerGuide: latestImport
+        ? PROVIDER_GUIDANCE[latestImport.provider]
+        : {
+            label: 'Payroll import',
+            requiredColumns: ['Worker name or ID', 'Project/job', 'Classification/trade', 'Daily hours', 'Base rate', 'Fringe rate'],
+            notes: ['Use provider exports with one row per worker, project, and classification when possible.', 'Preview before commit to catch unmatched workers and missing rates.'],
+          },
       issues,
     },
   });
+});
+
+importRouter.get('/providers', (_req, res) => {
+  res.json({ data: PROVIDER_GUIDANCE });
 });
 
 // ── GET /mappings/:projectId ───────────────────────────────────────────────

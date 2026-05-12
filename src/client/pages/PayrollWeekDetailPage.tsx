@@ -215,6 +215,11 @@ interface ImportReconciliationResult {
     missingPayCount: number;
     providerMappingCount: number;
   };
+  providerGuide?: {
+    label: string;
+    requiredColumns: string[];
+    notes: string[];
+  };
   issues: ImportReconciliationIssue[];
 }
 
@@ -1811,6 +1816,21 @@ export function PayrollWeekDetailPage() {
                 </div>
               ))}
             </div>
+            {importReconciliationData.data.providerGuide && (
+              <div className="mt-4 rounded-sm border border-brand-gold/30 bg-brand-gold/5 px-3 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  {importReconciliationData.data.providerGuide.label} import checklist
+                </p>
+                <p className="mt-1 text-xs text-gray-700">
+                  Required columns: {importReconciliationData.data.providerGuide.requiredColumns.join(', ')}.
+                </p>
+                <ul className="mt-2 space-y-1 text-xs text-gray-600">
+                  {importReconciliationData.data.providerGuide.notes.map((note) => (
+                    <li key={note}>- {note}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             </Card>
           </div>
         )}
