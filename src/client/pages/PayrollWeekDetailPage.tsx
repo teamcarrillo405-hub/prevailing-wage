@@ -155,6 +155,36 @@ interface SubmitReadyResult {
   };
 }
 
+type ExportPreflightFormat = 'wh347' | 'a1131' | 'ecpr-xml';
+type PendingExportAction = 'wh347' | 'a1131' | 'ecpr-xml' | null;
+
+interface ExportPreflightIssue {
+  id: string;
+  category: string;
+  severity: 'blocker' | 'warning' | 'pass';
+  title: string;
+  detail: string;
+  workerId?: string;
+  entryId?: string;
+}
+
+interface ExportPreflightResult {
+  weekId: string;
+  projectId: string;
+  format: ExportPreflightFormat;
+  status: 'blocked' | 'needs_review' | 'ready';
+  blockers: number;
+  warnings: number;
+  passes: number;
+  generatedAt: string;
+  issues: ExportPreflightIssue[];
+  summary: {
+    entryCount: number;
+    totalHours: number;
+    exportLabel: string;
+  };
+}
+
 // ── Payroll Import types (Phase 36 — mirrors src/server/services/importTypes.ts) ──
 
 interface ImportReconciliationIssue {
@@ -334,6 +364,10 @@ export function PayrollWeekDetailPage() {
 
   const [generating, setGenerating] = useState(false);
   const [showPreflight, setShowPreflight] = useState(false);
+  const [exportPreflight, setExportPreflight] = useState<ExportPreflightResult | null>(null);
+  const [preflightLoading, setPreflightLoading] = useState(false);
+  const [preflightError, setPreflightError] = useState<string | null>(null);
+  const [pendingExportAction, setPendingExportAction] = useState<PendingExportAction>(null);
   const generatingRef = useRef(false);
   const amendingRef = useRef(false);
   const hiddenAnchorRef = useRef<HTMLAnchorElement>(null);
@@ -1198,12 +1232,40 @@ export function PayrollWeekDetailPage() {
     if (issue) scrollToSubmitReadyIssue(issue);
   }
 
-  function handleDownloadClick() {
-    if (complianceData?.hasViolations) {
-      setShowPreflight(true);
-    } else {
-      handleConfirmedDownload();
+  function buildPreflightParams(format: ExportPreflightFormat) {
+    const params = new URLSearchParams();
+    if (format === 'ecpr-xml') {
+      params.set('contractorFein', ecprFein.replace(/-/g, ''));
+      params.set('dirProjectId', ecprDirProjectId);
+      params.set('awardingAgency', ecprAwardingAgency);
+      params.set('contractNumber', ecprContractNumber);
     }
+    return params.toString();
+  }
+
+  async function openExportPreflight(format: ExportPreflightFormat, action: PendingExportAction) {
+    setPendingExportAction(action);
+    setExportPreflight(null);
+    setPreflightError(null);
+    setPreflightLoading(true);
+    setShowPreflight(true);
+    try {
+      const query = buildPreflightParams(format);
+      const res = await fetch(`/api/export/preflight/${format}/${weekId}${query ? `?${query}` : ''}`, {
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as { error?: string }).error || `Preflight failed: ${res.status}`);
+      setExportPreflight((data as { data: ExportPreflightResult }).data);
+    } catch (err) {
+      setPreflightError(err instanceof Error ? err.message : 'Export preflight failed');
+    } finally {
+      setPreflightLoading(false);
+    }
+  }
+
+  function handleDownloadClick() {
+    void openExportPreflight('wh347', 'wh347');
   }
 
   async function handleConfirmedDownload() {
@@ -1228,8 +1290,20 @@ export function PayrollWeekDetailPage() {
 
   // CA A-1-131 download handlers
   function handleCaDownloadClick() {
-    // ALWAYS show disclosure — persistent regulatory notice, not conditional on violations
-    setShowCaDisclosure(true);
+    void openExportPreflight('a1131', 'a1131');
+  }
+
+  function handleContinueAfterPreflight() {
+    const action = pendingExportAction;
+    setShowPreflight(false);
+    setPendingExportAction(null);
+    if (action === 'wh347') {
+      void handleConfirmedDownload();
+    } else if (action === 'a1131') {
+      setShowCaDisclosure(true);
+    } else if (action === 'ecpr-xml') {
+      void handleEcprXmlDownload();
+    }
   }
 
   async function handleCaConfirmedDownload() {
@@ -3109,7 +3183,7 @@ export function PayrollWeekDetailPage() {
                       Cancel
                     </button>
                     <Button
-                      onClick={handleEcprXmlDownload}
+                      onClick={() => void openExportPreflight('ecpr-xml', 'ecpr-xml')}
                       disabled={!ecprFein.replace(/-/g, '') || !ecprDirProjectId || ecprGenerating}
                     >
                       {ecprGenerating ? 'Generating...' : 'Generate & Download XML'}
@@ -3880,7 +3954,7 @@ export function PayrollWeekDetailPage() {
           </div>
         )}
 
-        {/* Preflight compliance modal */}
+        {/* Export preflight modal */}
         {showPreflight && (
           <div
             className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
@@ -3892,70 +3966,71 @@ export function PayrollWeekDetailPage() {
             }}
             tabIndex={-1}
           >
-            <Card className="max-w-lg w-full mx-4">
-              <h2 className="text-base font-headline text-gray-900 mb-3">
-                Compliance Violations Detected
+            <Card className="max-w-2xl w-full mx-4 max-h-[82vh] overflow-y-auto">
+              <h2 className="text-base font-headline text-gray-900 mb-2">
+                Export Preflight Review
               </h2>
-              <p className="text-sm text-gray-600 mb-4">
-                This payroll week has the following violations. You may still download the WH-347,
-                but these issues will be reflected in the certification checkboxes.
-              </p>
-              <ul className="space-y-2 mb-6">
-                {complianceData!.violations.map((v, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                    <Badge variant="violation" className="mt-0.5 shrink-0">
-                      {violationLabel(v.violationType)}
-                    </Badge>
-                    <span>
-                      <span className="font-medium">{v.workerName}</span>
-                      {': delta $'}{v.delta.toFixed(2)}
-                    </span>
-                  </li>
-                ))}
-                {complianceData!.weekViolations?.map((wv, i) => (
-                  <li key={`week-${i}`} className="flex items-start gap-2 text-sm text-gray-700">
-                    <Badge variant="violation" className="mt-0.5 shrink-0">
-                      {wv.violationType === 'apprentice-trade-ratio' ? 'Trade Ratio' :
-                       wv.violationType === 'ira-iija-apprentice-pct' ? 'IRA/IIJA' :
-                       'Apprentice Ratio'}
-                    </Badge>
-                    {wv.violationType === 'apprentice-trade-ratio' && wv.trade ? (
-                      <span>
-                        <strong>{wv.trade}</strong>:{' '}
-                        {wv.apprenticeHours.toFixed(1)} apprentice hrs,{' '}
-                        {wv.journeyworkerHours.toFixed(1)} JW hrs
-                        {' '}(max: {wv.maxAllowedApprenticeHours.toFixed(1)}).
-                        {' '}Excess: {(wv.excessHours ?? 0).toFixed(1)} hrs.
-                        {' '}Est. wage adjustment: ${(wv.estimatedLiabilityUsd ?? 0).toFixed(2)}
-                      </span>
-                    ) : (
-                      <span>{wv.detail}</span>
-                    )}
-                  </li>
-                ))}
-                {complianceData!.deductionViolations?.map((dv, i) => (
-                  <li key={`deduction-${i}`} className="flex items-start gap-2 text-sm text-gray-700">
-                    <Badge variant="violation" className="mt-0.5 shrink-0">
-                      Deductions
-                    </Badge>
-                    <span>
-                      <span className="font-medium">{dv.workerName}</span>
-                      {': '}${dv.deductions.toFixed(2)} deducted from ${dv.grossWages.toFixed(2)} gross ({dv.deductionPct}%)
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {preflightLoading ? (
+                <p className="text-sm text-gray-600 mb-6">Checking export readiness...</p>
+              ) : preflightError ? (
+                <p className="text-sm text-red-700 mb-6">{preflightError}</p>
+              ) : exportPreflight ? (
+                <>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {exportPreflight.summary.exportLabel}: {exportPreflight.summary.entryCount} entries,
+                    {' '}{exportPreflight.summary.totalHours.toFixed(1)} hours reviewed.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="rounded border border-red-200 bg-red-50 px-3 py-2">
+                      <p className="text-xs text-red-700">Blockers</p>
+                      <p className="text-lg font-semibold text-red-900">{exportPreflight.blockers}</p>
+                    </div>
+                    <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2">
+                      <p className="text-xs text-amber-700">Warnings</p>
+                      <p className="text-lg font-semibold text-amber-900">{exportPreflight.warnings}</p>
+                    </div>
+                    <div className="rounded border border-green-200 bg-green-50 px-3 py-2">
+                      <p className="text-xs text-green-700">Passed</p>
+                      <p className="text-lg font-semibold text-green-900">{exportPreflight.passes}</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 mb-6">
+                    {exportPreflight.issues.map((issue) => (
+                      <li key={issue.id} className="flex items-start gap-2 text-sm text-gray-700">
+                        <Badge
+                          variant={issue.severity === 'blocker' ? 'violation' : issue.severity === 'warning' ? 'warning' : 'compliant'}
+                          className="mt-0.5 shrink-0"
+                        >
+                          {issue.severity === 'blocker' ? 'Blocker' : issue.severity === 'warning' ? 'Review' : 'Pass'}
+                        </Badge>
+                        <span>
+                          <span className="font-medium">{issue.title}</span>
+                          <span className="block text-gray-600">{issue.detail}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
               <div className="flex gap-3 justify-end">
                 <Button
                   variant="ghost"
                   size="sm"
                   autoFocus
-                  onClick={() => setShowPreflight(false)}
+                  onClick={() => {
+                    setShowPreflight(false);
+                    setPendingExportAction(null);
+                  }}
                 >
                   Cancel
                 </Button>
-                <Button variant="secondary" size="sm" onClick={handleConfirmedDownload}>
-                  Download Anyway
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={preflightLoading || !exportPreflight || exportPreflight.blockers > 0}
+                  onClick={handleContinueAfterPreflight}
+                >
+                  {exportPreflight?.blockers ? 'Resolve Blockers First' : 'Continue Export'}
                 </Button>
               </div>
             </Card>

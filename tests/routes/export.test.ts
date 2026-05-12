@@ -37,12 +37,28 @@ async function createProject(cookie: string, state: string, extra?: Record<strin
 async function createWorkerWithClassification(
   cookie: string,
   projectId: string,
-  extra?: { waTradeCode?: string },
+  extra?: {
+    waTradeCode?: string;
+    ssn?: string;
+    addressStreet?: string;
+    addressCity?: string;
+    addressState?: string;
+    addressZip?: string;
+    laborType?: 'journeyworker' | 'apprentice' | 'foreman';
+    programName?: string;
+  },
 ) {
   const wRes = await supertest(app)
     .post(`/api/projects/${projectId}/workers`)
     .set('Cookie', cookie)
-    .send({ name: 'Test Worker' });
+    .send({
+      name: 'Test Worker',
+      ...(extra?.ssn ? { ssn: extra.ssn } : {}),
+      ...(extra?.addressStreet ? { addressStreet: extra.addressStreet } : {}),
+      ...(extra?.addressCity ? { addressCity: extra.addressCity } : {}),
+      ...(extra?.addressState ? { addressState: extra.addressState } : {}),
+      ...(extra?.addressZip ? { addressZip: extra.addressZip } : {}),
+    });
   const workerId = wRes.body.data?.worker?.id as string;
 
   const cRes = await supertest(app)
@@ -51,8 +67,9 @@ async function createWorkerWithClassification(
     .send({
       tradeCode: 'CARP',
       tradeDescription: 'Carpenter',
-      laborType: 'journeyworker',
+      laborType: extra?.laborType ?? 'journeyworker',
       ...(extra?.waTradeCode ? { waTradeCode: extra.waTradeCode } : {}),
+      ...(extra?.programName ? { programName: extra.programName } : {}),
     });
   const classificationId = cRes.body.data?.classification?.id as string;
 
@@ -72,8 +89,9 @@ async function createPayrollEntry(
   weekId: string,
   workerId: string,
   classificationId: string,
+  extra?: Record<string, unknown>,
 ) {
-  await supertest(app)
+  const res = await supertest(app)
     .post('/api/payroll/entries')
     .set('Cookie', cookie)
     .send({
@@ -87,10 +105,120 @@ async function createPayrollEntry(
       grossWages: 1800.00,
       deductions: 250.00,
       netPay: 1550.00,
+      ...extra,
     });
+  return res.body.id as string;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────
+
+describe('GET /api/export/preflight/:format/:weekId', () => {
+  it('flags missing California eCPR project fields, worker address, and fringe breakdown', async () => {
+    const cookie = await registerUser('preflight-missing');
+    const projectId = await createProject(cookie, 'CA', {
+      cslbLicense: '123456',
+      wcPolicyNumber: 'WC-2026-789',
+    });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId);
+
+    const res = await supertest(app)
+      .get(`/api/export/preflight/ecpr-xml/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('blocked');
+    const issueIds = res.body.data.issues.map((issue: { id: string }) => issue.id);
+    expect(issueIds).toContain('ecpr-contractor-fein');
+    expect(issueIds).toContain('ecpr-dir-project-id');
+    expect(issueIds).toContain(`worker-address-${workerId}`);
+    expect(issueIds.some((id: string) => id.startsWith('ecpr-fringe-breakdown-'))).toBe(true);
+  });
+
+  it('returns needs_review for a clean eCPR export with only human certification warning', async () => {
+    const cookie = await registerUser('preflight-clean');
+    const projectId = await createProject(cookie, 'CA', {
+      cslbLicense: '123456',
+      wcPolicyNumber: 'WC-2026-789',
+    });
+    await supertest(app)
+      .patch(`/api/projects/${projectId}`)
+      .set('Cookie', cookie)
+      .send({
+        contractorFein: '123456789',
+        dirProjectId: 'DIR-123',
+        awardingAgency: 'City of Los Angeles',
+        contractNumber: 'C-100',
+      });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId, {
+      ssn: '123456789',
+      addressStreet: '100 Main St',
+      addressCity: 'Los Angeles',
+      addressState: 'CA',
+      addressZip: '90012',
+    });
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId, {
+      grossWages: 2300,
+      netPay: 2050,
+      fringeHealthWelfare: 5,
+      fringePension: 4,
+      fringeVacation: 2,
+      fringeTraining: 1.5,
+    });
+
+    const res = await supertest(app)
+      .get(`/api/export/preflight/ecpr-xml/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.blockers).toBe(0);
+    expect(res.body.data.status).toBe('needs_review');
+    expect(res.body.data.issues.some((issue: { id: string }) => issue.id === 'human-review')).toBe(true);
+  });
+
+  it('blocks eCPR export when fringe breakdown does not match the frozen fringe snapshot', async () => {
+    const cookie = await registerUser('preflight-fringe');
+    const projectId = await createProject(cookie, 'CA', {
+      cslbLicense: '123456',
+      wcPolicyNumber: 'WC-2026-789',
+    });
+    await supertest(app)
+      .patch(`/api/projects/${projectId}`)
+      .set('Cookie', cookie)
+      .send({
+        contractorFein: '123456789',
+        dirProjectId: 'DIR-123',
+        awardingAgency: 'City of Los Angeles',
+        contractNumber: 'C-100',
+      });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId, {
+      ssn: '123456789',
+      addressStreet: '100 Main St',
+      addressCity: 'Los Angeles',
+      addressState: 'CA',
+      addressZip: '90012',
+    });
+    const weekId = await createPayrollWeek(cookie, projectId);
+    const entryId = await createPayrollEntry(cookie, weekId, workerId, classificationId, {
+      grossWages: 2300,
+      netPay: 2050,
+      fringeHealthWelfare: 1,
+      fringePension: 1,
+      fringeVacation: 1,
+      fringeTraining: 1,
+    });
+
+    const res = await supertest(app)
+      .get(`/api/export/preflight/ecpr-xml/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('blocked');
+    expect(res.body.data.issues.map((issue: { id: string }) => issue.id)).toContain(`ecpr-fringe-breakdown-${entryId}`);
+  });
+});
 
 describe('GET /api/export/f700/:weekId - WAL-02', () => {
   it('should return 400 for non-WA project', async () => {

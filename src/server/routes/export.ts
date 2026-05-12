@@ -64,6 +64,11 @@ import {
   mapEntriesToExportRows,
 } from '../services/csvExporter.js';
 import { computeCompliance } from '../services/complianceService.js';
+import {
+  computeExportPreflight,
+  isExportPreflightFormat,
+  type ExportPreflightOverrides,
+} from '../services/exportPreflightService.js';
 import { decryptSsn } from '../services/cryptoService.js';
 import {
   generateComplianceSummaryPdf,
@@ -79,6 +84,37 @@ import * as schema from '../db/schema.js';
 
 const router = Router();
 router.use(requireAuth);
+
+router.get('/preflight/:format/:weekId', async (req, res) => {
+  try {
+    const { format, weekId } = req.params;
+    if (!isExportPreflightFormat(format)) {
+      return res.status(400).json({ error: 'Unsupported export preflight format' });
+    }
+
+    const week = await getPayrollWeek(weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+
+    await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+
+    const overrides: ExportPreflightOverrides = {
+      contractorFein: typeof req.query.contractorFein === 'string' ? req.query.contractorFein : undefined,
+      dirProjectId: typeof req.query.dirProjectId === 'string' ? req.query.dirProjectId : undefined,
+      awardingAgency: typeof req.query.awardingAgency === 'string' ? req.query.awardingAgency : undefined,
+      contractNumber: typeof req.query.contractNumber === 'string' ? req.query.contractNumber : undefined,
+    };
+    const preflight = await computeExportPreflight(getDb(), weekId, format, overrides);
+    if (!preflight) return res.status(404).json({ error: 'Payroll week not found' });
+
+    return res.json({ data: preflight });
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    logger.error({ err }, 'Export preflight failed');
+    return res.status(500).json({ error: 'Export preflight failed' });
+  }
+});
 
 // ── Exported helpers (testable) ────────────────────────────────────────────
 
