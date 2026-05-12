@@ -10,6 +10,7 @@ import { workers, payrollWeeks } from '../db/schema.js';
 import { upsertPayrollEntry } from '../services/payrollService.js';
 import { createWorker } from '../services/workerService.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { randomBytes } from 'node:crypto';
 
 const integrationsRouter = Router();
 
@@ -34,7 +35,8 @@ integrationsRouter.get('/qbo/connect', requireAuth, async (req, res) => {
   }
 
   // State parameter encodes userId for callback validation
-  const state = Buffer.from(JSON.stringify({ userId, nonce: Math.random().toString(36) })).toString('base64url');
+  // SEC: cryptographically secure nonce — Phase 126 fix (CONTEXT.md security gap)
+  const state = Buffer.from(JSON.stringify({ userId, nonce: randomBytes(16).toString('hex') })).toString('base64url');
 
   const authUrl =
     `https://appcenter.intuit.com/connect/oauth2?` +
@@ -623,7 +625,8 @@ integrationsRouter.get('/procore/connect', requireAuth, async (req, res) => {
     return;
   }
 
-  const state = Buffer.from(JSON.stringify({ userId, nonce: Math.random().toString(36) })).toString('base64url');
+  // SEC: cryptographically secure nonce — Phase 126 fix (CONTEXT.md security gap)
+  const state = Buffer.from(JSON.stringify({ userId, nonce: randomBytes(16).toString('hex') })).toString('base64url');
 
   const authUrl =
     `https://login.procore.com/oauth/authorize?` +
