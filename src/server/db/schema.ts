@@ -4,6 +4,8 @@ export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  hccMembershipNumber: text('hcc_membership_number'),
+  companyName: text('company_name'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   planTier: text('plan_tier').notNull().default('starter').$type<'starter' | 'pro' | 'enterprise'>(),
@@ -20,6 +22,31 @@ export const users = sqliteTable('users', {
   // Incremented when the user invokes "Revoke all sessions". JWTs carry an `sv`
   // claim; mismatched JWTs are rejected by the auth middleware. Default 0.
   sessionVersion: integer('session_version').notNull().default(0),
+});
+
+export const onboardingProfiles = sqliteTable('onboarding_profiles', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  contractorRole: text('contractor_role').notNull()
+    .$type<'general_contractor' | 'subcontractor' | 'both'>(),
+  companySize: text('company_size').notNull()
+    .$type<'1_10' | '11_50' | '51_200' | '201_plus'>(),
+  primaryStates: text('primary_states').notNull(), // JSON string[]
+  workTypes: text('work_types').notNull(), // JSON string[]
+  payrollProvider: text('payroll_provider')
+    .$type<'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300' | 'sage_100' | 'other' | 'none'>(),
+  accountingProvider: text('accounting_provider')
+    .$type<'quickbooks' | 'sage_300' | 'other' | 'none'>(),
+  projectManagementProvider: text('project_management_provider')
+    .$type<'procore' | 'other' | 'none'>(),
+  averageWeeklyWorkers: integer('average_weekly_workers'),
+  usesSubcontractors: integer('uses_subcontractors', { mode: 'boolean' }).notNull().default(false),
+  usesApprentices: integer('uses_apprentices', { mode: 'boolean' }).notNull().default(false),
+  fieldTrackingNeeded: integer('field_tracking_needed', { mode: 'boolean' }).notNull().default(false),
+  onboardingAnswers: text('onboarding_answers').notNull(),
+  recommendedNextSteps: text('recommended_next_steps').notNull(),
+  completedAt: text('completed_at').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });
 
 export const projects = sqliteTable('projects', {
@@ -583,6 +610,40 @@ export const procoreTokens = sqliteTable('procore_tokens', {
   idxProcoreUser: index('idx_procore_tokens_user').on(table.userId),
 }));
 
+// ── Phase 126: Integration Foundation (v9.0) ────────────────────────────
+// Generic ERP connection registry (per D-01: add alongside procore_tokens, do NOT migrate).
+// Phases 127-134 read from this table; Phase 127 also reads procore_tokens for OAuth.
+export const integrationConnections = sqliteTable('integration_connections', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  erpType: text('erp_type').notNull().$type<'procore' | 'sage300' | 'vista'>(),
+  credentialsEncrypted: text('credentials_encrypted'),
+  filePathConfig: text('file_path_config'),
+  syncStatus: text('sync_status').notNull().default('idle').$type<'idle' | 'running' | 'error'>(),
+  consecutiveFailureCount: integer('consecutive_failure_count').notNull().default(0),
+  lastSyncAt: text('last_sync_at'),
+  lastError: text('last_error'),
+  connectedAt: text('connected_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  idxIntegrationConnUser: index('idx_integration_connections_user').on(table.userId),
+  idxIntegrationConnType: index('idx_integration_connections_type').on(table.erpType),
+}));
+
+export const integrationSyncRuns = sqliteTable('integration_sync_runs', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id').notNull().references(() => integrationConnections.id, { onDelete: 'cascade' }),
+  erpType: text('erp_type').notNull().$type<'procore' | 'sage300' | 'vista'>(),
+  startedAt: text('started_at').notNull(),
+  completedAt: text('completed_at'),
+  recordsSynced: integer('records_synced').notNull().default(0),
+  errorsCount: integer('errors_count').notNull().default(0),
+  errorDetail: text('error_detail'),
+  trigger: text('trigger').notNull().$type<'cron' | 'manual'>(),
+}, (table) => ({
+  idxSyncRunsConn: index('idx_sync_runs_connection').on(table.connectionId),
+}));
+
 // ── Phase 64: SOC 2 Security Audit Tables ────────────────────────────────
 export const securityEvents = sqliteTable('security_events', {
   id:        text('id').primaryKey(),
@@ -681,7 +742,10 @@ export const apiKeys = sqliteTable('api_keys', {
   expiresAt: text('expires_at'),
   createdAt: text('created_at').notNull(),
   revokedAt: text('revoked_at'),
-});
+}, (table) => ({
+  keyHashUniqueIdx: uniqueIndex('idx_api_keys_key_hash_unique').on(table.keyHash),
+  userIdx: index('idx_api_keys_user').on(table.userId),
+}));
 
 export const webhooks = sqliteTable('webhooks', {
   id: text('id').primaryKey(),
@@ -769,3 +833,23 @@ export const aiClassifications = sqliteTable('ai_classifications', {
   latencyMs: integer('latency_ms'),
   createdAt: text('created_at').notNull(),
 });
+
+// PrevWage Copilot interactions. The Copilot is advisory by default: it may
+// explain and prepare fixes, but user approval is required before any mutation.
+export const copilotInteractions = sqliteTable('copilot_interactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  payrollWeekId: text('payroll_week_id').references(() => payrollWeeks.id, { onDelete: 'set null' }),
+  pagePath: text('page_path'),
+  userMessage: text('user_message').notNull(),
+  assistantMessage: text('assistant_message').notNull(),
+  contextJson: text('context_json').notNull(),
+  suggestionsJson: text('suggestions_json').notNull(),
+  modelUsed: text('model_used').notNull(),
+  latencyMs: integer('latency_ms'),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  idxCopilotUserTime: index('idx_copilot_user_time').on(table.userId, table.createdAt),
+  idxCopilotProjectTime: index('idx_copilot_project_time').on(table.projectId, table.createdAt),
+}));

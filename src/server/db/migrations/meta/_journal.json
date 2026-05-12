@@ -407,6 +407,34 @@
       "when": 1746057700000,
       "tag": "0066_webhook_delivery_status",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1746057800000,
+      "tag": "0067_api_key_hash_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1777585500000,
+      "tag": "0068_hcc_onboarding",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1777737000000,
+      "tag": "0069_copilot_interactions",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1778000000000,
+      "tag": "0070_integration_foundation",
+      "breakpoints": true
     }
   ]
 }
