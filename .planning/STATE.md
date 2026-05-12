@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
 status: Ready to execute
-stopped_at: Completed 126-01-PLAN.md (busy_timeout pragma + migration 0070 + Drizzle schema; 3 tests passing)
-last_updated: "2026-05-12T15:37:56.323Z"
+stopped_at: Completed 126-03-PLAN.md (syncOrchestrator + erpIntegrationsRouter + cron job #6; 12 tests passing)
+last_updated: "2026-05-12T16:03:00.000Z"
 progress:
   total_phases: 37
   completed_phases: 34
@@ -250,6 +250,9 @@ Key decisions locked for v9.0 scope:
 - Procore classification authority: Procore tradeClassification wins when pulling workers (classification_source = 'erp'); other ERPs only set classification for new workers, never overwrite existing local classification
 - [Phase 126]: busy_timeout=5000 inserted at line 14 of db/index.ts after foreign_keys pragma; prevents SQLITE_BUSY on nightly ERP sync (INTG-03)
 - [Phase 126]: integration_connections + integration_sync_runs added alongside procore_tokens in schema.ts (add-alongside pattern D-01); nullable credentials_encrypted and file_path_config per D-02
+- [Phase 126-03]: req.user.userId (not req.userId) for ERP routes — requireAuth sets req.user per middleware/auth.ts pattern; consistent with all other routes
+- [Phase 126-03]: dispatchNoop in syncOrchestrator.ts is module-private; Phase 127+ replaces dispatch call without changing orchestrator API
+- [Phase 126-03]: cron job #6 registered at '0 2 * * *' UTC inside server.listen callback (6th total cron.schedule in index.ts)
 
 ### Phase Order Rationale
 
@@ -283,7 +286,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-12T15:37:56.318Z
-Stopped at: Completed 126-01-PLAN.md (busy_timeout pragma + migration 0070 + Drizzle schema; 3 tests passing)
+Last session: 2026-05-12T16:03:00.000Z
+Stopped at: Completed 126-03-PLAN.md (syncOrchestrator + erpIntegrationsRouter + cron job #6; 12 tests passing)
 Resume file: None
-Next action: /gsd:plan-phase 126
+Next action: Execute 126-04-PLAN.md (IntegrationsPage Import Now button)

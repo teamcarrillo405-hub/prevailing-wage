@@ -40,6 +40,7 @@ import subUploadRouter from './routes/subUpload.js';
 import { auditExportRouter } from './routes/auditExport.js';
 import { projectWdRouter } from './routes/projectWageDeterminations.js';
 import { integrationsRouter } from './routes/integrations.js';
+import { erpIntegrationsRouter } from './routes/erpIntegrations.js';
 import timePunchesRouter, { fillFromPunchesRouter } from './routes/timePunches.js';
 import photosRouter, { photoFileRouter } from './routes/photos.js';
 import signatureRouter from './routes/signatures.js';
@@ -64,6 +65,7 @@ import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
 import { runCertificationExpiryAlerts } from './jobs/certificationExpiryAlerts.js';
 import { runScheduledReports } from './jobs/scheduledReports.js';
+import { runErpNightlySync } from './jobs/erpNightlySync.js';
 import { deliverPending } from './jobs/webhookDelivery.js';
 import './services/stateWageAdapter.js'; // side-effect import — calls registerAdapters(WAGE_ADAPTERS) at startup
 import './services/cryptoService.js'; // side-effect import — startup key assertion + self-test
@@ -206,6 +208,7 @@ app.use('/api/billing', billingRouter);
 app.use('/api/audit-export', auditExportRouter);
 app.use('/api/projects/:projectId/wage-determinations', projectWdRouter);
 app.use('/api/integrations', integrationsRouter);
+app.use('/api/erp-integrations', erpIntegrationsRouter);
 app.use('/api/time-punches', timePunchesRouter);
 app.use('/api/projects', photosRouter);
 app.use('/api/photos', photoFileRouter);
@@ -316,6 +319,18 @@ const server = app.listen(PORT, () => {
       await runScheduledReports();
     } catch (err) {
       logger.error({ err }, 'scheduled-reports: failed');
+      // Never rethrow — cron failures must not crash Express
+    }
+  }, { timezone: 'UTC' });
+
+  // Register nightly ERP sync — INTG-06 (Phase 126, job #6)
+  // Schedule: 2:00 AM UTC; sequential per connection (SQLite single-writer)
+  cron.schedule('0 2 * * *', async () => {
+    logger.info('erp-sync: starting nightly ERP sync');
+    try {
+      await runErpNightlySync();
+    } catch (err) {
+      logger.error({ err }, 'erp-sync: nightly sync failed');
       // Never rethrow — cron failures must not crash Express
     }
   }, { timezone: 'UTC' });
