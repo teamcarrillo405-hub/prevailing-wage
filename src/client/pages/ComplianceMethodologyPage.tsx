@@ -50,6 +50,15 @@ export function ComplianceMethodologyPage() {
 
         {methodology && (
           <>
+            <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-semibold text-gray-950">Certification Boundary</h2>
+              <p className="mt-2 text-sm leading-6 text-gray-700">
+                Automated checks help prepare a cleaner certified payroll package, but they do not replace an authorized
+                reviewer. Before signing or submitting, confirm worker classification, wage determination scope, fringe
+                benefit records, apprentice registration, deduction authorization, and agency filing requirements.
+              </p>
+            </section>
+
             <section className="grid gap-4 lg:grid-cols-2">
               {methodology.profiles.map((profile) => (
                 <article key={profile.id} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">

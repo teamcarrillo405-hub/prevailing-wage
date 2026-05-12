@@ -347,8 +347,14 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Footer — public links */}
       <footer className="border-t border-gray-200 mt-12 py-6 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-xs text-gray-400">&copy; 2026 PrevWage</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-xl">
+            <p className="text-xs text-gray-400">&copy; 2026 PrevWage</p>
+            <p className="mt-1 text-xs leading-5 text-gray-500">
+              PrevWage prepares and reviews certified payroll records. Final certification, legal classification decisions,
+              and agency submission remain the responsibility of the authorized reviewer.
+            </p>
+          </div>
           <div className="flex flex-wrap gap-5">
             <Link to="/case-studies" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Case Studies</Link>
             <Link to="/government" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Government</Link>

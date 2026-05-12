@@ -4,6 +4,10 @@ Version: `2026.05-prevailing-wage-v1`
 
 This system is an automated compliance review and certified payroll preparation tool. It is not a legal guarantee engine. Final certified payroll submission still requires human review and an authorized signature.
 
+## Certification Boundary
+
+PrevWage helps prepare, review, and package certified payroll records. It does not make final legal determinations. Before signing or submitting a certified payroll package, an authorized reviewer must confirm worker classification, wage determination scope, fringe benefit records, apprentice registration, deduction authorization, agency filing requirements, and signer authority.
+
 ## Automated Checks
 
 - Federal DBRA/CWHSSA wage math compares actual gross wages to the base plus fringe snapshot for the classification paid.
