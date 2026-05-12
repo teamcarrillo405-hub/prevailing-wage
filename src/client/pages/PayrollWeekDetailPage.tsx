@@ -187,6 +187,15 @@ interface ExportPreflightResult {
 
 // ── Payroll Import types (Phase 36 — mirrors src/server/services/importTypes.ts) ──
 
+interface StateExportReadiness {
+  state: string;
+  label: string;
+  ready: boolean;
+  supportedExports: string[];
+  requiredFields: Array<{ key: string; label: string; present: boolean }>;
+  missingFields: Array<{ key: string; label: string }>;
+}
+
 interface ImportReconciliationIssue {
   id: string;
   severity: 'blocker' | 'warning' | 'pass';
@@ -683,6 +692,12 @@ export function PayrollWeekDetailPage() {
   const { data: importReconciliationData } = useQuery({
     queryKey: ['import-reconciliation', weekId],
     queryFn: () => api.get<{ data: ImportReconciliationResult }>('/payroll/import/reconciliation/' + weekId),
+    enabled: !!weekId,
+  });
+
+  const { data: stateReadinessData } = useQuery({
+    queryKey: ['state-export-readiness', weekId],
+    queryFn: () => api.get<{ data: StateExportReadiness }>('/export/state-readiness/' + weekId),
     enabled: !!weekId,
   });
 
@@ -1269,6 +1284,33 @@ export function PayrollWeekDetailPage() {
     }
   }
 
+  function handlePreflightFix(issue: ExportPreflightIssue) {
+    setShowPreflight(false);
+    setPendingExportAction(null);
+
+    if (issue.entryId) {
+      scrollToPayrollEntry(issue.entryId);
+      return;
+    }
+
+    if (issue.category === 'project') {
+      navigate(`/projects/${projectId}/settings`);
+      return;
+    }
+
+    if (issue.category === 'worker') {
+      navigate(`/projects/${projectId}/workers`);
+      return;
+    }
+
+    if (issue.category === 'payroll' || issue.category === 'fringe') {
+      navigate(`/projects/${projectId}/payroll/${weekId}/edit`);
+      return;
+    }
+
+    scrollToElement(complianceSectionRef.current ?? submitReadySectionRef.current ?? entriesSectionRef.current);
+  }
+
   function handleDownloadClick() {
     void openExportPreflight('wh347', 'wh347');
   }
@@ -1833,6 +1875,41 @@ export function PayrollWeekDetailPage() {
             )}
             </Card>
           </div>
+        )}
+        {stateReadinessData?.data && (
+          <Card padding="default" className="mb-4 border border-border-default">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold text-gray-900">State export readiness</h2>
+                  <Badge variant={stateReadinessData.data.ready ? 'compliant' : 'warning'}>
+                    {stateReadinessData.data.state}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-text-secondary">
+                  {stateReadinessData.data.label}: {stateReadinessData.data.supportedExports.join(', ')}.
+                </p>
+              </div>
+              {!stateReadinessData.data.ready && (
+                <Link
+                  to={`/projects/${projectId}/settings`}
+                  className="inline-flex items-center justify-center rounded-sm border border-border-default px-3 py-2 text-xs font-semibold text-gray-800 hover:border-brand-gold hover:bg-brand-gold/5"
+                >
+                  Complete Fields
+                </Link>
+              )}
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {stateReadinessData.data.requiredFields.map((field) => (
+                <div key={field.key} className="flex items-center justify-between rounded-sm border border-border-default px-3 py-2 text-sm">
+                  <span className="text-gray-700">{field.label}</span>
+                  <Badge variant={field.present ? 'compliant' : 'warning'}>
+                    {field.present ? 'Ready' : 'Missing'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
         )}
         {/* MOB-13: sticky download bar with iOS safe-area padding */}
         <div
@@ -4023,10 +4100,19 @@ export function PayrollWeekDetailPage() {
                         >
                           {issue.severity === 'blocker' ? 'Blocker' : issue.severity === 'warning' ? 'Review' : 'Pass'}
                         </Badge>
-                        <span>
+                        <span className="flex-1">
                           <span className="font-medium">{issue.title}</span>
                           <span className="block text-gray-600">{issue.detail}</span>
                         </span>
+                        {issue.severity !== 'pass' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handlePreflightFix(issue)}
+                          >
+                            Fix
+                          </Button>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -4098,6 +4184,22 @@ export function PayrollWeekDetailPage() {
                     {importError && (
                       <p className="mt-2 text-sm text-status-violation">{importError}</p>
                     )}
+                  </div>
+                  <div className="mt-4 rounded-sm border border-border-default bg-gray-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">CSV templates</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {Object.entries(PROVIDER_LABELS)
+                        .filter(([provider]) => ['quickbooks', 'adp', 'gusto', 'paychex', 'sage_300', 'sage_100'].includes(provider))
+                        .map(([provider, label]) => (
+                          <a
+                            key={provider}
+                            href={`/api/payroll/import/templates/${provider}.csv`}
+                            className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:border-brand-gold"
+                          >
+                            {label}
+                          </a>
+                        ))}
+                    </div>
                   </div>
                   <div className="mt-6 flex justify-between items-center pt-4 border-t border-border-default">
                     <Button variant="ghost" size="md" onClick={closeImportModal}>

@@ -53,6 +53,43 @@ const PROVIDER_GUIDANCE: Record<string, { label: string; requiredColumns: string
   },
 };
 
+const PROVIDER_TEMPLATE_ROWS: Record<string, string[][]> = {
+  quickbooks: [
+    ['Employee', 'Project/Customer', 'Class/Trade', 'Mon Regular Hours', 'Tue Regular Hours', 'Wed Regular Hours', 'Thu Regular Hours', 'Fri Regular Hours', 'Sat Regular Hours', 'Sun Regular Hours', 'Overtime Hours'],
+    ['Maria Santos', 'Sample Federal Civic Center', 'Carpenter', '8', '8', '8', '8', '8', '0', '0', '0'],
+  ],
+  adp: [
+    ['Employee ID', 'Employee Name', 'Job', 'Earnings Code', 'Mon Hours', 'Tue Hours', 'Wed Hours', 'Thu Hours', 'Fri Hours', 'Sat Hours', 'Sun Hours'],
+    ['1001', 'Maria Santos', 'Sample Federal Civic Center', 'REG', '8', '8', '8', '8', '8', '0', '0'],
+  ],
+  gusto: [
+    ['Employee', 'Work Location/Project', 'Regular Hours', 'Overtime Hours', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    ['Maria Santos', 'Sample Federal Civic Center', '40', '0', '8', '8', '8', '8', '8', '0', '0'],
+  ],
+  paychex: [
+    ['Employee ID', 'Employee Name', 'Labor Assignment', 'Pay Type', 'Hours', 'Week Ending'],
+    ['1001', 'Maria Santos', 'Sample Federal Civic Center / Carpenter', 'Regular', '40', '2026-02-01'],
+  ],
+  sage_300: [
+    ['Employee', 'Job', 'Cost Code', 'Pay ID', 'Mon Hours', 'Tue Hours', 'Wed Hours', 'Thu Hours', 'Fri Hours', 'Sat Hours', 'Sun Hours'],
+    ['Maria Santos', 'Sample Federal Civic Center', 'CARP', 'REG', '8', '8', '8', '8', '8', '0', '0'],
+  ],
+  sage_100: [
+    ['Employee', 'Job', 'Cost Code', 'Pay Type', 'Hours', 'Week Ending'],
+    ['Maria Santos', 'Sample Federal Civic Center', 'CARP', 'Regular', '40', '2026-02-01'],
+  ],
+};
+
+function csvEscape(value: string) {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+function buildProviderTemplate(provider: string) {
+  const rows = PROVIDER_TEMPLATE_ROWS[provider];
+  if (!rows) return null;
+  return rows.map((row) => row.map(csvEscape).join(',')).join('\n') + '\n';
+}
+
 function entryHours(entry: typeof payrollEntries.$inferSelect): number {
   return (
     entry.monSt + entry.tueSt + entry.wedSt + entry.thuSt + entry.friSt + entry.satSt + entry.sunSt
@@ -447,6 +484,18 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
 
 importRouter.get('/providers', (_req, res) => {
   res.json({ data: PROVIDER_GUIDANCE });
+});
+
+importRouter.get('/templates/:provider.csv', (req, res) => {
+  const provider = req.params.provider;
+  const csv = buildProviderTemplate(provider);
+  if (!csv || !PROVIDER_GUIDANCE[provider]) {
+    res.status(404).json({ error: 'Unknown payroll import provider' });
+    return;
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${provider}-payroll-import-template.csv"`);
+  res.send(csv);
 });
 
 // ── GET /mappings/:projectId ───────────────────────────────────────────────

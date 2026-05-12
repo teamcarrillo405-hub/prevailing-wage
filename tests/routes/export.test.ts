@@ -113,6 +113,30 @@ async function createPayrollEntry(
 // ── Tests ─────────────────────────────────────────────────────────────────
 
 describe('GET /api/export/preflight/:format/:weekId', () => {
+  it('reports state export readiness and missing jurisdiction fields', async () => {
+    const cookie = await registerUser('state-readiness');
+    const projectId = await createProject(cookie, 'CA', {
+      cslbLicense: '123456',
+      wcPolicyNumber: 'WC-2026-789',
+    });
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .get(`/api/export/state-readiness/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.state).toBe('CA');
+    expect(res.body.data.supportedExports).toContain('A-1-131 PDF');
+    expect(res.body.data.ready).toBe(false);
+    expect(res.body.data.missingFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'contractorFein' }),
+        expect.objectContaining({ key: 'dirProjectId' }),
+      ]),
+    );
+  });
+
   it('flags missing California eCPR project fields, worker address, and fringe breakdown', async () => {
     const cookie = await registerUser('preflight-missing');
     const projectId = await createProject(cookie, 'CA', {

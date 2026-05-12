@@ -13,6 +13,7 @@
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest run",
     "test:watch": "vitest",
+    "qa:deployment": "tsx scripts/deployment-qa-smoke.mts",
     "generate-secrets": "node scripts/generate-secrets.js",
     "demo:seed": "tsx scripts/seed-demo.mts",
     "wh347:build": "tsx scripts/build-wh347-template.mts",

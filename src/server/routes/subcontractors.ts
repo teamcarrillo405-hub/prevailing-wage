@@ -180,7 +180,86 @@ router.get('/:id/subcontractor-cpr-queue', async (req, res) => {
       return (rank[a.status] ?? 3) - (rank[b.status] ?? 3) || a.weekEndingDate.localeCompare(b.weekEndingDate);
     });
 
-  res.json({ data: { queue } });
+  const summary = {
+    total: queue.length,
+    overdue: queue.filter((row) => row.status === 'overdue').length,
+    notReceived: queue.filter((row) => row.status === 'not-received').length,
+    nonCompliant: queue.filter((row) => row.status === 'received-non-compliant').length,
+    readyToRequest: queue.filter((row) => row.contactEmail && (row.status === 'overdue' || row.status === 'not-received')).length,
+  };
+
+  res.json({ data: { queue, summary } });
+});
+
+router.post('/:id/subcontractor-cpr-queue/request-bulk', async (req, res) => {
+  const projectId = req.params.id as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectWriteAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [subRows, weekRows] = await Promise.all([
+    db.select().from(subcontractors).where(eq(subcontractors.projectId, projectId)),
+    db.select().from(payrollWeeks).where(eq(payrollWeeks.projectId, projectId)).orderBy(desc(payrollWeeks.weekEndingDate)).limit(4),
+  ]);
+
+  let created = 0;
+  let emailed = 0;
+  const requests: Array<{ subcontractorId: string; subcontractorName: string; weekEndingDate: string; uploadUrl: string; emailed: boolean }> = [];
+
+  for (const sub of subRows) {
+    if (!sub.contactEmail) continue;
+    for (const week of weekRows) {
+      const [existing] = await db.select().from(subcontractorCprWeeks)
+        .where(and(eq(subcontractorCprWeeks.subcontractorId, sub.id), eq(subcontractorCprWeeks.weekEndingDate, week.weekEndingDate)))
+        .limit(1);
+      if (existing?.receivedDate) continue;
+
+      const uploadToken = randomBytes(32).toString('hex');
+      const uploadTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const now = new Date().toISOString();
+
+      if (existing) {
+        await db.update(subcontractorCprWeeks)
+          .set({ uploadToken, uploadTokenExpiresAt })
+          .where(eq(subcontractorCprWeeks.id, existing.id));
+      } else {
+        await db.insert(subcontractorCprWeeks).values({
+          id: randomUUID(),
+          subcontractorId: sub.id,
+          weekEndingDate: week.weekEndingDate,
+          receivedDate: null,
+          isCompliant: null,
+          notes: null,
+          uploadToken,
+          uploadTokenExpiresAt,
+          uploadedAt: null,
+          uploadPath: null,
+          createdAt: now,
+        });
+        created += 1;
+      }
+
+      const uploadUrl = `${process.env.APP_URL || 'http://localhost:3000'}/sub-upload/${uploadToken}`;
+      const [project] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, projectId)).limit(1);
+      await sendSubUploadRequestEmail({
+        toEmail: sub.contactEmail,
+        subName: sub.name,
+        projectName: project?.name ?? 'Project',
+        weekEndingDate: week.weekEndingDate,
+        uploadUrl,
+      });
+      emailed += 1;
+      requests.push({ subcontractorId: sub.id, subcontractorName: sub.name, weekEndingDate: week.weekEndingDate, uploadUrl, emailed: true });
+    }
+  }
+
+  res.json({ data: { created, emailed, requests } });
 });
 
 router.post('/:id/subcontractor-cpr-queue/request', validate(RequestCprWeekSchema), async (req, res) => {

@@ -108,6 +108,19 @@ Acme Corp,INV-002,750.00,2025-01-07
 // ── Tests: POST /api/payroll/import/preview ───────────────────────────────
 
 describe('POST /api/payroll/import/preview', () => {
+  it('downloads provider CSV templates for authenticated users', async () => {
+    const cookie = await registerAndLogin('template-download');
+
+    const res = await supertest(app)
+      .get('/api/payroll/import/templates/quickbooks.csv')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(res.text).toContain('Employee,Project/Customer,Class/Trade');
+    expect(res.text).toContain('Maria Santos');
+  });
+
   it('returns 401 when not authenticated', async () => {
     const res = await supertest(app)
       .post('/api/payroll/import/preview')

@@ -35,6 +35,15 @@ async function createProject(cookie: string) {
 
 // ── SUB-03: Subcontractor CRUD ─────────────────────────────────────────────
 
+async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-06-06') {
+  const res = await supertest(app)
+    .post('/api/payroll/weeks')
+    .set('Cookie', cookie)
+    .send({ projectId, weekEndingDate, payrollNumber: 1 });
+  expect(res.status).toBe(201);
+  return res.body.id as string;
+}
+
 describe('GET /api/projects/:id/subcontractors (SUB-03)', () => {
   it('returns 200 with empty array for a new project', async () => {
     const cookie = await registerAndLogin('sub-get-empty');
@@ -93,6 +102,41 @@ describe('GET /api/projects/:id/subcontractor-cpr-queue', () => {
           status: 'overdue',
         }),
       ]),
+    );
+    expect(res.body.data?.summary).toEqual(
+      expect.objectContaining({
+        total: expect.any(Number),
+        overdue: expect.any(Number),
+        readyToRequest: 0,
+      }),
+    );
+  });
+
+  it('creates bulk upload requests for missing subcontractor CPR weeks', async () => {
+    const cookie = await registerAndLogin('cpr-bulk');
+    const projectId = await createProject(cookie);
+    await createPayrollWeek(cookie, projectId);
+
+    const subRes = await supertest(app)
+      .post(`/api/projects/${projectId}/subcontractors`)
+      .set('Cookie', cookie)
+      .send({ name: 'Bulk Request Sub', contactEmail: 'sub@example.com' });
+    expect(subRes.status).toBe(201);
+
+    const res = await supertest(app)
+      .post(`/api/projects/${projectId}/subcontractor-cpr-queue/request-bulk`)
+      .set('Cookie', cookie)
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.data?.created).toBeGreaterThan(0);
+    expect(Array.isArray(res.body.data?.requests)).toBe(true);
+    expect(res.body.data?.requests[0]).toEqual(
+      expect.objectContaining({
+        subcontractorName: 'Bulk Request Sub',
+        weekEndingDate: '2025-06-06',
+        uploadUrl: expect.stringContaining('/sub-upload/'),
+      }),
     );
   });
 

@@ -3,7 +3,7 @@
 // Security posture page — trust signal (TRUST-03).
 
 import { Link } from 'react-router-dom';
-import { Lock, Shield, Server, Eye, Mail } from 'lucide-react';
+import { Lock, Shield, Server, Eye, Mail, FileCheck } from 'lucide-react';
 
 export function SecurityPolicyPage() {
   return (
@@ -141,6 +141,31 @@ export function SecurityPolicyPage() {
 
         {/* SOC 2 status */}
         <section>
+          <div className="flex items-center gap-3 mb-6">
+            <FileCheck className="w-6 h-6 text-brand-gold" />
+            <h2 className="text-2xl font-bold text-gray-900">Trust Center Controls</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              { control: 'Audit logging', posture: 'Payroll, export, login, and administrative events retained for investigation.' },
+              { control: 'Backups', posture: 'Daily production backups with restore checks before major releases.' },
+              { control: 'Access reviews', posture: 'Organization roles and auditor permissions reviewed before enterprise go-live.' },
+              { control: 'Incident response', posture: '72-hour acknowledgement target and 14-day remediation timeline for validated reports.' },
+              { control: 'Data retention', posture: 'Project records retained while active and deleted within stated closure windows.' },
+              { control: 'Compliance methodology', posture: 'Prevailing wage rules and export readiness are documented in the methodology center.' },
+            ].map(({ control, posture }) => (
+              <div key={control} className="border border-gray-100 rounded-xl p-4">
+                <p className="text-sm font-semibold text-gray-900">{control}</p>
+                <p className="mt-1 text-sm text-gray-600">{posture}</p>
+              </div>
+            ))}
+          </div>
+          <Link to="/methodology" className="mt-5 inline-flex text-sm font-semibold text-blue-600 hover:underline">
+            View compliance methodology
+          </Link>
+        </section>
+
+        <section>
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -214,6 +239,7 @@ export function SecurityPolicyPage() {
         <div className="max-w-5xl mx-auto px-6 flex flex-wrap justify-center gap-6">
           <Link to="/case-studies/hcc" className="hover:text-gray-300 transition-colors">Case Studies</Link>
           <Link to="/api-docs" className="hover:text-gray-300 transition-colors">API Docs</Link>
+          <Link to="/methodology" className="hover:text-gray-300 transition-colors">Methodology</Link>
           <Link to="/security" className="hover:text-gray-300 transition-colors">Security Policy</Link>
           <Link to="/register" className="hover:text-gray-300 transition-colors">Register</Link>
         </div>

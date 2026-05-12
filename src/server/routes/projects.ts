@@ -83,6 +83,11 @@ const UpdateProjectSchema = z.object({
   gpsRadiusMeters: z.number().min(50).max(10000).optional(),
 });
 
+const ReviewProjectSchema = z.object({
+  status: z.enum(['draft', 'ready_for_review', 'approved', 'rejected']),
+  note: z.string().max(1000).optional().nullable(),
+});
+
 // POST /api/projects — create a project
 router.post('/', validate(CreateProjectSchema), async (req, res) => {
   const body = req.body as z.infer<typeof CreateProjectSchema>;
@@ -279,10 +284,11 @@ router.patch('/:id', async (req, res) => {
 // DELETE /api/projects/:id — soft delete (set status to 'closed')
 router.delete('/:id', async (req, res) => {
   const userId = req.user!.userId;
+  const projectId = String(req.params.id);
   const db = getDb();
 
   try {
-    await assertProjectWriteAccess(db, req.params.id, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -292,9 +298,48 @@ router.delete('/:id', async (req, res) => {
   await db
     .update(projects)
     .set({ status: 'closed', updatedAt: now })
-    .where(eq(projects.id, req.params.id));
+    .where(eq(projects.id, projectId));
 
   res.json({ data: { message: 'Project closed' } });
+});
+
+router.post('/:id/review', validate(ReviewProjectSchema), async (req, res) => {
+  const userId = req.user!.userId;
+  const projectId = String(req.params.id);
+  const db = getDb();
+
+  try {
+    await assertProjectWriteAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [current] = await db.select({ projectSettings: projects.projectSettings })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  const currentSettings = (() => {
+    if (!current?.projectSettings) return {};
+    try { return JSON.parse(current.projectSettings) as Record<string, unknown>; } catch { return {}; }
+  })();
+  const body = req.body as z.infer<typeof ReviewProjectSchema>;
+  const now = new Date().toISOString();
+  const reviewState = {
+    status: body.status,
+    note: body.note ?? null,
+    reviewedAt: now,
+    reviewedBy: userId,
+  };
+
+  await db.update(projects)
+    .set({
+      projectSettings: JSON.stringify({ ...currentSettings, reviewState }),
+      updatedAt: now,
+    })
+    .where(eq(projects.id, projectId));
+
+  res.json({ data: { reviewState } });
 });
 
 export default router;

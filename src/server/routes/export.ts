@@ -85,6 +85,78 @@ import * as schema from '../db/schema.js';
 const router = Router();
 router.use(requireAuth);
 
+const STATE_EXPORT_READINESS: Record<string, {
+  label: string;
+  supportedExports: string[];
+  fields: Array<{ key: string; label: string }>;
+}> = {
+  CA: {
+    label: 'California public works',
+    supportedExports: ['A-1-131 PDF', 'CA eCPR XML'],
+    fields: [
+      { key: 'cslbLicense', label: 'CSLB license' },
+      { key: 'wcPolicyNumber', label: 'Workers comp policy' },
+      { key: 'contractorFein', label: 'Contractor FEIN' },
+      { key: 'dirProjectId', label: 'DIR project ID' },
+      { key: 'awardingAgency', label: 'Awarding agency' },
+      { key: 'contractNumber', label: 'Contract number' },
+    ],
+  },
+  WA: {
+    label: 'Washington public works',
+    supportedExports: ['F700 PDF', 'WA CPR XML'],
+    fields: [
+      { key: 'ubiNumber', label: 'UBI number' },
+      { key: 'lniCertificate', label: 'L&I certificate' },
+      { key: 'wcAccount', label: 'Workers comp account' },
+      { key: 'pwiaIntentId', label: 'PWIA intent ID' },
+    ],
+  },
+  NY: {
+    label: 'New York public works',
+    supportedExports: ['PW-12 PDF', 'MPWR XML'],
+    fields: [
+      { key: 'nyprcNumber', label: 'PRC number' },
+      { key: 'nysContractorRegNumber', label: 'NYS contractor registration' },
+    ],
+  },
+  TX: {
+    label: 'Texas public works',
+    supportedExports: ['TX CPR PDF', 'WH-347 fallback'],
+    fields: [
+      { key: 'txdotProjectId', label: 'TxDOT project ID' },
+      { key: 'txContractorLicense', label: 'Contractor license' },
+      { key: 'txAwardingAgency', label: 'Awarding agency' },
+    ],
+  },
+  MA: {
+    label: 'Massachusetts public works',
+    supportedExports: ['MA DLS payroll PDF'],
+    fields: [
+      { key: 'maDlsProjectId', label: 'DLS project ID' },
+      { key: 'maSicCode', label: 'SIC code' },
+    ],
+  },
+  NJ: {
+    label: 'New Jersey public works',
+    supportedExports: ['MW-562 PDF'],
+    fields: [
+      { key: 'njPwcNumber', label: 'PWC number' },
+      { key: 'njContractId', label: 'Contract ID' },
+    ],
+  },
+  MN: {
+    label: 'Minnesota public works',
+    supportedExports: ['MN DLI payroll PDF'],
+    fields: [{ key: 'mnContractId', label: 'Contract ID' }],
+  },
+  VA: {
+    label: 'Virginia public works',
+    supportedExports: ['VA DOLI payroll PDF'],
+    fields: [{ key: 'vaContractId', label: 'Contract ID' }],
+  },
+};
+
 router.get('/preflight/:format/:weekId', async (req, res) => {
   try {
     const { format, weekId } = req.params;
@@ -113,6 +185,50 @@ router.get('/preflight/:format/:weekId', async (req, res) => {
     }
     logger.error({ err }, 'Export preflight failed');
     return res.status(500).json({ error: 'Export preflight failed' });
+  }
+});
+
+router.get('/state-readiness/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const projectRecord = project as unknown as Record<string, unknown>;
+    const state = String(project.state ?? '').toUpperCase();
+    const config = STATE_EXPORT_READINESS[state] ?? {
+      label: `${state || 'Federal'} certified payroll`,
+      supportedExports: ['WH-347 PDF'],
+      fields: [] as Array<{ key: string; label: string }>,
+    };
+
+    const requiredFields = config.fields.map((field) => ({
+      ...field,
+      present: typeof projectRecord[field.key] === 'string'
+        ? String(projectRecord[field.key]).trim().length > 0
+        : projectRecord[field.key] != null,
+    }));
+
+    return res.json({
+      data: {
+        weekId: week.id,
+        projectId: week.projectId,
+        state: state || 'FED',
+        label: config.label,
+        supportedExports: config.supportedExports,
+        requiredFields,
+        missingFields: requiredFields
+          .filter((field) => !field.present)
+          .map(({ key, label }) => ({ key, label })),
+        ready: requiredFields.every((field) => field.present),
+      },
+    });
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    logger.error({ err }, 'State export readiness failed');
+    return res.status(500).json({ error: 'State export readiness failed' });
   }
 });
 

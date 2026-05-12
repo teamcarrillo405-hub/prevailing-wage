@@ -91,6 +91,31 @@ function parseProjectOnboardingSetup(raw: string | null | undefined): ProjectOnb
   }
 }
 
+function parseProjectSettings(raw: string | null | undefined): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function isSampleProject(raw: string | null | undefined): boolean {
+  return parseProjectSettings(raw).sampleProject === true;
+}
+
+interface ReviewState {
+  status?: 'draft' | 'ready_for_review' | 'approved' | 'rejected';
+  note?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+}
+
+function parseReviewState(raw: string | null | undefined): ReviewState {
+  const settings = parseProjectSettings(raw);
+  return (settings.reviewState ?? {}) as ReviewState;
+}
+
 function buildProjectSettingsWithNotifications(raw: string | null | undefined, prefs: NotifSettings): string {
   let parsed: Record<string, unknown> = {};
   if (raw) {
@@ -228,6 +253,14 @@ interface SubcontractorCprQueueItem {
   uploadTokenExpiresAt: string | null;
   uploadedAt: string | null;
   nextAction: string;
+}
+
+interface SubcontractorCprQueueSummary {
+  total: number;
+  overdue: number;
+  notReceived: number;
+  nonCompliant: number;
+  readyToRequest: number;
 }
 
 function ProjectReadinessPanel({
@@ -378,6 +411,98 @@ function ProjectAuditDefensePanel({ projectId }: { projectId: string }) {
           <p className="text-sm font-semibold text-gray-900">Full Audit ZIP</p>
           <p className="mt-1 text-xs text-gray-500">Includes WH-347 PDFs, compliance JSON, and audit-manifest.json.</p>
         </a>
+      </div>
+    </Card>
+  );
+}
+
+function SampleProjectPanel({ projectId }: { projectId: string }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/projects/${projectId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Sample project closed');
+      navigate('/dashboard');
+    },
+    onError: () => toast.error('Could not close sample project'),
+  });
+
+  return (
+    <Card className="mb-6 border-brand-gold/40 bg-brand-gold/5 shadow-card-elevated">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Badge variant="warning">Sample</Badge>
+            <h2 className="font-headline text-base text-text-primary">Demo project data</h2>
+          </div>
+          <p className="mt-1 text-sm text-gray-600">Use this project to test preflight, exports, audit ZIPs, and review workflows. It can be closed any time.</p>
+        </div>
+        <Button variant="ghost" size="sm" loading={deleteMutation.isPending} onClick={() => deleteMutation.mutate()}>
+          Close Sample
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function ProjectReviewPanel({
+  projectId,
+  projectSettings,
+}: {
+  projectId: string;
+  projectSettings: string | null;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [note, setNote] = useState('');
+  const reviewState = parseReviewState(projectSettings);
+  const status = reviewState.status ?? 'draft';
+
+  const mutation = useMutation({
+    mutationFn: (body: { status: ReviewState['status']; note?: string }) => api.post(`/projects/${projectId}/review`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] });
+      toast.success('Review status saved');
+      setNote('');
+    },
+    onError: () => toast.error('Could not save review status'),
+  });
+
+  const labels: Record<string, string> = {
+    draft: 'Draft',
+    ready_for_review: 'Ready for Review',
+    approved: 'Approved',
+    rejected: 'Rejected',
+  };
+
+  return (
+    <Card className="mb-6 shadow-card-elevated">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h2 className="font-headline text-base text-text-primary mb-1">Agency / Prime Review</h2>
+          <p className="text-sm text-gray-500">Track internal reviewer status before certifying or submitting payroll packages.</p>
+          {reviewState.note && <p className="mt-2 text-xs text-gray-600">Last note: {reviewState.note}</p>}
+        </div>
+        <Badge variant={status === 'approved' ? 'compliant' : status === 'rejected' ? 'violation' : status === 'ready_for_review' ? 'warning' : 'neutral'}>
+          {labels[status]}
+        </Badge>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+        <input
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          maxLength={1000}
+          placeholder="Optional review note"
+          className="rounded-sm border border-border-default px-3 py-2 text-sm"
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" loading={mutation.isPending} onClick={() => mutation.mutate({ status: 'ready_for_review', note })}>Ready</Button>
+          <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate({ status: 'approved', note })}>Approve</Button>
+          <Button size="sm" variant="ghost" loading={mutation.isPending} onClick={() => mutation.mutate({ status: 'rejected', note })}>Reject</Button>
+        </div>
       </div>
     </Card>
   );
@@ -1373,7 +1498,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
 
   const { data: cprQueueData } = useQuery({
     queryKey: ['subcontractor-cpr-queue', projectId],
-    queryFn: () => api.get<{ data: { queue: SubcontractorCprQueueItem[] } }>(`/projects/${projectId}/subcontractor-cpr-queue`),
+    queryFn: () => api.get<{ data: { queue: SubcontractorCprQueueItem[]; summary: SubcontractorCprQueueSummary } }>(`/projects/${projectId}/subcontractor-cpr-queue`),
     enabled: !!projectId,
   });
 
@@ -1422,6 +1547,25 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
     onError: () => toast.error('Could not create CPR request'),
   });
 
+  const requestBulkCprMutation = useMutation({
+    mutationFn: () =>
+      api.post<{ data: { created: number; emailed: number } }>(
+        `/projects/${projectId}/subcontractor-cpr-queue/request-bulk`,
+        {},
+      ),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['subcontractor-cpr-queue', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      const { created, emailed } = response.data;
+      toast.success(
+        emailed > 0
+          ? `Sent ${emailed} CPR upload request${emailed === 1 ? '' : 's'}`
+          : `Created ${created} CPR upload link${created === 1 ? '' : 's'}`,
+      );
+    },
+    onError: () => toast.error('Could not send CPR requests'),
+  });
+
   function handleAddSub() {
     if (!addForm.name.trim()) return;
     const body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string; dbeClassification?: DbeClass } = {
@@ -1462,6 +1606,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
 
   const subs = subsData?.data?.subcontractors ?? [];
   const cprQueue = cprQueueData?.data?.queue ?? [];
+  const cprSummary = cprQueueData?.data?.summary;
   const subsById = new Map(subs.map((sub) => [sub.id, sub]));
 
   // DBE-05: derive participation counts from server-attached certSummary
@@ -1540,10 +1685,33 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
 
       {cprQueue.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-5">
-          <h3 className="text-sm font-semibold text-amber-900 mb-2 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Subcontractor CPR Follow-Up
-          </h3>
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-amber-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Subcontractor CPR Follow-Up
+              </h3>
+              {cprSummary && (
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-sm bg-white/70 px-2 py-1 text-amber-900">{cprSummary.total} open</span>
+                  <span className="rounded-sm bg-white/70 px-2 py-1 text-amber-900">{cprSummary.overdue} overdue</span>
+                  <span className="rounded-sm bg-white/70 px-2 py-1 text-amber-900">{cprSummary.nonCompliant} non-compliant</span>
+                </div>
+              )}
+            </div>
+            {cprSummary && cprSummary.readyToRequest > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => requestBulkCprMutation.mutate()}
+                disabled={requestBulkCprMutation.isPending}
+              >
+                {requestBulkCprMutation.isPending
+                  ? 'Sending...'
+                  : `Send ${cprSummary.readyToRequest} Request${cprSummary.readyToRequest === 1 ? '' : 's'}`}
+              </Button>
+            )}
+          </div>
           <div className="space-y-2">
             {cprQueue.slice(0, 5).map((item, index) => {
               const sub = subsById.get(item.subcontractorId);
@@ -2001,6 +2169,7 @@ export function ProjectDetailPage() {
 
   const project = data?.data?.project;
   const onboardingSetup = parseProjectOnboardingSetup(project?.projectSettings);
+  const sampleProject = isSampleProject(project?.projectSettings);
   const hasSubcontractorSetup = (subcontractorsData?.data.subcontractors.length ?? 0) > 0;
   const hasApprenticeshipRatioSetup = hasApprenticeshipSetup(project?.apprenticeshipRequirements);
 
@@ -2038,9 +2207,11 @@ export function ProjectDetailPage() {
       {project && (
         <div>
           <PageHeader
-            title={project.name}
+            title={sampleProject ? `${project.name} (Sample)` : project.name}
             subtitle={`${project.state} — ${project.county}`}
           />
+
+          {sampleProject && <SampleProjectPanel projectId={project.id} />}
 
           <HelpCallout
             icon={Workflow}
@@ -2067,6 +2238,8 @@ export function ProjectDetailPage() {
           />
 
           <ProjectAuditDefensePanel projectId={project.id} />
+
+          <ProjectReviewPanel projectId={project.id} projectSettings={project.projectSettings} />
 
           <Card className="w-full md:max-w-lg shadow-card-elevated">
             <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Project Details</h2>
