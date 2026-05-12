@@ -11,6 +11,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { getDb } from '../db/index.js';
 import { apiKeys, projects, workers, projectMembers } from '../db/schema.js';
 import { computeCompliance } from '../services/complianceService.js';
+import { countComplianceViolations } from '../services/complianceRules.js';
 import { listPayrollWeeks } from '../services/payrollService.js';
 
 const router = Router();
@@ -22,6 +23,8 @@ declare global {
     interface Request {
       apiKeyUserId?: string;
       apiKeyScopes?: string[];
+      apiKeyHash?: string;
+      apiKeyId?: string;
     }
   }
 }
@@ -70,6 +73,8 @@ async function requireApiKey(req: Request, res: Response, next: NextFunction): P
 
   req.apiKeyUserId = keyRow.userId;
   req.apiKeyScopes = JSON.parse(keyRow.scopes) as string[];
+  req.apiKeyHash = keyRow.keyHash;
+  req.apiKeyId = keyRow.id;
   next();
 }
 
@@ -110,12 +115,18 @@ function paginatedMeta(page: number, limit: number, total: number) {
 
 // ── Per-API-key rate limiter (100 req/min, draft-7 headers) ──────────────────
 const publicApiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 100,
-  keyGenerator: (req) => req.apiKeyUserId ?? ipKeyGenerator(req.ip ?? 'unknown'),
+  windowMs: 60 * 60 * 1000,
+  limit: () => {
+    if (process.env.NODE_ENV === 'test' && process.env.PUBLIC_API_RATE_LIMIT_TEST_MAX) {
+      const parsed = Number(process.env.PUBLIC_API_RATE_LIMIT_TEST_MAX);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return 1000;
+  },
+  keyGenerator: (req) => req.apiKeyHash ?? ipKeyGenerator(req.ip ?? 'unknown'),
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Rate limit exceeded. Max 100 requests/minute per API key.' },
+  message: { error: 'Rate limit exceeded. Max 1000 requests/hour per API key.' },
 });
 
 // Apply API key auth then rate limit to all /v1 routes
@@ -346,14 +357,17 @@ router.get('/projects/:id/compliance-summary', requireScope('projects:read'), as
   const weeks = await listPayrollWeeks(projectId);
   let totalViolations = 0;
   let hasViolations = false;
+  const violationBreakdown = { wage: 0, week: 0, deduction: 0 };
 
   for (const week of weeks) {
     try {
       const result = await computeCompliance(db, week.id);
       if (result?.hasViolations) {
         hasViolations = true;
-        totalViolations +=
-          (result.violations?.length ?? 0) + (result.weekViolations?.length ?? 0);
+        totalViolations += countComplianceViolations(result);
+        violationBreakdown.wage += result.violationBreakdown.wage;
+        violationBreakdown.week += result.violationBreakdown.week;
+        violationBreakdown.deduction += result.violationBreakdown.deduction;
       }
     } catch {
       // skip weeks that fail compliance check
@@ -366,6 +380,10 @@ router.get('/projects/:id/compliance-summary', requireScope('projects:read'), as
       weekCount: weeks.length,
       hasViolations,
       totalViolations,
+      violationBreakdown: {
+        ...violationBreakdown,
+        total: totalViolations,
+      },
       status: hasViolations ? 'violations' : 'clean',
     },
     meta: meta(),
@@ -435,7 +453,13 @@ router.get('/reports/compliance-summary', requireScope('projects:read'), async (
 
   if (projectIds.length === 0) {
     res.json({
-      data: { totalProjects: 0, projectsWithViolations: 0, totalViolations: 0, perProject: [] },
+      data: {
+        totalProjects: 0,
+        projectsWithViolations: 0,
+        totalViolations: 0,
+        violationBreakdown: { wage: 0, week: 0, deduction: 0, total: 0 },
+        perProject: [],
+      },
       meta: meta(),
     });
     return;
@@ -452,22 +476,28 @@ router.get('/reports/compliance-summary', requireScope('projects:read'), async (
     projectStatus: string | null;
     weekCount: number;
     totalViolations: number;
+    violationBreakdown: { wage: number; week: number; deduction: number; total: number };
     hasViolations: boolean;
     complianceStatus: 'clean' | 'violations';
   }> = [];
 
   let globalViolations = 0;
+  const globalBreakdown = { wage: 0, week: 0, deduction: 0 };
   let projectsWithViolations = 0;
 
   for (const proj of projectRows) {
     const weeks = await listPayrollWeeks(proj.id);
     let projViolations = 0;
+    const violationBreakdown = { wage: 0, week: 0, deduction: 0 };
 
     for (const week of weeks) {
       try {
         const result = await computeCompliance(db, week.id);
         if (result?.hasViolations) {
-          projViolations += (result.violations?.length ?? 0) + (result.weekViolations?.length ?? 0);
+          projViolations += countComplianceViolations(result);
+          violationBreakdown.wage += result.violationBreakdown.wage;
+          violationBreakdown.week += result.violationBreakdown.week;
+          violationBreakdown.deduction += result.violationBreakdown.deduction;
         }
       } catch {
         // skip weeks that fail compliance check
@@ -477,6 +507,9 @@ router.get('/reports/compliance-summary', requireScope('projects:read'), async (
     const hasViolations = projViolations > 0;
     if (hasViolations) projectsWithViolations++;
     globalViolations += projViolations;
+    globalBreakdown.wage += violationBreakdown.wage;
+    globalBreakdown.week += violationBreakdown.week;
+    globalBreakdown.deduction += violationBreakdown.deduction;
 
     perProject.push({
       projectId: proj.id,
@@ -484,6 +517,10 @@ router.get('/reports/compliance-summary', requireScope('projects:read'), async (
       projectStatus: proj.status,
       weekCount: weeks.length,
       totalViolations: projViolations,
+      violationBreakdown: {
+        ...violationBreakdown,
+        total: projViolations,
+      },
       hasViolations,
       complianceStatus: hasViolations ? 'violations' : 'clean',
     });
@@ -494,6 +531,10 @@ router.get('/reports/compliance-summary', requireScope('projects:read'), async (
       totalProjects: projectRows.length,
       projectsWithViolations,
       totalViolations: globalViolations,
+      violationBreakdown: {
+        ...globalBreakdown,
+        total: globalViolations,
+      },
       perProject,
     },
     meta: meta(),

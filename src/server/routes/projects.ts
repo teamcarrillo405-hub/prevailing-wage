@@ -6,7 +6,7 @@ import { getDb } from '../db/index.js';
 import { projects, projectMembers, users } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { assertProjectAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 import type { Project } from '../utils/assertProjectAccess.js';
 import { getLimits, type PlanTier } from '../utils/planLimits.js';
 
@@ -222,7 +222,7 @@ router.patch('/:id', async (req, res) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, req.params.id, userId);
+    await assertProjectWriteAccess(db, req.params.id, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -282,7 +282,7 @@ router.delete('/:id', async (req, res) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, req.params.id, userId);
+    await assertProjectWriteAccess(db, req.params.id, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;

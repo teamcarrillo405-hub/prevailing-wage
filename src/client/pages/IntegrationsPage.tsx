@@ -7,6 +7,7 @@ import { PageHeader } from '../components/ui/PageHeader.js';
 import { Button } from '../components/ui/Button.js';
 import { Badge } from '../components/ui/Badge.js';
 import { IntegrationsSkeleton } from '../components/ui/Skeleton.js';
+import type { OnboardingAnswers, OnboardingResponse } from '../types/onboarding.js';
 
 interface QboStatusResponse {
   data: {
@@ -38,6 +39,44 @@ interface QboEmployee {
   qboId: string;
   displayName: string;
   email: string | null;
+}
+
+function onboardingIntegrationPrompts(answers?: OnboardingAnswers): Array<{ title: string; detail: string; priority: 'recommended' | 'optional' }> {
+  if (!answers) return [];
+
+  const prompts: Array<{ title: string; detail: string; priority: 'recommended' | 'optional' }> = [];
+  if (answers.payrollProvider === 'quickbooks' || answers.accountingProvider === 'quickbooks') {
+    prompts.push({
+      title: 'Connect QuickBooks first',
+      detail: 'Your onboarding profile uses QuickBooks, so employee import and weekly time sync should be your first connector.',
+      priority: 'recommended',
+    });
+  }
+  if (answers.projectManagementProvider === 'procore') {
+    prompts.push({
+      title: 'Connect Procore for timesheets',
+      detail: 'Your onboarding profile uses Procore, so project timesheets can feed payroll weeks after the connector is active.',
+      priority: 'recommended',
+    });
+  }
+  if (['adp', 'gusto', 'paychex', 'sage_300', 'sage_100'].includes(answers.payrollProvider)) {
+    prompts.push({
+      title: 'Use payroll CSV imports',
+      detail: `${answers.payrollProvider.replaceAll('_', ' ')} is handled through CSV import and saved worker mappings for this phase.`,
+      priority: 'recommended',
+    });
+  }
+  if (answers.fieldTrackingNeeded) {
+    prompts.push({
+      title: 'Enable field proof on projects',
+      detail: 'Your onboarding profile calls for field proof, so GPS clock-in and photos should be enabled on applicable projects.',
+      priority: 'optional',
+    });
+  }
+
+  return prompts.length > 0
+    ? prompts
+    : [{ title: 'Manual entry path is ready', detail: 'Your onboarding profile did not require a connector, so workers and payroll can be entered manually.', priority: 'optional' }];
 }
 
 // ── QB Employee Import (Phase 121 / QB-02) ────────────────────────────────
@@ -745,21 +784,21 @@ export function IntegrationsPage() {
 
   const { data, isLoading } = useQuery<QboStatusResponse>({
     queryKey: ['qbo-status'],
-    queryFn: () => api.get<QboStatusResponse>('/api/integrations/qbo/status'),
+    queryFn: () => api.get<QboStatusResponse>('/integrations/qbo/status'),
   });
 
   const disconnect = useMutation({
-    mutationFn: () => api.delete<unknown>('/api/integrations/qbo'),
+    mutationFn: () => api.delete<unknown>('/integrations/qbo'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qbo-status'] }),
   });
 
   const { data: procoreData } = useQuery<ProcoreStatusResponse>({
     queryKey: ['procore-status'],
-    queryFn: () => api.get<ProcoreStatusResponse>('/api/integrations/procore/status'),
+    queryFn: () => api.get<ProcoreStatusResponse>('/integrations/procore/status'),
   });
 
   const disconnectProcore = useMutation({
-    mutationFn: () => api.delete<unknown>('/api/integrations/procore'),
+    mutationFn: () => api.delete<unknown>('/integrations/procore'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['procore-status'] }),
   });
 
@@ -770,12 +809,20 @@ export function IntegrationsPage() {
   });
   const ssoConfig = ssoData?.data ?? null;
 
+  const { data: onboardingData } = useQuery({
+    queryKey: ['onboarding-profile'],
+    queryFn: () => api.get<OnboardingResponse>('/onboarding'),
+    staleTime: 5 * 60_000,
+  });
+
+  const integrationPrompts = onboardingIntegrationPrompts(onboardingData?.data.profile?.onboardingAnswers);
+
   // Shared project selector for QB employee import + (future) timesheet sync
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   const { data: projectsData } = useQuery<{ data: { projects: Array<{ id: string; name: string }> } }>({
     queryKey: ['projects-for-integrations'],
-    queryFn: () => api.get<{ data: { projects: Array<{ id: string; name: string }> } }>('/api/projects'),
+    queryFn: () => api.get<{ data: { projects: Array<{ id: string; name: string }> } }>('/projects'),
   });
 
   const projectsList = projectsData?.data?.projects ?? [];
@@ -803,6 +850,35 @@ export function IntegrationsPage() {
         {/* QuickBooks Online card */}
         {!isLoading && (
           <>
+            {integrationPrompts.length > 0 && (
+              <div className="rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-900">Recommended from onboarding</h2>
+                    <p className="mt-1 text-sm text-gray-700">
+                      These prompts come from your saved contractor profile. Update onboarding if your software stack changes.
+                    </p>
+                  </div>
+                  <Link to="/onboarding" className="shrink-0 text-sm font-semibold text-gray-700 underline">
+                    Edit
+                  </Link>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {integrationPrompts.map((prompt) => (
+                    <div key={prompt.title} className="rounded-lg border border-white/70 bg-white px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={prompt.priority === 'recommended' ? 'warning' : 'neutral'}>
+                          {prompt.priority === 'recommended' ? 'Recommended' : 'Optional'}
+                        </Badge>
+                        <p className="text-sm font-semibold text-gray-900">{prompt.title}</p>
+                      </div>
+                      <p className="mt-2 text-sm text-gray-600">{prompt.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>

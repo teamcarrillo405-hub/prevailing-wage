@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import crypto from 'crypto';
 import supertest from 'supertest';
 import { app } from '../../src/server/index.js';
+import { workers, workerClassifications } from '../../src/server/db/schema.js';
 import {
   createPayrollWeek,
   upsertPayrollEntry,
@@ -148,5 +150,59 @@ describe('payrollService', () => {
     expect(entries[0].workerName).toBe('Jane Smith');
     expect(typeof entries[0].tradeDescription).toBe('string');
     expect(entries[0].tradeDescription).toBe('Electrician');
+  });
+
+  it('upsertPayrollEntry returns the matching worker/classification when a week has multiple entries', async () => {
+    const { projectId, workerId, classificationId } = await seedProjectAndWorker();
+    const db = (globalThis as any).__testDb;
+    const now = new Date().toISOString();
+    const secondWorkerId = crypto.randomUUID();
+    const secondClassificationId = crypto.randomUUID();
+
+    await db.insert(workers).values({
+      id: secondWorkerId,
+      projectId,
+      name: 'Second Worker',
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.insert(workerClassifications).values({
+      id: secondClassificationId,
+      workerId: secondWorkerId,
+      projectId,
+      tradeCode: 'CARP',
+      tradeDescription: 'Carpenter',
+      laborType: 'journeyworker',
+      isActive: true,
+      createdAt: now,
+    });
+
+    const weekResult = await createPayrollWeek({
+      projectId,
+      weekEndingDate: '2025-04-27',
+      payrollNumber: 13,
+    });
+
+    await upsertPayrollEntry({
+      payrollWeekId: weekResult.id,
+      workerId,
+      classificationId,
+      monSt: 8,
+      baseRateSnapshot: 45,
+      fringeRateSnapshot: 20,
+    });
+
+    const returned = await upsertPayrollEntry({
+      payrollWeekId: weekResult.id,
+      workerId: secondWorkerId,
+      classificationId: secondClassificationId,
+      tueSt: 8,
+      baseRateSnapshot: 45,
+      fringeRateSnapshot: 20,
+    });
+
+    expect(returned?.workerId).toBe(secondWorkerId);
+    expect(returned?.classificationId).toBe(secondClassificationId);
   });
 });

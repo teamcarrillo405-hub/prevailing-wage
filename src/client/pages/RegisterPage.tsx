@@ -9,7 +9,9 @@ export function RegisterPage() {
           <h1 className="font-headline text-3xl text-text-primary border-b-4 border-brand-gold inline-block pb-1">
             HCC Prevailing Wage
           </h1>
-          <p className="text-sm text-text-secondary mt-3">Create a new account</p>
+          <p className="text-sm text-text-secondary mt-3">
+            Create your member account. No subscription payment required.
+          </p>
         </div>
         <Card>
           <RegisterForm />

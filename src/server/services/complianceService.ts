@@ -1,14 +1,22 @@
 // src/server/services/complianceService.ts
 // Detects under-wage (COMP-01) and CWHSSA OT mismatches (COMP-02) by comparing
-// stored grossWages against the value produced by calculateCwhssaOt() using
+// stored grossWages against certified payroll pay math using
 // frozen snapshots. No live WD lookups — only snapshot columns.
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
 import { getDb } from '../db/index.js';
-import { calculateCwhssaOt } from './calculations.js';
 import { getPayrollWeek, getPayrollEntries, listPayrollWeeks } from './payrollService.js';
+import {
+  countComplianceViolations,
+  detectDailyTradeApprenticeRatioViolations,
+  detectDeductionViolations,
+  expectedGrossForEntry,
+  getComplianceViolationBreakdown,
+  getEntryHourTotals,
+  type ComplianceViolationBreakdown,
+} from './complianceRules.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -19,15 +27,21 @@ export interface ComplianceViolation {
   violationType:
     | 'under-wage'
     | 'cwhssa-ot'
+    | 'weekly-ot'
+    | 'multi-classification-ot'
     | 'ca-daily-ot'    // CA: hours 8-12 per day must be at OT rate (Labor Code §510)
-    | 'ca-daily-dt';   // CA: hours >12 per day must be at DT rate
+     | 'ca-daily-dt';   // CA: hours >12 per day must be at DT rate
   expected: number;
   actual: number;
   delta: number;
 }
 
 export interface WeekViolation {
-  violationType: 'apprentice-ratio' | 'apprentice-trade-ratio' | 'ira-iija-apprentice-pct';
+  violationType:
+    | 'apprentice-ratio'
+    | 'apprentice-trade-ratio'
+    | 'apprentice-registration'
+    | 'ira-iija-apprentice-pct';
   detail: string;
   apprenticeHours: number;
   journeyworkerHours: number;
@@ -48,7 +62,7 @@ export interface DeductionViolation {
   workerName: string;
   deductions: number;
   grossWages: number;
-  deductionPct: number;   // actual deduction percentage (e.g. 35.2)
+  deductionPct: number;   // actual non-tax deduction percentage (e.g. 35.2)
 }
 
 export interface ComplianceResult {
@@ -57,6 +71,7 @@ export interface ComplianceResult {
   violations: ComplianceViolation[];
   weekViolations: WeekViolation[];
   deductionViolations: DeductionViolation[];  // 29 CFR Part 3 §3.5 — 30% cap
+  violationBreakdown: ComplianceViolationBreakdown;
   hasViolations: boolean;
   certProperPayment: boolean;    // false when any 'under-wage' violation exists
   certAccuratePayroll: boolean;  // false when any 'cwhssa-ot' violation exists
@@ -89,15 +104,8 @@ export async function computeCompliance(
   for (const row of rows) {
     const e = row.entry;
 
-    // Sum straight-time and OT hours from stored daily columns
-    const totalSt =
-      (e.monSt ?? 0) + (e.tueSt ?? 0) + (e.wedSt ?? 0) +
-      (e.thuSt ?? 0) + (e.friSt ?? 0) + (e.satSt ?? 0) + (e.sunSt ?? 0);
-    const totalOt =
-      (e.monOt ?? 0) + (e.tueOt ?? 0) + (e.wedOt ?? 0) +
-      (e.thuOt ?? 0) + (e.friOt ?? 0) + (e.satOt ?? 0) + (e.sunOt ?? 0);
-
-    const totalHours = totalSt + totalOt;
+    const totals = getEntryHourTotals(e);
+    const premiumHours = totals.overtime + totals.doubleTime;
 
     // NY daily OT check (COMP-04): NY projects flag cwhssa-ot for any day exceeding 8h
     // Each day is checked independently: (daySt + dayOt) > 8
@@ -178,15 +186,7 @@ export async function computeCompliance(
     // Skip entries where gross wages are not yet recorded
     if (e.grossWages == null) continue;
 
-    // Delegate all OT math to calculateCwhssaOt — do NOT reimplement
-    const calcResult = calculateCwhssaOt({
-      baseRate: e.baseRateSnapshot,
-      fringeRate: e.fringeRateSnapshot,
-      totalHoursWorked: totalHours,
-      overtimeHours: totalOt,
-    });
-
-    const expectedGross = calcResult.totalWeeklyCost;
+    const expectedGross = expectedGrossForEntry(e);
     const actualGross = e.grossWages;
     const delta = actualGross - expectedGross;
 
@@ -195,7 +195,7 @@ export async function computeCompliance(
     // Without OT, underpayment is flagged as under-wage (COMP-01).
     let violationType: 'under-wage' | 'cwhssa-ot' | null = null;
 
-    if (Math.abs(delta) > 0.01 && totalOt > 0) {
+    if (Math.abs(delta) > 0.01 && premiumHours > 0) {
       // OT formula mismatch — COMP-02 (checked first when OT is present)
       violationType = 'cwhssa-ot';
     } else if (delta < -0.01) {
@@ -216,28 +216,52 @@ export async function computeCompliance(
     }
   }
 
-  // ── 29 CFR Part 3 §3.5 — Deduction ratio check (COMP-08 / DOL 2024) ─────
-  // Deductions may not exceed 30% of gross wages in any payroll week.
-  const DEDUCTION_RATIO_CAP = 0.30;
-  const deductionViolations: DeductionViolation[] = [];
-
+  // Federal CWHSSA weekly OT floor. Per-entry math is correct when hours are
+  // already split into ST/OT/DT buckets; this catches the common import/manual
+  // error where >40 weekly hours are left in straight-time buckets.
+  type PayrollComplianceRow = (typeof rows)[number];
+  const rowsByWorker = new Map<string, PayrollComplianceRow[]>();
   for (const row of rows) {
-    const gross = row.entry.grossWages;
-    const deductions = row.entry.deductions ?? 0;
-    if (!gross || gross <= 0 || deductions <= 0) continue;
-    const ratio = deductions / gross;
-    if (ratio > DEDUCTION_RATIO_CAP) {
-      deductionViolations.push({
-        violationType: 'deduction-ratio',
-        entryId: row.entry.id,
-        workerId: row.entry.workerId,
-        workerName: row.workerName,
-        deductions,
-        grossWages: gross,
-        deductionPct: Math.round(ratio * 1000) / 10,  // one decimal place
-      });
-    }
+    const group: PayrollComplianceRow[] = rowsByWorker.get(row.entry.workerId) ?? [];
+    group.push(row);
+    rowsByWorker.set(row.entry.workerId, group);
   }
+
+  for (const workerRows of rowsByWorker.values()) {
+    const totalHours = workerRows.reduce((sum: number, row: PayrollComplianceRow) => sum + getEntryHourTotals(row.entry).total, 0);
+    const premiumHours = workerRows.reduce((sum: number, row: PayrollComplianceRow) => {
+      const totals = getEntryHourTotals(row.entry);
+      return sum + totals.overtime + totals.doubleTime;
+    }, 0);
+    const requiredOtHours = Math.max(0, totalHours - 40);
+    if (requiredOtHours <= premiumHours + 0.001) continue;
+
+    const firstRow = workerRows[0];
+    const distinctClassifications = new Set(workerRows.map((row: PayrollComplianceRow) => row.entry.classificationId));
+    const weightedBaseNumerator = workerRows.reduce((sum: number, row: PayrollComplianceRow) => {
+      const totals = getEntryHourTotals(row.entry);
+      return sum + totals.total * row.entry.baseRateSnapshot;
+    }, 0);
+    const weightedBase = totalHours > 0 ? weightedBaseNumerator / totalHours : firstRow.entry.baseRateSnapshot;
+    const missingPremiumHours = requiredOtHours - premiumHours;
+    const missingPremiumValue = Math.round(missingPremiumHours * 0.5 * weightedBase * 100) / 100;
+    const actualGross = workerRows.reduce((sum: number, row: PayrollComplianceRow) => sum + (row.entry.grossWages ?? 0), 0);
+
+    violations.push({
+      entryId: firstRow.entry.id,
+      workerId: firstRow.entry.workerId,
+      workerName: firstRow.workerName,
+      violationType: distinctClassifications.size > 1 ? 'multi-classification-ot' : 'weekly-ot',
+      expected: Math.round((actualGross + missingPremiumValue) * 100) / 100,
+      actual: Math.round(actualGross * 100) / 100,
+      delta: -missingPremiumValue,
+    });
+  }
+
+  // Non-tax deduction risk check. This is a pre-submission warning, not a
+  // blanket legal rule; deduction legality depends on type, authorization, and
+  // project/jurisdiction records.
+  const deductionViolations = detectDeductionViolations(rows);
 
   // 4. Apprentice ratio check (COMP-03) — aggregate over the full week
   const weekViolations: WeekViolation[] = [];
@@ -247,14 +271,19 @@ export async function computeCompliance(
 
   for (const row of rows) {
     const e = row.entry;
-    const totalHours =
-      (e.monSt ?? 0) + (e.tueSt ?? 0) + (e.wedSt ?? 0) +
-      (e.thuSt ?? 0) + (e.friSt ?? 0) + (e.satSt ?? 0) + (e.sunSt ?? 0) +
-      (e.monOt ?? 0) + (e.tueOt ?? 0) + (e.wedOt ?? 0) +
-      (e.thuOt ?? 0) + (e.friOt ?? 0) + (e.satOt ?? 0) + (e.sunOt ?? 0);
+    const totalHours = getEntryHourTotals(e).total;
 
     if (row.laborType === 'apprentice') {
       apprenticeHours += totalHours;
+      if (!row.programName?.trim()) {
+        weekViolations.push({
+          violationType: 'apprentice-registration',
+          detail: `${row.workerName} is entered as an apprentice without a registered apprenticeship program name on the payroll classification.`,
+          apprenticeHours: totalHours,
+          journeyworkerHours: 0,
+          maxAllowedApprenticeHours: 0,
+        });
+      }
     } else if (row.laborType === 'journeyworker' || row.laborType === 'foreman') {
       journeyworkerHours += totalHours;
     }
@@ -275,8 +304,7 @@ export async function computeCompliance(
 
   // COMP-04: Per-trade daily apprenticeship ratio violation
   // Runs when project.apprenticeshipRequirements is configured (JSON map of trade → maxRatio).
-  // Aggregates JW and apprentice hours by trade description for the week, then checks
-  // each configured trade against its configured ratio.
+  // Checks each configured trade against its configured ratio for each day.
   if (project?.apprenticeshipRequirements) {
     let ratioConfig: Record<string, { maxRatio: string }> = {};
     try {
@@ -286,79 +314,9 @@ export async function computeCompliance(
     }
 
     if (Object.keys(ratioConfig).length > 0) {
-      // Aggregate hours per trade and labor type
-      const tradeJwHours = new Map<string, number>();
-      const tradeAppHours = new Map<string, number>();
-      // Also track average apprentice and JW rates per trade for liability estimate
-      const tradeAppRateSum = new Map<string, number>();
-      const tradeAppCount = new Map<string, number>();
-      const tradeJwRateSum = new Map<string, number>();
-      const tradeJwCount = new Map<string, number>();
-
-      for (const row of rows) {
-        const e = row.entry;
-        const trade = row.tradeDescription;
-        const totalHoursRow =
-          (e.monSt ?? 0) + (e.tueSt ?? 0) + (e.wedSt ?? 0) +
-          (e.thuSt ?? 0) + (e.friSt ?? 0) + (e.satSt ?? 0) + (e.sunSt ?? 0) +
-          (e.monOt ?? 0) + (e.tueOt ?? 0) + (e.wedOt ?? 0) +
-          (e.thuOt ?? 0) + (e.friOt ?? 0) + (e.satOt ?? 0) + (e.sunOt ?? 0);
-
-        if (row.laborType === 'apprentice') {
-          tradeAppHours.set(trade, (tradeAppHours.get(trade) ?? 0) + totalHoursRow);
-          tradeAppRateSum.set(trade, (tradeAppRateSum.get(trade) ?? 0) + e.baseRateSnapshot);
-          tradeAppCount.set(trade, (tradeAppCount.get(trade) ?? 0) + 1);
-        } else if (row.laborType === 'journeyworker' || row.laborType === 'foreman') {
-          tradeJwHours.set(trade, (tradeJwHours.get(trade) ?? 0) + totalHoursRow);
-          tradeJwRateSum.set(trade, (tradeJwRateSum.get(trade) ?? 0) + e.baseRateSnapshot);
-          tradeJwCount.set(trade, (tradeJwCount.get(trade) ?? 0) + 1);
-        }
-      }
-
-      for (const [configTrade, { maxRatio }] of Object.entries(ratioConfig)) {
-        // Match configured trade against trade descriptions (case-insensitive partial match)
-        const matchKey = [...tradeJwHours.keys()].find(
-          k => k.toLowerCase().includes(configTrade.toLowerCase()) ||
-               configTrade.toLowerCase().includes(k.toLowerCase()),
-        ) ?? configTrade;
-
-        const jwHours = tradeJwHours.get(matchKey) ?? 0;
-        const appHours = tradeAppHours.get(matchKey) ?? 0;
-
-        if (jwHours === 0 || appHours === 0) continue;
-
-        // Parse ratio string e.g. "1:2" → numerator=1, denominator=2
-        const parts = maxRatio.split(':').map(Number);
-        const ratioNumerator = parts[0] ?? 1;
-        const ratioDenominator = parts[1] ?? 1;
-        const maxAllowedApp = jwHours * (ratioNumerator / ratioDenominator);
-
-        if (appHours > maxAllowedApp + 0.001) {
-          const excessHours = appHours - maxAllowedApp;
-
-          // Estimated liability = excess apprentice hours × (JW rate − apprentice rate)
-          const avgJwRate = tradeJwCount.get(matchKey)
-            ? (tradeJwRateSum.get(matchKey) ?? 0) / tradeJwCount.get(matchKey)!
-            : 0;
-          const avgAppRate = tradeAppCount.get(matchKey)
-            ? (tradeAppRateSum.get(matchKey) ?? 0) / tradeAppCount.get(matchKey)!
-            : 0;
-          const rateDiff = Math.max(0, avgJwRate - avgAppRate);
-          const estimatedLiabilityUsd = Math.round(excessHours * rateDiff * 100) / 100;
-
-          weekViolations.push({
-            violationType: 'apprentice-trade-ratio',
-            detail: `Trade: ${configTrade} — ${appHours.toFixed(1)} apprentice hrs vs ${jwHours.toFixed(1)} JW hrs (max ratio ${maxRatio}). Excess: ${excessHours.toFixed(1)} hrs. Est. wage adjustment: $${estimatedLiabilityUsd.toFixed(2)}`,
-            apprenticeHours: appHours,
-            journeyworkerHours: jwHours,
-            maxAllowedApprenticeHours: maxAllowedApp,
-            trade: configTrade,
-            excessHours,
-            estimatedLiabilityUsd,
-          });
-        }
-      }
+      weekViolations.push(...detectDailyTradeApprenticeRatioViolations(rows, ratioConfig));
     }
+
   }
 
   // COMP-05: IRA/IIJA 15% apprenticeship requirement
@@ -370,11 +328,7 @@ export async function computeCompliance(
 
     for (const row of rows) {
       const e = row.entry;
-      const totalHoursRow =
-        (e.monSt ?? 0) + (e.tueSt ?? 0) + (e.wedSt ?? 0) +
-        (e.thuSt ?? 0) + (e.friSt ?? 0) + (e.satSt ?? 0) + (e.sunSt ?? 0) +
-        (e.monOt ?? 0) + (e.tueOt ?? 0) + (e.wedOt ?? 0) +
-        (e.thuOt ?? 0) + (e.friOt ?? 0) + (e.satOt ?? 0) + (e.sunOt ?? 0);
+      const totalHoursRow = getEntryHourTotals(e).total;
 
       totalAllHours += totalHoursRow;
       if (row.laborType === 'apprentice') {
@@ -398,15 +352,24 @@ export async function computeCompliance(
     }
   }
 
+  const violationBreakdown = getComplianceViolationBreakdown({
+    violations,
+    weekViolations,
+    deductionViolations,
+  });
+
   return {
     weekId,
     projectId: week.projectId,
     violations,
     weekViolations,
     deductionViolations,   // 29 CFR Part 3 §3.5 — 30% cap warnings
-    hasViolations: violations.length > 0 || weekViolations.length > 0,
+    violationBreakdown,
+    hasViolations: violationBreakdown.total > 0,
     certProperPayment: !violations.some(v => v.violationType === 'under-wage'),
-    certAccuratePayroll: !violations.some(v => v.violationType === 'cwhssa-ot'),
+    certAccuratePayroll: !violations.some(v =>
+      ['cwhssa-ot', 'weekly-ot', 'multi-classification-ot', 'ca-daily-ot', 'ca-daily-dt'].includes(v.violationType),
+    ),
   };
 }
 
@@ -460,7 +423,7 @@ export async function getBatchProjectCompliance(
       const compliance = await computeCompliance(db, week.id);
       if (compliance?.hasViolations === true) {
         hasViolations = true;
-        violationCount += compliance.violations.length + compliance.weekViolations.length;
+        violationCount += countComplianceViolations(compliance);
       }
     }
 
@@ -482,7 +445,17 @@ export interface WorkerViolationHistoryEntry {
   weekId: string;
   weekEndingDate: string;
   payrollNumber: number;
-  violationType: 'under-wage' | 'cwhssa-ot' | 'ca-daily-ot' | 'ca-daily-dt' | 'apprentice-ratio' | 'apprentice-trade-ratio' | 'ira-iija-apprentice-pct';
+  violationType:
+    | 'under-wage'
+    | 'cwhssa-ot'
+    | 'weekly-ot'
+    | 'multi-classification-ot'
+    | 'ca-daily-ot'
+    | 'ca-daily-dt'
+    | 'apprentice-ratio'
+    | 'apprentice-trade-ratio'
+    | 'apprentice-registration'
+    | 'ira-iija-apprentice-pct';
   detail?: string;
   expected?: number;
   actual?: number;

@@ -204,6 +204,54 @@ export function ApiDocsPage() {
           </div>
         </section>
 
+        {/* Compliance Breakdown */}
+        <section>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Compliance Breakdown</h2>
+          <p className="text-gray-600 mb-4">
+            Compliance summary endpoints include a violation breakdown so integrations can separate
+            wage underpayment issues, week-level apprenticeship issues, and deduction cap issues.
+          </p>
+          <div className="bg-gray-900 rounded-xl p-5 text-sm font-mono text-gray-300 overflow-x-auto">
+            <pre>{`{
+  "projectId": "proj_abc123",
+  "weekCount": 8,
+  "hasViolations": true,
+  "totalViolations": 4,
+  "violationBreakdown": {
+    "wage": 1,
+    "week": 2,
+    "deduction": 1,
+    "total": 4
+  },
+  "status": "violations"
+}`}</pre>
+          </div>
+        </section>
+
+        {/* Evidence Exports */}
+        <section>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Evidence Exports</h2>
+          <p className="text-gray-600 mb-4">
+            Project evidence packets are available from the authenticated Evidence Dashboard. These routes
+            use the signed-in app session rather than Bearer API keys because they include audit events,
+            payroll submission metadata, photo metadata, and GPS punch evidence.
+          </p>
+          <div className="bg-gray-900 rounded-xl p-5 text-sm font-mono text-gray-300 overflow-x-auto">
+            <pre>{`GET /api/audit/{projectId}/evidence-summary
+GET /api/audit/{projectId}/evidence-packet
+GET /api/audit/{projectId}/evidence-packet?format=csv
+
+# Summary includes:
+{
+  "readyForPacket": false,
+  "missingEvidence": ["Field photo evidence"],
+  "requirements": [
+    { "label": "Certified payroll submissions", "requiredCount": 8, "collectedCount": 7, "missingCount": 1, "status": "missing" }
+  ]
+}`}</pre>
+          </div>
+        </section>
+
         {/* Error Format */}
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Errors</h2>
@@ -300,7 +348,15 @@ export function ApiDocsPage() {
               <p className="text-sm font-semibold text-gray-700 mb-2">Get compliance summary:</p>
               <div className="bg-gray-900 rounded-xl p-5 text-sm font-mono text-gray-300 overflow-x-auto">
                 <pre>{`curl https://prevwage.app/v1/projects/proj_abc123/compliance-summary \\
-  -H "Authorization: Bearer pw_live_..."`}</pre>
+  -H "Authorization: Bearer pw_live_..."
+
+# Response includes:
+{
+  "data": {
+    "totalViolations": 4,
+    "violationBreakdown": { "wage": 1, "week": 2, "deduction": 1, "total": 4 }
+  }
+}`}</pre>
               </div>
             </div>
           </div>

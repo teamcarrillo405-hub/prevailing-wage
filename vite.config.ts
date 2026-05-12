@@ -13,8 +13,7 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'prompt',
       injectManifest: {
-        swSrc: 'src/client/sw.ts',
-        swDest: 'sw.js',
+        rollupFormat: 'iife',
       },
       manifest: {
         name: 'PrevailingWage',
@@ -30,7 +29,7 @@ export default defineConfig({
     }),
   ],
   root: 'src/client',
-  build: { outDir: '../../dist/client' },
+  build: { outDir: '../../dist/client', emptyOutDir: true },
   server: {
     port: 4200,
     proxy: { '/api': { target: 'http://localhost:4099', changeOrigin: true } },

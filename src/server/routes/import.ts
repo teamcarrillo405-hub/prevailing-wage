@@ -6,10 +6,10 @@ import { logger } from '../logger.js';
 import { Router } from 'express';
 import multer from 'multer';
 import { randomUUID } from 'crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
-import { getPayrollWeek } from '../services/payrollService.js';
+import { getPayrollWeek, upsertPayrollEntry } from '../services/payrollService.js';
 import { parseImportFile } from '../services/importService.js';
 import { getDb } from '../db/index.js';
 import { payrollEntries, payrollImports, payrollProviderMappings, subcontractors } from '../db/schema.js';
@@ -17,6 +17,16 @@ import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
 
 export const importRouter = Router();
 importRouter.use(requireAuth);
+
+type ReconciliationSeverity = 'blocker' | 'warning' | 'pass';
+
+function entryHours(entry: typeof payrollEntries.$inferSelect): number {
+  return (
+    entry.monSt + entry.tueSt + entry.wedSt + entry.thuSt + entry.friSt + entry.satSt + entry.sunSt
+    + entry.monOt + entry.tueOt + entry.wedOt + entry.thuOt + entry.friOt + entry.satOt + entry.sunOt
+    + entry.monDt + entry.tueDt + entry.wedDt + entry.thuDt + entry.friDt + entry.satDt + entry.sunDt
+  );
+}
 
 // ── multer setup: memory storage, 5 MB limit, CSV MIME types only (D-14) ──
 
@@ -171,8 +181,7 @@ importRouter.post('/commit', async (req, res) => {
       resolvedSubId = sub?.id ?? null;
     }
 
-    await db.insert(payrollEntries).values({
-      id: randomUUID(),
+    await upsertPayrollEntry({
       payrollWeekId: body.weekId,
       workerId: row.workerId,
       classificationId: row.classificationId,
@@ -199,18 +208,13 @@ importRouter.post('/commit', async (req, res) => {
       sunDt: 0,
       baseRateSnapshot: row.baseRateSnapshot,
       fringeRateSnapshot: row.fringeRateSnapshot,
-      grossWages: null,
       deductions: 0,
-      netPay: null,
-      fringeHealthWelfare: null,
-      fringePension: null,
-      fringeVacation: null,
-      fringeTraining: null,
       subcontractorId: resolvedSubId,
-      createdByUserId: userId,
-      updatedByUserId: null,
-      createdAt: now,
-      updatedAt: now,
+      userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      workerName: row.workerName,
+      payrollNumber: week.payrollNumber,
     });
   }
 
@@ -248,6 +252,157 @@ importRouter.post('/commit', async (req, res) => {
   } catch (auditErr) { logger.error({ err: auditErr }, '[audit]'); }
 
   res.json({ committed: body.matched.length });
+});
+
+// GET /reconciliation/:weekId
+// Returns an actionable import health summary for the payroll week.
+importRouter.get('/reconciliation/:weekId', async (req, res) => {
+  const { weekId } = req.params;
+  const week = await getPayrollWeek(weekId);
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, week.projectId, req.user!.userId);
+  } catch (accessErr: any) {
+    res.status(accessErr.status ?? 500).json({ error: accessErr.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [entries, imports] = await Promise.all([
+    db.select().from(payrollEntries).where(eq(payrollEntries.payrollWeekId, weekId)),
+    db
+      .select()
+      .from(payrollImports)
+      .where(eq(payrollImports.payrollWeekId, weekId))
+      .orderBy(desc(payrollImports.createdAt))
+      .limit(1),
+  ]);
+
+  const latestImport = imports[0] as typeof payrollImports.$inferSelect | undefined;
+  const typedEntries = entries as (typeof payrollEntries.$inferSelect)[];
+  const providerMappings = latestImport
+    ? await db
+        .select({ id: payrollProviderMappings.id })
+        .from(payrollProviderMappings)
+        .where(and(
+          eq(payrollProviderMappings.projectId, week.projectId),
+          eq(payrollProviderMappings.provider, latestImport.provider),
+        ))
+    : [];
+
+  const zeroRateCount = typedEntries.filter((entry) => entryHours(entry) > 0 && entry.baseRateSnapshot <= 0).length;
+  const missingPayCount = typedEntries.filter((entry) => entry.grossWages == null || entry.netPay == null).length;
+  const totalHours = typedEntries.reduce((sum, entry) => sum + entryHours(entry), 0);
+  const grossWages = typedEntries.reduce((sum, entry) => sum + (entry.grossWages ?? 0), 0);
+  const issues: Array<{
+    id: string;
+    severity: ReconciliationSeverity;
+    title: string;
+    detail: string;
+    nextAction: string;
+  }> = [];
+
+  if (!latestImport && typedEntries.length === 0) {
+    issues.push({
+      id: 'no-import',
+      severity: 'warning',
+      title: 'No payroll import committed',
+      detail: 'This week has no provider import audit row and no payroll entries.',
+      nextAction: 'Import from QuickBooks, ADP, Gusto, Paychex, Sage, or enter payroll manually.',
+    });
+  }
+
+  if (latestImport && latestImport.unmatchedCount > 0) {
+    issues.push({
+      id: 'unmatched-workers',
+      severity: 'warning',
+      title: `${latestImport.unmatchedCount} provider worker${latestImport.unmatchedCount === 1 ? '' : 's'} still unmatched`,
+      detail: 'Unmatched workers were not committed into certified payroll entries.',
+      nextAction: 'Map provider worker IDs to project workers and rerun the import.',
+    });
+  }
+
+  if (zeroRateCount > 0) {
+    issues.push({
+      id: 'zero-rate',
+      severity: 'blocker',
+      title: `${zeroRateCount} entr${zeroRateCount === 1 ? 'y has' : 'ies have'} a zero base rate`,
+      detail: 'A zero base rate can create an incorrect certified payroll outcome.',
+      nextAction: 'Open the affected workers and attach the correct wage determination classification.',
+    });
+  }
+
+  if (missingPayCount > 0) {
+    issues.push({
+      id: 'missing-pay',
+      severity: 'blocker',
+      title: `${missingPayCount} entr${missingPayCount === 1 ? 'y is' : 'ies are'} missing gross or net pay`,
+      detail: 'Certified payroll exports need wage and net pay totals for each row.',
+      nextAction: 'Recalculate or edit the payroll entries before submission.',
+    });
+  }
+
+  if (latestImport && typedEntries.length === 0) {
+    issues.push({
+      id: 'empty-commit',
+      severity: 'blocker',
+      title: 'Import audit exists but no payroll entries were committed',
+      detail: 'The import was recorded, but this week has no payroll entry rows.',
+      nextAction: 'Run the import again and confirm selected rows before committing.',
+    });
+  }
+
+  if (issues.length === 0) {
+    issues.push({
+      id: 'reconciled',
+      severity: 'pass',
+      title: latestImport ? 'Import reconciled' : 'Manual payroll entries reconciled',
+      detail: 'The current payroll entries have rates, pay totals, and no unresolved import exceptions.',
+      nextAction: 'Continue to compliance review and submit-ready checks.',
+    });
+  }
+
+  const blockers = issues.filter((issue) => issue.severity === 'blocker').length;
+  const warnings = issues.filter((issue) => issue.severity === 'warning').length;
+  const status =
+    blockers > 0
+      ? 'blocked'
+      : warnings > 0
+      ? 'needs_review'
+      : typedEntries.length === 0
+      ? 'not_started'
+      : 'reconciled';
+
+  res.json({
+    data: {
+      weekId,
+      projectId: week.projectId,
+      status,
+      latestImport: latestImport
+        ? {
+            id: latestImport.id,
+            provider: latestImport.provider,
+            sourceFilename: latestImport.sourceFilename,
+            committedCount: latestImport.committedCount,
+            unmatchedCount: latestImport.unmatchedCount,
+            createdAt: latestImport.createdAt,
+          }
+        : null,
+      summary: {
+        entryCount: typedEntries.length,
+        totalHours,
+        grossWages,
+        zeroRateCount,
+        missingPayCount,
+        providerMappingCount: providerMappings.length,
+      },
+      issues,
+    },
+  });
 });
 
 // ── GET /mappings/:projectId ───────────────────────────────────────────────

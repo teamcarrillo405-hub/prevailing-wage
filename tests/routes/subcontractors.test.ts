@@ -62,6 +62,53 @@ describe('GET /api/projects/:id/subcontractors (SUB-03)', () => {
   });
 });
 
+describe('GET /api/projects/:id/subcontractor-cpr-queue', () => {
+  it('returns project-level CPR follow-up items', async () => {
+    const cookie = await registerAndLogin('cpr-queue');
+    const projectId = await createProject(cookie);
+
+    const subRes = await supertest(app)
+      .post(`/api/projects/${projectId}/subcontractors`)
+      .set('Cookie', cookie)
+      .send({ name: 'Queue Sub' });
+    const subId = subRes.body.data?.subcontractor?.id as string;
+
+    const cprRes = await supertest(app)
+      .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
+      .set('Cookie', cookie)
+      .send({ weekEndingDate: '2025-06-06' });
+    expect(cprRes.status).toBe(201);
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/subcontractor-cpr-queue`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data?.queue).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          subcontractorId: subId,
+          subcontractorName: 'Queue Sub',
+          weekEndingDate: '2025-06-06',
+          status: 'overdue',
+        }),
+      ]),
+    );
+  });
+
+  it('returns 403 for a non-member user', async () => {
+    const cookie = await registerAndLogin('cpr-queue-owner');
+    const projectId = await createProject(cookie);
+    const otherCookie = await registerAndLogin('cpr-queue-other');
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/subcontractor-cpr-queue`)
+      .set('Cookie', otherCookie);
+
+    expect(res.status).toBe(403);
+  });
+});
+
 describe('POST /api/projects/:id/subcontractors (SUB-03)', () => {
   it('creates a subcontractor and returns 201 with subcontractor object', async () => {
     const cookie = await registerAndLogin('sub-post-create');

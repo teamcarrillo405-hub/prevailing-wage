@@ -1,10 +1,42 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import supertest from 'supertest';
 import { app } from '../../src/server/index.js';
 
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
   process.env.NODE_ENV = 'test';
+});
+
+describe('GET /v1/projects - per-key rate limiting', () => {
+  it('isolates rate-limit buckets for two keys owned by the same user', async () => {
+    process.env.PUBLIC_API_RATE_LIMIT_TEST_MAX = '1';
+
+    const ts = Date.now();
+    const rand = Math.random().toString(36).slice(2, 7);
+    const email = `rate-limit-${ts}-${rand}@test.com`;
+    const cookie = await registerUser(email);
+    const firstKey = await createApiKey(cookie, ['projects:read'], 'first-rate-key');
+    const secondKey = await createApiKey(cookie, ['projects:read'], 'second-rate-key');
+
+    const firstRes = await supertest(app)
+      .get('/v1/projects')
+      .set('Authorization', `Bearer ${firstKey}`);
+    expect(firstRes.status).toBe(200);
+
+    const firstResAgain = await supertest(app)
+      .get('/v1/projects')
+      .set('Authorization', `Bearer ${firstKey}`);
+    expect(firstResAgain.status).toBe(429);
+
+    const secondRes = await supertest(app)
+      .get('/v1/projects')
+      .set('Authorization', `Bearer ${secondKey}`);
+    expect(secondRes.status).toBe(200);
+  });
+});
+
+afterEach(() => {
+  delete process.env.PUBLIC_API_RATE_LIMIT_TEST_MAX;
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

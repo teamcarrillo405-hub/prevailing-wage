@@ -451,6 +451,65 @@ describe('POST /api/payroll/import/commit', () => {
   });
 });
 
+describe('GET /api/payroll/import/reconciliation/:weekId', () => {
+  it('returns an actionable reconciliation summary after import commit', async () => {
+    const cookie = await registerAndLogin('reconciliation-commit');
+    const projectId = await createProject(cookie);
+    const { workerId, classificationId } = await createWorker(cookie, projectId, 'Reconcile Worker');
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-09');
+
+    const commitRes = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'quickbooks',
+        sourceFilename: 'qb.csv',
+        unmatchedCount: 1,
+        matched: [
+          {
+            csvName: 'Reconcile Worker',
+            workerId,
+            workerName: 'Reconcile Worker',
+            classificationId,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45,
+            fringeRateSnapshot: 20,
+            monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+          },
+        ],
+      });
+    expect(commitRes.status).toBe(200);
+
+    const res = await supertest(app)
+      .get(`/api/payroll/import/reconciliation/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.latestImport.provider).toBe('quickbooks');
+    expect(res.body.data.summary.entryCount).toBe(1);
+    expect(res.body.data.summary.totalHours).toBe(40);
+    expect(res.body.data.status).toBe('needs_review');
+    expect(res.body.data.issues.some((issue: any) => issue.id === 'unmatched-workers')).toBe(true);
+  });
+
+  it('warns when a week has no import and no entries', async () => {
+    const cookie = await registerAndLogin('reconciliation-empty');
+    const projectId = await createProject(cookie);
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-16');
+
+    const res = await supertest(app)
+      .get(`/api/payroll/import/reconciliation/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('needs_review');
+    expect(res.body.data.latestImport).toBeNull();
+    expect(res.body.data.issues[0].id).toBe('no-import');
+  });
+});
+
 // ── Tests: GET /api/payroll/import/mappings/:projectId ────────────────────
 
 describe('GET /api/payroll/import/mappings/:projectId', () => {

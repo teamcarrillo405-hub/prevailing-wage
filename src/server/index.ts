@@ -60,6 +60,8 @@ import { aiClassifyRouter } from './routes/aiClassify.js';
 import { growthRouter } from './routes/growth.js';
 import { ssoRouter } from './routes/sso.js';
 import { apprenticeshipRouter } from './routes/apprenticeship.js';
+import { onboardingRouter } from './routes/onboarding.js';
+import { copilotRouter } from './routes/copilot.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
@@ -222,6 +224,8 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/sam-gov', samGovRouter);
 app.use('/api/security', securityRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/onboarding', onboardingRouter);
+app.use('/api/copilot', copilotRouter);
 // /v1 — public REST API, Bearer token auth (no CSRF check needed — API key, no browser origin)
 app.use('/v1', publicApiRouter);
 app.use('/api/sso', ssoRouter);

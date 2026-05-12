@@ -47,6 +47,39 @@ export function calculateCwhssaOt(input: CwhssaOtInput): CwhssaOtResult {
   return { straightTimeBasePay, overtimePremium, totalFringePay, totalWeeklyCost };
 }
 
+export interface CertifiedPayrollPayInput {
+  baseRate: number;
+  fringeRate: number;
+  straightTimeHours: number;
+  overtimeHours: number;
+  doubleTimeHours: number;
+}
+
+export interface CertifiedPayrollPayResult {
+  straightTimeBasePay: number;
+  overtimePremium: number;
+  doubleTimePremium: number;
+  totalFringePay: number;
+  totalWeeklyCost: number;
+}
+
+export function calculateCertifiedPayrollPay(input: CertifiedPayrollPayInput): CertifiedPayrollPayResult {
+  const totalHours = input.straightTimeHours + input.overtimeHours + input.doubleTimeHours;
+  const straightTimeBasePay = totalHours * input.baseRate;
+  const overtimePremium = input.overtimeHours * 0.5 * input.baseRate;
+  const doubleTimePremium = input.doubleTimeHours * input.baseRate;
+  const totalFringePay = totalHours * input.fringeRate;
+  const totalWeeklyCost = straightTimeBasePay + overtimePremium + doubleTimePremium + totalFringePay;
+
+  return {
+    straightTimeBasePay,
+    overtimePremium,
+    doubleTimePremium,
+    totalFringePay,
+    totalWeeklyCost,
+  };
+}
+
 // ---- CALC-02: Fully-loaded hourly cost ----
 
 export interface LoadedRateInput {

@@ -2,12 +2,14 @@ import { logger } from '../logger.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { randomUUID, randomBytes } from 'crypto';
+import path from 'path';
+import fs from 'fs';
 import { eq, and, desc } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { subcontractors, subcontractorCprWeeks, subcontractorCertifications, projects } from '../db/schema.js';
+import { payrollWeeks, subcontractors, subcontractorCprWeeks, subcontractorCertifications, projects } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { assertProjectAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 import { sendSubUploadRequestEmail } from '../services/emailService.js';
 import { deliverWebhook, WEBHOOK_EVENT_SUBCONTRACTOR_CPR_RECEIVED } from '../services/webhookService.js';
 
@@ -49,9 +51,228 @@ const UpdateCprWeekSchema = z.object({
   notes: z.string().max(1000).optional().nullable(),
 });
 
+const RequestCprWeekSchema = z.object({
+  subcontractorId: z.string().min(1),
+  weekEndingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'weekEndingDate must be YYYY-MM-DD'),
+});
+
+function getCprQueueStatus(weekEndingDate: string, receivedDate: string | null, isCompliant: number | null) {
+  if (receivedDate) return isCompliant === 1 ? 'received-compliant' : 'received-non-compliant';
+  const weekMs = new Date(`${weekEndingDate}T00:00:00.000Z`).getTime();
+  const daysAgo = Math.floor((Date.now() - weekMs) / 86_400_000);
+  return daysAgo > 7 ? 'overdue' : 'not-received';
+}
+
+function getDaysLate(weekEndingDate: string): number {
+  const dueMs = new Date(`${weekEndingDate}T00:00:00.000Z`).getTime() + 7 * 86_400_000;
+  return Math.max(0, Math.floor((Date.now() - dueMs) / 86_400_000));
+}
+
 // ── SUB-03: Subcontractor CRUD ─────────────────────────────────────────────
 
 // GET /:id/subcontractors — list all subcontractors for a project
+router.get('/:id/subcontractor-cpr-queue', async (req, res) => {
+  const projectId = req.params.id as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+  const includeComplete = req.query.includeComplete === 'true';
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [subRows, weekRows, cprRows] = await Promise.all([
+    db
+      .select({
+        id: subcontractors.id,
+        name: subcontractors.name,
+        contactEmail: subcontractors.contactEmail,
+      })
+      .from(subcontractors)
+      .where(eq(subcontractors.projectId, projectId)),
+    db
+      .select({
+        id: payrollWeeks.id,
+        payrollNumber: payrollWeeks.payrollNumber,
+        weekEndingDate: payrollWeeks.weekEndingDate,
+      })
+      .from(payrollWeeks)
+      .where(eq(payrollWeeks.projectId, projectId))
+      .orderBy(desc(payrollWeeks.weekEndingDate)),
+    db
+      .select({
+        id: subcontractorCprWeeks.id,
+        subcontractorId: subcontractorCprWeeks.subcontractorId,
+        weekEndingDate: subcontractorCprWeeks.weekEndingDate,
+        receivedDate: subcontractorCprWeeks.receivedDate,
+        isCompliant: subcontractorCprWeeks.isCompliant,
+        notes: subcontractorCprWeeks.notes,
+        uploadTokenExpiresAt: subcontractorCprWeeks.uploadTokenExpiresAt,
+        uploadedAt: subcontractorCprWeeks.uploadedAt,
+      })
+      .from(subcontractorCprWeeks)
+      .innerJoin(subcontractors, eq(subcontractors.id, subcontractorCprWeeks.subcontractorId))
+      .where(eq(subcontractors.projectId, projectId)),
+  ]);
+
+  const typedSubRows = subRows as Array<{ id: string; name: string; contactEmail: string | null }>;
+  const typedWeekRows = weekRows as Array<{ id: string; payrollNumber: number; weekEndingDate: string }>;
+  const typedCprRows = cprRows as Array<{
+    id: string;
+    subcontractorId: string;
+    weekEndingDate: string;
+    receivedDate: string | null;
+    isCompliant: number | null;
+    notes: string | null;
+    uploadTokenExpiresAt: string | null;
+    uploadedAt: string | null;
+  }>;
+
+  const cprBySubAndWeek = new Map(
+    typedCprRows.map((row) => [`${row.subcontractorId}::${row.weekEndingDate}`, row]),
+  );
+  const weekRowsByDate = new Map(typedWeekRows.map((week) => [week.weekEndingDate, week]));
+  const allWeekRows = [
+    ...typedWeekRows,
+    ...typedCprRows
+      .filter((row) => !weekRowsByDate.has(row.weekEndingDate))
+      .map((row) => ({
+        id: null,
+        payrollNumber: null,
+        weekEndingDate: row.weekEndingDate,
+      })),
+  ] as Array<{ id: string | null; payrollNumber: number | null; weekEndingDate: string }>;
+
+  const queue = typedSubRows.flatMap((sub) => allWeekRows.map((week) => {
+    const cpr = cprBySubAndWeek.get(`${sub.id}::${week.weekEndingDate}`);
+    const status = getCprQueueStatus(week.weekEndingDate, cpr?.receivedDate ?? null, cpr?.isCompliant ?? null);
+    return {
+      subcontractorId: sub.id,
+      subcontractorName: sub.name,
+      contactEmail: sub.contactEmail,
+      weekId: cpr?.id ?? null,
+      payrollWeekId: week.id,
+      payrollNumber: week.payrollNumber,
+      weekEndingDate: week.weekEndingDate,
+      receivedDate: cpr?.receivedDate ?? null,
+      isCompliant: cpr?.isCompliant ?? null,
+      status,
+      daysLate: cpr?.receivedDate ? 0 : getDaysLate(week.weekEndingDate),
+      notes: cpr?.notes ?? null,
+      uploadTokenExpiresAt: cpr?.uploadTokenExpiresAt ?? null,
+      uploadedAt: cpr?.uploadedAt ?? null,
+      nextAction:
+        status === 'received-compliant'
+          ? 'No action needed.'
+          : status === 'received-non-compliant'
+          ? 'Request corrected CPR and document the issue.'
+          : sub.contactEmail
+          ? 'Send CPR upload request.'
+          : 'Add a subcontractor contact email.',
+    };
+  }))
+    .filter((row) => includeComplete || row.status === 'overdue' || row.status === 'not-received' || row.status === 'received-non-compliant')
+    .sort((a, b) => {
+      const rank: Record<string, number> = { overdue: 0, 'received-non-compliant': 1, 'not-received': 2 };
+      return (rank[a.status] ?? 3) - (rank[b.status] ?? 3) || a.weekEndingDate.localeCompare(b.weekEndingDate);
+    });
+
+  res.json({ data: { queue } });
+});
+
+router.post('/:id/subcontractor-cpr-queue/request', validate(RequestCprWeekSchema), async (req, res) => {
+  const projectId = req.params.id as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+  const body = req.body as z.infer<typeof RequestCprWeekSchema>;
+
+  try {
+    await assertProjectWriteAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [sub] = await db
+    .select()
+    .from(subcontractors)
+    .where(and(eq(subcontractors.id, body.subcontractorId), eq(subcontractors.projectId, projectId)))
+    .limit(1);
+
+  if (!sub) {
+    res.status(404).json({ error: 'Subcontractor not found' });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const uploadToken = randomBytes(32).toString('hex');
+  const uploadTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const [existing] = await db
+    .select()
+    .from(subcontractorCprWeeks)
+    .where(and(
+      eq(subcontractorCprWeeks.subcontractorId, body.subcontractorId),
+      eq(subcontractorCprWeeks.weekEndingDate, body.weekEndingDate),
+    ))
+    .limit(1);
+
+  let cprWeek: typeof subcontractorCprWeeks.$inferSelect;
+  if (existing) {
+    const [updated] = await db
+      .update(subcontractorCprWeeks)
+      .set({ uploadToken, uploadTokenExpiresAt })
+      .where(eq(subcontractorCprWeeks.id, existing.id))
+      .returning();
+    cprWeek = updated;
+  } else {
+    const [created] = await db
+      .insert(subcontractorCprWeeks)
+      .values({
+        id: randomUUID(),
+        subcontractorId: body.subcontractorId,
+        weekEndingDate: body.weekEndingDate,
+        receivedDate: null,
+        isCompliant: null,
+        notes: null,
+        uploadToken,
+        uploadTokenExpiresAt,
+        uploadedAt: null,
+        uploadPath: null,
+        createdAt: now,
+      })
+      .returning();
+    cprWeek = created;
+  }
+
+  const [project] = await db
+    .select({ name: projects.name })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+
+  const uploadUrl = `${process.env.APP_URL || 'http://localhost:3000'}/sub-upload/${uploadToken}`;
+  if (sub.contactEmail) {
+    await sendSubUploadRequestEmail({
+      toEmail: sub.contactEmail,
+      subName: sub.name,
+      projectName: project?.name ?? 'Project',
+      weekEndingDate: body.weekEndingDate,
+      uploadUrl,
+    });
+  }
+
+  res.status(existing ? 200 : 201).json({
+    data: {
+      cprWeek,
+      uploadUrl,
+      emailed: Boolean(sub.contactEmail),
+    },
+  });
+});
+
 router.get('/:id/subcontractors', async (req, res) => {
   const projectId = req.params.id as string;
   const userId = req.user!.userId;
@@ -111,7 +332,7 @@ router.post('/:id/subcontractors', validate(CreateSubSchema), async (req, res) =
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -165,7 +386,7 @@ router.patch('/:id/subcontractors/:subId', validate(UpdateSubSchema), async (req
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -213,7 +434,7 @@ router.delete('/:id/subcontractors/:subId', async (req, res) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -295,7 +516,7 @@ router.post('/:id/subcontractors/:subId/cpr-weeks', validate(CreateCprWeekSchema
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -480,7 +701,7 @@ router.post('/:id/subcontractors/:subId/certifications', validate(CreateCertSche
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -551,7 +772,7 @@ router.delete('/:id/subcontractors/:subId/certifications/:certId', async (req, r
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -575,7 +796,7 @@ router.patch('/:id/subcontractors/:subId/certifications/:certId',
     const db = getDb();
 
     try {
-      await assertProjectAccess(db, projectId, userId);
+      await assertProjectWriteAccess(db, projectId, userId);
     } catch (err: any) {
       res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
       return;
@@ -622,7 +843,7 @@ router.patch('/:id/subcontractors/:subId/certifications/:certId',
 );
 
 // PATCH /:id/subcontractors/:subId/cpr-weeks/:weekId — update a CPR week record
-router.patch('/:id/subcontractors/:subId/cpr-weeks/:weekId', validate(UpdateCprWeekSchema), async (req, res) => {
+router.get('/:id/subcontractors/:subId/cpr-weeks/:weekId/file', async (req, res) => {
   const projectId = req.params.id as string;
   const subId = req.params.subId as string;
   const weekId = req.params.weekId as string;
@@ -631,6 +852,52 @@ router.patch('/:id/subcontractors/:subId/cpr-weeks/:weekId', validate(UpdateCprW
 
   try {
     await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [row] = await db
+    .select({
+      weekEndingDate: subcontractorCprWeeks.weekEndingDate,
+      uploadPath: subcontractorCprWeeks.uploadPath,
+      subName: subcontractors.name,
+    })
+    .from(subcontractorCprWeeks)
+    .innerJoin(subcontractors, eq(subcontractorCprWeeks.subcontractorId, subcontractors.id))
+    .where(and(
+      eq(subcontractorCprWeeks.id, weekId),
+      eq(subcontractorCprWeeks.subcontractorId, subId),
+      eq(subcontractors.projectId, projectId),
+    ))
+    .limit(1);
+
+  if (!row?.uploadPath) {
+    res.status(404).json({ error: 'Uploaded CPR file not found' });
+    return;
+  }
+
+  const resolvedPath = path.resolve(row.uploadPath);
+  if (!fs.existsSync(resolvedPath)) {
+    res.status(404).json({ error: 'Uploaded CPR file is missing from storage' });
+    return;
+  }
+
+  const safeSubName = row.subName.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeSubName}-cpr-${row.weekEndingDate}.pdf"`);
+  res.sendFile(resolvedPath);
+});
+
+router.patch('/:id/subcontractors/:subId/cpr-weeks/:weekId', validate(UpdateCprWeekSchema), async (req, res) => {
+  const projectId = req.params.id as string;
+  const subId = req.params.subId as string;
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;

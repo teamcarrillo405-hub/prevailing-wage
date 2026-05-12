@@ -18,6 +18,7 @@ import { HelpCallout } from '../components/ui/HelpCallout';
 import { EmptyState } from '../components/ui/EmptyState';
 import { WorkersEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { TermTooltip } from '../components/ui/TermTooltip';
+import { RateProvenance } from '../components/ui/RateProvenance';
 
 const DB_DEF = "A federal law requiring contractors on federal or federally funded construction projects to pay workers the locally prevailing wage for their trade. Wages are set by the Department of Labor and published on SAM.gov.";
 
@@ -81,6 +82,84 @@ const LABOR_TYPES = [
   { value: 'apprentice', label: 'Apprentice' },
   { value: 'foreman', label: 'Foreman' },
 ];
+
+const RACE_OPTIONS = [
+  { value: '', label: 'Not specified' },
+  { value: 'American Indian or Alaska Native', label: 'American Indian or Alaska Native' },
+  { value: 'Asian', label: 'Asian' },
+  { value: 'Black or African American', label: 'Black or African American' },
+  { value: 'Native Hawaiian or Other Pacific Islander', label: 'Native Hawaiian or Other Pacific Islander' },
+  { value: 'White', label: 'White' },
+  { value: 'Two or more races', label: 'Two or more races' },
+  { value: 'Declined to answer', label: 'Declined to answer' },
+];
+
+const ETHNICITY_OPTIONS = [
+  { value: '', label: 'Not specified' },
+  { value: 'Hispanic or Latino', label: 'Hispanic or Latino' },
+  { value: 'Not Hispanic or Latino', label: 'Not Hispanic or Latino' },
+  { value: 'Declined to answer', label: 'Declined to answer' },
+];
+
+const GENDER_OPTIONS = [
+  { value: '', label: 'Not specified' },
+  { value: 'Female', label: 'Female' },
+  { value: 'Male', label: 'Male' },
+  { value: 'Non-binary', label: 'Non-binary' },
+  { value: 'Declined to answer', label: 'Declined to answer' },
+];
+
+const VETERAN_STATUS_OPTIONS = [
+  { value: '', label: 'Not specified' },
+  { value: 'Veteran', label: 'Veteran' },
+  { value: 'Not a veteran', label: 'Not a veteran' },
+  { value: 'Declined to answer', label: 'Declined to answer' },
+];
+
+const SKILL_LEVEL_OPTIONS = [
+  { value: '', label: 'Not specified' },
+  { value: 'journeyman', label: 'Journeyman' },
+  { value: 'apprentice', label: 'Apprentice' },
+];
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+function ComplianceSelect({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string | null | undefined;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <select
+        id={id}
+        className="w-full rounded border px-2 py-1.5 text-base"
+        value={value ?? ''}
+        onChange={e => onChange(e.target.value)}
+      >
+        {options.map(option => (
+          <option key={option.value || 'not-specified'} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 interface ProjectInfo {
   id: string;
@@ -425,6 +504,7 @@ export function WorkersPage() {
     if (form.ssn && form.ssn.length !== 9) { setFormError('SSN must be exactly 9 digits.'); return; }
     if (!isWA && form.tradeCode && !selectedTrade) { setFormError('Select a valid trade from the list'); return; }
     if (form.laborType === 'apprentice' && !form.apprenticePercent) { setFormError('Apprentice % is required'); return; }
+    if (form.laborType === 'apprentice' && !form.programName.trim()) { setFormError('Registered apprenticeship program is required'); return; }
     addWorker.mutate(form);
   }
 
@@ -442,6 +522,7 @@ export function WorkersPage() {
     if (isWA && !extraClass.tradeDescription.trim()) { setExtraError('Trade description is required'); return; }
     if (!isWA && !selectedExtraTrade) { setExtraError('Trade not found'); return; }
     if (extraClass.laborType === 'apprentice' && !extraClass.apprenticePercent) { setExtraError('Apprentice % required'); return; }
+    if (extraClass.laborType === 'apprentice' && !extraClass.programName.trim()) { setExtraError('Registered apprenticeship program is required'); return; }
     addClassification.mutate({ workerId });
   }
 
@@ -779,31 +860,42 @@ export function WorkersPage() {
                         <summary className="cursor-pointer text-sm font-medium text-purple-800">IL Compliance Demographics</summary>
                         <div className="mt-3 space-y-3">
                           <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label htmlFor={`edit-il-race-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Race</label>
-                              <input id={`edit-il-race-${w.id}`} className="w-full rounded border px-2 py-1.5 text-base" value={editForm.race} onChange={e => setEditForm(f => ({ ...f, race: e.target.value }))} placeholder="Optional" />
-                            </div>
-                            <div>
-                              <label htmlFor={`edit-il-ethnicity-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Ethnicity</label>
-                              <input id={`edit-il-ethnicity-${w.id}`} className="w-full rounded border px-2 py-1.5 text-base" value={editForm.ethnicity} onChange={e => setEditForm(f => ({ ...f, ethnicity: e.target.value }))} placeholder="Optional" />
-                            </div>
-                            <div>
-                              <label htmlFor={`edit-il-gender-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
-                              <input id={`edit-il-gender-${w.id}`} className="w-full rounded border px-2 py-1.5 text-base" value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))} placeholder="Optional" />
-                            </div>
-                            <div>
-                              <label htmlFor={`edit-il-veteran-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Veteran Status</label>
-                              <input id={`edit-il-veteran-${w.id}`} className="w-full rounded border px-2 py-1.5 text-base" value={editForm.veteranStatus} onChange={e => setEditForm(f => ({ ...f, veteranStatus: e.target.value }))} placeholder="Optional" />
-                            </div>
+                            <ComplianceSelect
+                              id={`edit-il-race-${w.id}`}
+                              label="Race"
+                              value={editForm.race}
+                              options={RACE_OPTIONS}
+                              onChange={value => setEditForm(f => ({ ...f, race: value }))}
+                            />
+                            <ComplianceSelect
+                              id={`edit-il-ethnicity-${w.id}`}
+                              label="Ethnicity"
+                              value={editForm.ethnicity}
+                              options={ETHNICITY_OPTIONS}
+                              onChange={value => setEditForm(f => ({ ...f, ethnicity: value }))}
+                            />
+                            <ComplianceSelect
+                              id={`edit-il-gender-${w.id}`}
+                              label="Gender"
+                              value={editForm.gender}
+                              options={GENDER_OPTIONS}
+                              onChange={value => setEditForm(f => ({ ...f, gender: value }))}
+                            />
+                            <ComplianceSelect
+                              id={`edit-il-veteran-${w.id}`}
+                              label="Veteran Status"
+                              value={editForm.veteranStatus}
+                              options={VETERAN_STATUS_OPTIONS}
+                              onChange={value => setEditForm(f => ({ ...f, veteranStatus: value }))}
+                            />
                           </div>
-                          <div>
-                            <label htmlFor={`edit-il-skill-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">Skill Level</label>
-                            <select id={`edit-il-skill-${w.id}`} className="w-full rounded border px-2 py-1.5 text-base" value={editForm.skillLevel} onChange={e => setEditForm(f => ({ ...f, skillLevel: e.target.value }))}>
-                              <option value="">Not specified</option>
-                              <option value="journeyman">Journeyman</option>
-                              <option value="apprentice">Apprentice</option>
-                            </select>
-                          </div>
+                          <ComplianceSelect
+                            id={`edit-il-skill-${w.id}`}
+                            label="Skill Level"
+                            value={editForm.skillLevel}
+                            options={SKILL_LEVEL_OPTIONS}
+                            onChange={value => setEditForm(f => ({ ...f, skillLevel: value }))}
+                          />
                         </div>
                       </details>
                     )}
@@ -992,12 +1084,14 @@ export function WorkersPage() {
                               )}
                             </div>
                             <div className="flex items-center gap-3">
-                              <div className="text-xs font-mono text-gray-600">
-                                {c.baseRate !== null
-                                  ? <>{fmt(c.baseRate)} base + {fmt(c.fringeRate ?? 0)} fringe</>
-                                  : <span className="text-amber-600">Rate pending</span>
-                                }
-                              </div>
+                              <RateProvenance
+                                baseRate={c.baseRate}
+                                fringeRate={c.fringeRate}
+                                sourceLabel={wdData?.data?.wdNumber ? `WD ${wdData.data.wdNumber}` : 'project wage source'}
+                                classificationLabel={c.tradeCode}
+                                laborType={c.laborType}
+                                compact
+                              />
                               <button
                                 onClick={() => deleteClassification.mutate({ workerId: w.id, classificationId: c.id })}
                                 className="p-2 text-xs text-gray-400 hover:text-red-500 transition-colors"
@@ -1015,8 +1109,47 @@ export function WorkersPage() {
                     {/* Add extra classification */}
                     {addingClassFor === w.id && (
                       <div className="mt-4 border-t border-gray-100 pt-4">
-                        <p className="text-sm font-semibold text-gray-900 mb-3">Add Another Trade</p>
+                        <p className="text-sm font-semibold text-gray-900 mb-3">Add Labor Type and Trade</p>
                         <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label htmlFor={`extra-labor-type-${w.id}`} className="block text-xs text-gray-600 mb-1">Labor Type</label>
+                            <select
+                              id={`extra-labor-type-${w.id}`}
+                              value={extraClass.laborType}
+                              onChange={(e) => setExtraClass(p => ({ ...p, laborType: e.target.value as typeof extraClass.laborType }))}
+                              className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                            >
+                              {LABOR_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
+                            </select>
+                          </div>
+                          {extraClass.laborType === 'apprentice' && (
+                            <div>
+                              <label htmlFor={`extra-app-pct-${w.id}`} className="block text-xs text-gray-600 mb-1">Program Wage %</label>
+                              <input
+                                id={`extra-app-pct-${w.id}`}
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={extraClass.apprenticePercent}
+                                onChange={(e) => setExtraClass(p => ({ ...p, apprenticePercent: e.target.value }))}
+                                placeholder="From approved program"
+                                className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                              />
+                            </div>
+                          )}
+                          {extraClass.laborType === 'apprentice' && (
+                            <div className="col-span-2">
+                              <label htmlFor={`extra-program-name-${w.id}`} className="block text-xs text-gray-600 mb-1">Registered Apprenticeship Program</label>
+                              <input
+                                id={`extra-program-name-${w.id}`}
+                                type="text"
+                                placeholder="Approved program name"
+                                value={extraClass.programName}
+                                onChange={e => setExtraClass(s => ({ ...s, programName: e.target.value }))}
+                                className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                              />
+                            </div>
+                          )}
                           {isWA ? (
                             <>
                               <div>
@@ -1058,45 +1191,6 @@ export function WorkersPage() {
                                   </option>
                                 ))}
                               </select>
-                            </div>
-                          )}
-                          <div>
-                            <label htmlFor={`extra-labor-type-${w.id}`} className="block text-xs text-gray-600 mb-1">Labor Type</label>
-                            <select
-                              id={`extra-labor-type-${w.id}`}
-                              value={extraClass.laborType}
-                              onChange={(e) => setExtraClass(p => ({ ...p, laborType: e.target.value as typeof extraClass.laborType }))}
-                              className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                            >
-                              {LABOR_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
-                            </select>
-                          </div>
-                          {extraClass.laborType === 'apprentice' && (
-                            <div>
-                              <label htmlFor={`extra-app-pct-${w.id}`} className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
-                              <input
-                                id={`extra-app-pct-${w.id}`}
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={extraClass.apprenticePercent}
-                                onChange={(e) => setExtraClass(p => ({ ...p, apprenticePercent: e.target.value }))}
-                                placeholder="e.g. 80"
-                                className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                              />
-                            </div>
-                          )}
-                          {extraClass.laborType === 'apprentice' && (
-                            <div className="col-span-2">
-                              <label htmlFor={`extra-program-name-${w.id}`} className="block text-xs text-gray-600 mb-1">DOL Apprenticeship Program Name <span className="text-gray-400">(optional)</span></label>
-                              <input
-                                id={`extra-program-name-${w.id}`}
-                                type="text"
-                                placeholder="DOL apprenticeship program name (optional)"
-                                value={extraClass.programName}
-                                onChange={e => setExtraClass(s => ({ ...s, programName: e.target.value }))}
-                                className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
-                              />
                             </div>
                           )}
                           {isWA && (
@@ -1314,44 +1408,111 @@ export function WorkersPage() {
                 <summary className="cursor-pointer text-sm font-medium text-purple-800">IL Compliance Demographics</summary>
                 <div className="mt-3 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="add-il-race" className="block text-xs font-medium text-gray-700 mb-1">Race</label>
-                      <input id="add-il-race" className="w-full rounded border px-2 py-1.5 text-base" value={form.race} onChange={e => setForm(f => ({ ...f, race: e.target.value }))} placeholder="Optional" />
-                    </div>
-                    <div>
-                      <label htmlFor="add-il-ethnicity" className="block text-xs font-medium text-gray-700 mb-1">Ethnicity</label>
-                      <input id="add-il-ethnicity" className="w-full rounded border px-2 py-1.5 text-base" value={form.ethnicity} onChange={e => setForm(f => ({ ...f, ethnicity: e.target.value }))} placeholder="Optional" />
-                    </div>
-                    <div>
-                      <label htmlFor="add-il-gender" className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
-                      <input id="add-il-gender" className="w-full rounded border px-2 py-1.5 text-base" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} placeholder="Optional" />
-                    </div>
-                    <div>
-                      <label htmlFor="add-il-veteran" className="block text-xs font-medium text-gray-700 mb-1">Veteran Status</label>
-                      <input id="add-il-veteran" className="w-full rounded border px-2 py-1.5 text-base" value={form.veteranStatus} onChange={e => setForm(f => ({ ...f, veteranStatus: e.target.value }))} placeholder="Optional" />
-                    </div>
+                    <ComplianceSelect
+                      id="add-il-race"
+                      label="Race"
+                      value={form.race}
+                      options={RACE_OPTIONS}
+                      onChange={value => setForm(f => ({ ...f, race: value }))}
+                    />
+                    <ComplianceSelect
+                      id="add-il-ethnicity"
+                      label="Ethnicity"
+                      value={form.ethnicity}
+                      options={ETHNICITY_OPTIONS}
+                      onChange={value => setForm(f => ({ ...f, ethnicity: value }))}
+                    />
+                    <ComplianceSelect
+                      id="add-il-gender"
+                      label="Gender"
+                      value={form.gender}
+                      options={GENDER_OPTIONS}
+                      onChange={value => setForm(f => ({ ...f, gender: value }))}
+                    />
+                    <ComplianceSelect
+                      id="add-il-veteran"
+                      label="Veteran Status"
+                      value={form.veteranStatus}
+                      options={VETERAN_STATUS_OPTIONS}
+                      onChange={value => setForm(f => ({ ...f, veteranStatus: value }))}
+                    />
                   </div>
-                  <div>
-                    <label htmlFor="add-il-skill" className="block text-xs font-medium text-gray-700 mb-1">Skill Level</label>
-                    <select id="add-il-skill" className="w-full rounded border px-2 py-1.5 text-base" value={form.skillLevel} onChange={e => setForm(f => ({ ...f, skillLevel: e.target.value }))}>
-                      <option value="">Not specified</option>
-                      <option value="journeyman">Journeyman</option>
-                      <option value="apprentice">Apprentice</option>
-                    </select>
-                  </div>
+                  <ComplianceSelect
+                    id="add-il-skill"
+                    label="Skill Level"
+                    value={form.skillLevel}
+                    options={SKILL_LEVEL_OPTIONS}
+                    onChange={value => setForm(f => ({ ...f, skillLevel: value }))}
+                  />
                 </div>
               </details>
             )}
 
             {/* Trade selection */}
             <div className="border-t border-gray-100 pt-4">
-              <p className="text-sm font-semibold text-gray-900 mb-3">Trade Classification</p>
+              <p className="text-sm font-semibold text-gray-900 mb-3">Labor Type and Trade Classification</p>
 
               {wdLoading ? (
                 <p className="text-sm text-gray-400">Loading available trades...</p>
               ) : isWA ? (
                 /* WA projects: manual trade entry + WA rate section */
                 <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="add-wa-labor-type" className="block text-xs text-gray-600 mb-1">Labor Type</label>
+                    <select
+                      id="add-wa-labor-type"
+                      value={form.laborType}
+                      onChange={e => setForm(p => ({ ...p, laborType: e.target.value as typeof form.laborType }))}
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                    >
+                      {LABOR_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
+                    </select>
+                  </div>
+                  {form.laborType === 'apprentice' && (
+                    <div>
+                      <label htmlFor="add-wa-app-pct" className="block text-xs text-gray-600 mb-1">Program Wage %</label>
+                      <input
+                        id="add-wa-app-pct"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={form.apprenticePercent}
+                        onChange={e => setForm(p => ({ ...p, apprenticePercent: e.target.value }))}
+                        placeholder="From approved program"
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                      />
+                    </div>
+                  )}
+                  {form.laborType === 'apprentice' && (
+                    <div className="col-span-2">
+                      <label htmlFor="add-wa-apprenticeship-program-name" className="block text-xs text-gray-600 mb-1">
+                        Registered Apprenticeship Program
+                      </label>
+                      <input
+                        id="add-wa-apprenticeship-program-name"
+                        type="text"
+                        placeholder="Approved program name"
+                        value={form.apprenticeshipProgramName}
+                        onChange={e => setForm(f => ({ ...f, apprenticeshipProgramName: e.target.value }))}
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                      />
+                    </div>
+                  )}
+                  {form.laborType === 'apprentice' && (
+                    <div>
+                      <label htmlFor="add-wa-rapids-number" className="block text-xs text-gray-600 mb-1">
+                        RAPIDS Number <span className="text-gray-400">(optional)</span>
+                      </label>
+                      <input
+                        id="add-wa-rapids-number"
+                        type="text"
+                        placeholder="DOL RAPIDS registration number"
+                        value={form.rapidsNumber}
+                        onChange={e => setForm(f => ({ ...f, rapidsNumber: e.target.value }))}
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label htmlFor="add-wa-trade-code" className="block text-xs text-gray-600 mb-1">Trade Code</label>
                     <input
@@ -1374,62 +1535,6 @@ export function WorkersPage() {
                       className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     />
                   </div>
-                  <div>
-                    <label htmlFor="add-wa-labor-type" className="block text-xs text-gray-600 mb-1">Labor Type</label>
-                    <select
-                      id="add-wa-labor-type"
-                      value={form.laborType}
-                      onChange={e => setForm(p => ({ ...p, laborType: e.target.value as typeof form.laborType }))}
-                      className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                    >
-                      {LABOR_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
-                    </select>
-                  </div>
-                  {form.laborType === 'apprentice' && (
-                    <div>
-                      <label htmlFor="add-wa-app-pct" className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
-                      <input
-                        id="add-wa-app-pct"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={form.apprenticePercent}
-                        onChange={e => setForm(p => ({ ...p, apprenticePercent: e.target.value }))}
-                        placeholder="e.g. 80"
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                      />
-                    </div>
-                  )}
-                  {form.laborType === 'apprentice' && (
-                    <div className="col-span-2">
-                      <label htmlFor="add-wa-apprenticeship-program-name" className="block text-xs text-gray-600 mb-1">
-                        Apprenticeship Program Name <span className="text-gray-400">(optional)</span>
-                      </label>
-                      <input
-                        id="add-wa-apprenticeship-program-name"
-                        type="text"
-                        placeholder="e.g. IBEW Apprenticeship Training"
-                        value={form.apprenticeshipProgramName}
-                        onChange={e => setForm(f => ({ ...f, apprenticeshipProgramName: e.target.value }))}
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
-                      />
-                    </div>
-                  )}
-                  {form.laborType === 'apprentice' && (
-                    <div>
-                      <label htmlFor="add-wa-rapids-number" className="block text-xs text-gray-600 mb-1">
-                        RAPIDS Number <span className="text-gray-400">(optional)</span>
-                      </label>
-                      <input
-                        id="add-wa-rapids-number"
-                        type="text"
-                        placeholder="DOL RAPIDS registration number"
-                        value={form.rapidsNumber}
-                        onChange={e => setForm(f => ({ ...f, rapidsNumber: e.target.value }))}
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
-                      />
-                    </div>
-                  )}
                   <div className="col-span-2 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
                     <p className="text-xs font-medium text-blue-800">Washington Prevailing Wage</p>
                     <div className="grid grid-cols-2 gap-3">
@@ -1478,22 +1583,6 @@ export function WorkersPage() {
                 </div>
               ) : hasWd ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label htmlFor="add-trade-select" className="block text-xs text-gray-600 mb-1">Trade</label>
-                    <select
-                      id="add-trade-select"
-                      value={form.tradeCode}
-                      onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value }))}
-                      className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                    >
-                      <option value="">— Select a trade —</option>
-                      {wageClassifications.map(wc => (
-                        <option key={wc.id} value={wc.tradeCode}>
-                          {wc.tradeDescription} — {fmt(wc.baseRate)} + {fmt(wc.fringeRate)} fringe/hr
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   <div>
                     <label htmlFor="add-labor-type" className="block text-xs text-gray-600 mb-1">Labor Type</label>
                     <select
@@ -1507,7 +1596,7 @@ export function WorkersPage() {
                   </div>
                   {form.laborType === 'apprentice' && (
                     <div>
-                      <label htmlFor="add-app-pct" className="block text-xs text-gray-600 mb-1">Apprentice % of Journey Rate</label>
+                      <label htmlFor="add-app-pct" className="block text-xs text-gray-600 mb-1">Program Wage %</label>
                       <input
                         id="add-app-pct"
                         type="number"
@@ -1515,18 +1604,18 @@ export function WorkersPage() {
                         max="100"
                         value={form.apprenticePercent}
                         onChange={e => setForm(p => ({ ...p, apprenticePercent: e.target.value }))}
-                        placeholder="e.g. 80"
+                        placeholder="From approved program"
                         className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                       />
                     </div>
                   )}
                   {form.laborType === 'apprentice' && (
                     <div className="col-span-2">
-                      <label htmlFor="add-program-name" className="block text-xs text-gray-600 mb-1">DOL Apprenticeship Program Name <span className="text-gray-400">(optional)</span></label>
+                      <label htmlFor="add-program-name" className="block text-xs text-gray-600 mb-1">Registered Apprenticeship Program</label>
                       <input
                         id="add-program-name"
                         type="text"
-                        placeholder="DOL apprenticeship program name (optional)"
+                        placeholder="Approved program name"
                         value={form.programName}
                         onChange={e => setForm(f => ({ ...f, programName: e.target.value }))}
                         className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
@@ -1536,7 +1625,7 @@ export function WorkersPage() {
                   {form.laborType === 'apprentice' && (
                     <div>
                       <label htmlFor="add-apprenticeship-program-name" className="block text-xs text-gray-600 mb-1">
-                        Apprenticeship Program Name <span className="text-gray-400">(optional)</span>
+                        Worker Program Name <span className="text-gray-400">(optional)</span>
                       </label>
                       <input
                         id="add-apprenticeship-program-name"
@@ -1563,6 +1652,22 @@ export function WorkersPage() {
                       />
                     </div>
                   )}
+                  <div className="col-span-2">
+                    <label htmlFor="add-trade-select" className="block text-xs text-gray-600 mb-1">Trade</label>
+                    <select
+                      id="add-trade-select"
+                      value={form.tradeCode}
+                      onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value }))}
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                    >
+                      <option value="">— Select a trade —</option>
+                      {wageClassifications.map(wc => (
+                        <option key={wc.id} value={wc.tradeCode}>
+                          {wc.tradeDescription} — {fmt(wc.baseRate)} + {fmt(wc.fringeRate)} fringe/hr
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-amber-700">

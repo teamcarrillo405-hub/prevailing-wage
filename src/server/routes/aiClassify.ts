@@ -47,6 +47,47 @@ confidence must be between 0.0 and 1.0.
 alternatives array must have 1-3 entries sorted by confidence descending.`;
 
 const MODEL = 'claude-3-5-haiku-20241022'; // fast + cheap for classification
+const LOCAL_MODEL = 'local-classification-rules-v1';
+
+function localClassify(jobDescription: string) {
+  const text = jobDescription.toLowerCase();
+  const rules: Array<{ code: string; description: string; confidence: number; keywords: string[] }> = [
+    { code: 'ELEC', description: 'Electrician', confidence: 0.86, keywords: ['electrical', 'conduit', 'wire', 'panel', 'lighting'] },
+    { code: 'PLUM', description: 'Plumber', confidence: 0.84, keywords: ['plumbing', 'pipe', 'fixture', 'water line', 'drain'] },
+    { code: 'CARP', description: 'Carpenter', confidence: 0.82, keywords: ['carpentry', 'framing', 'door', 'formwork', 'cabinet'] },
+    { code: 'OPER', description: 'Power Equipment Operator', confidence: 0.82, keywords: ['excavator', 'loader', 'crane', 'equipment', 'backhoe'] },
+    { code: 'LABO', description: 'Laborer', confidence: 0.72, keywords: ['cleanup', 'demolition', 'material handling', 'site prep', 'labor'] },
+    { code: 'PAIN', description: 'Painter', confidence: 0.78, keywords: ['paint', 'coating', 'sandblast', 'finish'] },
+    { code: 'ROOF', description: 'Roofer', confidence: 0.8, keywords: ['roof', 'membrane', 'flashing'] },
+  ];
+
+  const scored = rules
+    .map((rule) => ({
+      ...rule,
+      score: rule.keywords.filter((keyword) => text.includes(keyword)).length,
+    }))
+    .sort((a, b) => b.score - a.score || b.confidence - a.confidence);
+
+  const best = scored[0].score > 0 ? scored[0] : scored.find((rule) => rule.code === 'LABO')!;
+  const alternatives = scored
+    .filter((rule) => rule.code !== best.code)
+    .slice(0, 3)
+    .map((rule) => ({
+      tradeCode: rule.code,
+      tradeDescription: rule.description,
+      confidence: rule.score > 0 ? Math.max(rule.confidence - 0.1, 0.5) : 0.42,
+    }));
+
+  return {
+    tradeCode: best.code,
+    tradeDescription: best.description,
+    confidence: best.score > 0 ? best.confidence : 0.58,
+    reasoning: best.score > 0
+      ? 'Matched task language to common Davis-Bacon trade keywords; human review is still required.'
+      : 'No strong keyword match was found, so Laborer is suggested as a review starting point.',
+    alternatives,
+  };
+}
 
 aiClassifyRouter.post('/classify', async (req, res) => {
   const parseResult = ClassifyBodySchema.safeParse(req.body);
@@ -60,20 +101,6 @@ aiClassifyRouter.post('/classify', async (req, res) => {
   const startMs = Date.now();
 
   try {
-    const client = getAnthropicClient();
-    const message = await client.messages.create({
-      model: MODEL,
-      max_tokens: 512,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: `Job description: ${jobDescription}` }],
-    });
-
-    const latencyMs = Date.now() - startMs;
-    const rawText =
-      Array.isArray(message.content) && message.content[0]?.type === 'text'
-        ? message.content[0].text
-        : '{}';
-
     let parsed2: {
       tradeCode: string;
       tradeDescription: string;
@@ -81,12 +108,33 @@ aiClassifyRouter.post('/classify', async (req, res) => {
       reasoning: string;
       alternatives: Array<{ tradeCode: string; tradeDescription: string; confidence: number }>;
     };
+    let modelUsed = MODEL;
+    let latencyMs = Date.now() - startMs;
 
-    try {
-      parsed2 = JSON.parse(rawText);
-    } catch {
-      res.status(502).json({ error: 'AI returned unparseable response', raw: rawText });
-      return;
+    if (!process.env.ANTHROPIC_API_KEY) {
+      parsed2 = localClassify(jobDescription);
+      modelUsed = LOCAL_MODEL;
+    } else {
+      const client = getAnthropicClient();
+      const message = await client.messages.create({
+        model: MODEL,
+        max_tokens: 512,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: `Job description: ${jobDescription}` }],
+      });
+
+      latencyMs = Date.now() - startMs;
+      const rawText =
+        Array.isArray(message.content) && message.content[0]?.type === 'text'
+          ? message.content[0].text
+          : '{}';
+
+      try {
+        parsed2 = JSON.parse(rawText);
+      } catch {
+        res.status(502).json({ error: 'AI returned unparseable response', raw: rawText });
+        return;
+      }
     }
 
     // Audit trail (AI-02)
@@ -102,7 +150,7 @@ aiClassifyRouter.post('/classify', async (req, res) => {
       confidence: parsed2.confidence,
       reasoning: parsed2.reasoning ?? null,
       alternativesJson: JSON.stringify(parsed2.alternatives ?? []),
-      modelUsed: MODEL,
+      modelUsed,
       latencyMs,
       createdAt: new Date().toISOString(),
     });

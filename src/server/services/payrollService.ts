@@ -12,12 +12,13 @@ import {
   payrollWeekClassifications,
   projects,
 } from '../db/schema.js';
-import { getCachedWd, getCachedClassifications } from './wageCache.js';
+import { getCachedWd, getCachedClassifications, getPinnedWdsForProject } from './wageCache.js';
 import { lookupWageDetermination } from './wageLookup.js';
 import { insertAuditLog, diffObjects } from './auditService.js';
 import { sendViolationEmail, sendActivityEmail } from './emailService.js';
 import { computeCompliance } from './complianceService.js';
-import { calculateCwhssaOt } from './calculations.js';
+import { calculateCertifiedPayrollPay } from './calculations.js';
+import { resolveEffectiveClassificationRates } from './classificationRates.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -194,11 +195,34 @@ async function lookupRatesForEntry(
   if (!project || !project.state) return null;
 
   const [wc] = await db
-    .select({ tradeCode: workerClassifications.tradeCode })
+    .select({
+      tradeCode: workerClassifications.tradeCode,
+      laborType: workerClassifications.laborType,
+      apprenticePercent: workerClassifications.apprenticePercent,
+    })
     .from(workerClassifications)
     .where(eq(workerClassifications.id, classificationId))
     .limit(1);
   if (!wc) return null;
+
+  const pinnedWds = getPinnedWdsForProject(week.projectId);
+  const pinnedWd = pinnedWds.find((wd) => wd.isPrimary) ?? pinnedWds[0];
+  if (pinnedWd) {
+    const pinnedMatch = getCachedClassifications(pinnedWd.wageDeterminationId)
+      .find((c) => c.tradeCode === wc.tradeCode);
+    if (pinnedMatch) {
+      return resolveEffectiveClassificationRates(pinnedMatch, wc);
+    }
+  }
+
+  const cachedWd = getCachedWd(project.state, project.county ?? '');
+  if (cachedWd) {
+    const cachedMatch = getCachedClassifications(cachedWd.id)
+      .find((c) => c.tradeCode === wc.tradeCode);
+    if (cachedMatch) {
+      return resolveEffectiveClassificationRates(cachedMatch, wc);
+    }
+  }
 
   const wd = await lookupWageDetermination(project.state, project.county ?? '');
   if (!wd || !wd.classifications) return null;
@@ -206,7 +230,7 @@ async function lookupRatesForEntry(
   const match = wd.classifications.find((c) => c.tradeCode === wc.tradeCode);
   if (!match) return null;
 
-  return { baseRate: match.baseRate, fringeRate: match.fringeRate };
+  return resolveEffectiveClassificationRates(match, wc);
 }
 
 // Compute grossWages + netPay from hours + rates using the existing CWHSSA
@@ -228,12 +252,12 @@ function computeGrossAndNet(
   const totalSt = values.monSt + values.tueSt + values.wedSt + values.thuSt + values.friSt + values.satSt + values.sunSt;
   const totalOt = values.monOt + values.tueOt + values.wedOt + values.thuOt + values.friOt + values.satOt + values.sunOt;
   const totalDt = values.monDt + values.tueDt + values.wedDt + values.thuDt + values.friDt + values.satDt + values.sunDt;
-  const totalHoursWorked = totalSt + totalOt + totalDt;
-  const result = calculateCwhssaOt({
+  const result = calculateCertifiedPayrollPay({
     baseRate,
     fringeRate,
-    totalHoursWorked,
-    overtimeHours: totalOt + totalDt,
+    straightTimeHours: totalSt,
+    overtimeHours: totalOt,
+    doubleTimeHours: totalDt,
   });
   const grossWages = Math.round(result.totalWeeklyCost * 100) / 100;
   const netPay = Math.round((grossWages - (deductions || 0)) * 100) / 100;
@@ -404,20 +428,15 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     });
 
   // Return the entry by the unique constraint fields (id may differ from inserted)
-  const [entry] = await db
+  const [match] = await db
     .select()
     .from(payrollEntries)
-    .where(eq(payrollEntries.payrollWeekId, input.payrollWeekId))
-    // We filter to the specific worker+classification for the return value
-    .limit(100);
-
-  const match = entry
-    ? [entry].find(
-        (e) =>
-          e.workerId === input.workerId &&
-          e.classificationId === input.classificationId,
-      )
-    : null;
+    .where(and(
+      eq(payrollEntries.payrollWeekId, input.payrollWeekId),
+      eq(payrollEntries.workerId, input.workerId),
+      eq(payrollEntries.classificationId, input.classificationId),
+    ))
+    .limit(1);
 
   // Best-effort audit log (AUDIT-03) — never throws
   if (match) {
@@ -490,6 +509,7 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
           notifWeek.weekEndingDate,
           complianceResult.violations,
           complianceResult.weekViolations,
+          complianceResult.deductionViolations,
         );
       }
     }
@@ -803,11 +823,12 @@ export async function copyPayrollWeek(input: CopyWeekInput): Promise<CopyWeekRes
     throw new Error(`Project not found: ${input.projectId}`);
   }
 
-  // 2. Build rate map using cache-first lookup (matching workers.ts pattern)
-  const wd =
-    getCachedWd(project.state, project.county) ??
-    (await lookupWageDetermination(project.state, project.county));
-
+  // 2. Build rate map using the project-pinned WD first, then state/county cache.
+  const pinnedWds = getPinnedWdsForProject(input.projectId);
+  const pinnedWd = pinnedWds.find((row) => row.isPrimary) ?? pinnedWds[0];
+  const wd = pinnedWd
+    ? { id: pinnedWd.wageDeterminationId }
+    : getCachedWd(project.state, project.county) ?? (await lookupWageDetermination(project.state, project.county));
   const rateMap = new Map<string, { baseRate: number; fringeRate: number }>();
   if (wd) {
     for (const wc of getCachedClassifications(wd.id)) {
@@ -823,6 +844,8 @@ export async function copyPayrollWeek(input: CopyWeekInput): Promise<CopyWeekRes
       workerIsActive: workers.isActive,
       tradeCode: workerClassifications.tradeCode,
       tradeDescription: workerClassifications.tradeDescription,
+      laborType: workerClassifications.laborType,
+      apprenticePercent: workerClassifications.apprenticePercent,
     })
     .from(payrollEntries)
     .innerJoin(workers, eq(payrollEntries.workerId, workers.id))
@@ -851,11 +874,12 @@ export async function copyPayrollWeek(input: CopyWeekInput): Promise<CopyWeekRes
       continue;
     }
 
-    const rates = rateMap.get(row.tradeCode);
-    if (!rates) {
+    const journeyRates = rateMap.get(row.tradeCode);
+    if (!journeyRates) {
       skipped.push({ ...baseSkipped, reason: 'rate-lookup-failed' });
       continue;
     }
+    const rates = resolveEffectiveClassificationRates(journeyRates, row);
 
     copied.push({
       workerId: row.entry.workerId,
@@ -886,7 +910,7 @@ export async function copyPayrollWeek(input: CopyWeekInput): Promise<CopyWeekRes
     );
     if (!isCopied) continue;
 
-    const rates = rateMap.get(row.tradeCode)!;
+    const rates = resolveEffectiveClassificationRates(rateMap.get(row.tradeCode)!, row);
 
     await upsertPayrollEntry({
       payrollWeekId: newWeek.id,
@@ -1008,11 +1032,22 @@ export async function amendPayrollWeek(input: AmendWeekInput): Promise<AmendWeek
       friOt: entry.friOt ?? 0,
       satOt: entry.satOt ?? 0,
       sunOt: entry.sunOt ?? 0,
+      monDt: entry.monDt ?? 0,
+      tueDt: entry.tueDt ?? 0,
+      wedDt: entry.wedDt ?? 0,
+      thuDt: entry.thuDt ?? 0,
+      friDt: entry.friDt ?? 0,
+      satDt: entry.satDt ?? 0,
+      sunDt: entry.sunDt ?? 0,
       baseRateSnapshot: entry.baseRateSnapshot,
       fringeRateSnapshot: entry.fringeRateSnapshot,
-      grossWages: null,
-      deductions: 0,
-      netPay: null,
+      grossWages: entry.grossWages ?? null,
+      deductions: entry.deductions ?? 0,
+      netPay: entry.netPay ?? null,
+      fringeHealthWelfare: entry.fringeHealthWelfare ?? null,
+      fringePension: entry.fringePension ?? null,
+      fringeVacation: entry.fringeVacation ?? null,
+      fringeTraining: entry.fringeTraining ?? null,
       nonPwHours: entry.nonPwHours ?? null,
       checkNumber: entry.checkNumber ?? null,
       allOtherHours: entry.allOtherHours ?? null,
@@ -1021,6 +1056,7 @@ export async function amendPayrollWeek(input: AmendWeekInput): Promise<AmendWeek
       federalIncomeTax: entry.federalIncomeTax ?? null,
       stateIncomeTax: entry.stateIncomeTax ?? null,
       sdiTax: entry.sdiTax ?? null,
+      subcontractorId: entry.subcontractorId ?? null,
       createdByUserId: null, // amendment copies are system-generated clones, not direct user edits
       updatedByUserId: null,
       createdAt: now,

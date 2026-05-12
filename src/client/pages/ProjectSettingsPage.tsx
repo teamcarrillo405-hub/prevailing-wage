@@ -17,6 +17,11 @@ interface Project {
   gpsLongitude: number | null;
   gpsRadiusMeters: number | null;
   projectSettings: string | null;
+  apprenticeshipRequirements: string | null;
+}
+
+interface SubcontractorSummary {
+  id: string;
 }
 
 interface TeamMember {
@@ -24,6 +29,91 @@ interface TeamMember {
   email: string;
   role: string;
   joinedAt: string;
+}
+
+interface ProjectOnboardingSetup {
+  payrollProvider?: string;
+  accountingProvider?: string;
+  projectManagementProvider?: string;
+  usesSubcontractors?: boolean;
+  usesApprentices?: boolean;
+  fieldTrackingNeeded?: boolean;
+  averageWeeklyWorkers?: number;
+  completedPromptKeys?: string[];
+  appliedAt?: string;
+  lastAppliedAt?: string;
+}
+
+interface StoredProjectSettings {
+  onboardingSetup?: ProjectOnboardingSetup;
+  gpsJobsiteAddress?: string;
+}
+
+function parseProjectOnboardingSetup(raw: string | null | undefined): ProjectOnboardingSetup | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { onboardingSetup?: ProjectOnboardingSetup };
+    return parsed.onboardingSetup ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function parseStoredProjectSettings(raw: string | null | undefined): StoredProjectSettings {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as StoredProjectSettings;
+  } catch {
+    return {};
+  }
+}
+
+function buildUpdatedProjectSettings(raw: string | null | undefined, setup: ProjectOnboardingSetup): string {
+  let parsed: Record<string, unknown> = {};
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      parsed = {};
+    }
+  }
+  return JSON.stringify({ ...parsed, onboardingSetup: setup });
+}
+
+function metersToFeet(meters: number) {
+  return Math.round(meters * 3.281);
+}
+
+const RADIUS_PRESETS = [
+  { label: '250 ft', meters: 76 },
+  { label: '500 ft', meters: 152 },
+  { label: '1,000 ft', meters: 305 },
+  { label: '1 mile', meters: 1609 },
+];
+
+function providerName(value: string | undefined) {
+  const labels: Record<string, string> = {
+    quickbooks: 'QuickBooks',
+    adp: 'ADP',
+    gusto: 'Gusto',
+    paychex: 'Paychex',
+    sage_300: 'Sage 300 CRE',
+    sage_100: 'Sage 100',
+    procore: 'Procore',
+    other: 'Other',
+    none: 'None',
+  };
+  return value ? labels[value] ?? value.replaceAll('_', ' ') : 'None';
+}
+
+function hasApprenticeshipSetup(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.keys(parsed).length > 0;
+  } catch {
+    return false;
+  }
 }
 
 // ── Phase 86: Report schedule settings ─────────────────────────────────────
@@ -370,18 +460,41 @@ export function ProjectSettingsPage() {
     enabled: !!projectId,
   });
 
+  const { data: subcontractorsData } = useQuery({
+    queryKey: ['subcontractors', projectId],
+    queryFn: () => api.get<{ data: { subcontractors: SubcontractorSummary[] } }>(`/projects/${projectId}/subcontractors`),
+    enabled: !!projectId,
+    staleTime: 60_000,
+  });
+
   const project = projectData?.data?.project;
+  const onboardingSetup = parseProjectOnboardingSetup(project?.projectSettings);
+  const completedPromptKeys = new Set(onboardingSetup?.completedPromptKeys ?? []);
+  const hasSubcontractorSetup = (subcontractorsData?.data?.subcontractors?.length ?? 0) > 0;
+  const hasApprenticeshipRatioSetup = hasApprenticeshipSetup(project?.apprenticeshipRequirements);
+  const fieldProofApplied = Boolean(project?.gpsClockInEnabled || completedPromptKeys.has('field-proof'));
+  const hasRecommendedSetup =
+    Boolean(onboardingSetup?.fieldTrackingNeeded || onboardingSetup?.usesSubcontractors || onboardingSetup?.usesApprentices);
+  const allRecommendedSetupApplied =
+    (!onboardingSetup?.fieldTrackingNeeded || fieldProofApplied) &&
+    (!onboardingSetup?.usesSubcontractors || hasSubcontractorSetup) &&
+    (!onboardingSetup?.usesApprentices || hasApprenticeshipRatioSetup);
 
   // Local form state — synced from project on load
   const [gpsEnabled, setGpsEnabled] = useState(false);
+  const [jobsiteAddress, setJobsiteAddress] = useState('');
   const [latStr, setLatStr] = useState('');
   const [lngStr, setLngStr] = useState('');
   const [radiusMeters, setRadiusMeters] = useState(500);
   const [formError, setFormError] = useState<string | null>(null);
+  const [locationStatus, setLocationStatus] = useState<string | null>(null);
+  const [locationBusy, setLocationBusy] = useState(false);
 
   useEffect(() => {
     if (!project) return;
+    const settings = parseStoredProjectSettings(project.projectSettings);
     setGpsEnabled(project.gpsClockInEnabled ?? false);
+    setJobsiteAddress(settings.gpsJobsiteAddress ?? '');
     setLatStr(project.gpsLatitude != null ? String(project.gpsLatitude) : '');
     setLngStr(project.gpsLongitude != null ? String(project.gpsLongitude) : '');
     setRadiusMeters(project.gpsRadiusMeters ?? 500);
@@ -393,6 +506,7 @@ export function ProjectSettingsPage() {
       gpsLatitude?: number | null;
       gpsLongitude?: number | null;
       gpsRadiusMeters?: number;
+      projectSettings?: string;
     }) => api.patch<{ data: { project: Project } }>(`/projects/${projectId}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
@@ -400,6 +514,104 @@ export function ProjectSettingsPage() {
     },
     onError: () => {
       toast.error('Failed to save settings');
+    },
+  });
+
+  function useCurrentJobsiteLocation() {
+    setFormError(null);
+    setLocationStatus(null);
+
+    if (!navigator.geolocation) {
+      setFormError('This device does not support current-location capture.');
+      return;
+    }
+
+    setLocationBusy(true);
+    setLocationStatus('Asking this device for its current location...');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatStr(String(position.coords.latitude));
+        setLngStr(String(position.coords.longitude));
+        setLocationStatus(`Current location saved for jobsite center. Accuracy: about ${Math.round(position.coords.accuracy)}m.`);
+        setLocationBusy(false);
+      },
+      (error) => {
+        setLocationBusy(false);
+        if (error.code === GeolocationPositionError.PERMISSION_DENIED) {
+          setFormError('Location permission was denied. Allow location access or use the address lookup.');
+        } else {
+          setFormError('Could not get current location. Try again outside or use the address lookup.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
+    );
+  }
+
+  async function findJobsiteFromAddress() {
+    setFormError(null);
+    setLocationStatus(null);
+
+    const address = jobsiteAddress.trim();
+    if (!address) {
+      setFormError('Enter a jobsite address first.');
+      return;
+    }
+
+    setLocationBusy(true);
+    setLocationStatus('Looking up the jobsite address...');
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`);
+      if (!res.ok) throw new Error(`Geocoding failed: ${res.status}`);
+      const rows = await res.json() as Array<{ lat: string; lon: string; display_name?: string }>;
+      const match = rows[0];
+      if (!match) {
+        setFormError('No location was found for that address. Try a more complete street address.');
+        setLocationStatus(null);
+        return;
+      }
+
+      setLatStr(match.lat);
+      setLngStr(match.lon);
+      setLocationStatus(match.display_name ? `Location found: ${match.display_name}` : 'Location found and saved for the jobsite center.');
+    } catch {
+      setFormError('Address lookup failed. Use current location or paste coordinates in Advanced.');
+      setLocationStatus(null);
+    } finally {
+      setLocationBusy(false);
+    }
+  }
+
+  const applyRecommendedMutation = useMutation({
+    mutationFn: () => {
+      const now = new Date().toISOString();
+      const completedPromptKeys = new Set(onboardingSetup?.completedPromptKeys ?? []);
+
+      if (onboardingSetup?.fieldTrackingNeeded) completedPromptKeys.add('field-proof');
+
+      const nextSetup: ProjectOnboardingSetup = {
+        ...(onboardingSetup ?? {}),
+        completedPromptKeys: Array.from(completedPromptKeys),
+        lastAppliedAt: now,
+      };
+
+      return api.patch<{ data: { project: Project } }>(`/projects/${projectId}`, {
+        ...(onboardingSetup?.fieldTrackingNeeded && {
+          gpsClockInEnabled: true,
+          gpsRadiusMeters: project?.gpsRadiusMeters ?? 500,
+        }),
+        projectSettings: buildUpdatedProjectSettings(project?.projectSettings, nextSetup),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      if (onboardingSetup?.fieldTrackingNeeded) {
+        setGpsEnabled(true);
+        setRadiusMeters(project?.gpsRadiusMeters ?? 500);
+      }
+      toast.success(onboardingSetup?.fieldTrackingNeeded ? 'Field proof settings applied' : 'Setup recommendations refreshed');
+    },
+    onError: () => {
+      toast.error('Failed to apply recommended setup');
     },
   });
 
@@ -417,11 +629,22 @@ export function ProjectSettingsPage() {
         setFormError('Longitude must be between -180 and 180.');
         return;
       }
+      const nextProjectSettings = parseStoredProjectSettings(project?.projectSettings);
+      nextProjectSettings.gpsJobsiteAddress = jobsiteAddress.trim() || undefined;
+      if (onboardingSetup?.fieldTrackingNeeded) {
+        nextProjectSettings.onboardingSetup = {
+          ...onboardingSetup,
+          completedPromptKeys: Array.from(new Set([...(onboardingSetup.completedPromptKeys ?? []), 'field-proof'])),
+          lastAppliedAt: new Date().toISOString(),
+        };
+      }
+
       saveMutation.mutate({
         gpsClockInEnabled: true,
         gpsLatitude: latStr ? lat : null,
         gpsLongitude: lngStr ? lng : null,
         gpsRadiusMeters: radiusMeters,
+        projectSettings: JSON.stringify(nextProjectSettings),
       });
     } else {
       saveMutation.mutate({ gpsClockInEnabled: false });
@@ -462,6 +685,76 @@ export function ProjectSettingsPage() {
           </h1>
           <p className="text-sm text-gray-500">{project.name}</p>
         </div>
+
+        {onboardingSetup && (
+          <div className="bg-brand-gold/10 rounded-lg border border-brand-gold/40 shadow-sm p-5 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-headline text-base font-semibold text-gray-900">
+                  Onboarding-Based Setup
+                </h2>
+                <p className="mt-1 text-sm text-gray-700">
+                  This project inherited your contractor profile: {providerName(onboardingSetup.payrollProvider)} payroll,
+                  {' '}{providerName(onboardingSetup.projectManagementProvider)} project system,
+                  {' '}{onboardingSetup.averageWeeklyWorkers ?? 0} average weekly workers.
+                </p>
+              </div>
+              <Link to="/onboarding" className="shrink-0 text-sm font-semibold text-brand-gold hover:underline">
+                Edit
+              </Link>
+            </div>
+            <div className="grid gap-2 text-sm">
+              {onboardingSetup.fieldTrackingNeeded && (
+                <div className="rounded border border-white/70 bg-white px-3 py-2 text-gray-700">
+                  {fieldProofApplied
+                    ? 'Field proof applied. GPS clock-in is enabled for this project.'
+                    : 'Field proof is recommended. Enable GPS clock-in below and use project photos for audit evidence.'}
+                </div>
+              )}
+              {onboardingSetup.usesSubcontractors && (
+                <div className="rounded border border-white/70 bg-white px-3 py-2 text-gray-700">
+                  {hasSubcontractorSetup
+                    ? 'Subcontractor CPR tracking is active. At least one subcontractor exists on this project.'
+                    : 'Subcontractor CPR tracking should be active for this project.'}
+                </div>
+              )}
+              {onboardingSetup.usesApprentices && (
+                <div className="rounded border border-white/70 bg-white px-3 py-2 text-gray-700">
+                  {hasApprenticeshipRatioSetup
+                    ? 'Apprenticeship ratio setup is active for this project.'
+                    : 'Apprenticeship ratios should be reviewed before the first certified payroll.'}
+                </div>
+              )}
+            </div>
+            {hasRecommendedSetup && (
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-gray-600">
+                  {allRecommendedSetupApplied
+                    ? 'Recommended setup has been applied for this project.'
+                    : fieldProofApplied
+                    ? 'Field proof is applied. Subcontractor and apprenticeship prompts complete automatically when those records exist.'
+                    : 'Apply will enable field proof defaults. Subcontractor and apprenticeship prompts complete automatically when those records exist.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => applyRecommendedMutation.mutate()}
+                  disabled={applyRecommendedMutation.isPending || allRecommendedSetupApplied || !onboardingSetup.fieldTrackingNeeded || fieldProofApplied}
+                  className="inline-flex min-h-10 items-center justify-center rounded bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {applyRecommendedMutation.isPending
+                    ? 'Applying...'
+                    : allRecommendedSetupApplied
+                      ? 'Applied'
+                      : fieldProofApplied
+                        ? 'Field proof applied'
+                      : onboardingSetup.fieldTrackingNeeded
+                        ? 'Apply field proof settings'
+                        : 'Complete records to apply'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* GPS Settings Card */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
@@ -506,15 +799,87 @@ export function ProjectSettingsPage() {
             </div>
           )}
 
-          {/* GPS coordinates section */}
+          {/* Jobsite location section */}
           {gpsEnabled && (
             <div className="space-y-4 pt-2">
               <p className="text-sm text-gray-600">
-                Set the job site center coordinates to check if workers are on-site. Leave blank
-                to skip distance checking (location will still be recorded).
+                Set the jobsite center with a normal address or the current device location. The system saves
+                the GPS coordinates in the background for on-site checks.
               </p>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Jobsite address
+                </label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  placeholder="123 Main St, Los Angeles, CA"
+                  value={jobsiteAddress}
+                  onChange={(e) => setJobsiteAddress(e.target.value)}
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={findJobsiteFromAddress}
+                    disabled={locationBusy}
+                    className="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Find location from address
+                  </button>
+                  <button
+                    type="button"
+                    onClick={useCurrentJobsiteLocation}
+                    disabled={locationBusy}
+                    className="rounded border border-brand-gold bg-brand-gold/10 px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-gold/20 disabled:opacity-50"
+                  >
+                    Use my current location
+                  </button>
+                </div>
+                {locationStatus && (
+                  <p className="mt-2 text-xs text-emerald-700">{locationStatus}</p>
+                )}
+                {latStr && lngStr && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Jobsite geofence is set. Workers outside the selected radius will see a warning.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-2">
+                  Jobsite radius
+                </label>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {RADIUS_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setRadiusMeters(preset.meters)}
+                      className={`rounded border px-3 py-2 text-xs font-semibold transition-colors ${
+                        radiusMeters === preset.meters
+                          ? 'border-brand-gold bg-brand-gold/15 text-brand-navy'
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Current radius: <span className="font-semibold">{metersToFeet(radiusMeters)} ft</span>.
+                  Workers are warned, not blocked, when outside the radius.
+                </p>
+              </div>
+
+              <details className="rounded border border-gray-200 bg-gray-50 p-3">
+                <summary className="cursor-pointer text-xs font-semibold text-gray-700">
+                  Advanced: GPS coordinates
+                </summary>
+                <p className="mt-2 text-xs text-gray-500">
+                  Use this only when a jobsite has no reliable street address or you already have a map pin.
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Latitude
@@ -546,11 +911,12 @@ export function ProjectSettingsPage() {
                   />
                 </div>
               </div>
+              </details>
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Geofence Radius: <span className="font-semibold">{radiusMeters}m</span>
-                  <span className="text-gray-400 ml-1">({Math.round(radiusMeters * 3.281)}ft)</span>
+                  Custom geofence radius: <span className="font-semibold">{radiusMeters}m</span>
+                  <span className="text-gray-400 ml-1">({metersToFeet(radiusMeters)}ft)</span>
                 </label>
                 <input
                   type="range"
@@ -565,9 +931,6 @@ export function ProjectSettingsPage() {
                   <span>50m</span>
                   <span>2,000m</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Workers outside this radius will see a warning but are not blocked from clocking in.
-                </p>
               </div>
             </div>
           )}

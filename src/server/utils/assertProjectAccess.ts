@@ -36,3 +36,15 @@ export async function assertProjectAccess(
   if (!exists) throw { status: 404, message: 'Project not found' };
   throw { status: 403, message: 'Access denied' };
 }
+
+export async function assertProjectWriteAccess(
+  db: DrizzleDb,
+  projectId: string,
+  userId: string,
+): Promise<{ project: Project; role: Exclude<ProjectRole, 'auditor'> }> {
+  const access = await assertProjectAccess(db, projectId, userId);
+  if (access.role === 'auditor') {
+    throw { status: 403, message: 'Auditors have read-only project access' };
+  }
+  return access as { project: Project; role: Exclude<ProjectRole, 'auditor'> };
+}

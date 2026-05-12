@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import supertest from 'supertest';
+import { eq } from 'drizzle-orm';
 import { app } from '../../src/server/index.js';
 import { computeCompliance } from '../../src/server/services/complianceService.js';
+import { getDb } from '../../src/server/db/index.js';
+import { projects, workerClassifications } from '../../src/server/db/schema.js';
 
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
@@ -13,6 +16,7 @@ beforeAll(() => {
 async function seedApprenticeWorker(
   cookie: string,
   projectId: string,
+  opts: { programName?: string | null } = {},
 ): Promise<{ workerId: string; classificationId: string }> {
   const wRes = await supertest(app)
     .post(`/api/projects/${projectId}/workers`)
@@ -28,6 +32,7 @@ async function seedApprenticeWorker(
       tradeDescription: 'Electrician Apprentice',
       laborType: 'apprentice',
       apprenticePercent: 80,
+      ...(opts.programName !== null ? { programName: opts.programName ?? 'IBEW Registered Apprenticeship Program' } : {}),
     });
   const classificationId = cRes.body.data?.classification?.id as string;
 
@@ -107,9 +112,17 @@ async function seedEntry(
     satOt?: number;
     sunSt?: number;
     sunOt?: number;
+    monDt?: number;
+    tueDt?: number;
+    wedDt?: number;
+    thuDt?: number;
+    friDt?: number;
+    satDt?: number;
+    sunDt?: number;
     baseRateSnapshot: number;
     fringeRateSnapshot: number;
     grossWages?: number;
+    deductions?: number;
   },
 ) {
   const res = await supertest(app)
@@ -133,9 +146,17 @@ async function seedEntry(
       satOt: opts.satOt ?? 0,
       sunSt: opts.sunSt ?? 0,
       sunOt: opts.sunOt ?? 0,
+      monDt: opts.monDt ?? 0,
+      tueDt: opts.tueDt ?? 0,
+      wedDt: opts.wedDt ?? 0,
+      thuDt: opts.thuDt ?? 0,
+      friDt: opts.friDt ?? 0,
+      satDt: opts.satDt ?? 0,
+      sunDt: opts.sunDt ?? 0,
       baseRateSnapshot: opts.baseRateSnapshot,
       fringeRateSnapshot: opts.fringeRateSnapshot,
       grossWages: opts.grossWages ?? null,
+      deductions: opts.deductions ?? 0,
     });
   return res.body.data?.entry?.id ?? res.body.id;
 }
@@ -201,6 +222,7 @@ async function seedProjectWithApprenticeshipConfig(opts: {
       tradeDescription: 'Electrician',
       laborType: 'apprentice',
       apprenticePercent: 80,
+      programName: 'IBEW Registered Apprenticeship Program',
     });
   const appClassificationId = acRes.body.data?.classification?.id as string;
 
@@ -321,6 +343,56 @@ describe('computeCompliance', () => {
     expect(underResult!.violations[0].expected).toBe(1820);
     expect(underResult!.violations[0].actual).toBe(1760);
     expect(underResult!.violations[0].delta).toBe(-60);
+  });
+
+  it('COMP-02: weekly hours over 40 left as straight time flags missing federal OT', async () => {
+    const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-12', 7);
+
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 4,
+      baseRateSnapshot: 30,
+      fringeRateSnapshot: 10,
+      grossWages: 1760,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const weeklyOt = result!.violations.find(v => v.violationType === 'weekly-ot');
+    expect(weeklyOt).toBeDefined();
+    expect(weeklyOt!.delta).toBe(-60);
+    expect(result!.certAccuratePayroll).toBe(false);
+  });
+
+  it('COMP-02: multi-classification week over 40 without OT flags weighted-average review', async () => {
+    const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
+    const cRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+      .set('Cookie', cookie)
+      .send({
+        tradeCode: 'PLUM',
+        tradeDescription: 'Plumber',
+        laborType: 'journeyworker',
+      });
+    const secondClassificationId = cRes.body.data?.classification?.id as string;
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-13', 8);
+
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 4,
+      baseRateSnapshot: 30,
+      fringeRateSnapshot: 10,
+      grossWages: 800,
+    });
+    await seedEntry(cookie, weekId, workerId, secondClassificationId, {
+      wedSt: 4, thuSt: 8, friSt: 8, satSt: 4,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 1200,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    expect(result!.violations.some(v => v.violationType === 'multi-classification-ot')).toBe(true);
   });
 
   it('COMP-01/COMP-02: certProperPayment is false when an under-wage violation exists', async () => {
@@ -491,6 +563,25 @@ describe('computeCompliance', () => {
     const result = await computeCompliance(db, weekId);
     expect(result).not.toBeNull();
     expect(result!.weekViolations).toHaveLength(0);
+  });
+
+  it('COMP-03: apprentice payroll without registered program name requires review', async () => {
+    const { projectId, cookie } = await seedProjectAndWorker();
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-10', 19);
+    const { workerId: appId, classificationId: appClassId } = await seedApprenticeWorker(cookie, projectId);
+    await getDb().update(workerClassifications)
+      .set({ programName: null })
+      .where(eq(workerClassifications.id, appClassId));
+    await seedEntry(cookie, weekId, appId, appClassId, {
+      monSt: 8,
+      baseRateSnapshot: 20,
+      fringeRateSnapshot: 5,
+      grossWages: 200,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    expect(result!.weekViolations.some(v => v.violationType === 'apprentice-registration')).toBe(true);
   });
 
   // ── NY Daily OT Rule ─────────────────────────────────────────────────────
@@ -674,6 +765,47 @@ describe('computeCompliance', () => {
     expect(result!.hasViolations).toBe(true);          // true because weekViolations non-empty
   });
 
+  it('COMP-08: deduction-ratio violations contribute to hasViolations', async () => {
+    const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-08', 17);
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8,
+      baseRateSnapshot: 30,
+      fringeRateSnapshot: 10,
+      grossWages: 320,
+      deductions: 120,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    expect(result!.violations).toHaveLength(0);
+    expect(result!.weekViolations).toHaveLength(0);
+    expect(result!.deductionViolations).toHaveLength(1);
+    expect(result!.hasViolations).toBe(true);
+  });
+
+  it('CA double-time pay math uses a full extra base-rate premium', async () => {
+    const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
+    const db = (globalThis as any).__testDb;
+    await db.update(projects)
+      .set({ state: 'CA' })
+      .where(eq(projects.id, projectId));
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-09', 18);
+
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8,
+      monOt: 4,
+      monDt: 2,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 860,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    expect(result!.violations.filter(v => v.violationType === 'cwhssa-ot')).toHaveLength(0);
+  });
+
   // ── COMP-04: Per-trade daily apprenticeship ratio ────────────────────────
 
   it('COMP-04: violation fires when apprentice hours exceed configured 1:2 ratio', async () => {
@@ -702,14 +834,13 @@ describe('computeCompliance', () => {
     const tradeRatioViolations = result!.weekViolations.filter(
       v => v.violationType === 'apprentice-trade-ratio',
     );
-    expect(tradeRatioViolations).toHaveLength(1);
+    expect(tradeRatioViolations).toHaveLength(3);
     expect(tradeRatioViolations[0].trade).toBe('Electrician');
-    expect(tradeRatioViolations[0].apprenticeHours).toBe(20);
-    expect(tradeRatioViolations[0].journeyworkerHours).toBe(20);
-    expect(tradeRatioViolations[0].maxAllowedApprenticeHours).toBeCloseTo(10, 1);
-    expect(tradeRatioViolations[0].excessHours).toBeCloseTo(10, 1);
-    // estimatedLiabilityUsd = 10 * (40 - 25) = 150
-    expect(tradeRatioViolations[0].estimatedLiabilityUsd).toBeCloseTo(150, 1);
+    expect(tradeRatioViolations[0].apprenticeHours).toBe(8);
+    expect(tradeRatioViolations[0].journeyworkerHours).toBe(8);
+    expect(tradeRatioViolations[0].maxAllowedApprenticeHours).toBeCloseTo(4, 1);
+    expect(tradeRatioViolations[0].excessHours).toBeCloseTo(4, 1);
+    expect(tradeRatioViolations[0].estimatedLiabilityUsd).toBeCloseTo(60, 1);
   });
 
   it('COMP-04: no violation when apprentice hours equal max allowed (exactly at 1:2 ratio)', async () => {
@@ -725,9 +856,9 @@ describe('computeCompliance', () => {
       fringeRateSnapshot: 10,
       grossWages: 1000,
     });
-    // Apprentice: 10 hrs (exactly at limit)
+    // Apprentice: 10 hrs, exactly at the 1:2 daily limits: 4 + 4 + 2.
     await seedEntry(cookie, weekId, appWorkerId, appClassificationId, {
-      monSt: 8, tueSt: 2,
+      monSt: 4, tueSt: 4, wedSt: 2,
       baseRateSnapshot: 25,
       fringeRateSnapshot: 5,
       grossWages: 300,
@@ -768,6 +899,37 @@ describe('computeCompliance', () => {
     );
     expect(tradeRatioViolations).toHaveLength(0);
     // Note: legacy 'apprentice-ratio' (COMP-03) may still fire — that is unrelated to COMP-04.
+  });
+
+  it('COMP-04: checks ratios per day, not balanced weekly totals', async () => {
+    const { projectId, workerId, classificationId, appWorkerId, appClassificationId, cookie } =
+      await seedProjectWithApprenticeshipConfig({
+        apprenticeshipRequirements: JSON.stringify({ Electrician: { maxRatio: '1:2' } }),
+      });
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-07', 26);
+
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8,
+      baseRateSnapshot: 40,
+      fringeRateSnapshot: 10,
+      grossWages: 1600,
+    });
+    await seedEntry(cookie, weekId, appWorkerId, appClassificationId, {
+      monSt: 8,
+      baseRateSnapshot: 25,
+      fringeRateSnapshot: 5,
+      grossWages: 240,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const tradeRatioViolations = result!.weekViolations.filter(
+      v => v.violationType === 'apprentice-trade-ratio',
+    );
+    expect(tradeRatioViolations).toHaveLength(1);
+    expect(tradeRatioViolations[0].apprenticeHours).toBe(8);
+    expect(tradeRatioViolations[0].journeyworkerHours).toBe(8);
+    expect(tradeRatioViolations[0].maxAllowedApprenticeHours).toBeCloseTo(4, 1);
   });
 
   // ── COMP-05: IRA/IIJA 15% apprenticeship threshold ───────────────────────

@@ -6,7 +6,7 @@ import { eq, and, desc, gte, lte, isNull } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { timePunches, workers, payrollWeeks } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
-import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { assertProjectAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -15,9 +15,15 @@ const CreatePunchSchema = z.object({
   projectId: z.string().min(1),
   workerId: z.string().min(1),
   punchType: z.enum(['in', 'out']),
+  punchedAt: z.string().datetime().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   accuracyMeters: z.number().optional(),
+});
+
+const UpdatePunchSchema = z.object({
+  punchType: z.enum(['in', 'out']).optional(),
+  punchedAt: z.string().datetime().optional(),
 });
 
 // POST /api/time-punches
@@ -28,12 +34,12 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const { projectId, workerId, punchType, latitude, longitude, accuracyMeters } = parsed.data;
+  const { projectId, workerId, punchType, punchedAt, latitude, longitude, accuracyMeters } = parsed.data;
   const userId = req.user!.userId;
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -52,6 +58,7 @@ router.post('/', async (req, res) => {
   }
 
   const now = new Date().toISOString();
+  const effectivePunchedAt = punchedAt ?? now;
   const id = randomUUID();
 
   await db.insert(timePunches).values({
@@ -59,7 +66,7 @@ router.post('/', async (req, res) => {
     projectId,
     workerId,
     punchType,
-    punchedAt: now,
+    punchedAt: effectivePunchedAt,
     latitude: latitude ?? null,
     longitude: longitude ?? null,
     accuracyMeters: accuracyMeters ?? null,
@@ -168,7 +175,7 @@ router.delete('/:id', async (req, res) => {
   }
 
   try {
-    await assertProjectAccess(db, punch.projectId, userId);
+    await assertProjectWriteAccess(db, punch.projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -177,6 +184,56 @@ router.delete('/:id', async (req, res) => {
   await db.delete(timePunches).where(eq(timePunches.id, punchId));
 
   res.json({ data: { message: 'Punch deleted' } });
+});
+
+// PATCH /api/time-punches/:id - admin correction for missed or incorrect punches.
+router.patch('/:id', async (req, res) => {
+  const punchId = req.params.id;
+  const parsed = UpdatePunchSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Validation failed', issues: parsed.error.issues });
+    return;
+  }
+
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const [punch] = await db
+    .select()
+    .from(timePunches)
+    .where(eq(timePunches.id, punchId))
+    .limit(1);
+
+  if (!punch) {
+    res.status(404).json({ error: 'Punch not found' });
+    return;
+  }
+
+  try {
+    await assertProjectWriteAccess(db, punch.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const updates: Partial<typeof timePunches.$inferInsert> = {};
+  if (parsed.data.punchType !== undefined) updates.punchType = parsed.data.punchType;
+  if (parsed.data.punchedAt !== undefined) updates.punchedAt = parsed.data.punchedAt;
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: 'No correction fields provided' });
+    return;
+  }
+
+  await db.update(timePunches).set(updates).where(eq(timePunches.id, punchId));
+
+  const [updated] = await db
+    .select()
+    .from(timePunches)
+    .where(eq(timePunches.id, punchId))
+    .limit(1);
+
+  res.json({ data: { punch: updated } });
 });
 
 export default router;
@@ -197,7 +254,7 @@ fillFromPunchesRouter.post('/:projectId/weeks/:weekId/fill-from-punches', async 
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;

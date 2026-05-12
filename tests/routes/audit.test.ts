@@ -111,6 +111,67 @@ describe('GET /api/audit/:projectId', () => {
     });
   });
 
+  it('returns evidence summary counts for audit and payroll evidence', async () => {
+    const cookie = await registerAndLogin('evidence-summary');
+    const projectId = await createProject(cookie);
+    await seedAuditLogs(projectId, 2);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-04-10', payrollNumber: 1 });
+    expect(weekRes.status).toBe(201);
+
+    const submitRes = await supertest(app)
+      .patch(`/api/payroll/weeks/${weekRes.body.id}/submit`)
+      .set('Cookie', cookie)
+      .send({ submittedAt: '2026-04-11', submittedTo: 'DOL' });
+    expect(submitRes.status).toBe(200);
+
+    const res = await supertest(app)
+      .get(`/api/audit/${projectId}/evidence-summary`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.auditEventCount).toBeGreaterThanOrEqual(3);
+    expect(res.body.data.payrollWeekCount).toBe(1);
+    expect(res.body.data.submittedWeekCount).toBe(1);
+    expect(res.body.data.unsubmittedWeekCount).toBe(0);
+    expect(res.body.data.photoCount).toBe(0);
+    expect(res.body.data.timePunchCount).toBe(0);
+    expect(res.body.data.readyForPacket).toBe(true);
+    expect(res.body.data.missingEvidence).toEqual([]);
+    expect(res.body.data.weeks).toEqual([
+      expect.objectContaining({
+        weekId: weekRes.body.id,
+        payrollNumber: 1,
+        weekEndingDate: '2026-04-10',
+        submitted: true,
+        weekPhotoCount: 0,
+        timePunchCount: 0,
+        readyForPacket: true,
+        missingEvidence: [],
+      }),
+    ]);
+    expect(res.body.data.requirements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'payroll_submissions',
+          requiredCount: 1,
+          collectedCount: 1,
+          status: 'complete',
+        }),
+        expect.objectContaining({
+          key: 'photo_evidence',
+          requiredCount: 0,
+          collectedCount: 0,
+          status: 'not_applicable',
+        }),
+      ]),
+    );
+    expect(typeof res.body.data.latestAuditAt).toBe('string');
+  });
+
   it('returns 25 items on page 1 when 30 rows exist', async () => {
     const cookie = await registerAndLogin('page1-test');
     const projectId = await createProject(cookie);
@@ -297,5 +358,78 @@ describe('GET /api/audit/:projectId/csv', () => {
       .set('Cookie', cookie);
 
     expect(res.text).toContain("'=HYPERLINK");
+  });
+});
+
+describe('GET /api/audit/:projectId/evidence-packet', () => {
+  it('returns 403 for unauthorized user', async () => {
+    const ownerCookie = await registerAndLogin('packet-owner');
+    const otherCookie = await registerAndLogin('packet-other');
+    const projectId = await createProject(ownerCookie);
+
+    const res = await supertest(app)
+      .get(`/api/audit/${projectId}/evidence-packet`)
+      .set('Cookie', otherCookie);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('exports JSON packet with summary and evidence rows', async () => {
+    const cookie = await registerAndLogin('packet-json');
+    const projectId = await createProject(cookie);
+    await seedAuditLogs(projectId, 2);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-04-17', payrollNumber: 2 });
+    expect(weekRes.status).toBe(201);
+
+    const res = await supertest(app)
+      .get(`/api/audit/${projectId}/evidence-packet`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.headers['content-disposition']).toContain('evidence-packet');
+    expect(res.body.projectId).toBe(projectId);
+    expect(res.body.summary.payrollWeekCount).toBe(1);
+    expect(res.body.methodology.version).toMatch(/prevailing-wage/);
+    expect(res.body.summary.requirements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'payroll_submissions', status: 'missing' }),
+      ]),
+    );
+    expect(res.body.payrollWeeks).toHaveLength(1);
+    expect(res.body.submitReadyWeeks).toHaveLength(1);
+    expect(res.body.complianceEvidenceWeeks).toEqual([
+      expect.objectContaining({
+        week: expect.objectContaining({ id: weekRes.body.id }),
+        methodologyVersion: expect.stringMatching(/prevailing-wage/),
+      }),
+    ]);
+    expect(Array.isArray(res.body.payrollImports)).toBe(true);
+    expect(Array.isArray(res.body.subcontractorCprWeeks)).toBe(true);
+    expect(res.body.auditEvents.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('exports CSV packet with requirements and audit sections', async () => {
+    const cookie = await registerAndLogin('packet-csv');
+    const projectId = await createProject(cookie);
+    await seedAuditLogs(projectId, 1);
+
+    const res = await supertest(app)
+      .get(`/api/audit/${projectId}/evidence-packet?format=csv`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(res.text).toContain('Requirements');
+    expect(res.text).toContain('Submit-Ready Reviews');
+    expect(res.text).toContain('Compliance Evidence');
+    expect(res.text).toContain('Payroll Imports');
+    expect(res.text).toContain('Subcontractor CPR');
+    expect(res.text).toContain('Audit Events');
+    expect(res.text).toContain('Project audit trail');
   });
 });

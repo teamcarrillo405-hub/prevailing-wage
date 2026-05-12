@@ -23,6 +23,7 @@ import { mapGustoRows } from './gustoMapper.js';
 import { mapPaychexRows } from './paychexMapper.js';
 import { isSage300CRE, mapSage300Rows, mapSage100Rows } from './sage300Mapper.js';
 import type { ImportProvider, ImportPreviewResult, ImportedRow, UnmatchedRow, ConflictRow } from './importTypes.js';
+import { resolveEffectiveClassificationRates } from './classificationRates.js';
 
 type DrizzleDb = BetterSQLite3Database<typeof schema>;
 
@@ -194,6 +195,8 @@ export async function parseImportFile(
     classificationId: string;
     classificationName: string;
     tradeCode: string;
+    laborType: string;
+    apprenticePercent: number | null;
     baseRateSnapshot: number;
     fringeRateSnapshot: number;
   };
@@ -206,6 +209,8 @@ export async function parseImportFile(
       classificationId: workerClassifications.id,
       classificationName: workerClassifications.tradeDescription,
       tradeCode: workerClassifications.tradeCode,
+      laborType: workerClassifications.laborType,
+      apprenticePercent: workerClassifications.apprenticePercent,
     })
     .from(workers)
     .innerJoin(workerClassifications, eq(workerClassifications.workerId, workers.id))
@@ -223,6 +228,8 @@ export async function parseImportFile(
       classificationId: string;
       classificationName: string;
       tradeCode: string;
+      laborType: string;
+      apprenticePercent: number | null;
     }>;
 
   // Fetch wage classifications for rate lookup (if project has a WD)
@@ -305,7 +312,8 @@ export async function parseImportFile(
     const workerIdLookup = new Map<string, WorkerRow>();
     for (const row of workerRows) {
       if (!workerIdLookup.has(row.workerId)) {
-        const rates = rateMap.get(row.tradeCode) ?? { baseRate: 0, fringeRate: 0 };
+        const journeyRates = rateMap.get(row.tradeCode) ?? { baseRate: 0, fringeRate: 0 };
+        const rates = resolveEffectiveClassificationRates(journeyRates, row);
         workerIdLookup.set(row.workerId, {
           ...row,
           baseRateSnapshot: rates.baseRate,
@@ -385,7 +393,8 @@ export async function parseImportFile(
     for (const row of workerRows) {
       const key = row.workerName.toLowerCase().trim();
       if (!nameLookup.has(key)) {
-        const rates = rateMap.get(row.tradeCode) ?? { baseRate: 0, fringeRate: 0 };
+        const journeyRates = rateMap.get(row.tradeCode) ?? { baseRate: 0, fringeRate: 0 };
+        const rates = resolveEffectiveClassificationRates(journeyRates, row);
         nameLookup.set(key, {
           ...row,
           baseRateSnapshot: rates.baseRate,

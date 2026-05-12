@@ -8,7 +8,8 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { lookupWageDetermination, fetchAndCacheByWdNumber } from '../services/wageLookup.js';
 import { upsertWageDetermination, upsertClassifications, getWdById, getCachedClassifications } from '../services/wageCache.js';
-import { runWageSync } from '../services/wdolSync.js';
+import { runWageSync, WD_SEED_LIST } from '../services/wdolSync.js';
+import { getCountyCoverageAudit } from '../services/countyCoverageAudit.js';
 
 export const wagesRouter = Router();
 
@@ -64,9 +65,25 @@ wagesRouter.get('/lookup', async (req, res) => {
 // Powers the admin coverage dashboard.
 wagesRouter.get('/coverage', async (_req, res) => {
   const { getDb } = await import('../db/index.js');
-  const { wageDeterminations, wageSyncMeta } = await import('../db/schema.js');
+  const { wageClassifications, wageDeterminations, wageSyncMeta } = await import('../db/schema.js');
   const { sql, desc } = await import('drizzle-orm');
   const db = getDb();
+  const nowIso = new Date().toISOString();
+
+  const seedByState = new Map<string, {
+    seededWds: number;
+    seededCountyKeys: Set<string>;
+  }>();
+
+  for (const seed of WD_SEED_LIST) {
+    const current = seedByState.get(seed.state) ?? {
+      seededWds: 0,
+      seededCountyKeys: new Set<string>(),
+    };
+    current.seededWds += 1;
+    current.seededCountyKeys.add(seed.county ?? '__statewide__');
+    seedByState.set(seed.state, current);
+  }
 
   // Per-state aggregate
   const byStateRaw = db
@@ -75,6 +92,8 @@ wagesRouter.get('/coverage', async (_req, res) => {
       wdCount: sql<number>`count(*)`.as('wdCount'),
       countyCount: sql<number>`count(distinct coalesce(${wageDeterminations.county}, '__statewide__'))`.as('countyCount'),
       cached: sql<number>`sum(case when ${wageDeterminations.rawDocument} is not null then 1 else 0 end)`.as('cached'),
+      fresh: sql<number>`sum(case when ${wageDeterminations.cacheExpiresAt} > ${nowIso} then 1 else 0 end)`.as('fresh'),
+      expired: sql<number>`sum(case when ${wageDeterminations.cacheExpiresAt} <= ${nowIso} then 1 else 0 end)`.as('expired'),
     })
     .from(wageDeterminations)
     .where(sql`${wageDeterminations.isActive} = 1`)
@@ -82,12 +101,49 @@ wagesRouter.get('/coverage', async (_req, res) => {
     .orderBy(wageDeterminations.state)
     .all();
 
-  const byState = byStateRaw.map((r: typeof byStateRaw[number]) => ({
-    state: r.state,
-    wdCount: Number(r.wdCount),
-    countyCount: Number(r.countyCount),
-    cached: Number(r.cached),
-  }));
+  const classificationsByStateRaw = db
+    .select({
+      state: wageDeterminations.state,
+      classificationCount: sql<number>`count(${wageClassifications.id})`.as('classificationCount'),
+    })
+    .from(wageDeterminations)
+    .leftJoin(wageClassifications, sql`${wageClassifications.wageDeterminationId} = ${wageDeterminations.id}`)
+    .where(sql`${wageDeterminations.isActive} = 1`)
+    .groupBy(wageDeterminations.state)
+    .all();
+
+  const classificationCountByState = new Map<string, number>(
+    classificationsByStateRaw.map((r: typeof classificationsByStateRaw[number]) => [
+      r.state,
+      Number(r.classificationCount),
+    ] as [string, number]),
+  );
+
+  type CachedStateRow = typeof byStateRaw[number];
+  const cachedByState = new Map<string, CachedStateRow>(
+    byStateRaw.map((r: CachedStateRow) => [r.state, r] as [string, CachedStateRow]),
+  );
+  const stateCodes = [...new Set([...seedByState.keys(), ...cachedByState.keys()])].sort();
+  const byState = stateCodes.map((state) => {
+    const seed = seedByState.get(state);
+    const cached = cachedByState.get(state);
+    const seededWds = seed?.seededWds ?? 0;
+    const wdCount = cached ? Number(cached.wdCount) : 0;
+    const cachedDocuments = cached ? Number(cached.cached) : 0;
+    return {
+      state,
+      seededWds,
+      seededCountyKeys: seed?.seededCountyKeys.size ?? 0,
+      wdCount,
+      countyCount: cached ? Number(cached.countyCount) : 0,
+      cached: cachedDocuments,
+      fresh: cached ? Number(cached.fresh) : 0,
+      expired: cached ? Number(cached.expired) : 0,
+      classificationCount: classificationCountByState.get(state) ?? 0,
+      uncachedSeededWds: Math.max(seededWds - wdCount, 0),
+      percentCached: seededWds > 0 ? Math.round((Math.min(wdCount, seededWds) / seededWds) * 100) : 0,
+    };
+  });
 
   // Latest sync run
   const [latestSync] = db
@@ -97,13 +153,67 @@ wagesRouter.get('/coverage', async (_req, res) => {
     .limit(1)
     .all();
 
+  const totals = byState.reduce((acc, row) => {
+    acc.seededWds += row.seededWds;
+    acc.seededCountyKeys += row.seededCountyKeys;
+    acc.wdCount += row.wdCount;
+    acc.countyCount += row.countyCount;
+    acc.cachedDocuments += row.cached;
+    acc.fresh += row.fresh;
+    acc.expired += row.expired;
+    acc.classificationCount += row.classificationCount;
+    acc.uncachedSeededWds += row.uncachedSeededWds;
+    return acc;
+  }, {
+    seededWds: 0,
+    seededCountyKeys: 0,
+    wdCount: 0,
+    countyCount: 0,
+    cachedDocuments: 0,
+    fresh: 0,
+    expired: 0,
+    classificationCount: 0,
+    uncachedSeededWds: 0,
+  });
+
   return res.json({
+    source: {
+      label: 'DOL/SAM.gov Wage Determinations API',
+      federalScope: 'Davis-Bacon and Related Acts',
+      verifiedAt: nowIso,
+      syncModel: 'Known WD index plus live federal document fetch/cache',
+    },
     byState,
-    totalStates: byState.length,
-    totalWds: byState.reduce((sum: number, r: typeof byState[number]) => sum + r.wdCount, 0),
-    totalCounties: byState.reduce((sum: number, r: typeof byState[number]) => sum + r.countyCount, 0),
+    totalStates: stateCodes.length,
+    totalSeededStates: seedByState.size,
+    totalSeededWds: totals.seededWds,
+    totalSeededCountyKeys: totals.seededCountyKeys,
+    totalWds: totals.wdCount,
+    totalCounties: totals.countyCount,
+    totalCachedDocuments: totals.cachedDocuments,
+    totalFreshWds: totals.fresh,
+    totalExpiredWds: totals.expired,
+    totalClassifications: totals.classificationCount,
+    totalUncachedSeededWds: totals.uncachedSeededWds,
+    percentSeedCacheComplete: totals.seededWds > 0 ? Math.round((Math.min(totals.wdCount, totals.seededWds) / totals.seededWds) * 100) : 0,
     latestSync: latestSync ?? null,
   });
+});
+
+// GET /api/wages/county-coverage
+// Compares cached federal WD locations against Census county/county-equivalent geography.
+// A county is treated as covered when it has either an explicit named-county WD or a statewide WD fallback.
+wagesRouter.get('/county-coverage', async (_req, res) => {
+  try {
+    const audit = await getCountyCoverageAudit();
+    res.json(audit);
+  } catch (err) {
+    logger.error({ err }, '[wages/county-coverage] audit failed');
+    res.status(502).json({
+      error: 'County coverage audit failed',
+      detail: err instanceof Error ? err.message : String(err),
+    });
+  }
 });
 
 // GET /api/wages/fetch?wdNumber=CA20250001

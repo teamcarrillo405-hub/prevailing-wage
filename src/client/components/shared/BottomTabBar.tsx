@@ -1,12 +1,12 @@
 // Phase 97 — Mobile bottom tab bar (MOB-21)
 // Fixed 56px bar, md:hidden, 4 tabs for field worker navigation.
-import { MapPin, ClipboardList, FolderOpen, MoreHorizontal } from 'lucide-react';
+import { MapPin, ClipboardList, LayoutDashboard, MoreHorizontal } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const TABS = [
   { label: 'Field',    to: '/field',     Icon: MapPin },
-  { label: 'Payroll',  to: '/dashboard', Icon: ClipboardList },
-  { label: 'Projects', to: '/reports',   Icon: FolderOpen },
+  { label: 'Dashboard', to: '/dashboard', Icon: LayoutDashboard },
+  { label: 'Reports',  to: '/reports',   Icon: ClipboardList },
   { label: 'More',     to: '/team',      Icon: MoreHorizontal },
 ] as const;
 

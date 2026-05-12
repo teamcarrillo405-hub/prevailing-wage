@@ -8,13 +8,13 @@
 
 ## Integration Foundation
 
-- [ ] **INTG-01**: User can view an IntegrationsPage showing available ERP connections (Procore, Sage 300 CRE, Viewpoint Vista) with connect/disconnect controls and sync status
+- [x] **INTG-01**: User can view an IntegrationsPage showing available ERP connections (Procore, Sage 300 CRE, Viewpoint Vista) with connect/disconnect controls and sync status
 - [x] **INTG-02**: System stores ERP connection state, encrypted credentials, and sync metadata in `integration_connections` table
 - [x] **INTG-03**: System enables SQLite WAL mode and `busy_timeout=5000` at startup so payroll entry is never blocked by a running sync job
-- [ ] **INTG-04**: System defines an `IErpAdapter` TypeScript interface that all three ERP adapters implement (pull workers, pull timesheets, push compliance status)
-- [ ] **INTG-05**: System stores OAuth tokens and API keys encrypted at rest using the existing AES-256-GCM vault pattern
-- [ ] **INTG-06**: System runs a nightly ERP sync automatically (node-cron, sequential per connection, no additional infrastructure)
-- [ ] **INTG-07**: User can trigger a manual sync for any connected ERP from the IntegrationsPage
+- [x] **INTG-04**: System defines an `IErpAdapter` TypeScript interface that all three ERP adapters implement (pull workers, pull timesheets, push compliance status)
+- [x] **INTG-05**: System stores OAuth tokens and API keys encrypted at rest using the existing AES-256-GCM vault pattern
+- [x] **INTG-06**: System runs a nightly ERP sync automatically (node-cron, sequential per connection, no additional infrastructure)
+- [x] **INTG-07**: User can trigger a manual sync for any connected ERP from the IntegrationsPage
 
 ## Procore Integration
 
@@ -47,8 +47,8 @@
 
 ## Security & Data Integrity
 
-- [ ] **SEC-01**: No outbound ERP payload ever includes SSN, decrypted SSN, or any SSN-derived value; all sync serializers use explicit inclusion lists
-- [ ] **SEC-02**: All OAuth access tokens and refresh tokens are encrypted before storage using AES-256-GCM; tokens are decrypted only at the sync call site
+- [x] **SEC-01**: No outbound ERP payload ever includes SSN, decrypted SSN, or any SSN-derived value; all sync serializers use explicit inclusion lists
+- [x] **SEC-02**: All OAuth access tokens and refresh tokens are encrypted before storage using AES-256-GCM; tokens are decrypted only at the sync call site
 - [ ] **SEC-03**: OAuth PKCE `code_verifier` is stored in the database (not in-memory session) to survive server restarts; `state` nonce is verified against the stored value before token exchange
 
 ---

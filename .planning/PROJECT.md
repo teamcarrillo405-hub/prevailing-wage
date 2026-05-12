@@ -12,16 +12,24 @@ A contractor can run a full project end-to-end — create project → add worker
 
 **Delivered:** TX, FL, MA, NJ certified payroll PDFs; CA A-1-131 gap closed; subcontractor CPR tracking; audit log CSV export; multi-project compliance PDF; Pino structured logging; /api/health DB probe; payroll entry wizard; state column toggles; DOL wage live lookup; UI primitives (Input/Select/Table); 62-county state wage reference data; WD cache status page.
 
-## Current Milestone: v6.0 — Competitive Industry Leadership
+## Previous Milestone: v6.0 — Competitive Industry Leadership ✅ SHIPPED
 
-**Goal:** Surpass B2Gnow and Knowify on every scored dimension of COMPETITIVE_ANALYSIS.md — UI/UX, mobile/field, power features, integrations, and market credibility — making this the undisputed #1 prevailing wage platform for contractors.
+**Delivered:** Premium mobile-responsive UI across all core pages (Phase 125 complete); design token elevated cards, skeleton loading, route transitions, empty states, filter chips; QuickBooks OAuth, apprenticeship ratio enforcement, DBE/MBE/WBE sub certification tracking; state portal integrations (CA eCPR, WA PWIA); compliance dashboard real-time counters.
+
+## Current Milestone: v9.0 — Construction ERP Integrations
+
+**Goal:** Bidirectional sync with Procore, Sage 300 CRE, and Viewpoint Vista — pulling workers, timesheets, and projects in; pushing WH-347 status and compliance violations back out — making this the only prevailing wage platform that stays live-connected to the ERPs contractors already use.
 
 **Target features:**
-- Phase A — UI Polish: premium mobile-responsive treatment, onboarding tour, trust signals, 50-state coverage map on landing
-- Phase B — Power Features: QuickBooks OAuth direct sync, apprenticeship ratio enforcement per trade, DBE/MBE/WBE sub certification tracking, real-time compliance dashboard counter
-- Phase C — Mobile/Field PWA: offline-capable service worker, GPS clock-in/out, field photo capture, mobile sub CPR submission
-- Phase D — Market Credibility: SOC 2 Type II control implementation, public REST API + webhooks, government case study page, economic impact dashboard
-- Enhanced fringe report — by fund type, union local, journeyman vs apprentice
+- Phase 126 — Integration Foundation: connection management UI, credential vault, IntegrationsPage
+- Phase 127 — Procore OAuth + Project/Employee Sync (pull in)
+- Phase 128 — Procore Timesheet Pull: daily timesheet sync
+- Phase 129 — Procore Compliance Push: WH-347 status + violations → Procore custom fields
+- Phase 130 — Sage 300 CRE Adapter: cloud REST + on-premise file-based adapter, employee sync
+- Phase 131 — Sage 300 Payroll Sync + compliance push
+- Phase 132 — Viewpoint Vista Foundation: API/file hybrid adapter
+- Phase 133 — Viewpoint Timesheet + Compliance Push
+- Phase 134 — Integration Dashboard: unified sync history, field mapping, scheduling UI
 
 ## Previous Milestone: v4.0 — Compliance Depth + Operations ✅ SHIPPED 2026-04-07
 

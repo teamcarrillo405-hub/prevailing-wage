@@ -9,9 +9,11 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 
 const RegisterSchema = z.object({
+  companyName: z.string().min(2, 'Enter your company name'),
+  hccMembershipNumber: z.string().min(3, 'Enter your HCC membership number'),
   email: z.string().email('Enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  inviteCode: z.string().min(1, 'Invitation code is required'),
+  inviteCode: z.string().optional(),
 });
 
 type RegisterFields = z.infer<typeof RegisterSchema>;
@@ -30,9 +32,15 @@ export function RegisterForm() {
   async function onSubmit(data: RegisterFields) {
     setApiError(null);
     try {
-      await api.post('/auth/register', { email: data.email, password: data.password, inviteCode: data.inviteCode });
+      await api.post('/auth/register', {
+        companyName: data.companyName,
+        hccMembershipNumber: data.hccMembershipNumber,
+        email: data.email,
+        password: data.password,
+        inviteCode: data.inviteCode || undefined,
+      });
       await login(data.email, data.password);
-      navigate('/dashboard', { replace: true });
+      navigate('/onboarding', { replace: true });
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Registration failed');
     }
@@ -40,6 +48,23 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+      <Input
+        id="reg-company"
+        type="text"
+        autoComplete="organization"
+        label="Company name"
+        error={errors.companyName?.message}
+        {...register('companyName')}
+      />
+      <Input
+        id="reg-hcc"
+        type="text"
+        autoComplete="off"
+        label="HCC membership number"
+        help="Used to verify member access. No subscription payment is collected during signup."
+        error={errors.hccMembershipNumber?.message}
+        {...register('hccMembershipNumber')}
+      />
       <Input
         id="reg-email"
         type="email"
@@ -60,7 +85,8 @@ export function RegisterForm() {
         id="reg-invite"
         type="text"
         autoComplete="off"
-        label="Invitation Code"
+        label="Invitation code"
+        help="Optional unless your organization issued one."
         error={errors.inviteCode?.message}
         {...register('inviteCode')}
       />
@@ -72,7 +98,7 @@ export function RegisterForm() {
       )}
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? 'Creating account…' : 'Create Account'}
+        {isSubmitting ? 'Creating account...' : 'Create account'}
       </Button>
     </form>
   );

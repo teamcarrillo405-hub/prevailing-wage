@@ -15,6 +15,7 @@ import { LoadingSpinner } from './components/shared/LoadingSpinner';
 const LoginPage = React.lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const LandingPage = React.lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const RegisterPage = React.lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const OnboardingPage = React.lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
 const DashboardPage = React.lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const ProjectDetailPage = React.lazy(() => import('./pages/ProjectDetailPage').then(m => ({ default: m.ProjectDetailPage })));
 const WageLookupPage = React.lazy(() => import('./pages/WageLookupPage.js').then(m => ({ default: m.WageLookupPage })));
@@ -66,6 +67,12 @@ const SsoConfigPage = React.lazy(() =>
 );
 const ApprenticeshipPage = React.lazy(() =>
   import('./pages/ApprenticeshipPage').then(m => ({ default: m.ApprenticeshipPage }))
+);
+const CopilotAuditPage = React.lazy(() =>
+  import('./pages/CopilotAuditPage').then(m => ({ default: m.CopilotAuditPage }))
+);
+const ComplianceMethodologyPage = React.lazy(() =>
+  import('./pages/ComplianceMethodologyPage').then(m => ({ default: m.ComplianceMethodologyPage }))
 );
 
 const queryClient = new QueryClient({
@@ -130,6 +137,7 @@ export default function App() {
 
               {/* Protected routes — unauthenticated users redirected to /login */}
               <Route element={<ProtectedRoute />}>
+                <Route path="/onboarding" element={<OnboardingPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/projects/:id" element={<ProjectDetailPage />} />
                 <Route path="/wages" element={<WageLookupPage />} />
@@ -137,6 +145,7 @@ export default function App() {
                 <Route path="/admin/coverage" element={<WageCoveragePage />} />
                 <Route path="/admin/wages" element={<AdminStateWagePage />} />
                 <Route path="/admin/growth" element={<GrowthDashboardPage />} />
+                <Route path="/admin/copilot" element={<CopilotAuditPage />} />
                 <Route path="/projects/:projectId/payroll" element={<PayrollListPage />} />
                 <Route path="/projects/:projectId/payroll/new" element={<PayrollWizardPage />} />
                 <Route path="/projects/:projectId/payroll/:weekId/edit" element={<PayrollWizardPage />} />
@@ -164,6 +173,7 @@ export default function App() {
                 <Route path="/projects/:projectId/apprenticeship" element={<ApprenticeshipPage />} />
                 <Route path="/checklists" element={<OfflineChecklistPage />} />
                 <Route path="/classification-assist" element={<ClassificationAssistPage />} />
+                <Route path="/compliance-methodology" element={<ComplianceMethodologyPage />} />
               </Route>
 
               {/* Public pages — no auth required */}
@@ -177,6 +187,7 @@ export default function App() {
               <Route path="/government" element={<GovernmentPage />} />
               <Route path="/roi" element={<RoiCalculatorPage />} />
               <Route path="/testimonials" element={<TestimonialsPage />} />
+              <Route path="/reviews" element={<TestimonialsPage />} />
 
               {/* Public accept-invite route — no auth wrapper per D-09 */}
               <Route path="/accept-invite" element={<AcceptInvitePage />} />

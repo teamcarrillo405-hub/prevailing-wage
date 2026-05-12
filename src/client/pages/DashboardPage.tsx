@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard, FolderOpen, AlertTriangle, TrendingUp, Download, FileText, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, AlertTriangle, TrendingUp, Download, FileText, ShieldAlert, ClipboardCheck, Grid2X2, List, ArrowRight } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -21,6 +21,7 @@ import { HelpCallout } from '../components/ui/HelpCallout';
 import { ComplianceOverviewCard } from '../components/compliance/ComplianceOverviewCard';
 import { DueSoonPanel } from '../components/dashboard/DueSoonPanel';
 import { OnboardingChecklist } from '../components/ui/OnboardingChecklist';
+import type { OnboardingResponse } from '../types/onboarding';
 
 interface Project {
   id: string;
@@ -32,6 +33,25 @@ interface Project {
   awardDate: string;
   status: string;
 }
+
+interface ContractorAction {
+  id: string;
+  projectId: string;
+  projectName: string;
+  type: 'violation' | 'overdue_payroll' | 'due_payroll' | 'setup' | 'subcontractor_cpr';
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  label: string;
+  detail: string;
+  to: string;
+  dueDate: string | null;
+}
+
+const ACTION_PRIORITY_CLASS: Record<ContractorAction['priority'], string> = {
+  critical: 'border-red-200 bg-red-50 text-red-700',
+  high: 'border-amber-200 bg-amber-50 text-amber-700',
+  medium: 'border-blue-200 bg-blue-50 text-blue-700',
+  low: 'border-gray-200 bg-gray-50 text-gray-700',
+};
 
 const FUNDING_OPTIONS = [
   { value: '', label: 'All Funding Types' },
@@ -54,6 +74,115 @@ const COMPLIANCE_FILTER_OPTIONS = [
   { value: 'archived', label: 'Archived' },
 ];
 
+type SavedProjectView = 'all' | 'needs-action' | 'payroll-due' | 'missing-setup' | 'sub-cpr' | 'ready-export';
+type ProjectDisplayMode = 'cards' | 'list';
+
+const SAVED_PROJECT_VIEWS: Array<{ value: SavedProjectView; label: string; description: string }> = [
+  { value: 'all', label: 'All active', description: 'Every visible project' },
+  { value: 'needs-action', label: 'Needs action', description: 'Any open blocker or next step' },
+  { value: 'payroll-due', label: 'Payroll due', description: 'Open or overdue CPR weeks' },
+  { value: 'missing-setup', label: 'Missing setup', description: 'Workers, WD, or project setup gaps' },
+  { value: 'sub-cpr', label: 'Sub CPR overdue', description: 'Subcontractor payroll packages needed' },
+  { value: 'ready-export', label: 'Ready to export', description: 'No known blockers or open weeks' },
+];
+
+function ProjectsCommandPanel({
+  activeProjectCount,
+  urgentFixes,
+  payrollDue,
+  setupGaps,
+  subCprGaps,
+  onNewProject,
+}: {
+  activeProjectCount: number;
+  urgentFixes: number;
+  payrollDue: number;
+  setupGaps: number;
+  subCprGaps: number;
+  onNewProject: () => void;
+}) {
+  const totalFixes = urgentFixes + payrollDue + setupGaps + subCprGaps;
+  const links = [
+    { label: 'Today', href: '#today', value: totalFixes },
+    { label: 'Projects', href: '#project-list', value: activeProjectCount },
+    { label: 'Action Queue', href: '#action-queue', value: totalFixes },
+    { label: 'Analytics', href: '#management-reports', value: null },
+  ];
+
+  return (
+    <aside className="lg:sticky lg:top-[92px]">
+      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Workspace</p>
+          <h2 className="mt-1 text-base font-semibold text-gray-950">Command Center</h2>
+          <p className="mt-1 text-xs leading-relaxed text-gray-500">
+            Start with the next fix, then open the project that needs work.
+          </p>
+          <button
+            type="button"
+            onClick={onNewProject}
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-brand-gold px-4 text-sm font-semibold text-nav-dark hover:opacity-90"
+          >
+            New Project
+          </button>
+        </div>
+        <nav className="p-2" aria-label="Dashboard sections">
+          {links.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              className="mb-1 flex min-h-[44px] items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+            >
+              <span>{link.label}</span>
+              {link.value !== null && (
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{link.value}</span>
+              )}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </aside>
+  );
+}
+
+function AnalyticsActionCard({
+  label,
+  value,
+  detail,
+  to,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+  to: string;
+  tone?: 'red' | 'amber' | 'emerald' | 'neutral';
+}) {
+  const toneClass = tone === 'red'
+    ? 'border-red-200 bg-red-50 text-red-700'
+    : tone === 'amber'
+      ? 'border-amber-200 bg-amber-50 text-amber-700'
+      : tone === 'emerald'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : 'border-gray-200 bg-gray-50 text-gray-700';
+
+  return (
+    <Link
+      to={to}
+      className={`group flex min-h-[104px] flex-col justify-between rounded-xl border p-4 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${toneClass}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide opacity-75">{label}</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums">{value}</p>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+      </div>
+      <p className="mt-3 text-xs leading-relaxed opacity-80">{detail}</p>
+    </Link>
+  );
+}
+
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -72,6 +201,8 @@ export function DashboardPage() {
   const searchQuery = searchParams.get('q') ?? '';
   const fundingFilter = searchParams.get('funding') ?? '';
   const complianceFilter = searchParams.get('compliance') ?? '';
+  const savedView = (searchParams.get('view') as SavedProjectView | null) ?? 'all';
+  const displayMode = (searchParams.get('display') as ProjectDisplayMode | null) ?? 'cards';
 
   // Local controlled-input state initialized from URL (avoids useSearchParams lag on keystroke)
   const [inputValue, setInputValue] = useState(() => searchParams.get('q') ?? '');
@@ -120,6 +251,18 @@ export function DashboardPage() {
       '/dashboard/stats'
     ),
     staleTime: 60_000,
+  });
+
+  const { data: contractorActionsData } = useQuery({
+    queryKey: ['dashboard-contractor-actions'],
+    queryFn: () => api.get<{ actions: ContractorAction[] }>('/dashboard/contractor-actions'),
+    staleTime: 60_000,
+  });
+
+  const { data: onboardingData } = useQuery({
+    queryKey: ['onboarding-profile'],
+    queryFn: () => api.get<OnboardingResponse>('/onboarding'),
+    staleTime: 5 * 60_000,
   });
 
   const { data: trendResp } = useQuery({
@@ -207,7 +350,8 @@ export function DashboardPage() {
   }, [summaryItemMap]);
 
   // DASH-01 hero stats — sourced from server (replaces client-side useMemos)
-  const activeProjectCount = statsData?.activeProjects ?? 0;
+  const visibleActiveProjectCount = projects.filter(p => p.status === 'active').length;
+  const activeProjectCount = Math.max(statsData?.activeProjects ?? 0, visibleActiveProjectCount);
   const totalViolations = statsData?.openViolations ?? 0;
   const dueSoonCount = statsData?.weeksDueThisWeek ?? 0;
 
@@ -229,21 +373,6 @@ export function DashboardPage() {
   });
 
   const atRiskProjects: AtRiskProject[] = atRiskResp?.projects ?? [];
-
-  const filteredProjects = useMemo(() => {
-    let result = projects;
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      result = result.filter(p => p.name.toLowerCase().includes(q));
-    }
-    if (fundingFilter) {
-      result = result.filter(p => p.fundingType === fundingFilter);
-    }
-    if (complianceFilter) {
-      result = result.filter(p => summaryMap.get(p.id) === complianceFilter);
-    }
-    return result;
-  }, [projects, searchQuery, fundingFilter, complianceFilter, summaryMap]);
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
@@ -285,6 +414,129 @@ export function DashboardPage() {
   }
 
   const complianceFilterLabel = COMPLIANCE_FILTER_OPTIONS.find(o => o.value === complianceFilter)?.label;
+  const contractorActions = contractorActionsData?.actions ?? [];
+  const actionByProjectId = useMemo(() => {
+    const map = new Map<string, ContractorAction>();
+    const priorityRank: Record<ContractorAction['priority'], number> = {
+      critical: 0,
+      high: 1,
+      medium: 2,
+      low: 3,
+    };
+    for (const action of contractorActions) {
+      const current = map.get(action.projectId);
+      if (!current || priorityRank[action.priority] < priorityRank[current.priority]) {
+        map.set(action.projectId, action);
+      }
+    }
+    return map;
+  }, [contractorActions]);
+  const urgentContractorActions = contractorActions.filter(
+    (action) => action.priority === 'critical' || action.priority === 'high',
+  );
+  const duePayrollActions = contractorActions.filter(
+    (action) => action.type === 'overdue_payroll' || action.type === 'due_payroll',
+  );
+  const setupActions = contractorActions.filter((action) => action.type === 'setup');
+  const subcontractorActions = contractorActions.filter((action) => action.type === 'subcontractor_cpr');
+  const actionTypeByProjectId = useMemo(() => {
+    const map = new Map<string, Set<ContractorAction['type']>>();
+    for (const action of contractorActions) {
+      const existing = map.get(action.projectId) ?? new Set<ContractorAction['type']>();
+      existing.add(action.type);
+      map.set(action.projectId, existing);
+    }
+    return map;
+  }, [contractorActions]);
+  const savedViewCounts = useMemo(() => {
+    const counts: Record<SavedProjectView, number> = {
+      all: projects.length,
+      'needs-action': 0,
+      'payroll-due': 0,
+      'missing-setup': 0,
+      'sub-cpr': 0,
+      'ready-export': 0,
+    };
+    for (const project of projects) {
+      const summary = summaryItemMap.get(project.id);
+      const actionTypes = actionTypeByProjectId.get(project.id);
+      const hasViolations = (summary?.violationCount ?? 0) > 0;
+      const hasOpenWeeks = (summary?.unsubmittedWeekEndingDates.length ?? 0) > 0;
+      const hasActions = Boolean(actionTypes?.size);
+      if (hasActions || hasViolations || hasOpenWeeks) counts['needs-action'] += 1;
+      if (hasOpenWeeks || actionTypes?.has('due_payroll') || actionTypes?.has('overdue_payroll')) counts['payroll-due'] += 1;
+      if (actionTypes?.has('setup')) counts['missing-setup'] += 1;
+      if (actionTypes?.has('subcontractor_cpr')) counts['sub-cpr'] += 1;
+      if (!hasActions && !hasViolations && !hasOpenWeeks && project.status !== 'closed') counts['ready-export'] += 1;
+    }
+    return counts;
+  }, [actionTypeByProjectId, projects, summaryItemMap]);
+  const filteredProjects = useMemo(() => {
+    let result = projects;
+    if (savedView !== 'all') {
+      result = result.filter((project) => {
+        const summary = summaryItemMap.get(project.id);
+        const actionTypes = actionTypeByProjectId.get(project.id);
+        const hasViolations = (summary?.violationCount ?? 0) > 0;
+        const hasOpenWeeks = (summary?.unsubmittedWeekEndingDates.length ?? 0) > 0;
+        const hasActions = Boolean(actionTypes?.size);
+        if (savedView === 'needs-action') return hasActions || hasViolations || hasOpenWeeks;
+        if (savedView === 'payroll-due') return hasOpenWeeks || actionTypes?.has('due_payroll') || actionTypes?.has('overdue_payroll');
+        if (savedView === 'missing-setup') return actionTypes?.has('setup');
+        if (savedView === 'sub-cpr') return actionTypes?.has('subcontractor_cpr');
+        if (savedView === 'ready-export') return !hasActions && !hasViolations && !hasOpenWeeks && project.status !== 'closed';
+        return true;
+      });
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(p => p.name.toLowerCase().includes(q));
+    }
+    if (fundingFilter) {
+      result = result.filter(p => p.fundingType === fundingFilter);
+    }
+    if (complianceFilter) {
+      result = result.filter(p => summaryMap.get(p.id) === complianceFilter);
+    }
+    return result;
+  }, [projects, savedView, searchQuery, fundingFilter, complianceFilter, summaryMap, summaryItemMap, actionTypeByProjectId]);
+  function handleSavedViewChange(val: SavedProjectView) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val === 'all') {
+        next.delete('view');
+      } else {
+        next.set('view', val);
+      }
+      return next;
+    });
+  }
+
+  function handleDisplayModeChange(val: ProjectDisplayMode) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val === 'cards') {
+        next.delete('display');
+      } else {
+        next.set('display', val);
+      }
+      return next;
+    });
+  }
+  const primaryTodayAction = urgentContractorActions[0] ?? contractorActions[0] ?? null;
+  const readyProjectCount = projects.filter((project) => summaryMap.get(project.id) === 'compliant').length;
+  const highVarianceTradeCount = economicData?.data.wageVarianceByTrade.filter((row) => row.deviation > 5).length ?? 0;
+  const apprenticeGapCount = economicData?.data.apprenticeshipProgress.filter((row) => row.gap > 0).length ?? 0;
+  const overtimeProjectCount = economicData?.data.overtimeExposure.length ?? 0;
+  const topOvertimeProject = economicData?.data.overtimeExposure[0] ?? null;
+  const onboardingAnswers = onboardingData?.data.profile?.onboardingAnswers;
+  const recommendedNextSteps = onboardingData?.data.profile?.recommendedNextSteps ?? [];
+  const onboardingHasWorkers = projects.length > 0 && !contractorActions.some(
+    (action) => action.type === 'setup' && action.label === 'Add workers and classifications',
+  );
+  const onboardingHasPayroll = projects.length > 0 && !contractorActions.some(
+    (action) => action.type === 'setup' && action.label === 'Create the first payroll week',
+  );
 
   useEffect(() => {
     if (!showForm) return;
@@ -339,16 +591,13 @@ export function DashboardPage() {
               HCC Prevailing Wage
             </p>
             <h1 className="font-headline text-4xl sm:text-5xl text-white mb-2 leading-tight">
-              Projects
+              Dashboard
             </h1>
             <p className="text-sm text-gray-400 max-w-xs">
               Certified payroll tracking &amp; DOL compliance
             </p>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-3">
-            <Button onClick={() => setShowForm(true)}>
-              New Project
-            </Button>
             {!isLoading && projects.length > 0 && (
               <a
                 href="/api/export/compliance-summary"
@@ -362,12 +611,126 @@ export function DashboardPage() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <ProjectsCommandPanel
+          activeProjectCount={activeProjectCount}
+          urgentFixes={urgentContractorActions.length}
+          payrollDue={duePayrollActions.length || dueSoonCount}
+          setupGaps={setupActions.length}
+          subCprGaps={subcontractorActions.length}
+          onNewProject={() => setShowForm(true)}
+        />
+        <div className="min-w-0">
+
+      {projects.length > 0 && (
+        <section id="today" className="mb-8 scroll-mt-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Today</p>
+              <h2 className="mt-1 font-headline text-2xl text-gray-950">
+                {primaryTodayAction ? primaryTodayAction.label : 'All active projects are clean right now'}
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                {primaryTodayAction
+                  ? `${primaryTodayAction.projectName}: ${primaryTodayAction.detail}`
+                  : 'No blocking payroll, wage determination, or subcontractor CPR actions are open.'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col lg:items-end">
+              {primaryTodayAction ? (
+                <Link
+                  to={primaryTodayAction.to}
+                  className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-semibold text-nav-dark hover:opacity-90"
+                >
+                  Open next fix
+                </Link>
+              ) : (
+                <Link
+                  to="/reports"
+                  className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-semibold text-nav-dark hover:opacity-90"
+                >
+                  Review reports
+                </Link>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+            {[
+              { label: 'Urgent fixes', value: urgentContractorActions.length, tone: urgentContractorActions.length ? 'text-red-600' : 'text-emerald-600' },
+              { label: 'Payroll due', value: duePayrollActions.length || dueSoonCount, tone: (duePayrollActions.length || dueSoonCount) ? 'text-amber-600' : 'text-emerald-600' },
+              { label: 'Setup gaps', value: setupActions.length, tone: setupActions.length ? 'text-amber-600' : 'text-emerald-600' },
+              { label: 'Sub CPR gaps', value: subcontractorActions.length, tone: subcontractorActions.length ? 'text-red-600' : 'text-emerald-600' },
+              { label: 'No violations', value: readyProjectCount, tone: 'text-gray-900' },
+            ].map(({ label, value, tone }) => (
+              <div key={label} className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                <div className={`text-2xl font-bold tabular-nums ${tone}`}>{value}</div>
+                <div className="mt-1 text-xs font-medium text-gray-500">{label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
 
       <HelpCallout
         icon={LayoutDashboard}
-        title="Your Active Projects"
+        title="Your Project Dashboard"
         body="Each project tracks a separate federal job. Add workers and enter payroll weekly to keep your certified payroll current and DOL-ready."
       />
+
+      {onboardingAnswers && (
+        <details className="mb-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+            Setup profile
+            <span className="ml-2 text-xs font-normal text-gray-500">
+              Payroll, project system, states, and onboarding checklist
+            </span>
+          </summary>
+          <div className="mt-4 space-y-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-sm text-gray-600">
+                  Defaults and import prompts are using your onboarding answers for {onboardingAnswers.primaryStates.join(', ') || 'your selected states'}.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-700">
+                    {onboardingAnswers.payrollProvider.replaceAll('_', ' ')} payroll
+                  </span>
+                  <span className="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-700">
+                    {onboardingAnswers.projectManagementProvider.replaceAll('_', ' ')} project system
+                  </span>
+                  <span className="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-700">
+                    {onboardingAnswers.usesSubcontractors ? 'Subcontractor CPR tracking' : 'Prime CPR only'}
+                  </span>
+                </div>
+                {recommendedNextSteps.length > 0 && (
+                  <p className="mt-3 text-xs text-gray-500">
+                    Next setup focus: {recommendedNextSteps.slice(0, 2).join(' · ')}
+                  </p>
+                )}
+              </div>
+              <Link
+                to="/onboarding"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Edit onboarding
+              </Link>
+            </div>
+            {showOnboarding && !isLoading && projects.length > 0 && (
+              <OnboardingChecklist
+                hasProjects
+                hasWorkers={onboardingHasWorkers}
+                hasPayroll={onboardingHasPayroll}
+                hasWageDetermination
+                hasReport={onboardingHasPayroll}
+                firstProjectId={projects[0]?.id}
+                onDismiss={handleDismissOnboarding}
+              />
+            )}
+          </div>
+        </details>
+      )}
 
       {!isLoading && !isError && projects.length === 0 && (
         <div className="bg-brand-navy text-white rounded-xl p-8 mb-8">
@@ -396,19 +759,30 @@ export function DashboardPage() {
         </div>
       )}
 
-      {showOnboarding && !isLoading && (
+      {showOnboarding && !isLoading && projects.length === 0 && (
         <OnboardingChecklist
-          hasProjects={projects.length > 0}
-          hasWorkers={false}
-          hasPayroll={false}
+          hasProjects={false}
+          hasWorkers={onboardingHasWorkers}
+          hasPayroll={onboardingHasPayroll}
+          hasWageDetermination={false}
+          hasReport={onboardingHasPayroll}
           firstProjectId={projects[0]?.id}
           onDismiss={handleDismissOnboarding}
         />
       )}
 
+      <details id="management-reports" className="mb-8 scroll-mt-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+          Management reports and analytics
+          <span className="ml-2 text-xs font-normal text-gray-500">
+            Compliance trend, due weeks, economic impact, and reporting detail
+          </span>
+        </summary>
+        <div className="mt-5 space-y-6">
+
       {/* DASH-01: Hero stat row — active projects, open violations, due this week */}
       {projects.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { label: 'Active Projects', value: activeProjectCount, color: 'text-gray-900' },
             { label: 'Open Violations', value: totalViolations, color: totalViolations > 0 ? 'text-red-600' : 'text-emerald-600' },
@@ -422,9 +796,68 @@ export function DashboardPage() {
         </div>
       )}
 
+      {projects.length > 0 && (
+        <div id="action-queue" className="scroll-mt-24 rounded-xl border border-gray-200 bg-gray-50 p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4 text-brand-gold" />
+                Contractor Action Queue
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                The next payroll, compliance, and subcontractor items that can block certification.
+              </p>
+            </div>
+            <span className="text-xs text-gray-500">{contractorActions.length} open</span>
+          </div>
+          {contractorActions.length > 0 ? (
+            <div className="divide-y divide-gray-100">
+              {contractorActions.slice(0, 6).map((action) => (
+                <div key={action.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`text-[11px] font-semibold uppercase px-2 py-1 rounded border ${ACTION_PRIORITY_CLASS[action.priority]}`}>
+                        {action.priority}
+                      </span>
+                      <p className="text-sm font-semibold text-gray-900">{action.label}</p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      <span className="font-medium text-gray-700">{action.projectName}</span>
+                      {' - '}
+                      {action.detail}
+                    </p>
+                  </div>
+                  <Link
+                    to={action.to}
+                    className="inline-flex items-center justify-center text-xs font-semibold text-brand-gold hover:underline shrink-0"
+                  >
+                    Open
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              No blocking payroll, compliance, or subcontractor actions are open right now.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* DASH-02: 12-week violation trend chart */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-8">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Compliance Trend — Last 12 Weeks</h3>
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700">Compliance Trend - Last 12 Weeks</h3>
+            <p className="mt-1 text-xs text-gray-500">Use the action view to open the projects behind the trend.</p>
+          </div>
+          <Link
+            to="/dashboard?display=list&view=needs-action#project-list"
+            className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:border-brand-gold hover:text-gray-950"
+          >
+            Open source projects
+          </Link>
+        </div>
         {(trendData.length > 0 && projects.length > 0) ? (
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={trendData}>
@@ -447,7 +880,7 @@ export function DashboardPage() {
 
       {/* DASH-03: Projects-at-risk panel — sourced from /api/dashboard/at-risk */}
       {atRiskProjects.length > 0 && (
-        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-5 mb-8 md:max-w-lg">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5 md:max-w-lg">
           <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 mb-3">
             <AlertTriangle className="w-4 h-4" />
             Projects Needing Attention ({atRiskProjects.length})
@@ -475,16 +908,78 @@ export function DashboardPage() {
         <ComplianceOverviewCard
           statusMap={summaryMap}
           totalActiveProjects={projects.filter(p => p.status === 'active').length}
+          statusLinks={{
+            compliant: '/dashboard?display=list&compliance=compliant#project-list',
+            violations: '/dashboard?display=list&compliance=violations#project-list',
+            'no-payroll': '/dashboard?display=list&compliance=no-payroll#project-list',
+          }}
           isLoading={!summaryData && projects.length > 0}
         />
       )}
 
       {/* Due-soon / overdue payroll weeks across all projects */}
       <DueSoonPanel />
+        </div>
+      </details>
 
       {/* Filter bar */}
       {(!isLoading && (projects.length > 0 || showArchived)) && (
-        <div className="space-y-3 mb-6">
+        <div id="project-list" className="scroll-mt-24 space-y-3 mb-6">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Saved views</p>
+                <h2 className="mt-1 text-lg font-semibold text-gray-950">Projects</h2>
+              </div>
+              <div className="inline-flex w-full rounded-lg border border-gray-200 bg-gray-50 p-1 sm:w-auto" aria-label="Project display mode">
+                <button
+                  type="button"
+                  onClick={() => handleDisplayModeChange('cards')}
+                  aria-pressed={displayMode === 'cards'}
+                  className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold sm:flex-none ${
+                    displayMode === 'cards' ? 'bg-white text-gray-950 shadow-sm' : 'text-gray-600 hover:text-gray-950'
+                  }`}
+                >
+                  <Grid2X2 className="h-4 w-4" />
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDisplayModeChange('list')}
+                  aria-pressed={displayMode === 'list'}
+                  className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold sm:flex-none ${
+                    displayMode === 'list' ? 'bg-white text-gray-950 shadow-sm' : 'text-gray-600 hover:text-gray-950'
+                  }`}
+                >
+                  <List className="h-4 w-4" />
+                  List
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+              {SAVED_PROJECT_VIEWS.map((view) => (
+                <button
+                  key={view.value}
+                  type="button"
+                  onClick={() => handleSavedViewChange(view.value)}
+                  aria-pressed={savedView === view.value}
+                  className={`min-h-[72px] rounded-lg border px-3 py-2 text-left transition-colors ${
+                    savedView === view.value
+                      ? 'border-brand-gold bg-brand-gold/10 text-gray-950'
+                      : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-brand-gold/60 hover:bg-white'
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                    {view.label}
+                    <span className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-700 shadow-sm">
+                      {savedViewCounts[view.value]}
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-xs leading-snug text-gray-500">{view.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
             <input
               type="text"
@@ -534,9 +1029,9 @@ export function DashboardPage() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto px-4 py-6 sm:py-10">
           <div
-            className="bg-white rounded-2xl shadow-card-hover w-full max-w-lg p-7"
+            className="bg-white rounded-2xl shadow-card-hover w-full max-w-lg p-7 mx-auto max-h-[calc(100dvh-3rem)] overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-project-modal-title"
@@ -586,13 +1081,95 @@ export function DashboardPage() {
         />
       )}
 
-      {!isLoading && !isError && filteredProjects.length > 0 && (
+      {!isLoading && !isError && filteredProjects.length > 0 && displayMode === 'list' && (
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="hidden grid-cols-[minmax(220px,1.5fr)_120px_120px_120px_minmax(180px,1fr)_96px] gap-4 border-b border-gray-100 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 lg:grid">
+            <span>Project</span>
+            <span>Issues</span>
+            <span>Open weeks</span>
+            <span>Status</span>
+            <span>Next action</span>
+            <span className="text-right">Open</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {filteredProjects.map((project) => {
+              const summary = summaryItemMap.get(project.id);
+              const action = actionByProjectId.get(project.id);
+              const violationCount = summary?.violationCount ?? 0;
+              const openWeekCount = summary?.unsubmittedWeekEndingDates.length ?? 0;
+              const statusLabel = violationCount > 0
+                ? `${violationCount} violation${violationCount !== 1 ? 's' : ''}`
+                : openWeekCount > 0
+                  ? 'Open payroll'
+                  : summary?.status === 'no-payroll'
+                    ? 'No payroll'
+                    : 'Ready';
+              const statusClass = violationCount > 0
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : openWeekCount > 0
+                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  : summary?.status === 'no-payroll'
+                    ? 'border-gray-200 bg-gray-50 text-gray-600'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+              return (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  className="grid gap-3 px-4 py-4 transition-colors hover:bg-gray-50 lg:grid-cols-[minmax(220px,1.5fr)_120px_120px_120px_minmax(180px,1fr)_96px] lg:items-center lg:gap-4"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-950">{project.name}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {project.state} - {project.county} - {FUNDING_LABELS[project.fundingType] ?? project.fundingType}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between lg:block">
+                    <span className="text-xs font-medium text-gray-500 lg:hidden">Issues</span>
+                    <span className={`text-sm font-bold tabular-nums ${violationCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {violationCount}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between lg:block">
+                    <span className="text-xs font-medium text-gray-500 lg:hidden">Open weeks</span>
+                    <span className={`text-sm font-bold tabular-nums ${openWeekCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {openWeekCount}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    {action ? (
+                      <>
+                        <p className="truncate text-sm font-semibold text-gray-900">{action.label}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{action.detail}</p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-500">No known blocker</p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-end gap-1 text-sm font-semibold text-brand-gold">
+                    Open
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !isError && filteredProjects.length > 0 && displayMode === 'cards' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProjects.map((project) => (
             <ProjectCard
               key={project.id}
               project={project}
               violationCount={summaryItemMap.get(project.id)?.violationCount}
+              unsubmittedWeekCount={summaryItemMap.get(project.id)?.unsubmittedWeekEndingDates.length ?? 0}
+              nextAction={actionByProjectId.get(project.id)}
             />
           ))}
         </div>
@@ -600,7 +1177,14 @@ export function DashboardPage() {
 
       {/* DASH-04 / TRUST-02: Economic Impact Section */}
       {economicData?.data && (
-        <div className="mt-12">
+        <details className="mt-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+            Economic impact reports
+            <span className="ml-2 text-xs font-normal text-gray-500">
+              wages, apprenticeships, punctuality, and trade analytics
+            </span>
+          </summary>
+        <div className="mt-6">
           <div className="flex items-center justify-between gap-2 mb-6">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-brand-gold" />
@@ -614,6 +1198,44 @@ export function DashboardPage() {
               <Download className="w-3.5 h-3.5" />
               Download Economic Impact Report
             </a>
+          </div>
+
+          <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <AnalyticsActionCard
+              label="Payroll source"
+              value={savedViewCounts['payroll-due']}
+              detail="Open every project behind due or overdue certified payroll."
+              to="/dashboard?display=list&view=payroll-due#project-list"
+              tone={savedViewCounts['payroll-due'] > 0 ? 'amber' : 'emerald'}
+            />
+            <AnalyticsActionCard
+              label="Sub CPR source"
+              value={savedViewCounts['sub-cpr']}
+              detail="Jump to projects waiting on subcontractor payroll packages."
+              to="/dashboard?display=list&view=sub-cpr#project-list"
+              tone={savedViewCounts['sub-cpr'] > 0 ? 'red' : 'emerald'}
+            />
+            <AnalyticsActionCard
+              label="Rate variance"
+              value={highVarianceTradeCount}
+              detail="Review trades with large pay-rate spread before export."
+              to="/reports"
+              tone={highVarianceTradeCount > 0 ? 'amber' : 'neutral'}
+            />
+            <AnalyticsActionCard
+              label="OT exposure"
+              value={overtimeProjectCount}
+              detail="Open project payroll where premium labor cost is concentrated."
+              to={topOvertimeProject ? `/projects/${topOvertimeProject.projectId}/payroll` : '/reports'}
+              tone={overtimeProjectCount > 0 ? 'amber' : 'neutral'}
+            />
+            <AnalyticsActionCard
+              label="Apprentice gaps"
+              value={apprenticeGapCount}
+              detail="Open apprenticeship reporting when ratios need attention."
+              to="/reports"
+              tone={apprenticeGapCount > 0 ? 'red' : 'neutral'}
+            />
           </div>
 
           {/* Stat tiles — 4 across */}
@@ -727,7 +1349,15 @@ export function DashboardPage() {
           {/* Wages by craft bar chart — enhanced with worker count tooltip */}
           {economicData.data.totalWagesByCraft.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Wages by Craft</h3>
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">Wages by Craft</h3>
+                  <p className="mt-1 text-xs text-gray-500">Hover for wage, worker, and project count. Use reports for export-ready source rows.</p>
+                </div>
+                <Link to="/reports" className="text-xs font-semibold text-brand-gold hover:underline">
+                  Open reports
+                </Link>
+              </div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={economicData.data.totalWagesByCraft.slice(0, 8)}>
                   <XAxis dataKey="trade" tick={{ fontSize: 11 }} />
@@ -762,7 +1392,15 @@ export function DashboardPage() {
           {/* NEW: Weekly Wage Burn AreaChart */}
           {economicData.data.weeklyWageBurn.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Weekly Wage Burn — Last 12 Weeks</h3>
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">Weekly Wage Burn - Last 12 Weeks</h3>
+                  <p className="mt-1 text-xs text-gray-500">Open the project ranking table below to trace wage movement back to jobs.</p>
+                </div>
+                <a href="#project-rankings" className="text-xs font-semibold text-brand-gold hover:underline">
+                  View source projects
+                </a>
+              </div>
               <ResponsiveContainer width="100%" height={180}>
                 <AreaChart data={economicData.data.weeklyWageBurn}>
                   <defs>
@@ -788,9 +1426,14 @@ export function DashboardPage() {
           {/* NEW: Wage Variance by Trade table */}
           {economicData.data.wageVarianceByTrade.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-700">Wage Rate Variance by Trade</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Per-trade spread between min and max base rates across all payroll entries</p>
+              <div className="px-5 py-4 border-b border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">Wage Rate Variance by Trade</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Per-trade spread between min and max base rates across all payroll entries</p>
+                </div>
+                <Link to="/reports" className="text-xs font-semibold text-brand-gold hover:underline">
+                  Investigate rates
+                </Link>
               </div>
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -822,9 +1465,16 @@ export function DashboardPage() {
           {/* NEW: Overtime Exposure panel */}
           {economicData.data.overtimeExposure.length > 0 && (
             <div className="bg-white border border-amber-100 rounded-xl overflow-hidden shadow-sm mb-6">
-              <div className="px-5 py-4 border-b border-amber-100 bg-amber-50">
-                <h3 className="text-sm font-semibold text-amber-800">Overtime Exposure</h3>
-                <p className="text-xs text-amber-600 mt-0.5">Estimated premium labor cost from OT and DT hours per project</p>
+              <div className="px-5 py-4 border-b border-amber-100 bg-amber-50 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-amber-800">Overtime Exposure</h3>
+                  <p className="text-xs text-amber-600 mt-0.5">Estimated premium labor cost from OT and DT hours per project</p>
+                </div>
+                {topOvertimeProject && (
+                  <Link to={`/projects/${topOvertimeProject.projectId}/payroll`} className="text-xs font-semibold text-amber-800 hover:underline">
+                    Open top project
+                  </Link>
+                )}
               </div>
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -858,9 +1508,14 @@ export function DashboardPage() {
           {/* NEW: Apprenticeship Progress table */}
           {economicData.data.apprenticeshipProgress.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-700">Apprenticeship Ratio Progress</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Actual apprentice hour % vs required threshold per trade (IRA/IIJA default: 25%)</p>
+              <div className="px-5 py-4 border-b border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">Apprenticeship Ratio Progress</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Actual apprentice hour % vs required threshold per trade (IRA/IIJA default: 25%)</p>
+                </div>
+                <Link to="/reports" className="text-xs font-semibold text-brand-gold hover:underline">
+                  Open apprenticeship report
+                </Link>
               </div>
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -891,7 +1546,7 @@ export function DashboardPage() {
 
           {/* NEW: Project Rankings sortable table */}
           {sortedRankings.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
+            <div id="project-rankings" className="scroll-mt-24 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700">Project Rankings</h3>
@@ -998,7 +1653,11 @@ export function DashboardPage() {
             </Link>
           </div>
         </div>
+        </details>
       )}
+
+        </div>
+      </div>
 
     </Layout>
   );

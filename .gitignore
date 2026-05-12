@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .env
+coverage/
+data/
+*.db
 data/*.db
 data/*.db-shm
 data/*.db-wal
@@ -15,3 +18,10 @@ scripts/calibrate/*.bak
 assets/wh347-fillable-grid.pdf
 .worktrees/
 uploads/
+
+# Local agent/dev artifacts
+.codex-run/
+.playwright-cli/
+.claude/worktrees/
+output/playwright/
+.dev-*.log

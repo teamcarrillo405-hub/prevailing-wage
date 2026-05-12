@@ -6,7 +6,7 @@ import { logger } from '../logger.js';
 import { eq, isNull, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { projectMembers, users, projects } from '../db/schema.js';
-import type { ComplianceViolation, WeekViolation } from './complianceService.js';
+import type { ComplianceViolation, DeductionViolation, WeekViolation } from './complianceService.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -81,6 +81,7 @@ export async function sendViolationEmail(
   weekEndingDate: string,
   violations: ComplianceViolation[],
   weekViolations: WeekViolation[],
+  deductionViolations: DeductionViolation[] = [],
 ): Promise<void> {
   try {
     const resend = await getResend();
@@ -96,7 +97,7 @@ export async function sendViolationEmail(
     const recipients = members.map((m: { userId: string; role: string; email: string }) => m.email).filter((e: string | null): e is string => !!e);
     if (!recipients.length) return;
 
-    const allViolationCount = violations.length + weekViolations.length;
+    const allViolationCount = violations.length + weekViolations.length + deductionViolations.length;
     const weekUrl = `${APP_URL}/projects/${projectId}/payroll/${weekId}`;
 
     const violationRows = violations
@@ -106,6 +107,12 @@ export async function sendViolationEmail(
       )
       .join('');
     const weekViolationRows = weekViolations.map(wv => `<li>${wv.detail}</li>`).join('');
+    const deductionViolationRows = deductionViolations
+      .map(
+        v =>
+          `<li>${v.workerName}: deductions $${v.deductions.toFixed(2)} are ${v.deductionPct}% of $${v.grossWages.toFixed(2)} gross wages</li>`,
+      )
+      .join('');
 
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -115,6 +122,7 @@ export async function sendViolationEmail(
         <p>A compliance check on <strong>${projectName}</strong> for the week ending <strong>${weekEndingDate}</strong> detected <strong>${allViolationCount} violation(s)</strong>.</p>
         ${violations.length > 0 ? `<p>Entry violations:</p><ul>${violationRows}</ul>` : ''}
         ${weekViolations.length > 0 ? `<p>Week-level violations:</p><ul>${weekViolationRows}</ul>` : ''}
+        ${deductionViolations.length > 0 ? `<p>Deduction violations:</p><ul>${deductionViolationRows}</ul>` : ''}
         <p><a href="${weekUrl}">Review payroll week</a></p>
         <p style="color:#888;font-size:12px">You are receiving this because you are a member of this project. Manage notification preferences in the project settings.</p>
       `,

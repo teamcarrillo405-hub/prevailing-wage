@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { getDb } from '../db/index.js';
-import { projectWageDeterminations, wageDeterminations } from '../db/schema.js';
+import { projectWageDeterminations, projects, wageDeterminations } from '../db/schema.js';
 import {
   pinWdToProject,
   unpinWdFromProject,
@@ -32,6 +32,32 @@ const PinBodySchema = z.object({
   constructionType: z.enum(['Building', 'Heavy', 'Highway', 'Residential']).nullable().optional(),
 });
 
+function lockProjectToWd(projectId: string, wageDeterminationId: string): void {
+  const db = getDb();
+  const wd = db
+    .select({
+      wdNumber: wageDeterminations.wdNumber,
+      revisionNumber: wageDeterminations.revisionNumber,
+    })
+    .from(wageDeterminations)
+    .where(eq(wageDeterminations.id, wageDeterminationId))
+    .get();
+
+  if (!wd) {
+    throw new Error('Wage determination not found');
+  }
+
+  db.update(projects)
+    .set({
+      wdIdentifier: wd.wdNumber,
+      wdModNumber: wd.revisionNumber,
+      wdLockedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(projects.id, projectId))
+    .run();
+}
+
 // GET /api/projects/:projectId/wage-determinations
 // Returns each pin with lastFetchedAt, wdNumber, revisionNumber (COMP-06 Phase 88)
 projectWdRouter.get('/', (req, res) => {
@@ -44,8 +70,15 @@ projectWdRouter.get('/', (req, res) => {
       isPrimary: projectWageDeterminations.isPrimary,
       pinnedAt: projectWageDeterminations.pinnedAt,
       pinnedByUserId: projectWageDeterminations.pinnedByUserId,
+      source: wageDeterminations.source,
       wdNumber: wageDeterminations.wdNumber,
       revisionNumber: wageDeterminations.revisionNumber,
+      state: wageDeterminations.state,
+      county: wageDeterminations.county,
+      wdConstructionType: wageDeterminations.constructionType,
+      publishDate: wageDeterminations.publishDate,
+      cachedAt: wageDeterminations.cachedAt,
+      cacheExpiresAt: wageDeterminations.cacheExpiresAt,
       lastFetchedAt: wageDeterminations.lastFetchedAt,
     })
     .from(projectWageDeterminations)
@@ -68,9 +101,23 @@ projectWdRouter.post('/', (req, res) => {
     return;
   }
   try {
+    const db = getDb();
+    const existingPins = db
+      .select({ wageDeterminationId: projectWageDeterminations.wageDeterminationId })
+      .from(projectWageDeterminations)
+      .where(eq(projectWageDeterminations.projectId, projectId))
+      .all();
     pinWdToProject(projectId, parsed.data.wageDeterminationId, parsed.data.constructionType ?? null, userId);
-    res.status(201).json({ ok: true });
-  } catch {
+    if (existingPins.length === 0) {
+      setPrimaryWd(projectId, parsed.data.wageDeterminationId);
+      lockProjectToWd(projectId, parsed.data.wageDeterminationId);
+    }
+    res.status(201).json({ ok: true, isPrimary: existingPins.length === 0 });
+  } catch (err) {
+    if ((err as Error).message === 'Wage determination not found') {
+      res.status(404).json({ error: 'Wage determination not found' });
+      return;
+    }
     res.status(409).json({ error: 'This WD is already pinned to the project' });
   }
 });
@@ -90,5 +137,11 @@ projectWdRouter.patch('/:wdId', (req, res) => {
     return;
   }
   setPrimaryWd(projectId, wdId);
+  try {
+    lockProjectToWd(projectId, wdId);
+  } catch {
+    res.status(404).json({ error: 'Wage determination not found' });
+    return;
+  }
   res.json({ ok: true });
 });

@@ -5,6 +5,7 @@ interface Props {
   hasProjects: boolean;
   hasWorkers: boolean;
   hasPayroll: boolean;
+  hasWageDetermination?: boolean;
   hasReport?: boolean;
   hasTeamMember?: boolean;
   hasQboConnection?: boolean;
@@ -26,6 +27,7 @@ export function OnboardingChecklist({
   hasProjects,
   hasWorkers,
   hasPayroll,
+  hasWageDetermination,
   hasReport = false,
   hasTeamMember = false,
   hasQboConnection = false,
@@ -35,8 +37,10 @@ export function OnboardingChecklist({
   const steps: Step[] = [
     {
       num: 1,
-      title: 'Create your first project',
-      description: 'Add your federal or state job to start tracking certified payroll.',
+      title: hasProjects ? 'Project created' : 'Create your first project',
+      description: hasProjects
+        ? 'Your first job is ready for certified payroll tracking.'
+        : 'Add your federal or state job to start tracking certified payroll.',
       complete: hasProjects,
       href: '/dashboard',
     },
@@ -50,9 +54,9 @@ export function OnboardingChecklist({
     },
     {
       num: 3,
-      title: 'Set wage determinations for your state',
+      title: (hasWageDetermination ?? hasProjects) ? 'Wage determination selected' : 'Set wage determinations for your state',
       description: "Find your county's Davis-Bacon wage determination from SAM.gov — rates auto-populate.",
-      complete: false,
+      complete: hasWageDetermination ?? hasProjects,
       href: '/wages',
     },
     {
@@ -84,7 +88,7 @@ export function OnboardingChecklist({
       description: 'Link your QB Online account so employee time records flow in automatically each week.',
       complete: hasQboConnection,
       optional: true,
-      href: '/integrations',
+      href: '/settings/integrations',
     },
   ];
 

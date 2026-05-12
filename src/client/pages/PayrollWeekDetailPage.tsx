@@ -31,6 +31,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { RateProvenance } from '../components/ui/RateProvenance';
 import { PhotoCapture } from '../components/field/PhotoCapture';
 
 interface PayrollWeek {
@@ -88,7 +89,7 @@ interface PayrollEntryRow {
 interface ComplianceViolation {
   workerId: string;
   workerName: string;
-  violationType: 'under-wage' | 'cwhssa-ot';
+  violationType: 'under-wage' | 'cwhssa-ot' | 'weekly-ot' | 'multi-classification-ot' | 'ca-daily-ot' | 'ca-daily-dt';
   expected: number;
   actual: number;
   delta: number;
@@ -96,7 +97,7 @@ interface ComplianceViolation {
 }
 
 interface WeekViolation {
-  violationType: 'apprentice-ratio' | 'apprentice-trade-ratio' | 'ira-iija-apprentice-pct';
+  violationType: 'apprentice-ratio' | 'apprentice-trade-ratio' | 'apprentice-registration' | 'ira-iija-apprentice-pct';
   detail: string;
   apprenticeHours: number;
   journeyworkerHours: number;
@@ -126,7 +127,66 @@ interface ComplianceResult {
   certAccuratePayroll: boolean;
 }
 
+interface SubmitReadyIssue {
+  id: string;
+  category: string;
+  severity: 'blocker' | 'warning' | 'pass';
+  title: string;
+  detail: string;
+  actionId?: string;
+}
+
+interface SubmitReadyResult {
+  weekId: string;
+  projectId: string;
+  score: number;
+  status: 'not_ready' | 'needs_review' | 'ready' | 'submitted';
+  headline: string;
+  blockers: number;
+  warnings: number;
+  passes: number;
+  issues: SubmitReadyIssue[];
+  summary: {
+    entryCount: number;
+    totalHours: number;
+    grossWages: number;
+    complianceIssueCount: number;
+    exportFormat: string;
+  };
+}
+
 // ── Payroll Import types (Phase 36 — mirrors src/server/services/importTypes.ts) ──
+
+interface ImportReconciliationIssue {
+  id: string;
+  severity: 'blocker' | 'warning' | 'pass';
+  title: string;
+  detail: string;
+  nextAction: string;
+}
+
+interface ImportReconciliationResult {
+  weekId: string;
+  projectId: string;
+  status: 'blocked' | 'needs_review' | 'not_started' | 'reconciled';
+  latestImport: {
+    id: string;
+    provider: string;
+    sourceFilename: string | null;
+    committedCount: number;
+    unmatchedCount: number;
+    createdAt: string;
+  } | null;
+  summary: {
+    entryCount: number;
+    totalHours: number;
+    grossWages: number;
+    zeroRateCount: number;
+    missingPayCount: number;
+    providerMappingCount: number;
+  };
+  issues: ImportReconciliationIssue[];
+}
 
 interface ImportedRow {
   csvName: string;
@@ -226,9 +286,46 @@ interface PayrollWeekDetailResponse {
   entries: PayrollEntryRow[];
 }
 
-function violationLabel(type: 'under-wage' | 'cwhssa-ot'): string {
+function violationLabel(type: ComplianceViolation['violationType']): string {
   if (type === 'under-wage') return 'Under-Wage';
+  if (type === 'weekly-ot') return 'Weekly OT Review';
+  if (type === 'multi-classification-ot') return 'Multi-Classification OT';
+  if (type === 'ca-daily-ot') return 'CA Daily OT';
+  if (type === 'ca-daily-dt') return 'CA Daily DT';
   return 'CWHSSA OT Error';
+}
+
+function getViolationFix(v: ComplianceViolation): string {
+  if (v.violationType === 'under-wage') {
+    return 'Raise the worker pay rate or fringe credit for this classification, then recalculate gross and net pay.';
+  }
+  if (v.violationType === 'cwhssa-ot' || v.violationType === 'weekly-ot') {
+    return 'Move weekly hours over 40 into OT and pay the extra half-time premium on the basic hourly rate; fringe stays credited at straight time for every hour.';
+  }
+  if (v.violationType === 'multi-classification-ot') {
+    return 'Review the worker\'s full workweek across classifications and apply either a documented rate-in-effect method or weighted-average overtime calculation.';
+  }
+  if (v.violationType === 'ca-daily-ot') {
+    return 'Move daily hours over 8 into CA overtime or adjust the pay calculation to include the daily OT premium.';
+  }
+  return 'Move daily hours over 12 into CA double time or adjust the pay calculation to include the double-time premium.';
+}
+
+function getWeekViolationFix(wv: WeekViolation): string {
+  if (wv.violationType === 'apprentice-trade-ratio') {
+    return 'Reduce apprentice hours for this trade, add journeyworker coverage, or document the approved program ratio before submitting.';
+  }
+  if (wv.violationType === 'ira-iija-apprentice-pct') {
+    return 'Add qualifying apprentice hours or document a good-faith exception before certifying this payroll.';
+  }
+  if (wv.violationType === 'apprentice-registration') {
+    return 'Add the registered apprenticeship program name for the apprentice classification or pay the worker at the full journeyworker rate.';
+  }
+  return 'Adjust apprentice and journeyworker hours to match the applicable program ratio before submission.';
+}
+
+function getDeductionFix(): string {
+  return 'Review non-tax deductions for authorization and supporting records before certifying the payroll.';
 }
 
 export function PayrollWeekDetailPage() {
@@ -240,6 +337,12 @@ export function PayrollWeekDetailPage() {
   const generatingRef = useRef(false);
   const amendingRef = useRef(false);
   const hiddenAnchorRef = useRef<HTMLAnchorElement>(null);
+  const entriesSectionRef = useRef<HTMLDivElement>(null);
+  const complianceSectionRef = useRef<HTMLDivElement>(null);
+  const submitReadySectionRef = useRef<HTMLDivElement>(null);
+  const importReconciliationSectionRef = useRef<HTMLDivElement>(null);
+  const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
+  const [activeFixIssue, setActiveFixIssue] = useState<SubmitReadyIssue | null>(null);
 
   // isDirty: true when local changes (classification overrides, or any unsaved state) exist
   // and the user is offline — drives the 30-second auto-save indicator
@@ -491,6 +594,8 @@ export function PayrollWeekDetailPage() {
       const count = (data as { committed: number }).committed;
       queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
       queryClient.invalidateQueries({ queryKey: ['payroll-weeks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['import-reconciliation', weekId] });
+      queryClient.invalidateQueries({ queryKey: ['submit-ready', weekId] });
       closeImportModal();
       setImportSuccessBanner(`Imported ${count} entries from ${provider}.`);
     },
@@ -523,6 +628,22 @@ export function PayrollWeekDetailPage() {
   } = useQuery({
     queryKey: ['compliance', weekId],
     queryFn: () => api.get<ComplianceResult>('/compliance/' + weekId),
+    enabled: !!weekId,
+  });
+
+  const {
+    data: submitReadyData,
+    isLoading: submitReadyLoading,
+    isError: submitReadyError,
+  } = useQuery({
+    queryKey: ['submit-ready', weekId],
+    queryFn: () => api.get<SubmitReadyResult>('/compliance/' + weekId + '/submit-ready'),
+    enabled: !!weekId,
+  });
+
+  const { data: importReconciliationData } = useQuery({
+    queryKey: ['import-reconciliation', weekId],
+    queryFn: () => api.get<{ data: ImportReconciliationResult }>('/payroll/import/reconciliation/' + weekId),
     enabled: !!weekId,
   });
 
@@ -928,11 +1049,77 @@ export function PayrollWeekDetailPage() {
     return () => clearInterval(intervalId);
   }, [weekId, weekData, isDirty, autoSaving]);
 
-  const isLoading = weekLoading || complianceLoading;
-  const isError = weekError || complianceError;
+  const isLoading = weekLoading || complianceLoading || submitReadyLoading;
+  const isError = weekError || complianceError || submitReadyError;
 
   const week = weekData?.week;
   const entries = weekData?.entries ?? [];
+  const readinessChecks = [
+    {
+      label: 'Payroll entries',
+      complete: entries.length > 0,
+      detail: entries.length > 0 ? `${entries.length} worker entr${entries.length === 1 ? 'y' : 'ies'} recorded` : 'Add worker hours for this week.',
+    },
+    {
+      label: 'Gross and net pay',
+      complete: entries.length > 0 && entries.every((row) => row.entry.grossWages !== null && row.entry.netPay !== null),
+      detail: 'Required for a usable certified payroll report.',
+    },
+    {
+      label: 'Compliance clean',
+      complete: !complianceData?.hasViolations && (complianceData?.deductionViolations?.length ?? 0) === 0,
+      detail: complianceData?.hasViolations ? 'Resolve listed wage, overtime, or ratio issues.' : 'No blocking violations detected.',
+    },
+    {
+      label: 'CPR submission',
+      complete: Boolean(week?.submittedAt),
+      detail: week?.submittedAt ? `Submitted to ${week.submittedTo ?? 'agency'}` : 'Record submission after the agency/GC receives it.',
+    },
+    {
+      label: 'State export',
+      complete: !stateFormConfig || entries.length > 0,
+      detail: stateFormConfig ? `${stateFormConfig.downloadLabel} available after entries are complete.` : 'WH-347 export is available for this contract.',
+    },
+  ];
+  const readinessCompleteCount = readinessChecks.filter((check) => check.complete).length;
+  const hasPayrollEntries = entries.length > 0;
+  const payRowsComplete = entries.length > 0 && entries.every((row) => row.entry.grossWages !== null && row.entry.netPay !== null);
+  const hasBlockingCompliance = Boolean(complianceData?.hasViolations) || (complianceData?.deductionViolations?.length ?? 0) > 0;
+  const hasSubmitReadyBlockers = (submitReadyData?.blockers ?? 0) > 0;
+  const canGenerateCertifiedPayroll = hasPayrollEntries && payRowsComplete && !hasBlockingCompliance && !hasSubmitReadyBlockers;
+  const canMarkSubmitted = canGenerateCertifiedPayroll && Boolean(week && !week.submittedAt);
+  const requiredFormRows = [
+    {
+      label: 'Federal WH-347',
+      description: 'Certified payroll record for Davis-Bacon covered work.',
+      available: canGenerateCertifiedPayroll,
+      submitted: Boolean(week?.submittedAt),
+      nextAction: week?.submittedAt
+        ? `Submitted to ${week.submittedTo ?? 'agency'}`
+        : canGenerateCertifiedPayroll
+        ? 'Download WH-347, submit to the contracting officer, then mark submitted.'
+        : 'Complete payroll entries and clear blocking issues.',
+    },
+    stateFormConfig
+      ? {
+          label: stateFormConfig.downloadLabel.replace(/^Download\s+/, ''),
+          description: `Required state export for ${projectData?.data?.project?.state?.toUpperCase()} public work when applicable.`,
+          available: canGenerateCertifiedPayroll,
+          submitted: Boolean(week?.submittedAt),
+          nextAction: week?.submittedAt
+            ? 'Keep the export with the submitted weekly record.'
+            : canGenerateCertifiedPayroll
+            ? `${stateFormConfig.downloadLabel}, submit through the state or agency portal, then record submission.`
+            : 'Finish readiness before generating the state form.',
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    label: string;
+    description: string;
+    available: boolean;
+    submitted: boolean;
+    nextAction: string;
+  }>;
 
   // Build a set of entry IDs that have violations for quick lookup
   const violationsByEntryId = new Map<string, ComplianceViolation>();
@@ -940,6 +1127,75 @@ export function PayrollWeekDetailPage() {
     for (const v of complianceData.violations) {
       violationsByEntryId.set(v.entryId, v);
     }
+  }
+
+  function scrollToElement(target: HTMLElement | null | undefined) {
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.focus({ preventScroll: true });
+  }
+
+  function scrollToPayrollEntry(entryId: string) {
+    const isMobile = window.matchMedia('(max-width: 639px)').matches;
+    const targetId = isMobile ? `payroll-entry-mobile-${entryId}` : `payroll-entry-row-${entryId}`;
+    const target = document.getElementById(targetId) ?? document.getElementById(`payroll-entry-row-${entryId}`);
+    setHighlightedEntryId(entryId);
+    scrollToElement(target);
+    window.setTimeout(() => setHighlightedEntryId(null), 3500);
+  }
+
+  function scrollToSubmitReadyIssue(issue: SubmitReadyIssue) {
+    setActiveFixIssue(issue);
+    if (issue.id === 'pay-calculation') {
+      const row = entries.find(({ entry }) => entry.grossWages == null || entry.netPay == null);
+      if (row) {
+        scrollToPayrollEntry(row.entry.id);
+        window.setTimeout(() => setActiveFixIssue(null), 10_000);
+        return;
+      }
+    }
+
+    if (issue.id === 'rate-snapshots') {
+      const row = entries.find(({ entry }) => entry.baseRateSnapshot === 0 && entry.fringeRateSnapshot === 0);
+      if (row) {
+        scrollToPayrollEntry(row.entry.id);
+        window.setTimeout(() => setActiveFixIssue(null), 10_000);
+        return;
+      }
+    }
+
+    if (issue.actionId === 'review-week-violations' || issue.id === 'compliance-review') {
+      const violationEntryId =
+        complianceData?.violations?.[0]?.entryId ??
+        complianceData?.deductionViolations?.[0]?.entryId;
+      if (violationEntryId) {
+        scrollToPayrollEntry(violationEntryId);
+        window.setTimeout(() => setActiveFixIssue(null), 10_000);
+        return;
+      }
+      scrollToElement(complianceSectionRef.current);
+      window.setTimeout(() => setActiveFixIssue(null), 10_000);
+      return;
+    }
+
+    if (issue.actionId === 'prepare-import-review' || issue.id === 'payroll-entries') {
+      scrollToElement(entries.length > 0 ? entriesSectionRef.current : importReconciliationSectionRef.current ?? entriesSectionRef.current);
+      window.setTimeout(() => setActiveFixIssue(null), 10_000);
+      return;
+    }
+
+    if (issue.actionId === 'prepare-missing-wd') {
+      navigate(`/projects/${projectId}#wage-determinations`);
+      return;
+    }
+
+    scrollToElement(complianceSectionRef.current ?? entriesSectionRef.current ?? submitReadySectionRef.current);
+    window.setTimeout(() => setActiveFixIssue(null), 10_000);
+  }
+
+  function scrollToFirstIssue(severity: 'blocker' | 'warning') {
+    const issue = submitReadyData?.issues.find((candidate) => candidate.severity === severity);
+    if (issue) scrollToSubmitReadyIssue(issue);
   }
 
   function handleDownloadClick() {
@@ -1345,6 +1601,145 @@ export function PayrollWeekDetailPage() {
             <span className="text-xs text-amber-600 font-medium shrink-0">Auto-saving...</span>
           )}
         </div>
+        {submitReadyData && (
+          <div ref={submitReadySectionRef} tabIndex={-1}>
+            <Card padding="default" className="mb-4 border border-border-default">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold text-gray-900">Submit-ready score</h2>
+                  <Badge
+                    variant={
+                      submitReadyData.status === 'ready' || submitReadyData.status === 'submitted'
+                        ? 'compliant'
+                        : submitReadyData.status === 'needs_review'
+                        ? 'warning'
+                        : 'violation'
+                    }
+                  >
+                    {submitReadyData.score}/100
+                  </Badge>
+                  <Badge variant="neutral">{submitReadyData.summary.exportFormat}</Badge>
+                </div>
+                <p className="mt-1 text-sm text-text-secondary">{submitReadyData.headline}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[220px]">
+                <button
+                  type="button"
+                  onClick={() => scrollToFirstIssue('blocker')}
+                  className="rounded-sm px-2 py-1 text-center transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  aria-label="Go to first blocker"
+                >
+                  <p className="text-lg font-semibold text-status-violation">{submitReadyData.blockers}</p>
+                  <p className="text-xs text-text-secondary">Blockers</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToFirstIssue('warning')}
+                  className="rounded-sm px-2 py-1 text-center transition-colors hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  aria-label="Go to first warning"
+                >
+                  <p className="text-lg font-semibold text-status-warning">{submitReadyData.warnings}</p>
+                  <p className="text-xs text-text-secondary">Warnings</p>
+                </button>
+                <div>
+                  <p className="text-lg font-semibold text-status-compliant">{submitReadyData.passes}</p>
+                  <p className="text-xs text-text-secondary">Passed</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-2">
+              {submitReadyData.issues
+                .filter((issue) => issue.severity !== 'pass')
+                .slice(0, 4)
+                .map((issue) => (
+                  <button
+                    key={issue.id}
+                    type="button"
+                    onClick={() => scrollToSubmitReadyIssue(issue)}
+                    className="flex w-full items-start justify-between gap-3 rounded-sm border border-border-default px-3 py-2 text-left transition-colors hover:border-brand-gold hover:bg-brand-gold/5 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{issue.title}</p>
+                      <p className="text-xs text-text-secondary">{issue.detail}</p>
+                      <p className="mt-1 text-xs font-medium text-brand-gold">Click to go to the fix.</p>
+                    </div>
+                    <Badge variant={issue.severity === 'blocker' ? 'violation' : 'warning'}>
+                      {issue.severity}
+                    </Badge>
+                  </button>
+                ))}
+              {submitReadyData.issues.every((issue) => issue.severity === 'pass') && (
+                <p className="text-sm text-status-compliant">All pre-submission checks are passing.</p>
+              )}
+            </div>
+            </Card>
+          </div>
+        )}
+        {importReconciliationData?.data && (
+          <div ref={importReconciliationSectionRef} tabIndex={-1}>
+            <Card padding="default" className="mb-4 border border-border-default">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold text-gray-900">Import reconciliation</h2>
+                  <Badge
+                    variant={
+                      importReconciliationData.data.status === 'reconciled'
+                        ? 'compliant'
+                        : importReconciliationData.data.status === 'blocked'
+                        ? 'violation'
+                        : 'warning'
+                    }
+                  >
+                    {importReconciliationData.data.status.replace('_', ' ')}
+                  </Badge>
+                  {importReconciliationData.data.latestImport && (
+                    <Badge variant="neutral">
+                      {PROVIDER_LABELS[importReconciliationData.data.latestImport.provider] ?? importReconciliationData.data.latestImport.provider}
+                    </Badge>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-text-secondary">
+                  {importReconciliationData.data.latestImport
+                    ? `${importReconciliationData.data.latestImport.committedCount} rows committed, ${importReconciliationData.data.latestImport.unmatchedCount} unmatched.`
+                    : 'No committed provider import has been recorded for this week.'}
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[260px]">
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">{importReconciliationData.data.summary.entryCount}</p>
+                  <p className="text-xs text-text-secondary">Entries</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-status-violation">{importReconciliationData.data.summary.zeroRateCount}</p>
+                  <p className="text-xs text-text-secondary">Zero Rates</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-status-warning">{importReconciliationData.data.summary.missingPayCount}</p>
+                  <p className="text-xs text-text-secondary">Pay Gaps</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-2">
+              {importReconciliationData.data.issues.slice(0, 3).map((issue) => (
+                <div key={issue.id} className="rounded-sm border border-border-default px-3 py-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{issue.title}</p>
+                      <p className="text-xs text-text-secondary">{issue.detail}</p>
+                      <p className="mt-1 text-xs font-medium text-gray-700">{issue.nextAction}</p>
+                    </div>
+                    <Badge variant={issue.severity === 'pass' ? 'compliant' : issue.severity === 'blocker' ? 'violation' : 'warning'}>
+                      {issue.severity}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+            </Card>
+          </div>
+        )}
         {/* MOB-13: sticky download bar with iOS safe-area padding */}
         <div
           className="sticky bottom-0 z-10 bg-white border-t border-brand-navy/10 px-4 sm:px-6 pt-3 -mx-4 sm:-mx-6 mt-8"
@@ -1364,7 +1759,7 @@ export function PayrollWeekDetailPage() {
             </div>
           )}
           <div className="flex gap-2 flex-wrap items-center">
-            {weekId && week && !week.isFinal && (
+            {weekId && week && !week.isFinal && !week.submittedAt && (
               <Link
                 to={`/projects/${projectId}/payroll/${weekId}/edit`}
                 className="inline-flex items-center justify-center text-xs px-3 py-2.5 min-h-[44px] font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 transition-colors"
@@ -1377,12 +1772,14 @@ export function PayrollWeekDetailPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  disabled={generating}
+                  disabled={generating || !canGenerateCertifiedPayroll}
                   onClick={handleDownloadClick}
                 >
                   {generating ? 'Generating...' : 'Download WH-347'}
                 </Button>
-                <Tooltip content="Federal Certified Payroll Report required for Davis-Bacon Act projects. The January 2025 revision is the only version accepted by the Department of Labor." />
+                <Tooltip content={canGenerateCertifiedPayroll
+                  ? 'Federal Certified Payroll Report required for Davis-Bacon Act projects. The January 2025 revision is the only version accepted by the Department of Labor.'
+                  : 'Complete payroll entries and clear blocking compliance issues before generating WH-347.'} />
               </span>
             )}
             {/* STATE_FORMS registry-driven primary download button (STATE-12, NFR-06) */}
@@ -1390,7 +1787,7 @@ export function PayrollWeekDetailPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                disabled={generating}
+                disabled={generating || !canGenerateCertifiedPayroll}
                 onClick={() =>
                   stateFormConfig.route === 'a1131'
                     ? handleCaDownloadClick()
@@ -1533,11 +1930,22 @@ export function PayrollWeekDetailPage() {
           </Card>
         )}
 
+        {activeFixIssue && (
+          <div className="mb-4 rounded-lg border border-brand-gold bg-brand-gold/10 px-4 py-3 text-sm text-nav-dark">
+            <p className="font-semibold">Fix target: {activeFixIssue.title}</p>
+            <p className="mt-1 text-xs text-gray-700">{activeFixIssue.detail}</p>
+            {activeFixIssue.actionLabel && (
+              <p className="mt-1 text-xs font-medium text-gray-900">Action: {activeFixIssue.actionLabel}</p>
+            )}
+          </div>
+        )}
+
         {/* lg: two-column layout — entries (left) + compliance/submission sidebar (right) */}
         <div className="lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
         <div className="lg:col-span-2">
 
         {/* Entries — MOB-13: card view on mobile, table on sm+ */}
+        <div ref={entriesSectionRef} tabIndex={-1}>
         {!isLoading && !isError && entries.length > 0 && (
           <Card padding="none" className="mb-6">
             <div className="px-5 py-3 border-b border-gray-100">
@@ -1552,7 +1960,15 @@ export function PayrollWeekDetailPage() {
                 const totalOt = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
                 const violation = violationsByEntryId.get(e.id);
                 return (
-                  <div key={e.id} className={cn('px-4 py-4 min-h-[56px]', index % 2 === 0 ? 'bg-white' : 'bg-surface-muted')}>
+                  <div
+                    key={e.id}
+                    id={`payroll-entry-mobile-${e.id}`}
+                    tabIndex={-1}
+                    className={cn(
+                      'px-4 py-4 min-h-[56px] scroll-mt-24 outline-none transition-colors',
+                      highlightedEntryId === e.id ? 'ring-2 ring-brand-gold bg-brand-gold/10' : index % 2 === 0 ? 'bg-white' : 'bg-surface-muted',
+                    )}
+                  >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">{row.workerName}</p>
@@ -1573,7 +1989,14 @@ export function PayrollWeekDetailPage() {
                       </div>
                       <div>
                         <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-0.5">Base / Fringe</p>
-                        <p>${e.baseRateSnapshot.toFixed(2)} / ${e.fringeRateSnapshot.toFixed(2)}</p>
+                        <RateProvenance
+                          baseRate={e.baseRateSnapshot}
+                          fringeRate={e.fringeRateSnapshot}
+                          sourceLabel="project wage source"
+                          classificationLabel={row.tradeDescription}
+                          override={Boolean(row.overrideClassificationId)}
+                          compact
+                        />
                       </div>
                       <div>
                         <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-0.5">Net Pay</p>
@@ -1628,7 +2051,14 @@ export function PayrollWeekDetailPage() {
 
                     return (
                       <React.Fragment key={e.id}>
-                      <tr className={cn('hover:bg-gray-50', index % 2 === 0 ? 'bg-white' : 'bg-surface-muted')}>
+                      <tr
+                        id={`payroll-entry-row-${e.id}`}
+                        tabIndex={-1}
+                        className={cn(
+                          'scroll-mt-24 outline-none transition-colors hover:bg-gray-50',
+                          highlightedEntryId === e.id ? 'ring-2 ring-brand-gold bg-brand-gold/10' : index % 2 === 0 ? 'bg-white' : 'bg-surface-muted',
+                        )}
+                      >
                         <td className="px-5 py-3 font-medium text-gray-900">
                           <span className="inline-flex items-center gap-1.5">
                             {row.workerName}
@@ -1689,10 +2119,22 @@ export function PayrollWeekDetailPage() {
                           {totalSt} ST / {totalOt} OT
                         </td>
                         <td className="px-5 py-3 text-gray-600">
-                          ${e.baseRateSnapshot.toFixed(2)}
+                          <RateProvenance
+                            baseRate={e.baseRateSnapshot}
+                            sourceLabel="project wage source"
+                            classificationLabel={row.tradeDescription}
+                            override={Boolean(row.overrideClassificationId)}
+                            compact
+                          />
                         </td>
                         <td className="px-5 py-3 text-gray-600">
-                          ${e.fringeRateSnapshot.toFixed(2)}
+                          <RateProvenance
+                            baseRate={e.fringeRateSnapshot}
+                            sourceLabel="classification fringe snapshot"
+                            rateLabel="fringe"
+                            missingIsProblem={false}
+                            compact
+                          />
                         </td>
                         <td className="px-5 py-3 text-gray-600">
                           {e.grossWages !== null ? `$${e.grossWages.toFixed(2)}` : '—'}
@@ -1779,12 +2221,68 @@ export function PayrollWeekDetailPage() {
             <p className="text-sm text-gray-500">No payroll entries for this week.</p>
           </Card>
         )}
+        </div>
 
         </div>{/* end lg:col-span-2 */}
         <div className="lg:col-span-1 space-y-6">
 
+        {!isLoading && !isError && (
+          <Card padding="none">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-gray-900">Week Readiness</h2>
+              <Badge variant={readinessCompleteCount === readinessChecks.length ? 'compliant' : 'warning'}>
+                {readinessCompleteCount}/{readinessChecks.length}
+              </Badge>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {readinessChecks.map((check) => (
+                <div key={check.label} className="flex items-start gap-3">
+                  <span className={`mt-0.5 h-5 w-5 rounded-full flex items-center justify-center text-xs font-semibold ${
+                    check.complete ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {check.complete ? '\u2713' : '!'}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{check.label}</p>
+                    <p className="text-xs text-gray-500">{check.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {!isLoading && !isError && (
+          <Card padding="none">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Required Forms</h2>
+              <p className="mt-1 text-xs text-gray-500">The filing checklist for this payroll week.</p>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {requiredFormRows.map((form) => (
+                <div key={form.label} className="rounded border border-gray-200 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{form.label}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">{form.description}</p>
+                    </div>
+                    <Badge variant={form.submitted ? 'compliant' : form.available ? 'warning' : 'neutral'}>
+                      {form.submitted ? 'Filed' : form.available ? 'Ready' : 'Blocked'}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-600">{form.nextAction}</p>
+                </div>
+              ))}
+              <div className="rounded border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                PrevWage prepares the certified payroll package and keeps the evidence trail. If your contract requires eComply, LCPtracker, DIR, L&I, or another portal, download the matching export here and upload it in that portal unless a live integration is configured.
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Compliance violations panel */}
         {!isLoading && !isError && (
+          <div ref={complianceSectionRef} tabIndex={-1}>
           <Card padding="none">
             <div className="px-5 py-3 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Compliance Check</h2>
@@ -1804,6 +2302,9 @@ export function PayrollWeekDetailPage() {
                       <span>
                         <span className="font-medium">{v.workerName}</span>
                         {': expected $'}{v.expected.toFixed(2)}{', paid $'}{v.actual.toFixed(2)}{' (delta $'}{v.delta.toFixed(2)}{')'}
+                        <span className="block text-xs text-gray-500 mt-0.5">
+                          Fix: {getViolationFix(v)}
+                        </span>
                       </span>
                     </li>
                   ))}
@@ -1822,9 +2323,17 @@ export function PayrollWeekDetailPage() {
                           {' '}(max: {wv.maxAllowedApprenticeHours.toFixed(1)}).
                           {' '}Excess: {(wv.excessHours ?? 0).toFixed(1)} hrs.
                           {' '}Est. wage adjustment: ${(wv.estimatedLiabilityUsd ?? 0).toFixed(2)}
+                          <span className="block text-xs text-gray-500 mt-0.5">
+                            Fix: {getWeekViolationFix(wv)}
+                          </span>
                         </span>
                       ) : (
-                        <span>{wv.detail}</span>
+                        <span>
+                          {wv.detail}
+                          <span className="block text-xs text-gray-500 mt-0.5">
+                            Fix: {getWeekViolationFix(wv)}
+                          </span>
+                        </span>
                       )}
                     </li>
                   ))}
@@ -1852,6 +2361,7 @@ export function PayrollWeekDetailPage() {
                       <li key={i} className="text-xs text-amber-800">
                         <span className="font-semibold">{dv.workerName}</span>
                         {': '}${dv.deductions.toFixed(2)} deducted from ${dv.grossWages.toFixed(2)} gross ({dv.deductionPct}%)
+                        <span className="block text-amber-700">Fix: {getDeductionFix()}</span>
                       </li>
                     ))}
                   </ul>
@@ -1859,6 +2369,7 @@ export function PayrollWeekDetailPage() {
               </div>
             )}
           </Card>
+          </div>
         )}
 
         {/* Submission status panel */}
@@ -1924,12 +2435,17 @@ export function PayrollWeekDetailPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    disabled={!submitDate || !submitAgency.trim() || submitMutation.isPending}
+                    disabled={!submitDate || !submitAgency.trim() || submitMutation.isPending || !canMarkSubmitted}
                     onClick={() => submitMutation.mutate()}
                   >
                     {submitMutation.isPending ? 'Saving...' : 'Mark as Submitted'}
                   </Button>
                 </div>
+                {!canGenerateCertifiedPayroll && (
+                  <p className="text-xs text-amber-700">
+                    Complete week readiness and clear blocking compliance issues before marking this CPR submitted.
+                  </p>
+                )}
                 {submitMutation.isError && (
                   <p className="text-xs text-red-600">Failed to submit. Please try again.</p>
                 )}
@@ -3415,6 +3931,17 @@ export function PayrollWeekDetailPage() {
                     ) : (
                       <span>{wv.detail}</span>
                     )}
+                  </li>
+                ))}
+                {complianceData!.deductionViolations?.map((dv, i) => (
+                  <li key={`deduction-${i}`} className="flex items-start gap-2 text-sm text-gray-700">
+                    <Badge variant="violation" className="mt-0.5 shrink-0">
+                      Deductions
+                    </Badge>
+                    <span>
+                      <span className="font-medium">{dv.workerName}</span>
+                      {': '}${dv.deductions.toFixed(2)} deducted from ${dv.grossWages.toFixed(2)} gross ({dv.deductionPct}%)
+                    </span>
                   </li>
                 ))}
               </ul>

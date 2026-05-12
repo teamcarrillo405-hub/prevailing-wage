@@ -201,11 +201,17 @@ export function PhotoGallery({ projectId }: PhotoGalleryProps) {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {photos.map((photo) => (
             <div key={photo.id} className="flex flex-col gap-1">
-              <img
-                src={photo.dataUrl ?? ''}
-                alt={photo.caption ?? 'Site photo'}
-                className="w-full h-24 object-cover rounded border border-border-default"
-              />
+              {photo.dataUrl ? (
+                <img
+                  src={photo.dataUrl}
+                  alt={photo.caption ?? 'Site photo'}
+                  className="w-full h-24 object-cover rounded border border-border-default"
+                />
+              ) : (
+                <div className="flex h-24 items-center justify-center rounded border border-dashed border-border-default bg-gray-50 px-3 text-center text-xs text-text-secondary">
+                  Photo file unavailable
+                </div>
+              )}
               {photo.latitude !== null && photo.longitude !== null && (
                 <p className="text-xs text-text-secondary">
                   {photo.latitude.toFixed(4)}, {photo.longitude.toFixed(4)}

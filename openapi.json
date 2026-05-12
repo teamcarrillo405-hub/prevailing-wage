@@ -199,7 +199,7 @@
       },
       "ProjectComplianceSummary": {
         "type": "object",
-        "required": ["projectId", "weekCount", "hasViolations", "totalViolations", "status"],
+        "required": ["projectId", "weekCount", "hasViolations", "totalViolations", "violationBreakdown", "status"],
         "properties": {
           "projectId": { "type": "string", "format": "uuid" },
           "weekCount": {
@@ -208,21 +208,33 @@
           },
           "hasViolations": { "type": "boolean" },
           "totalViolations": { "type": "integer", "minimum": 0 },
+          "violationBreakdown": { "$ref": "#/components/schemas/ViolationBreakdown" },
           "status": {
             "type": "string",
             "enum": ["clean", "violations"]
           }
         }
       },
+      "ViolationBreakdown": {
+        "type": "object",
+        "required": ["wage", "week", "deduction", "total"],
+        "properties": {
+          "wage": { "type": "integer", "minimum": 0 },
+          "week": { "type": "integer", "minimum": 0 },
+          "deduction": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        }
+      },
       "PerProjectCompliance": {
         "type": "object",
-        "required": ["projectId", "projectName", "weekCount", "totalViolations", "hasViolations", "complianceStatus"],
+        "required": ["projectId", "projectName", "weekCount", "totalViolations", "violationBreakdown", "hasViolations", "complianceStatus"],
         "properties": {
           "projectId": { "type": "string", "format": "uuid" },
           "projectName": { "type": "string" },
           "projectStatus": { "type": ["string", "null"] },
           "weekCount": { "type": "integer" },
           "totalViolations": { "type": "integer" },
+          "violationBreakdown": { "$ref": "#/components/schemas/ViolationBreakdown" },
           "hasViolations": { "type": "boolean" },
           "complianceStatus": {
             "type": "string",
@@ -232,11 +244,12 @@
       },
       "ReportsComplianceSummary": {
         "type": "object",
-        "required": ["totalProjects", "projectsWithViolations", "totalViolations", "perProject"],
+        "required": ["totalProjects", "projectsWithViolations", "totalViolations", "violationBreakdown", "perProject"],
         "properties": {
           "totalProjects": { "type": "integer" },
           "projectsWithViolations": { "type": "integer" },
           "totalViolations": { "type": "integer" },
+          "violationBreakdown": { "$ref": "#/components/schemas/ViolationBreakdown" },
           "perProject": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/PerProjectCompliance" }

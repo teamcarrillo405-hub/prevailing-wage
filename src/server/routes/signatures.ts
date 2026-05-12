@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { contractorSignatures } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
-import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { assertProjectAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 
 const SIGNATURES_DIR = process.env.SIGNATURES_DIR || './var/data/signatures';
 fs.mkdirSync(SIGNATURES_DIR, { recursive: true });
@@ -47,7 +47,7 @@ router.post('/:projectId/signature', (req, res, next) => {
   const userId = req.user!.userId;
   const db = getDb();
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     if (req.file) fs.unlink(req.file.path, () => {});
     res.status(err.status ?? 500).json({ error: err.message });
@@ -117,7 +117,7 @@ router.delete('/:projectId/signature', async (req, res) => {
   const userId = req.user!.userId;
   const db = getDb();
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message });
     return;

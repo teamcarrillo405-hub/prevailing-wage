@@ -127,6 +127,17 @@ export function deriveAllApprenticesRegistered(
   );
 }
 
+function deriveCertApprentices(
+  entries: Array<{ laborType: string; programName: string | null | undefined }>,
+  complianceResult: Awaited<ReturnType<typeof computeCompliance>>,
+): boolean {
+  const registrationComplete = deriveAllApprenticesRegistered(entries);
+  const apprenticeRuleClear = !(complianceResult?.weekViolations.some(v =>
+    ['apprentice-ratio', 'apprentice-trade-ratio', 'apprentice-registration'].includes(v.violationType),
+  ) ?? false);
+  return registrationComplete && apprenticeRuleClear;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function formatDate(isoDate: string): string {
@@ -160,17 +171,22 @@ router.get('/wh347/:weekId', async (req, res) => {
   }
 
   // 3. Load payroll entries
-  const entries = await getPayrollEntries(weekId);
+  const entries = await getPayrollEntriesWithWorkerDetails(weekId);
+  type EntryRow = (typeof entries)[number];
+  const incompletePayRows = entries.filter((row: EntryRow) => row.entry.grossWages == null || row.entry.netPay == null);
+  if (incompletePayRows.length > 0) {
+    res.status(409).json({ error: 'Cannot generate WH-347 until gross wages and net pay are calculated for every entry.' });
+    return;
+  }
 
-  // certApprentices: derived from apprentice registration status (see deriveAllApprenticesRegistered)
+  // certApprentices: derived from apprentice registration and ratio review status.
   // certProperPayment + certAccuratePayroll: derived from compliance engine (see complianceResult below)
-  const allApprenticesRegistered = deriveAllApprenticesRegistered(entries);
 
   // Derive compliance flags for Statement of Compliance
   const complianceResult = await computeCompliance(db, weekId);
+  const certApprentices = deriveCertApprentices(entries, complianceResult);
 
   // 4. Map entries to Wh347WorkerRow[]
-  type EntryRow = (typeof entries)[number];
   const workerRows: Wh347WorkerRow[] = entries.map((row: EntryRow, index: number) => {
     const e = row.entry;
     const totalSt = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
@@ -196,7 +212,7 @@ router.get('/wh347/:weekId', async (req, res) => {
       entryNo: index + 1,
       workerName: row.workerName,
       laborType: (row.laborType === 'foreman' ? 'journeyworker' : row.laborType) as 'journeyworker' | 'apprentice',
-      identifyingNo: '', // ssnLast4 not joined — privacy-safe default
+      identifyingNo: row.workerSsnLast4 ?? '',
       classification: row.tradeDescription,
       monSt: e.monSt, monOt: e.monOt,
       tueSt: e.tueSt, tueOt: e.tueOt,
@@ -244,7 +260,7 @@ router.get('/wh347/:weekId', async (req, res) => {
       certProperPayment: complianceResult?.certProperPayment ?? true,
       certAccuratePayroll: complianceResult?.certAccuratePayroll ?? true,
       certWorkPerformed: true,      // manual certification — always true
-      certApprentices: allApprenticesRegistered,
+      certApprentices,
       certFringeBenefits: workerRows.some(w => w.fringeCredit > 0),
       certDeductions: false,
       officialName: 'Certifying Official',

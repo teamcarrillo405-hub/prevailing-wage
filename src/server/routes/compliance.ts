@@ -12,11 +12,18 @@ import { requireAuth } from '../middleware/auth.js';
 import { getDb } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { computeCompliance, getWorkerComplianceHistory, getBatchProjectCompliance } from '../services/complianceService.js';
+import { countComplianceViolations } from '../services/complianceRules.js';
+import { computeSubmitReady } from '../services/submitReadyService.js';
 import { listPayrollWeeks } from '../services/payrollService.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { sendViolationAlertEmail } from '../services/emailService.js';
+import { buildWeekComplianceEvidence, getComplianceMethodology } from '../services/complianceMethodology.js';
 
 export const complianceRouter = Router();
+
+complianceRouter.get('/methodology', requireAuth, (_req, res) => {
+  res.json({ data: getComplianceMethodology() });
+});
 
 // GET /api/compliance/project/:projectId — MUST come before /:weekId
 // Express matches routes in declaration order; /:weekId is a wildcard that would
@@ -152,6 +159,49 @@ complianceRouter.get('/worker/:workerId/history/csv', requireAuth, async (req, r
   res.send('\uFEFF' + csvString);
 });
 
+// GET /api/compliance/:weekId/submit-ready - contractor-facing pre-submission score.
+complianceRouter.get('/:weekId/submit-ready', requireAuth, async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const result = await computeSubmitReady(db, weekId);
+  if (!result) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  try {
+    await assertProjectAccess(db, result.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  res.json(result);
+});
+
+complianceRouter.get('/:weekId/evidence', requireAuth, async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const evidence = await buildWeekComplianceEvidence(db, weekId);
+  if (!evidence) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  try {
+    await assertProjectAccess(db, evidence.project.id, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  res.json({ data: evidence });
+});
+
 complianceRouter.get('/:weekId', requireAuth, async (req, res) => {
   const weekId = req.params.weekId as string;
   const userId = req.user!.userId;
@@ -191,10 +241,11 @@ complianceRouter.get('/:weekId', requireAuth, async (req, res) => {
         const projectName = projectRow.name;
         const weekEndingDate = weekRow.weekEndingDate;
 
-        const totalCount = result.violations.length + result.weekViolations.length;
+        const totalCount = countComplianceViolations(result);
         const violationSummary = `${totalCount} violation(s) detected: ${[
           ...result.violations.map(v => `${v.workerName} (${v.violationType})`),
           ...result.weekViolations.map(wv => wv.detail),
+          ...result.deductionViolations.map(v => `${v.workerName} (${v.violationType}: ${v.deductionPct}% deductions)`),
         ].join('; ')}`;
 
         const ownerRows = await db
@@ -230,7 +281,13 @@ complianceRouter.get('/:weekId', requireAuth, async (req, res) => {
       await deliverWebhook(userId, 'violation.detected', {
         projectId: result.projectId,
         weekId,
-        violationCount: result.violations.length + result.weekViolations.length,
+        violationCount: countComplianceViolations(result),
+        violationBreakdown: result.violationBreakdown,
+        violations: {
+          entry: result.violations,
+          week: result.weekViolations,
+          deductions: result.deductionViolations,
+        },
         hasViolations: result.hasViolations,
       });
     } catch (whErr) {

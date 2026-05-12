@@ -31,6 +31,22 @@ export function buildTransport() {
 }
 
 export const logger = pino(
-  { level: process.env.LOG_LEVEL ?? (isDev ? 'debug' : 'info') },
+  {
+    level: process.env.LOG_LEVEL ?? (isDev ? 'debug' : 'info'),
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'res.headers.set-cookie',
+        'res.headers["set-cookie"]',
+        '*.password',
+        '*.passwordHash',
+        '*.token',
+        '*.secret',
+        '*.apiKey',
+      ],
+      censor: '[REDACTED]',
+    },
+  },
   buildTransport(),
 );

@@ -35,6 +35,8 @@ interface Project {
   status: string;
   createdAt: string;
   projectSettings: string | null;
+  gpsClockInEnabled?: boolean;
+  apprenticeshipRequirements: string | null;
 }
 
 interface NotifSettings {
@@ -43,6 +45,22 @@ interface NotifSettings {
   dueSoonDays: number;
   notifyActivity: boolean;
   notifySubmission: boolean;
+}
+
+interface ProjectOnboardingSetup {
+  source?: string;
+  primaryStates?: string[];
+  workTypes?: string[];
+  payrollProvider?: string;
+  accountingProvider?: string;
+  projectManagementProvider?: string;
+  usesSubcontractors?: boolean;
+  usesApprentices?: boolean;
+  fieldTrackingNeeded?: boolean;
+  averageWeeklyWorkers?: number;
+  appliedAt?: string;
+  completedPromptKeys?: string[];
+  lastAppliedAt?: string;
 }
 
 const DEFAULT_NOTIF_SETTINGS: NotifSettings = {
@@ -60,6 +78,53 @@ function parseNotifSettings(raw: string | null | undefined): NotifSettings {
     return { ...DEFAULT_NOTIF_SETTINGS, ...parsed };
   } catch {
     return { ...DEFAULT_NOTIF_SETTINGS };
+  }
+}
+
+function parseProjectOnboardingSetup(raw: string | null | undefined): ProjectOnboardingSetup | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { onboardingSetup?: ProjectOnboardingSetup };
+    return parsed.onboardingSetup ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function buildProjectSettingsWithNotifications(raw: string | null | undefined, prefs: NotifSettings): string {
+  let parsed: Record<string, unknown> = {};
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      parsed = {};
+    }
+  }
+  return JSON.stringify({ ...parsed, ...prefs });
+}
+
+function providerName(value: string | undefined) {
+  const labels: Record<string, string> = {
+    quickbooks: 'QuickBooks',
+    adp: 'ADP',
+    gusto: 'Gusto',
+    paychex: 'Paychex',
+    sage_300: 'Sage 300 CRE',
+    sage_100: 'Sage 100',
+    procore: 'Procore',
+    other: 'Other',
+    none: 'None',
+  };
+  return value ? labels[value] ?? value.replaceAll('_', ' ') : 'None';
+}
+
+function hasApprenticeshipSetup(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.keys(parsed).length > 0;
+  } catch {
+    return false;
   }
 }
 
@@ -144,6 +209,278 @@ function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean
         </div>
       ))}
     </div>
+  );
+}
+
+interface SubcontractorCprQueueItem {
+  subcontractorId: string;
+  subcontractorName: string;
+  contactEmail: string | null;
+  weekId: string | null;
+  payrollWeekId: string | null;
+  payrollNumber: number | null;
+  weekEndingDate: string;
+  receivedDate: string | null;
+  isCompliant: number | null;
+  status: 'overdue' | 'received-non-compliant' | 'not-received' | 'received-compliant';
+  daysLate: number;
+  notes: string | null;
+  uploadTokenExpiresAt: string | null;
+  uploadedAt: string | null;
+  nextAction: string;
+}
+
+function ProjectReadinessPanel({
+  projectId,
+  workersCount,
+  weeks,
+  violationCount,
+  hasPrimaryWageDetermination,
+}: {
+  projectId: string;
+  workersCount: number;
+  weeks: { id: string; submittedAt: string | null; weekEndingDate?: string; payrollNumber?: number }[];
+  violationCount: number;
+  hasPrimaryWageDetermination: boolean;
+}) {
+  const unsubmittedWeeks = weeks.filter((w) => !w.submittedAt);
+  const nextUnsubmitted = unsubmittedWeeks
+    .slice()
+    .sort((a, b) => String(a.weekEndingDate ?? '').localeCompare(String(b.weekEndingDate ?? '')))[0];
+
+  const actions = [
+    workersCount === 0
+      ? {
+          label: 'Add workers and classifications',
+          detail: 'Create worker records before entering certified payroll.',
+          to: `/projects/${projectId}/workers`,
+          priority: 'Required',
+        }
+      : null,
+    !hasPrimaryWageDetermination
+      ? {
+          label: 'Select wage determination',
+          detail: 'Confirm the SAM.gov wage determination that drives rates for this project.',
+          to: `/wages`,
+          priority: 'Required',
+        }
+      : null,
+    weeks.length === 0
+      ? {
+          label: 'Create payroll week',
+          detail: 'Start weekly CPR tracking for this project.',
+          to: `/projects/${projectId}/payroll`,
+          priority: 'Required',
+        }
+      : null,
+    violationCount > 0
+      ? {
+          label: `Resolve ${violationCount} compliance issue${violationCount === 1 ? '' : 's'}`,
+          detail: 'Fix wage, overtime, deduction, or apprenticeship items before certification.',
+          to: `/projects/${projectId}/payroll`,
+          priority: 'Critical',
+        }
+      : null,
+    nextUnsubmitted
+      ? {
+          label: `Finish Payroll Week ${nextUnsubmitted.payrollNumber ?? ''}`.trim(),
+          detail: nextUnsubmitted.weekEndingDate
+            ? `Week ending ${nextUnsubmitted.weekEndingDate} has not been submitted.`
+            : 'A payroll week has not been submitted.',
+          to: `/projects/${projectId}/payroll/${nextUnsubmitted.id}`,
+          priority: 'Next',
+        }
+      : null,
+    {
+      label: 'Review evidence packet',
+      detail: 'Confirm audit trail, field photos, GPS punches, and payroll submissions are export-ready.',
+      to: `/projects/${projectId}/activity`,
+      priority: 'Audit',
+    },
+  ].filter(Boolean) as Array<{ label: string; detail: string; to: string; priority: string }>;
+
+  return (
+    <Card className="mb-6 shadow-card-elevated">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h2 className="font-headline text-base text-text-primary mb-1">Project Readiness</h2>
+          <p className="text-sm text-gray-500">
+            Contractor-focused next steps for getting this job CPR-ready.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center shrink-0">
+          <div className="rounded border border-gray-200 px-3 py-2">
+            <p className="text-lg font-semibold text-gray-900">{workersCount}</p>
+            <p className="text-[11px] text-gray-500">Workers</p>
+          </div>
+          <div className="rounded border border-gray-200 px-3 py-2">
+            <p className="text-lg font-semibold text-gray-900">{weeks.length}</p>
+            <p className="text-[11px] text-gray-500">Weeks</p>
+          </div>
+          <div className="rounded border border-gray-200 px-3 py-2">
+            <p className={`text-lg font-semibold ${violationCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{violationCount}</p>
+            <p className="text-[11px] text-gray-500">Issues</p>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {actions.map((action) => (
+          <Link
+            key={`${action.priority}-${action.label}`}
+            to={action.to}
+            className="block rounded-lg border border-gray-200 bg-white hover:border-brand-gold hover:shadow-sm transition-colors p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{action.label}</p>
+                <p className="text-xs text-gray-500 mt-1">{action.detail}</p>
+              </div>
+              <span className="text-[11px] font-semibold uppercase text-brand-gold shrink-0">{action.priority}</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function ProjectAuditDefensePanel({ projectId }: { projectId: string }) {
+  return (
+    <Card className="mb-6 shadow-card-elevated">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h2 className="font-headline text-base text-text-primary mb-1">Audit Defense</h2>
+          <p className="text-sm text-gray-500">
+            One place to prove payroll submissions, field evidence, GPS activity, and user changes.
+          </p>
+        </div>
+        <Badge variant="neutral">Export Ready</Badge>
+      </div>
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Link
+          to={`/projects/${projectId}/activity`}
+          className="rounded-lg border border-gray-200 p-4 hover:border-brand-gold hover:shadow-sm transition-colors"
+        >
+          <p className="text-sm font-semibold text-gray-900">Evidence Dashboard</p>
+          <p className="mt-1 text-xs text-gray-500">Review missing proof before an agency or GC asks.</p>
+        </Link>
+        <a
+          href={`/api/audit/${projectId}/evidence-packet?format=csv`}
+          className="rounded-lg border border-gray-200 p-4 hover:border-brand-gold hover:shadow-sm transition-colors"
+        >
+          <p className="text-sm font-semibold text-gray-900">CSV Evidence Packet</p>
+          <p className="mt-1 text-xs text-gray-500">Payroll, photos, GPS punches, and audit events.</p>
+        </a>
+        <a
+          href={`/api/audit-export/${projectId}`}
+          className="rounded-lg border border-gray-200 p-4 hover:border-brand-gold hover:shadow-sm transition-colors"
+        >
+          <p className="text-sm font-semibold text-gray-900">Full Audit ZIP</p>
+          <p className="mt-1 text-xs text-gray-500">Download the full project response package.</p>
+        </a>
+      </div>
+    </Card>
+  );
+}
+
+function ProjectSetupGuidancePanel({
+  projectId,
+  setup,
+  gpsClockInEnabled,
+  hasSubcontractorSetup,
+  hasApprenticeshipRatioSetup,
+}: {
+  projectId: string;
+  setup: ProjectOnboardingSetup | null;
+  gpsClockInEnabled?: boolean;
+  hasSubcontractorSetup: boolean;
+  hasApprenticeshipRatioSetup: boolean;
+}) {
+  if (!setup) return null;
+  const completed = new Set(setup.completedPromptKeys ?? []);
+
+  const items = [
+    setup.fieldTrackingNeeded && !gpsClockInEnabled && !completed.has('field-proof')
+      ? {
+          title: 'Enable field proof',
+          detail: 'Turn on GPS clock-in and use project photos for audit evidence.',
+          to: `/projects/${projectId}/settings`,
+          priority: 'Recommended',
+        }
+      : null,
+    setup.usesSubcontractors && !hasSubcontractorSetup
+      ? {
+          title: 'Set up subcontractor CPR tracking',
+          detail: 'Add subcontractors and track weekly CPR receipt before payment review.',
+          to: `/projects/${projectId}`,
+          priority: 'Recommended',
+        }
+      : null,
+    setup.usesApprentices && !hasApprenticeshipRatioSetup
+      ? {
+          title: 'Confirm apprenticeship ratios',
+          detail: 'Enter program details and ratio rules before certifying payroll.',
+          to: `/projects/${projectId}`,
+          priority: 'Recommended',
+        }
+      : null,
+    setup.payrollProvider === 'quickbooks' || setup.accountingProvider === 'quickbooks'
+      ? {
+          title: 'Connect QuickBooks',
+          detail: 'Import employees and sync time records for this project.',
+          to: '/settings/integrations',
+          priority: 'Import',
+        }
+      : null,
+    setup.projectManagementProvider === 'procore'
+      ? {
+          title: 'Connect Procore',
+          detail: 'Import project timesheets into weekly payroll.',
+          to: '/settings/integrations',
+          priority: 'Import',
+        }
+      : null,
+    setup.payrollProvider && ['adp', 'gusto', 'paychex', 'sage_300', 'sage_100'].includes(setup.payrollProvider)
+      ? {
+          title: `Prepare ${providerName(setup.payrollProvider)} export`,
+          detail: 'Use the CSV import path and save worker mappings for repeat weeks.',
+          to: `/projects/${projectId}/payroll`,
+          priority: 'Import',
+        }
+      : null,
+  ].filter(Boolean) as Array<{ title: string; detail: string; to: string; priority: string }>;
+
+  if (items.length === 0) return null;
+
+  return (
+    <Card className="mb-6 border-brand-gold/40 bg-brand-gold/5 shadow-card-elevated">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h2 className="font-headline text-base text-text-primary mb-1">Setup From Onboarding</h2>
+          <p className="text-sm text-gray-600">
+            This project was created with your business profile: {providerName(setup.payrollProvider)} payroll,
+            {' '}{providerName(setup.projectManagementProvider)} project system,
+            {' '}{setup.averageWeeklyWorkers ?? 0} average weekly workers.
+          </p>
+        </div>
+        <Link to="/onboarding" className="text-sm font-semibold text-brand-gold hover:underline">
+          Edit profile
+        </Link>
+      </div>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {items.map((item) => (
+          <Link key={item.title} to={item.to} className="rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-gold hover:shadow-sm transition-colors">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                <p className="mt-1 text-xs text-gray-500">{item.detail}</p>
+              </div>
+              <span className="text-[11px] font-semibold uppercase text-brand-gold shrink-0">{item.priority}</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -324,7 +661,15 @@ function CprWeekTable({ projectId, subId }: { projectId: string; subId: string }
                     </td>
                     <td className="py-1.5 pr-3">
                       {week.uploadedAt
-                        ? <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">PDF Uploaded</span>
+                        ? (
+                          <a
+                            href={`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks/${week.id}/file`}
+                            className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            PDF Uploaded
+                          </a>
+                        )
                         : week.uploadToken
                           ? <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Awaiting upload</span>
                           : null
@@ -1026,6 +1371,12 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
     enabled: !!projectId,
   });
 
+  const { data: cprQueueData } = useQuery({
+    queryKey: ['subcontractor-cpr-queue', projectId],
+    queryFn: () => api.get<{ data: { queue: SubcontractorCprQueueItem[] } }>(`/projects/${projectId}/subcontractor-cpr-queue`),
+    enabled: !!projectId,
+  });
+
   const addSubMutation = useMutation({
     mutationFn: (body: { name: string; licenseNumber?: string; contactName?: string; contactEmail?: string; address?: string; dbeClassification?: DbeClass }) =>
       api.post<{ data: { subcontractor: Subcontractor } }>(`/projects/${projectId}/subcontractors`, body),
@@ -1058,6 +1409,17 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
       setExpandedSubId(prev => prev === subId ? null : prev);
     },
     onError: () => toast.error('Could not remove subcontractor'),
+  });
+
+  const requestCprMutation = useMutation({
+    mutationFn: (body: { subcontractorId: string; weekEndingDate: string }) =>
+      api.post<{ data: { uploadUrl: string; emailed: boolean } }>(`/projects/${projectId}/subcontractor-cpr-queue/request`, body),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['subcontractor-cpr-queue', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['subcontractors', projectId] });
+      toast.success(response.data.emailed ? 'CPR upload request sent' : 'CPR upload link created');
+    },
+    onError: () => toast.error('Could not create CPR request'),
   });
 
   function handleAddSub() {
@@ -1099,6 +1461,8 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
   }
 
   const subs = subsData?.data?.subcontractors ?? [];
+  const cprQueue = cprQueueData?.data?.queue ?? [];
+  const subsById = new Map(subs.map((sub) => [sub.id, sub]));
 
   // DBE-05: derive participation counts from server-attached certSummary
   const activeCertifiedCount = subs.filter(
@@ -1170,6 +1534,66 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
             <p className="text-xs text-amber-700 bg-amber-50 rounded p-2 mt-3">
               Resolve certification issues before the next CPR submission deadline.
             </p>
+          )}
+        </div>
+      )}
+
+      {cprQueue.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-5">
+          <h3 className="text-sm font-semibold text-amber-900 mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Subcontractor CPR Follow-Up
+          </h3>
+          <div className="space-y-2">
+            {cprQueue.slice(0, 5).map((item, index) => {
+              const sub = subsById.get(item.subcontractorId);
+              const contactEmail = item.contactEmail?.trim() || sub?.contactEmail?.trim();
+              return (
+              <div key={`${item.subcontractorId}-${item.weekEndingDate}-${item.status}-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+                <div>
+                  <span className="font-medium text-amber-950">{item.subcontractorName}</span>
+                  <span className="text-amber-800"> - week ending {item.weekEndingDate}</span>
+                  {item.daysLate > 0 && (
+                    <span className="ml-1 text-xs text-amber-800">({item.daysLate} days late)</span>
+                  )}
+                  <p className="text-xs text-amber-800">{item.nextAction}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={item.status === 'overdue' ? 'warning' : 'violation'}>
+                    {item.status === 'overdue'
+                      ? 'Overdue'
+                      : item.status === 'not-received'
+                      ? 'Not Received'
+                      : 'Non-Compliant'}
+                  </Badge>
+                  {contactEmail ? (
+                    <button
+                      type="button"
+                      disabled={requestCprMutation.isPending}
+                      onClick={() => requestCprMutation.mutate({
+                        subcontractorId: item.subcontractorId,
+                        weekEndingDate: item.weekEndingDate,
+                      })}
+                      className="text-xs font-semibold text-amber-950 underline underline-offset-2 hover:text-brand-navy"
+                    >
+                      Send upload request
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-amber-950 underline underline-offset-2 hover:text-brand-navy"
+                      onClick={() => startEdit(sub ?? { id: item.subcontractorId, name: item.subcontractorName } as Subcontractor)}
+                    >
+                      Add contact email
+                    </button>
+                  )}
+                </div>
+              </div>
+              );
+            })}
+          </div>
+          {cprQueue.length > 5 && (
+            <p className="text-xs text-amber-800 mt-2">{cprQueue.length - 5} more subcontractor CPR items need review.</p>
           )}
         </div>
       )}
@@ -1470,9 +1894,16 @@ export function ProjectDetailPage() {
     staleTime: 60_000,
   });
 
+  const { data: subcontractorsData } = useQuery({
+    queryKey: ['subcontractors', id],
+    queryFn: () => api.get<{ data: { subcontractors: { id: string }[] } }>(`/projects/${id}/subcontractors`),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+
   const { data: weeksData } = useQuery({
     queryKey: ['payroll-weeks', id],
-    queryFn: () => api.get<{ weeks: { id: string; submittedAt: string | null }[] }>(`/payroll/projects/${id}/weeks`),
+    queryFn: () => api.get<{ weeks: { id: string; submittedAt: string | null; weekEndingDate: string; payrollNumber: number }[] }>(`/payroll/projects/${id}/weeks`),
     enabled: !!id,
     staleTime: 60_000,
   });
@@ -1528,7 +1959,9 @@ export function ProjectDetailPage() {
 
   const saveNotifMutation = useMutation({
     mutationFn: (prefs: NotifSettings) => {
-      return api.patch(`/projects/${id}`, { projectSettings: JSON.stringify(prefs) });
+      return api.patch(`/projects/${id}`, {
+        projectSettings: buildProjectSettingsWithNotifications(project?.projectSettings, prefs),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', id] });
@@ -1567,6 +2000,9 @@ export function ProjectDetailPage() {
   }
 
   const project = data?.data?.project;
+  const onboardingSetup = parseProjectOnboardingSetup(project?.projectSettings);
+  const hasSubcontractorSetup = (subcontractorsData?.data.subcontractors.length ?? 0) > 0;
+  const hasApprenticeshipRatioSetup = hasApprenticeshipSetup(project?.apprenticeshipRequirements);
 
   const workers = workersData?.data?.workers ?? [];
   const weeks = weeksData?.weeks ?? [];
@@ -1614,59 +2050,23 @@ export function ProjectDetailPage() {
 
           <WorkflowProgress steps={steps} />
 
-          {/* Project sub-page navigation — scrollable on mobile, wraps on md: */}
-          <div className="mb-6 -mx-4 px-4 overflow-x-auto">
-          <div className="flex flex-nowrap md:flex-wrap gap-2 items-center whitespace-nowrap pb-2 md:pb-0">
-            <Link
-              to={`/projects/${project.id}/workers`}
-              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
-            >
-              Workers
-            </Link>
-            <Link
-              to={`/projects/${project.id}/payroll`}
-              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
-            >
-              Payroll Weeks
-            </Link>
-            <Link
-              to={`/projects/${project.id}/field`}
-              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
-            >
-              Field Clock
-            </Link>
-            <Link
-              to={`/projects/${project.id}/ot-scenarios`}
-              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
-            >
-              OT Scenarios
-            </Link>
-            <Link
-              to={`/projects/${project.id}/variance`}
-              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
-            >
-              Variance
-            </Link>
-            <Link
-              to={`/projects/${project.id}/reports`}
-              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
-            >
-              Reports
-            </Link>
-            <Link
-              to={`/projects/${project.id}/activity`}
-              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-text-secondary border border-transparent hover:bg-gray-100 transition-all duration-150"
-            >
-              Activity
-            </Link>
-            <Link
-              to={`/projects/${project.id}/settings`}
-              className="inline-flex items-center justify-center text-sm px-4 py-3 min-h-[44px] font-semibold rounded-lg bg-transparent text-text-secondary border border-transparent hover:bg-gray-100 transition-all duration-150"
-            >
-              Settings
-            </Link>
-          </div>
-          </div>{/* end overflow-x-auto */}
+          <ProjectReadinessPanel
+            projectId={project.id}
+            workersCount={workers.length}
+            weeks={weeks}
+            violationCount={violationCount}
+            hasPrimaryWageDetermination={primaryPin !== null}
+          />
+
+          <ProjectSetupGuidancePanel
+            projectId={project.id}
+            setup={onboardingSetup}
+            gpsClockInEnabled={project.gpsClockInEnabled}
+            hasSubcontractorSetup={hasSubcontractorSetup}
+            hasApprenticeshipRatioSetup={hasApprenticeshipRatioSetup}
+          />
+
+          <ProjectAuditDefensePanel projectId={project.id} />
 
           <Card className="w-full md:max-w-lg shadow-card-elevated">
             <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Project Details</h2>
@@ -1923,10 +2323,12 @@ export function ProjectDetailPage() {
           )}
 
           {/* Subcontractors panel */}
-          <Card className="mt-8 shadow-card-elevated">
-            <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Subcontractors</h2>
-            <SubcontractorsPanel projectId={project.id} />
-          </Card>
+          <div id="subcontractors" className="scroll-mt-24">
+            <Card className="mt-8 shadow-card-elevated">
+              <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Subcontractors</h2>
+              <SubcontractorsPanel projectId={project.id} />
+            </Card>
+          </div>
 
           {/* Apprenticeship Ratios — Phase 117 (APP-01) */}
           <Card padding="none" className="mt-8 shadow-card-elevated overflow-hidden">
@@ -1934,6 +2336,7 @@ export function ProjectDetailPage() {
           </Card>
 
           {/* Wage determinations panel */}
+          <div id="wage-determinations" className="scroll-mt-24">
           <Card className="mt-8 shadow-card-elevated">
             <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Wage Determinations</h2>
             {/* Stale WD banner — COMP-06 Phase 88 */}
@@ -1946,6 +2349,7 @@ export function ProjectDetailPage() {
               projectCounty={project.county}
             />
           </Card>
+          </div>
 
           {/* Phase 96: Contractor Signature */}
           <div className="mt-8">

@@ -1,11 +1,7 @@
 // src/client/pages/TestimonialsPage.tsx
-// Public /testimonials page — TRUST-05 (contractor quotes) + TRUST-06 (video + case study)
-// Phase 101
 
 import { Link } from 'react-router-dom';
 import { Shield } from 'lucide-react';
-
-// ── Testimonial data (same shape + data as LandingPage.tsx TESTIMONIALS) ─────
 
 interface Testimonial {
   quote: string;
@@ -18,26 +14,26 @@ interface Testimonial {
 const TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      "We cut certified payroll prep from 4 hours to 20 minutes. The CA eCPR XML export alone saved us a full day of rework every month.",
-    name: "Maria Gonzalez, Project Manager",
-    company: "Hispanic Construction Council",
-    project: "I-405 Corridor Improvements",
-    initials: "MG",
+      "The demo scenario shows a payroll team moving from raw time entries to a clean certified payroll package with blockers, WD source data, and export evidence visible.",
+    name: "Payroll manager scenario",
+    company: "Demo account",
+    project: "California public works CPR flow",
+    initials: "PM",
   },
   {
     quote:
-      "Finally a tool that actually generates the WH-347 correctly for federal projects. Our DOL audit came back clean on the first try.",
-    name: "Name withheld pending approval",
-    company: "General contractor — name withheld",
-    project: "Federal Government Contract",
+      "The demo flow shows exactly what my payroll team needs: confirm the WD, fill rates from source data, fix blockers, and export the certified payroll package.",
+    name: "Contractor workflow scenario",
+    company: "Demo account",
+    project: "Federal Davis-Bacon project",
     initials: "GC",
   },
   {
     quote:
-      "The subcontractor upload portal saved us from chasing CPRs by email. Our subs submit online and we have everything in one place.",
-    name: "Name withheld pending approval",
-    company: "Subcontractor — name withheld",
-    project: "State DOT Project — WA",
+      "The subcontractor upload portal gives the prime a clear weekly status instead of a chain of emails and missing attachments.",
+    name: "Prime/subcontractor scenario",
+    company: "Demo account",
+    project: "Public works subcontractor CPR flow",
     initials: "SC",
   },
 ];
@@ -77,10 +73,10 @@ function TestimonialsHero() {
     <section className="bg-nav-dark text-white py-16 px-6 text-center">
       <div className="max-w-3xl mx-auto">
         <h1 className="font-headline text-4xl font-bold mb-4">
-          What Contractors Are Saying
+          Reviews And Demo Proof
         </h1>
         <p className="text-gray-300 text-lg leading-relaxed">
-          Real results from verified users managing Davis-Bacon compliance.
+          Contractor quotes, scenario proof points, and workflow evidence for Davis-Bacon certified payroll.
         </p>
       </div>
     </section>
@@ -133,26 +129,34 @@ function TestimonialsGrid() {
 // ── Video Section ─────────────────────────────────────────────────────────────
 
 function VideoSection() {
-  // TODO: replace with real video ID once HCC records an official demo video
-  const VIDEO_ID = 'dQw4w9WgXcQ';
+  const proofCards = [
+    {
+      title: 'Source-proven rates',
+      body: 'Project and payroll screens show the wage determination, modification, classification, base rate, fringe rate, and override state.',
+    },
+    {
+      title: 'Corrective blockers',
+      body: 'Payroll blockers explain the cause, why it matters, and where to go to fix the exact missing or incorrect field.',
+    },
+    {
+      title: 'Audit-ready package',
+      body: 'The workflow produces certified payroll output plus evidence, source data, correction history, and subcontractor status.',
+    },
+  ];
 
   return (
     <section className="bg-nav-dark py-20 px-6">
-      <div className="max-w-3xl mx-auto text-center">
+      <div className="max-w-5xl mx-auto">
         <h2 className="font-headline text-3xl font-bold text-white mb-8">
-          See It in Action
+          What The Demo Proves
         </h2>
-        <div className="max-w-3xl mx-auto aspect-video rounded-2xl overflow-hidden shadow-2xl">
-          <iframe
-            width="560"
-            height="315"
-            src={`https://www.youtube.com/embed/${VIDEO_ID}`}
-            title="HCC Prevailing Wage Demo"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="w-full h-full"
-          />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {proofCards.map((card) => (
+            <div key={card.title} className="rounded-xl border border-white/10 bg-white/5 p-6">
+              <h3 className="text-sm font-semibold text-brand-gold">{card.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-gray-300">{card.body}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>

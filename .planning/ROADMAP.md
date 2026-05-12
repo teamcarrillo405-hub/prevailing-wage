@@ -2626,10 +2626,10 @@ Plans:
   4. No outbound ERP payload (tested by unit assertions) contains any field matching /ssn/i or a 9-digit numeric pattern -- all worker serializers use explicit inclusion lists, never row spread
   5. AES-256-GCM encryption wraps all OAuth tokens and API keys before DB storage; tokens are decrypted only at the sync call site via integrationVault.ts; the IErpAdapter TypeScript interface is defined with pullWorkers(), pullTimesheets(), and pushComplianceStatus() method signatures
 
-**Plans:** 1/4 plans executed
+**Plans:** 3/4 plans executed
 - [x] 126-01-PLAN.md — DB migration 0070 (integration_connections + integration_sync_runs) + WAL busy_timeout pragma + Drizzle schema
-- [ ] 126-02-PLAN.md — IErpAdapter interface + integrationVault credential wrapper + SSN-exclusion serializer stub + Math.random nonce hot-fix
-- [ ] 126-03-PLAN.md — /api/erp-integrations router (GET/POST config/POST sync) + syncOrchestrator + cron job #6 (nightly UTC)
+- [x] 126-02-PLAN.md — IErpAdapter interface + integrationVault credential wrapper + SSN-exclusion serializer stub + Math.random nonce hot-fix
+- [x] 126-03-PLAN.md — /api/erp-integrations router (GET/POST config/POST sync) + syncOrchestrator + cron job #6 (nightly UTC)
 - [ ] 126-04-PLAN.md — IntegrationsPage FileErpCard (Sage 300 CRE + Viewpoint Vista cards) + extended security footnote
 
 **UI hint**: yes
@@ -2793,7 +2793,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 126. Integration Foundation | v9.0 | 1/4 | In Progress|  |
+| 126. Integration Foundation | v9.0 | 3/4 | In Progress|  |
 | 127. Procore OAuth + Worker Sync | v9.0 | 0/TBD | Not started | - |
 | 128. Procore Timesheet Pull | v9.0 | 0/TBD | Not started | - |
 | 129. Procore Compliance Push | v9.0 | 0/TBD | Not started | - |

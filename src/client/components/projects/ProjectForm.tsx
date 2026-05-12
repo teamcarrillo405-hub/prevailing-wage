@@ -2,9 +2,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '../../lib/api';
-import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
+import type { OnboardingAnswers, OnboardingResponse } from '../../types/onboarding';
 
 const CreateProjectSchema = z.object({
   name: z.string().min(1, 'Job name is required').max(200),
@@ -43,6 +45,7 @@ const CreateProjectSchema = z.object({
   njContractId: z.string().max(100).optional(),
   // Phase 70 — Apprenticeship enforcement (IRA/IIJA flag only; ratio table is managed separately)
   isIraIijaProject: z.boolean().optional(),
+  projectSettings: z.string().optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
@@ -57,17 +60,97 @@ interface ProjectFormProps {
   onCancel: () => void;
 }
 
+function defaultsFromOnboarding(answers?: OnboardingAnswers): Partial<ProjectFields> {
+  if (!answers) return {};
+
+  const workTypes = new Set(answers.workTypes);
+  const hasFederal = workTypes.has('federal_davis_bacon');
+  const hasState = workTypes.has('state_prevailing_wage') || workTypes.has('dot') || workTypes.has('school_public_agency');
+  const hasPrivateMix = workTypes.has('private_mixed');
+
+  return {
+    state: answers.primaryStates[0]?.toUpperCase() ?? undefined,
+    contractType: hasFederal
+      ? 'federal-davis-bacon'
+      : hasState
+        ? 'state-prevailing'
+        : hasPrivateMix
+          ? 'private'
+          : undefined,
+    fundingType: hasFederal && hasState ? 'mixed' : hasFederal ? 'federal' : hasState ? 'state' : undefined,
+    isIraIijaProject: answers.usesApprentices && hasFederal ? false : undefined,
+  };
+}
+
+function importPromptFromOnboarding(answers?: OnboardingAnswers): string | null {
+  if (!answers) return null;
+  if (answers.payrollProvider === 'quickbooks' || answers.accountingProvider === 'quickbooks') {
+    return 'Your onboarding says QuickBooks is part of your workflow. After this project is created, connect QuickBooks from Integrations to import employees and sync time.';
+  }
+  if (answers.projectManagementProvider === 'procore') {
+    return 'Your onboarding says Procore is part of your workflow. After this project is created, connect Procore from Integrations to import timesheets.';
+  }
+  if (['adp', 'gusto', 'paychex', 'sage_300', 'sage_100'].includes(answers.payrollProvider)) {
+    return 'Your onboarding says payroll comes from a provider export. After this project is created, use the payroll CSV import path and save worker mappings.';
+  }
+  if (answers.fieldTrackingNeeded) {
+    return 'Your onboarding says field proof matters. After this project is created, enable field clock and photo capture from project settings.';
+  }
+  return null;
+}
+
+function projectSettingsFromOnboarding(answers?: OnboardingAnswers): string | undefined {
+  if (!answers) return undefined;
+
+  return JSON.stringify({
+    onboardingSetup: {
+      source: 'onboarding',
+      primaryStates: answers.primaryStates,
+      workTypes: answers.workTypes,
+      payrollProvider: answers.payrollProvider,
+      accountingProvider: answers.accountingProvider,
+      projectManagementProvider: answers.projectManagementProvider,
+      usesSubcontractors: answers.usesSubcontractors,
+      usesApprentices: answers.usesApprentices,
+      fieldTrackingNeeded: answers.fieldTrackingNeeded,
+      averageWeeklyWorkers: answers.averageWeeklyWorkers,
+      appliedAt: new Date().toISOString(),
+    },
+  });
+}
+
 export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
   const [tradeRatios, setTradeRatios] = useState<TradeRatioRow[]>([]);
+
+  const { data: onboardingData } = useQuery({
+    queryKey: ['onboarding-profile'],
+    queryFn: () => api.get<OnboardingResponse>('/onboarding'),
+    staleTime: 5 * 60_000,
+  });
+
+  const onboardingAnswers = onboardingData?.data.profile?.onboardingAnswers;
+  const onboardingDefaults = useMemo(() => defaultsFromOnboarding(onboardingAnswers), [onboardingAnswers]);
+  const importPrompt = useMemo(() => importPromptFromOnboarding(onboardingAnswers), [onboardingAnswers]);
 
   const {
     register,
     handleSubmit,
+    reset,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<ProjectFields>({ resolver: zodResolver(CreateProjectSchema) });
+  } = useForm<ProjectFields>({
+    resolver: zodResolver(CreateProjectSchema),
+    defaultValues: onboardingDefaults,
+  });
+
+  useEffect(() => {
+    if (Object.keys(onboardingDefaults).length > 0) {
+      reset(onboardingDefaults);
+    }
+  }, [onboardingDefaults, reset]);
 
   const stateValue = watch('state');
   const fundingTypeValue = watch('fundingType');
@@ -95,8 +178,22 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           )
         : undefined;
 
-      await api.post('/projects', { ...data, apprenticeshipRequirements });
+      const created = await api.post<{ data: { project: { id: string; state: string; county: string; contractType: string } } }>('/projects', {
+        ...data,
+        projectSettings: projectSettingsFromOnboarding(onboardingAnswers),
+        apprenticeshipRequirements,
+      });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      const project = created.data.project;
+      if (project.contractType === 'federal-davis-bacon') {
+        const params = new URLSearchParams({
+          state: project.state,
+          county: project.county,
+          projectId: project.id,
+        });
+        navigate(`/wages?${params.toString()}`);
+        return;
+      }
       onSuccess();
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Failed to create project');
@@ -117,6 +214,16 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+      {onboardingAnswers && (
+        <div className="rounded-lg border border-brand-gold/40 bg-brand-gold/10 px-4 py-3 text-sm text-gray-800">
+          <p className="font-semibold text-gray-900">Pre-filled from onboarding</p>
+          <p className="mt-1">
+            State and contract defaults are based on your saved business profile. County, award date,
+            and job identifiers still need to come from the contract documents.
+          </p>
+        </div>
+      )}
+
       <div>
         <label htmlFor="proj-name" className="block text-sm font-medium text-gray-700 mb-1">
           Job name
@@ -165,6 +272,12 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           {errors.county && <p className="text-red-600 text-xs mt-1">{errors.county.message}</p>}
         </div>
       </div>
+
+      {fundingTypeValue === 'federal' && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          After this project is created, the system will automatically search federal WDs for this county with this project already selected. Review the WD number/revision from the award documents, then lock it to the project.
+        </div>
+      )}
 
       <div>
         <label htmlFor="proj-contract-type" className="block text-sm font-medium text-gray-700 mb-1">
@@ -488,6 +601,12 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
               + Add Trade Ratio
             </button>
           </div>
+        </div>
+      )}
+
+      {importPrompt && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          {importPrompt}
         </div>
       )}
 

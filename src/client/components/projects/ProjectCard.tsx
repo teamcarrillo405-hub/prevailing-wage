@@ -20,6 +20,12 @@ interface ProjectCardProps {
   /** Optional pre-fetched violation count from batch summary (DASH-04). When provided,
    *  overrides the per-card compliance badge with a precise count badge. */
   violationCount?: number;
+  unsubmittedWeekCount?: number;
+  nextAction?: {
+    label: string;
+    detail: string;
+    priority: 'critical' | 'high' | 'medium' | 'low';
+  };
 }
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
@@ -35,8 +41,17 @@ const FUNDING_TYPE_LABELS: Record<string, string> = {
   mixed: 'Mixed',
 };
 
-export function ProjectCard({ project, className, violationCount }: ProjectCardProps) {
+const ACTION_TONE: Record<NonNullable<ProjectCardProps['nextAction']>['priority'], string> = {
+  critical: 'border-red-200 bg-red-50 text-red-700',
+  high: 'border-amber-200 bg-amber-50 text-amber-700',
+  medium: 'border-blue-200 bg-blue-50 text-blue-700',
+  low: 'border-gray-200 bg-gray-50 text-gray-700',
+};
+
+export function ProjectCard({ project, className, violationCount, unsubmittedWeekCount = 0, nextAction }: ProjectCardProps) {
   const navigate = useNavigate();
+  const hasViolations = (violationCount ?? 0) > 0;
+  const hasOpenPayroll = unsubmittedWeekCount > 0;
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['compliance-summary', project.id],
@@ -100,13 +115,15 @@ export function ProjectCard({ project, className, violationCount }: ProjectCardP
           <>
             {/* DASH-04: show violation count badge when batch data provides count */}
             {violationCount !== undefined ? (
-              violationCount > 0 ? (
+              hasViolations ? (
                 <Badge variant="violation">
                   {violationCount} violation{violationCount !== 1 ? 's' : ''}
                 </Badge>
+              ) : hasOpenPayroll ? (
+                <Badge variant="neutral">Open payroll</Badge>
               ) : (
                 summary?.weekCount && summary.weekCount > 0
-                  ? <Badge variant="compliant">Clean</Badge>
+                  ? <Badge variant="compliant">No violations</Badge>
                   : <Badge variant="neutral">No payroll</Badge>
               )
             ) : (
@@ -115,7 +132,7 @@ export function ProjectCard({ project, className, violationCount }: ProjectCardP
                   <Badge variant="violation">Violations</Badge>
                 )}
                 {summary?.badge === 'clean' && summary.weekCount > 0 && (
-                  <Badge variant="compliant">Clean</Badge>
+                  <Badge variant="compliant">No violations</Badge>
                 )}
                 {(!summary || summary.weekCount === 0) && (
                   <Badge variant="neutral">No payroll</Badge>
@@ -131,6 +148,37 @@ export function ProjectCard({ project, className, violationCount }: ProjectCardP
           </>
         )}
       </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-gray-100 pt-3 text-center">
+        <div>
+          <p className={`text-sm font-bold ${violationCount && violationCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+            {violationCount ?? 0}
+          </p>
+          <p className="text-[10px] uppercase tracking-wide text-gray-500">Issues</p>
+        </div>
+        <div>
+          <p className={`text-sm font-bold ${unsubmittedWeekCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+            {unsubmittedWeekCount}
+          </p>
+          <p className="text-[10px] uppercase tracking-wide text-gray-500">Open weeks</p>
+        </div>
+        <div>
+          <p className="text-sm font-bold text-gray-900">{summary?.lastWeekNumber ?? '-'}</p>
+          <p className="text-[10px] uppercase tracking-wide text-gray-500">Last CPR</p>
+        </div>
+      </div>
+
+      {nextAction && (
+        <div className={`mt-4 rounded-lg border px-3 py-2 ${ACTION_TONE[nextAction.priority]}`}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold">{nextAction.label}</p>
+              <p className="mt-0.5 text-[11px] leading-snug opacity-80">{nextAction.detail}</p>
+            </div>
+            <span className="shrink-0 text-[10px] font-bold uppercase">{nextAction.priority}</span>
+          </div>
+        </div>
+      )}
 
       {/* Award date */}
       <p className="text-xs text-text-secondary mt-auto">

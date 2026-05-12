@@ -11,6 +11,7 @@ import { getDb } from '../db/index.js';
 import { projects, projectMembers, users } from '../db/schema.js';
 import { listPayrollWeeks } from '../services/payrollService.js';
 import { computeCompliance } from '../services/complianceService.js';
+import { countComplianceViolations } from '../services/complianceRules.js';
 import { dateDiffDays } from '../services/dueSoonService.js';
 
 // ── Lazy-init Resend (mirrors certificationExpiryAlerts.ts:17-25) ──────────
@@ -27,6 +28,19 @@ async function getResend() {
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'notifications@hccprevailingwage.com';
 const APP_URL    = process.env.APP_URL    || 'http://localhost:3000';
+
+function getBreakdown(result: {
+  violations: unknown[];
+  weekViolations: unknown[];
+  deductionViolations?: unknown[];
+  violationBreakdown?: { wage: number; week: number; deduction: number };
+}) {
+  return result.violationBreakdown ?? {
+    wage: result.violations.length,
+    week: result.weekViolations.length,
+    deduction: result.deductionViolations?.length ?? 0,
+  };
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -138,6 +152,9 @@ export async function runScheduledReports(): Promise<void> {
       const totalWeeks = allWeeks.length;
       let compliantCount = 0;
       let openViolations = 0;
+      let wageViolations = 0;
+      let weekViolations = 0;
+      let deductionViolations = 0;
 
       for (const w of allWeeks) {
         const result = await computeCompliance(db as any, w.id);
@@ -145,7 +162,11 @@ export async function runScheduledReports(): Promise<void> {
         if (!result.hasViolations) {
           compliantCount += 1;
         } else {
-          openViolations += result.violations.length + result.weekViolations.length;
+          openViolations += countComplianceViolations(result);
+          const breakdown = getBreakdown(result);
+          wageViolations += breakdown.wage;
+          weekViolations += breakdown.week;
+          deductionViolations += breakdown.deduction;
         }
       }
 
@@ -191,6 +212,7 @@ export async function runScheduledReports(): Promise<void> {
         <ul>
           <li>Compliance rate: <strong>${complianceRate}%</strong> (${compliantCount}/${totalWeeks} weeks)</li>
           <li>Open violations: <strong>${openViolations}</strong></li>
+          <li>Violation breakdown: wage ${wageViolations}, week-level ${weekViolations}, deductions ${deductionViolations}</li>
           <li>Payroll weeks due in next 7 days: <strong>${dueIn7}</strong></li>
         </ul>
         <p><a href="${projectUrl}">View project &rarr;</a></p>
@@ -206,6 +228,7 @@ export async function runScheduledReports(): Promise<void> {
         ``,
         `Compliance rate: ${complianceRate}% (${compliantCount}/${totalWeeks} weeks)`,
         `Open violations: ${openViolations}`,
+        `Violation breakdown: wage ${wageViolations}, week-level ${weekViolations}, deductions ${deductionViolations}`,
         `Payroll weeks due in next 7 days: ${dueIn7}`,
         ``,
         `View project: ${projectUrl}`,

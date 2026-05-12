@@ -3,6 +3,7 @@
 // Protected route — requires authentication (calls /api/ai/classify which requires JWT)
 
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader';
 import { api } from '../lib/api.js';
@@ -38,6 +39,8 @@ function ConfidenceBar({ value }: { value: number }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function ClassificationAssistPage() {
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get('projectId') ?? undefined;
   const [jobDescription, setJobDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ClassifyResponse | null>(null);
@@ -54,6 +57,7 @@ export function ClassificationAssistPage() {
     try {
       const data = await api.post<ClassifyResponse>('/api/ai/classify', {
         jobDescription: jobDescription.trim(),
+        projectId,
       });
       setResult(data);
     } catch (err: unknown) {
@@ -69,7 +73,9 @@ export function ClassificationAssistPage() {
       <div className="max-w-3xl mx-auto py-8 px-4">
         <PageHeader
           title="AI Classification Assist"
-          subtitle="Describe a construction task and get an instant Davis-Bacon trade classification suggestion."
+          subtitle={projectId
+            ? 'Describe missing project work and create an auditable Davis-Bacon classification suggestion.'
+            : 'Describe a construction task and get an instant Davis-Bacon trade classification suggestion.'}
         />
 
         {/* IL AI Act Disclosure — always visible, not dismissible (legal requirement) */}

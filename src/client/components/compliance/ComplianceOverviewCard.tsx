@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
 type ComplianceStatus = 'compliant' | 'violations' | 'no-payroll' | 'archived';
@@ -6,6 +7,7 @@ type ComplianceStatus = 'compliant' | 'violations' | 'no-payroll' | 'archived';
 interface ComplianceOverviewCardProps {
   statusMap: Map<string, ComplianceStatus | string>;
   totalActiveProjects: number;
+  statusLinks?: Partial<Record<ComplianceStatus, string>>;
   isLoading?: boolean;
   className?: string;
 }
@@ -13,6 +15,7 @@ interface ComplianceOverviewCardProps {
 export function ComplianceOverviewCard({
   statusMap,
   totalActiveProjects,
+  statusLinks,
   isLoading,
   className,
 }: ComplianceOverviewCardProps) {
@@ -95,18 +98,21 @@ export function ComplianceOverviewCard({
             value={compliant}
             pct={compliantPct}
             color="emerald"
+            to={statusLinks?.compliant}
           />
           <StatTile
             label="Violations"
             value={violations}
             pct={violationPct}
             color={violations > 0 ? 'red' : 'neutral'}
+            to={statusLinks?.violations}
           />
           <StatTile
             label="No Payroll"
             value={noPayroll}
             pct={noPayrollPct}
             color="neutral"
+            to={statusLinks?.['no-payroll']}
           />
         </div>
 
@@ -154,9 +160,10 @@ interface StatTileProps {
   value: number;
   pct: number;
   color: 'emerald' | 'red' | 'neutral';
+  to?: string;
 }
 
-function StatTile({ label, value, pct, color }: StatTileProps) {
+function StatTile({ label, value, pct, color, to }: StatTileProps) {
   const valueColor =
     color === 'emerald' ? 'text-emerald-400'
     : color === 'red' && value > 0 ? 'text-red-400'
@@ -167,8 +174,8 @@ function StatTile({ label, value, pct, color }: StatTileProps) {
     : color === 'red' && value > 0 ? 'bg-red-500/10 border-red-500/20'
     : 'bg-white/5 border-white/10';
 
-  return (
-    <div className={cn('rounded-xl border px-4 py-3.5', bgColor)}>
+  const content = (
+    <>
       <div className={cn('text-3xl font-bold tabular-nums leading-none mb-1', valueColor)}>
         {value}
       </div>
@@ -176,6 +183,20 @@ function StatTile({ label, value, pct, color }: StatTileProps) {
       {pct > 0 && (
         <div className="text-xs text-gray-600">{pct}%</div>
       )}
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link className={cn('block rounded-xl border px-4 py-3.5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold', bgColor)} to={to}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={cn('rounded-xl border px-4 py-3.5', bgColor)}>
+      {content}
     </div>
   );
 }

@@ -5,6 +5,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/helpers/db.ts'],
+    fileParallelism: false,
+    maxWorkers: 1,
     // Exclude agent worktree scratch dirs — each contains a full repo copy and
     // causes port conflicts (EADDRINUSE) + noisy FAIL output when discovered.
     exclude: ['**/node_modules/**', '**/dist/**', '.claude/worktrees/**', '.worktrees/**'],

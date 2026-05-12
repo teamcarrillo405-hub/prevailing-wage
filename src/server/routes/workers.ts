@@ -4,15 +4,21 @@ import { randomUUID } from 'crypto';
 import { eq, and, sql, count } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { workers, workerClassifications, projects as projectsTable, users } from '../db/schema.js';
-import { getCachedWd, getCachedClassifications } from '../services/wageCache.js';
+import {
+  getCachedWd,
+  getCachedClassifications,
+  getPinnedWdsForProject,
+  getWdById,
+} from '../services/wageCache.js';
 import { lookupWageDetermination } from '../services/wageLookup.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { assertProjectAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 import type { Project } from '../utils/assertProjectAccess.js';
 import { createWorker, updateWorker, deleteWorker } from '../services/workerService.js';
 import { deliverWebhook, WEBHOOK_EVENT_WORKER_ADDED } from '../services/webhookService.js';
 import { getLimits, type PlanTier } from '../utils/planLimits.js';
+import { resolveEffectiveClassificationRates } from '../services/classificationRates.js';
 
 const router = Router();
 
@@ -88,7 +94,7 @@ const CreateClassificationSchema = z.object({
   tradeDescription: z.string().min(1).max(200),
   laborType: z.enum(['journeyworker', 'apprentice', 'foreman']),
   apprenticePercent: z.number().int().min(0).max(100).optional(),
-  programName: z.string().max(200).optional(),
+  programName: z.string().trim().min(1).max(200).optional(),
   // Phase 25 — WA manual prevailing wage rate (SAM.gov not used for WA state projects)
   waManualRate: z.number().positive().optional(),
   // Phase 25 — WA-specific 4-letter trade code override for F700-065-000
@@ -96,10 +102,35 @@ const CreateClassificationSchema = z.object({
 }).refine(
   (data) => data.laborType !== 'apprentice' || data.apprenticePercent !== undefined,
   { message: 'apprenticePercent is required when laborType is apprentice', path: ['apprenticePercent'] }
+).refine(
+  (data) => data.laborType !== 'apprentice' || Boolean(data.programName?.trim()),
+  { message: 'programName is required when laborType is apprentice', path: ['programName'] }
 );
 
 // GET /api/projects/:projectId/wage-classifications — available trades from WD for this project.
 // Auto-fetches from SAM.gov if not cached — the project already knows its state + county.
+function getProjectWageRateContext(projectId: string, state: string, county: string) {
+  const pinnedWds = getPinnedWdsForProject(projectId);
+  const pinnedWd = pinnedWds.find((wd) => wd.isPrimary) ?? pinnedWds[0];
+  if (pinnedWd) {
+    const classifications = getCachedClassifications(pinnedWd.wageDeterminationId);
+    if (classifications.length > 0) {
+      return {
+        wd: getWdById(pinnedWd.wageDeterminationId),
+        classifications,
+        source: 'pinned' as const,
+      };
+    }
+  }
+
+  const wd = getCachedWd(state, county);
+  return {
+    wd,
+    classifications: wd ? getCachedClassifications(wd.id) : [],
+    source: 'state-county-cache' as const,
+  };
+}
+
 router.get('/:projectId/wage-classifications', async (req, res) => {
   const projectId = req.params.projectId as string;
   const userId = req.user!.userId;
@@ -113,22 +144,30 @@ router.get('/:projectId/wage-classifications', async (req, res) => {
     return;
   }
 
-  // Try cache first, then auto-fetch from SAM.gov using the project's own state + county
-  let wd = getCachedWd(project.state, project.county);
-  if (!wd) {
+  // Prefer the WD pinned to this project. Fall back to state/county cache, then live lookup.
+  let rateContext = getProjectWageRateContext(projectId, project.state, project.county);
+  if (!rateContext.wd) {
     const fetched = await lookupWageDetermination(project.state, project.county);
     if (fetched) {
-      wd = getCachedWd(project.state, project.county);
+      rateContext = getProjectWageRateContext(projectId, project.state, project.county);
     }
   }
 
-  if (!wd) {
+  if (!rateContext.wd) {
     res.json({ data: { classifications: [], hasWd: false, state: project.state, county: project.county } });
     return;
   }
 
-  const classifications = getCachedClassifications(wd.id);
-  res.json({ data: { classifications, hasWd: true, wdNumber: wd.wdNumber, state: project.state, county: project.county } });
+  res.json({
+    data: {
+      classifications: rateContext.classifications,
+      hasWd: true,
+      wdNumber: rateContext.wd.wdNumber,
+      source: rateContext.source,
+      state: project.state,
+      county: project.county,
+    },
+  });
 });
 
 // GET /api/projects/:projectId/workers — list workers with classifications + live WD rates
@@ -146,12 +185,10 @@ router.get('/:projectId/workers', async (req, res) => {
   }
 
   // Build a tradeCode → rate map from the project's wage determination
-  const wd = getCachedWd(project.state, project.county);
+  const rateContext = getProjectWageRateContext(projectId, project.state, project.county);
   const rateMap = new Map<string, { baseRate: number; fringeRate: number }>();
-  if (wd) {
-    for (const wc of getCachedClassifications(wd.id)) {
-      rateMap.set(wc.tradeCode, { baseRate: wc.baseRate, fringeRate: wc.fringeRate });
-    }
+  for (const wc of rateContext.classifications) {
+    rateMap.set(wc.tradeCode, { baseRate: wc.baseRate, fringeRate: wc.fringeRate });
   }
 
   const workerRows = await db
@@ -176,11 +213,17 @@ router.get('/:projectId/workers', async (req, res) => {
       return {
         ...safeW,
         hasFullSsn,
-        classifications: classifications.map((c: ClassificationRow) => ({
-          ...c,
-          baseRate: rateMap.get(c.tradeCode)?.baseRate ?? null,
-          fringeRate: rateMap.get(c.tradeCode)?.fringeRate ?? null,
-        })),
+        classifications: classifications.map((c: ClassificationRow) => {
+          const journeyRates = rateMap.get(c.tradeCode);
+          const effectiveRates = journeyRates
+            ? resolveEffectiveClassificationRates(journeyRates, c)
+            : null;
+          return {
+            ...c,
+            baseRate: effectiveRates?.baseRate ?? null,
+            fringeRate: effectiveRates?.fringeRate ?? null,
+          };
+        }),
       };
     }),
   );
@@ -242,7 +285,7 @@ router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res
   // Verify user has access to the project
   let project: Project;
   try {
-    ({ project } = await assertProjectAccess(db, projectId, userId));
+    ({ project } = await assertProjectWriteAccess(db, projectId, userId));
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -325,7 +368,7 @@ router.put('/:projectId/workers/:workerId', validate(UpdateWorkerSchema), async 
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -377,7 +420,7 @@ router.delete('/:projectId/workers/:workerId', async (req, res) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -404,7 +447,7 @@ router.delete('/:projectId/workers/:workerId/classifications/:classificationId',
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -428,7 +471,7 @@ router.post('/:projectId/workers/:workerId/classifications', validate(CreateClas
 
   // Verify user has access to the project
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;

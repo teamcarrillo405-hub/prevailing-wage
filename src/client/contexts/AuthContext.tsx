@@ -4,6 +4,9 @@ import { api } from '../lib/api';
 interface User {
   id: string;
   email: string;
+  hccMembershipNumber?: string | null;
+  companyName?: string | null;
+  onboardingCompletedAt?: string | null;
 }
 
 export type LoginResult =
@@ -16,6 +19,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
   completeMfaLogin: (userId: string, token: string) => Promise<User>;
+  refreshUser: () => Promise<User | null>;
   logout: () => Promise<void>;
 }
 
@@ -25,13 +29,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount, restore session from cookie
+  async function refreshUser(): Promise<User | null> {
+    try {
+      const res = await api.get<{ data: { user: User } }>('/auth/me');
+      setUser(res.data.user);
+      return res.data.user;
+    } catch {
+      setUser(null);
+      return null;
+    }
+  }
+
   useEffect(() => {
-    api
-      .get<{ data: { user: User } }>('/auth/me')
-      .then((res) => setUser(res.data.user))
-      .catch(() => setUser(null))
-      .finally(() => setIsLoading(false));
+    refreshUser().finally(() => setIsLoading(false));
   }, []);
 
   async function login(email: string, password: string): Promise<LoginResult> {
@@ -70,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login,
     completeMfaLogin,
+    refreshUser,
     logout,
   };
 

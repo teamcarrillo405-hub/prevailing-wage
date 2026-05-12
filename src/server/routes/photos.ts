@@ -13,7 +13,7 @@ import { getDb } from '../db/index.js';
 import { weekPhotos, projectPhotos } from '../db/schema.js';
 import type { InferSelectModel } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
-import { assertProjectAccess } from '../utils/assertProjectAccess.js';
+import { assertProjectAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -57,7 +57,7 @@ router.post('/:projectId/weeks/:weekId/photos', (req, res, next) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     // Clean up uploaded file if access denied
     if (req.file) fs.unlink(req.file.path, () => {});
@@ -127,7 +127,7 @@ router.delete('/:projectId/weeks/:weekId/photos/:photoId', async (req, res) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;
@@ -177,7 +177,7 @@ router.post('/:projectId/photos', (req, res, next) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     if (req.file) fs.unlink(req.file.path, () => {});
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
@@ -249,7 +249,9 @@ router.get('/:projectId/photos', async (req, res) => {
     if (fs.existsSync(absPath)) {
       try {
         const buffer = fs.readFileSync(absPath);
-        dataUrl = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+        const ext = path.extname(p.filePath).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+        dataUrl = `data:${mime};base64,${buffer.toString('base64')}`;
       } catch {
         // file read error — omit dataUrl
       }
@@ -267,7 +269,7 @@ router.delete('/:projectId/photos/:photoId', async (req, res) => {
   const db = getDb();
 
   try {
-    await assertProjectAccess(db, projectId, userId);
+    await assertProjectWriteAccess(db, projectId, userId);
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
     return;

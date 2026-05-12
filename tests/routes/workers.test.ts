@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import supertest from 'supertest';
+import { randomUUID } from 'crypto';
 import { app } from '../../src/server/index.js';
+import {
+  pinWdToProject,
+  upsertClassifications,
+  upsertWageDetermination,
+} from '../../src/server/services/wageCache.js';
 
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
@@ -206,6 +212,114 @@ describe('GET /workers programName field', () => {
     expect(Array.isArray(workers)).toBe(true);
     expect(workers.length).toBeGreaterThan(0);
     expect(workers[0].classifications[0]).toHaveProperty('programName');
+  });
+
+  it('uses the project-pinned wage determination for worker classification rates', async () => {
+    const cookie = await registerAndLogin('pinned-wd-rates');
+    const projectId = await createProject(cookie);
+    const now = new Date();
+
+    const pinnedWdId = upsertWageDetermination({
+      id: randomUUID(),
+      source: 'federal-dol',
+      wdNumber: `PINNED${Date.now()}`,
+      revisionNumber: 0,
+      state: 'CA',
+      county: 'Los Angeles',
+      constructionType: 'Building',
+      publishDate: '2025-01-01',
+      rawDocument: 'Pinned WD with project classifications.',
+      cachedAt: now.toISOString(),
+      cacheExpiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    upsertClassifications(pinnedWdId, [
+      { code: 'CARP', description: 'Carpenter', baseRate: 44.15, fringeRate: 19.82, totalRate: 63.97 },
+    ]);
+    pinWdToProject(projectId, pinnedWdId, 'Building', null);
+
+    const newerUnpinnedWdId = upsertWageDetermination({
+      id: randomUUID(),
+      source: 'federal-dol',
+      wdNumber: `UNPINNED${Date.now()}`,
+      revisionNumber: 0,
+      state: 'CA',
+      county: 'Los Angeles',
+      constructionType: 'Heavy',
+      publishDate: '2026-01-01',
+      rawDocument: 'Newer state/county WD that should not override the project pin.',
+      cachedAt: now.toISOString(),
+      cacheExpiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    upsertClassifications(newerUnpinnedWdId, [
+      { code: 'ELEC', description: 'Electrician', baseRate: 70, fringeRate: 25, totalRate: 95 },
+    ]);
+
+    await createWorkerWithClassification(cookie, projectId);
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    const workers = res.body.data?.workers ?? [];
+    expect(workers[0].classifications[0].baseRate).toBe(44.15);
+    expect(workers[0].classifications[0].fringeRate).toBe(19.82);
+  });
+
+  it('returns apprentice effective base rate using apprentice percent', async () => {
+    const cookie = await registerAndLogin('apprentice-effective-rates');
+    const projectId = await createProject(cookie);
+    const now = new Date();
+
+    const pinnedWdId = upsertWageDetermination({
+      id: randomUUID(),
+      source: 'federal-dol',
+      wdNumber: `APP-PINNED${Date.now()}`,
+      revisionNumber: 0,
+      state: 'CA',
+      county: 'Los Angeles',
+      constructionType: 'Building',
+      publishDate: '2025-01-01',
+      rawDocument: 'Pinned WD with apprentice rate test classification.',
+      cachedAt: now.toISOString(),
+      cacheExpiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    upsertClassifications(pinnedWdId, [
+      { code: 'ELEC', description: 'Electrician', baseRate: 50, fringeRate: 20, totalRate: 70 },
+    ]);
+    pinWdToProject(projectId, pinnedWdId, 'Building', null);
+
+    const wRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'Apprentice Worker' });
+    const workerId = wRes.body.data?.worker?.id as string;
+
+    await supertest(app)
+      .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+      .set('Cookie', cookie)
+      .send({
+        tradeCode: 'ELEC',
+        tradeDescription: 'Electrician',
+        laborType: 'apprentice',
+        apprenticePercent: 60,
+        programName: 'IBEW Registered Apprenticeship Program',
+      });
+
+    const res = await supertest(app)
+      .get(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    const cls = res.body.data.workers[0].classifications[0];
+    expect(cls.baseRate).toBe(30);
+    expect(cls.fringeRate).toBe(20);
   });
 });
 

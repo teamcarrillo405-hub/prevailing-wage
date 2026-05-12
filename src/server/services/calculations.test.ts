@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateCwhssaOt } from './calculations.js';
+import { calculateCertifiedPayrollPay, calculateCwhssaOt } from './calculations.js';
 
 describe('calculateCwhssaOt', () => {
   // ── Standard 40h week (no OT) ───────────────────────────────────────────
@@ -196,5 +196,23 @@ describe('calculateCwhssaOt', () => {
     expect(result.overtimePremium).toBeCloseTo(overtimeHours * 0.5 * baseRate); // 400
     // NOT overtimeHours * 1.5 * baseRate
     expect(result.overtimePremium).not.toBeCloseTo(overtimeHours * 1.5 * baseRate);
+  });
+});
+
+describe('calculateCertifiedPayrollPay', () => {
+  it('pays double-time hours with a full extra base-rate premium and fringe at 1x', () => {
+    const result = calculateCertifiedPayrollPay({
+      baseRate: 40,
+      fringeRate: 10,
+      straightTimeHours: 8,
+      overtimeHours: 4,
+      doubleTimeHours: 2,
+    });
+
+    expect(result.straightTimeBasePay).toBeCloseTo(14 * 40);
+    expect(result.overtimePremium).toBeCloseTo(4 * 0.5 * 40);
+    expect(result.doubleTimePremium).toBeCloseTo(2 * 40);
+    expect(result.totalFringePay).toBeCloseTo(14 * 10);
+    expect(result.totalWeeklyCost).toBeCloseTo(860);
   });
 });

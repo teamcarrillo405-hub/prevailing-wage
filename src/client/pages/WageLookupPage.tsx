@@ -1,6 +1,7 @@
 // src/client/pages/WageLookupPage.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { WageClassificationsTable } from '../components/WageClassificationsTable.js';
 import { ManualWageEntryForm } from '../components/ManualWageEntryForm.js';
 import type { WageDetermination, WageClassification } from '../../shared/types.js';
@@ -45,22 +46,35 @@ async function fetchByWdNumber(wdNumber: string): Promise<FetchResult> {
   return res.json();
 }
 
-// ─── WdCard ──────────────────────────────────────────────────────────────────
-
 interface WdCardProps {
   wd: WageDetermination;
   classifications: WageClassification[];
+  defaultProjectId?: string;
 }
 
-function WdCard({ wd, classifications }: WdCardProps) {
-  const [pinProjectId, setPinProjectId] = useState('');
+function buildWdClipboardText(wd: WageDetermination): string {
+  return [
+    `WD Number: ${wd.wdNumber}`,
+    `Revision/Modification: ${wd.revisionNumber}`,
+    `State: ${wd.state}`,
+    `County: ${wd.county ?? 'Statewide'}`,
+    `Construction Type: ${wd.constructionType ?? 'All types'}`,
+    `Published: ${wd.publishDate ?? 'Unknown date'}`,
+  ].join('\n');
+}
+
+function WdCard({ wd, classifications, defaultProjectId }: WdCardProps) {
+  const navigate = useNavigate();
+  const [pinProjectId, setPinProjectId] = useState(defaultProjectId ?? '');
   const [pinStatus, setPinStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
   const { data: projectsData } = useQuery<{ data: { projects: { id: string; name: string }[] } }>({
     queryKey: ['projects'],
     queryFn: () => fetch('/api/projects', { credentials: 'include' }).then((r) => r.json()),
   });
   const projects = projectsData?.data?.projects ?? [];
+  const selectedProjectName = projects.find((project) => project.id === pinProjectId)?.name;
 
   const handlePin = async () => {
     if (!pinProjectId) return;
@@ -77,42 +91,73 @@ function WdCard({ wd, classifications }: WdCardProps) {
         throw new Error((body as any).error ?? 'Pin failed');
       }
       setPinStatus('done');
+      window.setTimeout(() => {
+        navigate(`/projects/${pinProjectId}#wage-determinations`);
+      }, 650);
     } catch {
       setPinStatus('error');
     }
   };
 
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(buildWdClipboardText(wd));
+    setCopyStatus('copied');
+    window.setTimeout(() => setCopyStatus('idle'), 2000);
+  };
+
   return (
-    <div className="border rounded-lg p-4 mb-3 bg-white shadow-sm">
-      <div className="flex items-start justify-between">
+    <div className="mb-3 rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="font-mono text-sm font-semibold text-gray-900">{wd.wdNumber}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Use this number to lock the project WD</p>
+          <p className="mt-1 font-mono text-base font-semibold text-gray-900">{wd.wdNumber}</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            {wd.constructionType ?? 'All types'} · {wd.county ?? 'Statewide'} · Rev {wd.revisionNumber} · {wd.publishDate ?? 'Unknown date'}
+            {wd.constructionType ?? 'All types'} - {wd.county ?? 'Statewide'} - Rev {wd.revisionNumber} - {wd.publishDate ?? 'Unknown date'}
+          </p>
+          <p className="mt-2 max-w-2xl text-sm text-gray-600">
+            Confirm this WD matches the award documents, county, construction type, and contract date. After it is locked to a project, worker trade codes use these rates automatically.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
           {projects.length > 0 && (
             <select
-              className="text-xs border rounded px-2 py-1"
+              aria-label="Project to lock this wage determination to"
+              className="min-h-[44px] rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm"
               value={pinProjectId}
               onChange={(e) => { setPinProjectId(e.target.value); setPinStatus('idle'); }}
             >
-              <option value="">Pin to project…</option>
+              <option value="">Choose project</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
-          {pinProjectId && pinStatus !== 'done' && (
-            <Button size="sm" onClick={handlePin} disabled={pinStatus === 'loading'}>
-              {pinStatus === 'loading' ? 'Pinning…' : 'Pin'}
+          <Button size="sm" variant="secondary" onClick={handleCopy}>
+            {copyStatus === 'copied' ? 'Copied' : 'Copy WD details'}
+          </Button>
+          {pinProjectId && (
+            <Button size="sm" onClick={handlePin} disabled={pinStatus === 'loading' || pinStatus === 'done'}>
+              {pinStatus === 'loading'
+                ? 'Locking...'
+                : pinStatus === 'done'
+                  ? 'Locked'
+                  : selectedProjectName
+                    ? `Lock to ${selectedProjectName}`
+                    : 'Lock to project'}
             </Button>
           )}
-          {pinStatus === 'done' && <span className="text-xs text-green-600">Pinned ✓</span>}
-          {pinStatus === 'error' && <span className="text-xs text-red-600">Error — already pinned?</span>}
         </div>
       </div>
+      {pinStatus === 'done' && (
+        <p className="mt-3 rounded-sm border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          WD locked. Returning to the project wage determination panel.
+        </p>
+      )}
+      {pinStatus === 'error' && (
+        <p className="mt-3 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          Could not lock this WD. It may already be pinned to that project.
+        </p>
+      )}
       {classifications.length > 0 && (
-        <div className="mt-2">
+        <div className="mt-3">
           <WageClassificationsTable classifications={classifications} />
         </div>
       )}
@@ -120,24 +165,22 @@ function WdCard({ wd, classifications }: WdCardProps) {
   );
 }
 
-// ─── WageLookupPage ───────────────────────────────────────────────────────────
-
 function getInitialParam(key: string): string {
   return new URLSearchParams(window.location.search).get(key) ?? '';
 }
 
 export function WageLookupPage() {
+  const navigate = useNavigate();
   const [stateInput, setStateInput] = useState(() => getInitialParam('state').toUpperCase());
   const [countyInput, setCountyInput] = useState(() => getInitialParam('county'));
+  const defaultProjectId = getInitialParam('projectId');
   const [constructionType, setConstructionType] = useState<ConstructionType | ''>('');
   const [submitted, setSubmitted] = useState<{ state: string; county: string; constructionType?: string } | null>(null);
   const [manualResult, setManualResult] = useState<WageDetermination | null>(null);
 
-  // "Fetch by WD Number" section state
   const [wdNumberInput, setWdNumberInput] = useState('');
   const [submittedWdNumber, setSubmittedWdNumber] = useState<string | null>(null);
 
-  // State/county lookup
   const { data, isLoading, error } = useQuery<LookupResult, Error & { status?: number }>({
     queryKey: ['wages', 'lookup', submitted?.state, submitted?.county, submitted?.constructionType],
     queryFn: () => fetchWageLookup(submitted!.state, submitted!.county, submitted!.constructionType),
@@ -145,13 +188,23 @@ export function WageLookupPage() {
     retry: false,
   });
 
-  // Direct WD number lookup
   const { data: wdFetchData, isLoading: wdFetchLoading, error: wdFetchError } = useQuery<FetchResult, Error & { status?: number }>({
     queryKey: ['wages', 'fetch', submittedWdNumber],
     queryFn: () => fetchByWdNumber(submittedWdNumber!),
     enabled: Boolean(submittedWdNumber),
     retry: false,
   });
+
+  useEffect(() => {
+    if (!stateInput.trim() || !countyInput.trim()) return;
+    setSubmitted({
+      state: stateInput.trim().toUpperCase(),
+      county: countyInput.trim(),
+      constructionType: constructionType || undefined,
+    });
+  // Run once for project setup deep links so the contractor does not need a second Search click.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,13 +224,58 @@ export function WageLookupPage() {
   };
 
   const is404 = (error as any)?.status === 404;
-  const showManualForm = Boolean(submitted && (is404 || manualResult));
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex min-h-[44px] items-center rounded-sm border border-gray-300 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="inline-flex min-h-[44px] items-center rounded-sm border border-gray-300 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
+        >
+          Dashboard
+        </button>
+        {defaultProjectId && (
+          <button
+            type="button"
+            onClick={() => navigate(`/projects/${defaultProjectId}#wage-determinations`)}
+            className="inline-flex min-h-[44px] items-center rounded-sm border border-brand-gold px-3 py-2 font-medium text-brand-gold hover:bg-brand-gold/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
+          >
+            Project WD panel
+          </button>
+        )}
+      </div>
+
       <PageHeader title="Prevailing Wage Lookup" />
 
-      {/* State / County / Construction Type search */}
+      <section className="mb-6 rounded-sm border border-blue-200 bg-blue-50 p-4">
+        <h2 className="text-sm font-semibold text-blue-950">What you are looking for</h2>
+        <p className="mt-1 text-sm text-blue-900">
+          The main number is the federal WD number, plus its revision/modification. Match it to the award location, construction type, and contract date. Then click Lock to project.
+        </p>
+        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+          <div className="rounded-sm border border-blue-100 bg-white/70 p-3">
+            <p className="font-semibold text-gray-900">1. WD number</p>
+            <p className="text-gray-600">Example: CA20260001. This locks the source document.</p>
+          </div>
+          <div className="rounded-sm border border-blue-100 bg-white/70 p-3">
+            <p className="font-semibold text-gray-900">2. Revision</p>
+            <p className="text-gray-600">Use the modification required by the contract award documents.</p>
+          </div>
+          <div className="rounded-sm border border-blue-100 bg-white/70 p-3">
+            <p className="font-semibold text-gray-900">3. Trade row</p>
+            <p className="text-gray-600">Worker classification pulls base, fringe, and total rate from the locked WD.</p>
+          </div>
+        </div>
+      </section>
+
       <form onSubmit={handleSearch} className="flex items-end gap-3 mb-8 flex-wrap">
         <Input
           label="State"
@@ -208,12 +306,17 @@ export function WageLookupPage() {
         <Button type="submit">Search</Button>
       </form>
 
-      {isLoading && <p className="text-sm text-gray-500">Searching…</p>}
+      {isLoading && <p className="text-sm text-gray-500">Searching...</p>}
 
       {data && !manualResult && (
         <div className="mb-8">
           {data.wds.map((wd, i) => (
-            <WdCard key={wd.id} wd={wd} classifications={data.classifications[i] ?? []} />
+            <WdCard
+              key={wd.id}
+              wd={wd}
+              classifications={data.classifications[i] ?? []}
+              defaultProjectId={defaultProjectId}
+            />
           ))}
         </div>
       )}
@@ -242,7 +345,6 @@ export function WageLookupPage() {
         <p className="text-sm text-red-700 mb-8">Error: {error.message}</p>
       )}
 
-      {/* Fetch by WD Number */}
       <div className="border-t pt-6">
         <h2 className="text-sm font-semibold text-gray-800 mb-3">Fetch by WD Number</h2>
         <form onSubmit={handleWdFetch} className="flex items-end gap-3 mb-4">
@@ -250,22 +352,26 @@ export function WageLookupPage() {
             label="WD Number"
             value={wdNumberInput}
             onChange={(e) => setWdNumberInput(e.target.value.toUpperCase())}
-            placeholder="CA20250001"
+            placeholder="CA20260001"
             className="w-48 uppercase"
           />
           <Button type="submit">Fetch</Button>
         </form>
 
-        {wdFetchLoading && <p className="text-sm text-gray-500">Fetching…</p>}
+        {wdFetchLoading && <p className="text-sm text-gray-500">Fetching...</p>}
 
         {wdFetchData && (
-          <WdCard wd={wdFetchData.wd} classifications={wdFetchData.classifications} />
+          <WdCard
+            wd={wdFetchData.wd}
+            classifications={wdFetchData.classifications}
+            defaultProjectId={defaultProjectId}
+          />
         )}
 
         {wdFetchError && (
           <p className="text-sm text-red-600">
             {(wdFetchError as any)?.status === 404
-              ? `WD not found on SAM.gov. Enter rates manually.`
+              ? 'WD not found on SAM.gov. Enter rates manually.'
               : wdFetchError.message}
           </p>
         )}

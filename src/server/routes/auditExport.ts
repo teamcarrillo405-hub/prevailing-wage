@@ -94,6 +94,7 @@ auditExportRouter.get('/:projectId', async (req, res) => {
   for (const week of weeks) {
     // 6a. Load entries joined with worker + classification data
     const entries = await getPayrollEntries(week.id);
+    const complianceResult = await computeCompliance(db, week.id);
 
     // 6b. Map entries to Wh347WorkerRow[]
     type EntryRow = (typeof entries)[number];
@@ -163,10 +164,12 @@ auditExportRouter.get('/:projectId', async (req, res) => {
       isPrime: true,
       workers: workerRows,
       compliance: {
-        certProperPayment: true,
-        certAccuratePayroll: true,
+        certProperPayment: complianceResult?.certProperPayment ?? true,
+        certAccuratePayroll: complianceResult?.certAccuratePayroll ?? true,
         certWorkPerformed: true,
-        certApprentices: true,
+        certApprentices: !(complianceResult?.weekViolations.some(v =>
+          ['apprentice-ratio', 'apprentice-trade-ratio', 'apprentice-registration'].includes(v.violationType),
+        ) ?? false),
         certFringeBenefits: workerRows.some(w => w.fringeCredit > 0),
         certDeductions: false,
         officialName: 'Certifying Official',

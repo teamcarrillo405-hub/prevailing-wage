@@ -94,7 +94,7 @@ function DueSoonRow({ item }: { item: DueSoonItem }) {
 
   return (
     <Link
-      to={`/projects/${item.projectId}/payroll`}
+      to={`/projects/${item.projectId}/payroll/${item.weekId}`}
       className={cn(
         'group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm transition-all duration-150',
         'hover:shadow-sm',

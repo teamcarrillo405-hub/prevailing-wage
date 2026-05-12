@@ -1,7 +1,7 @@
 // src/client/pages/PayrollListPage.tsx
 // Route: /projects/:projectId/payroll
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FileCheck, FileText, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
@@ -86,6 +86,12 @@ function getWeekBadge(week: PayrollWeek): React.ReactNode {
     return <Badge variant="warning">In Progress</Badge>;
   }
   return <Badge variant="neutral">Draft</Badge>;
+}
+
+function openOnEnterOrSpace(event: React.KeyboardEvent<HTMLElement>, action: () => void) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  action();
 }
 
 export function PayrollListPage() {
@@ -272,7 +278,13 @@ export function PayrollListPage() {
             <div className="p-4 space-y-2">
               {weeks.map((week) => (
                 <Card key={week.id} padding="sm" className="shadow-card-elevated hover:shadow-card-hover cursor-pointer transition-shadow duration-150">
-                  <Link to={`/projects/${projectId}/payroll/${week.id}`} className="block min-h-[44px] flex items-center">
+                  <div
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => navigate(`/projects/${projectId}/payroll/${week.id}`)}
+                    onKeyDown={(event) => openOnEnterOrSpace(event, () => navigate(`/projects/${projectId}/payroll/${week.id}`))}
+                    className="block min-h-[44px] flex items-center focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 rounded-sm"
+                  >
                     <div className="flex items-center justify-between gap-4 w-full">
                       <div className="min-w-0">
                         <p className="font-headline text-sm text-text-primary">
@@ -295,17 +307,29 @@ export function PayrollListPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {getWeekBadge(week)}
-                        <a
-                          href={`/api/export/wh347/${week.id}`}
-                          className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
-                          onClick={(e) => { e.stopPropagation(); toast.success('WH-347 downloading — submit to your contracting officer within 7 days of the week ending date.'); }}
-                        >
-                          WH-347
-                        </a>
+                        {Number(week.workerCount ?? 0) > 0 && week.totalGross != null ? (
+                          <a
+                            href={`/api/export/wh347/${week.id}`}
+                            className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.success('WH-347 downloading - submit to your contracting officer within 7 days of the week ending date.');
+                            }}
+                          >
+                            WH-347
+                          </a>
+                        ) : (
+                          <span
+                            className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-gray-100 text-gray-400 border border-gray-200"
+                            title="Add payroll entries before downloading WH-347."
+                          >
+                            WH-347
+                          </span>
+                        )}
                         <ChevronRight className="w-4 h-4 text-text-secondary" />
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 </Card>
               ))}
             </div>

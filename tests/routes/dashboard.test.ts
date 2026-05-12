@@ -68,6 +68,43 @@ describe('GET /api/dashboard/stats', () => {
 
 // ── /compliance-trend ─────────────────────────────────────────────────────
 
+describe('GET /api/dashboard/contractor-actions', () => {
+  it('returns 401 when not authenticated', async () => {
+    const res = await supertest(app).get('/api/dashboard/contractor-actions');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns an action array for authenticated users', async () => {
+    const cookie = await registerAndLogin('actions-shape');
+    const res = await supertest(app)
+      .get('/api/dashboard/contractor-actions')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.actions)).toBe(true);
+  });
+
+  it('surfaces setup work for projects without workers', async () => {
+    const cookie = await registerAndLogin('actions-setup');
+    const projectId = await createProject(cookie);
+
+    const res = await supertest(app)
+      .get('/api/dashboard/contractor-actions')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          projectId,
+          type: 'setup',
+          label: 'Add workers and classifications',
+        }),
+      ]),
+    );
+  });
+});
+
 describe('GET /api/dashboard/compliance-trend', () => {
   it('returns 401 when not authenticated', async () => {
     const res = await supertest(app).get('/api/dashboard/compliance-trend');

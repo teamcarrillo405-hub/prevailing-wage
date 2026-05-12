@@ -9,6 +9,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActivityEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
+import { AlertTriangle, Camera, CheckCircle2, ClipboardCheck, Clock3, Download, FileClock, ShieldCheck } from 'lucide-react';
 
 // Client-side mirror of server types — DO NOT import from server
 interface AuditLogItem {
@@ -30,6 +31,42 @@ interface AuditLogResponse {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+interface EvidenceSummary {
+  auditEventCount: number;
+  payrollWeekCount: number;
+  submittedWeekCount: number;
+  unsubmittedWeekCount: number;
+  photoCount: number;
+  projectPhotoCount: number;
+  weekPhotoCount: number;
+  timePunchCount: number;
+  latestAuditAt: string | null;
+  readyForPacket: boolean;
+  missingEvidence: string[];
+  requirements: EvidenceRequirement[];
+  weeks: EvidenceWeek[];
+}
+
+interface EvidenceWeek {
+  weekId: string;
+  payrollNumber: number;
+  weekEndingDate: string;
+  submitted: boolean;
+  weekPhotoCount: number;
+  timePunchCount: number;
+  readyForPacket: boolean;
+  missingEvidence: string[];
+}
+
+interface EvidenceRequirement {
+  key: 'payroll_submissions' | 'audit_trail' | 'photo_evidence' | 'gps_time_punches';
+  label: string;
+  requiredCount: number;
+  collectedCount: number;
+  missingCount: number;
+  status: 'complete' | 'missing' | 'not_applicable';
 }
 
 // Human-readable action labels — mirrors auditService action keys
@@ -111,6 +148,13 @@ export function ProjectActivityPage() {
     enabled: !!projectId,
   });
 
+  const { data: evidenceSummary } = useQuery({
+    queryKey: ['evidenceSummary', projectId],
+    queryFn: () =>
+      api.get<{ data: EvidenceSummary }>(`/audit/${projectId}/evidence-summary`).then((r) => r.data),
+    enabled: !!projectId,
+  });
+
   function handleFilterChange(key: string, value: string) {
     const next = new URLSearchParams(searchParams);
     if (value) {
@@ -133,6 +177,10 @@ export function ProjectActivityPage() {
     if (to) params.set('to', to);
     const url = `/api/audit/${projectId}/csv${params.size > 0 ? '?' + params.toString() : ''}`;
     window.location.href = url;
+  }
+
+  function handleExportEvidencePacket(format: 'json' | 'csv') {
+    window.location.href = `/api/audit/${projectId}/evidence-packet?format=${format}`;
   }
 
   function handlePageChange(newPage: number) {
@@ -164,35 +212,185 @@ export function ProjectActivityPage() {
       <div className="max-w-4xl mx-auto">
         <Link
           to={`/projects/${projectId}`}
-          className="text-sm text-neutral-400 hover:text-white transition-colors mb-4 inline-block"
+          className="text-sm text-brand-gold hover:underline transition-colors mb-4 inline-block"
         >
           &larr; Back to Project
         </Link>
 
         <PageHeader
-          title="Project Activity"
-          subtitle="Audit trail of all project events"
+          title="Evidence Dashboard"
+          subtitle="Audit trail, payroll submissions, field photos, and GPS-backed activity"
         />
+
+        <div className="grid grid-cols-1 md:grid-cols-[1.15fr_0.85fr] gap-4 mb-4">
+          <Card padding="sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Evidence status</p>
+                <p className="mt-2 text-2xl font-semibold text-gray-900">
+                  {evidenceSummary && evidenceSummary.payrollWeekCount === 0
+                    ? 'No payroll weeks yet'
+                    : evidenceSummary?.readyForPacket
+                    ? 'Packet ready'
+                    : evidenceSummary
+                    ? `${evidenceSummary.missingEvidence.length} evidence gaps`
+                    : 'Loading evidence'}
+                </p>
+                <p className="mt-1 text-sm text-gray-600">
+                  {evidenceSummary?.payrollWeekCount
+                    ? `${evidenceSummary.submittedWeekCount}/${evidenceSummary.payrollWeekCount} payroll weeks submitted.`
+                    : 'No payroll weeks recorded yet.'}
+                  {' '}Latest audit event {evidenceSummary?.latestAuditAt ? formatTimestamp(evidenceSummary.latestAuditAt) : 'not recorded yet'}.
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded bg-brand-gold/15 flex items-center justify-center text-brand-gold shrink-0">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+            </div>
+          </Card>
+
+          <Card padding="sm">
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'Audit events', value: evidenceSummary?.auditEventCount ?? 0, Icon: FileClock },
+                { label: 'Photos', value: evidenceSummary?.photoCount ?? 0, Icon: Camera },
+                { label: 'GPS punches', value: evidenceSummary?.timePunchCount ?? 0, Icon: Clock3 },
+                { label: 'Open weeks', value: evidenceSummary?.unsubmittedWeekCount ?? 0, Icon: ClipboardCheck },
+              ].map(({ label, value, Icon }) => (
+                <div key={label} className="border border-gray-200 rounded p-3 min-h-[76px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-gray-500">{label}</p>
+                    <Icon className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <p className="mt-2 text-xl font-semibold text-gray-900 font-mono">{value}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <Card padding="sm" className="mb-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Required vs collected</p>
+                <p className="mt-1 text-sm text-gray-600">
+                  Evidence packet readiness based on payroll submission, audit, photo, and GPS proof.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleExportEvidencePacket('json')}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-brand-gold text-brand-gold rounded hover:bg-brand-gold/10 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  JSON packet
+                </button>
+                <button
+                  onClick={() => handleExportEvidencePacket('csv')}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  CSV packet
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(evidenceSummary?.requirements ?? []).map((item) => {
+                const isComplete = item.status === 'complete';
+                const isMissing = item.status === 'missing';
+                const Icon = isComplete ? CheckCircle2 : isMissing ? AlertTriangle : Clock3;
+                return (
+                  <div key={item.key} className="border border-gray-200 rounded p-3 min-h-[88px]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {item.collectedCount} collected / {item.requiredCount} required
+                        </p>
+                      </div>
+                      <Icon className={`h-4 w-4 shrink-0 ${isComplete ? 'text-green-600' : isMissing ? 'text-amber-600' : 'text-gray-400'}`} />
+                    </div>
+                    {isMissing && (
+                      <p className="mt-2 text-xs text-amber-700">{item.missingCount} missing</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+
+        {(evidenceSummary?.weeks?.length ?? 0) > 0 && (
+          <Card padding="sm" className="mb-4">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Weekly evidence</p>
+                <p className="mt-1 text-sm text-gray-600">
+                  Per-week proof needed for a clean audit packet.
+                </p>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
+                    <th className="py-2 pr-3">Week</th>
+                    <th className="py-2 pr-3">Submitted</th>
+                    <th className="py-2 pr-3">Photos</th>
+                    <th className="py-2 pr-3">GPS</th>
+                    <th className="py-2">Missing</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {evidenceSummary!.weeks.map((week) => (
+                    <tr key={week.weekId}>
+                      <td className="py-2 pr-3 text-gray-900">
+                        Week {week.payrollNumber}
+                        <span className="block text-xs text-gray-500">{week.weekEndingDate}</span>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <span className={week.submitted ? 'text-green-600' : 'text-amber-700'}>
+                          {week.submitted ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 text-gray-700">{week.weekPhotoCount}</td>
+                      <td className="py-2 pr-3 text-gray-700">{week.timePunchCount}</td>
+                      <td className="py-2 text-gray-700">
+                        {week.readyForPacket ? (
+                          <span className="text-green-600">Ready</span>
+                        ) : (
+                          week.missingEvidence.join(', ')
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         {/* Date range filter */}
         <Card padding="sm" className="mb-4">
           <div className="flex flex-wrap items-end gap-4">
             <div>
-              <label className="block text-xs text-neutral-400 mb-1">From</label>
+              <label className="block text-xs text-gray-500 mb-1">From</label>
               <input
                 type="date"
                 value={from}
                 onChange={(e) => handleFilterChange('from', e.target.value)}
-                className="border border-neutral-700 rounded px-3 py-1.5 text-sm bg-surface-card text-white focus:border-brand-gold focus:outline-none"
+                className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:border-brand-gold focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs text-neutral-400 mb-1">To</label>
+              <label className="block text-xs text-gray-500 mb-1">To</label>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => handleFilterChange('to', e.target.value)}
-                className="border border-neutral-700 rounded px-3 py-1.5 text-sm bg-surface-card text-white focus:border-brand-gold focus:outline-none"
+                className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:border-brand-gold focus:outline-none"
               />
             </div>
             {(from || to) && (
@@ -216,7 +414,7 @@ export function ProjectActivityPage() {
         {isLoading && <LoadingSpinner />}
 
         {isError && (
-          <p className="text-sm text-red-400 py-4">
+          <p className="text-sm text-red-600 py-4">
             Failed to load activity log. Please try again.
           </p>
         )}
@@ -231,12 +429,12 @@ export function ProjectActivityPage() {
 
         {!isLoading && !isError && items.length > 0 && (
           <Card padding="none">
-            <ul className="divide-y divide-neutral-800">
+            <ul className="divide-y divide-gray-200">
               {rows.map((row) => {
                 if (row.kind === 'header') {
                   return (
-                    <li key={row.key} className="px-5 py-2 bg-nav-dark">
-                      <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                    <li key={row.key} className="px-5 py-2 bg-gray-50">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                         {row.label}
                       </span>
                     </li>
@@ -252,10 +450,10 @@ export function ProjectActivityPage() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white">
+                      <p className="text-sm text-gray-900">
                         {getActionLabel(item)}
                       </p>
-                      <p className="text-xs text-neutral-400 mt-0.5">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         {item.userEmail ?? 'System'} &middot; {formatTimestamp(item.createdAt)}
                       </p>
                     </div>
@@ -269,7 +467,7 @@ export function ProjectActivityPage() {
         {/* Pagination */}
         {data && data.totalPages > 1 && (
           <div className="mt-4 flex items-center justify-between">
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-gray-500">
               Page {data.page} of {data.totalPages} ({data.total} events)
             </p>
             <div className="flex gap-2">

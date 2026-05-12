@@ -12,10 +12,36 @@ import {
   workerClassifications,
   projectMembers,
   payrollWeeks,
+  subcontractors,
+  subcontractorCprWeeks,
 } from '../db/schema.js';
 import { getBatchProjectCompliance } from '../services/complianceService.js';
 
 export const dashboardRouter = Router();
+
+type ContractorAction = {
+  id: string;
+  projectId: string;
+  projectName: string;
+  type: 'violation' | 'overdue_payroll' | 'due_payroll' | 'setup' | 'subcontractor_cpr';
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  label: string;
+  detail: string;
+  to: string;
+  dueDate: string | null;
+};
+
+function daysBetween(a: string, b: string): number {
+  const aMs = new Date(`${a}T00:00:00.000Z`).getTime();
+  const bMs = new Date(`${b}T00:00:00.000Z`).getTime();
+  return Math.floor((aMs - bMs) / (24 * 60 * 60 * 1000));
+}
+
+function getCprQueueStatus(weekEndingDate: string, receivedDate: string | null, isCompliant: number | null) {
+  if (receivedDate) return isCompliant === 1 ? 'received-compliant' : 'received-non-compliant';
+  const today = new Date().toISOString().slice(0, 10);
+  return daysBetween(today, weekEndingDate) > 7 ? 'overdue' : 'not-received';
+}
 
 // GET /api/dashboard/violations
 // Lightweight real-time endpoint — returns projects with active violations.
@@ -119,6 +145,182 @@ dashboardRouter.get('/stats', requireAuth, async (req, res) => {
   }
 
   res.json({ activeProjects, openViolations, weeksDueThisWeek });
+});
+
+// GET /api/dashboard/contractor-actions
+// Contractor-first queue: the dashboard should answer "what do I need to do next?"
+// without making users inspect trends, grids, and compliance badges manually.
+dashboardRouter.get('/contractor-actions', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const memberRows = await db
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.userId, userId), isNull(projectMembers.removedAt)));
+  const projectIds = new Set(memberRows.map((r: { projectId: string }) => r.projectId));
+
+  if (projectIds.size === 0) {
+    res.json({ actions: [] });
+    return;
+  }
+
+  const [projectRows, workerRows, weekRows, subRows, cprRows] = await Promise.all([
+    db.select({ id: projects.id, name: projects.name, status: projects.status }).from(projects),
+    db.select({ projectId: workers.projectId }).from(workers),
+    db.select({
+      id: payrollWeeks.id,
+      projectId: payrollWeeks.projectId,
+      payrollNumber: payrollWeeks.payrollNumber,
+      weekEndingDate: payrollWeeks.weekEndingDate,
+      submittedAt: payrollWeeks.submittedAt,
+    }).from(payrollWeeks),
+    db.select({ id: subcontractors.id, projectId: subcontractors.projectId, name: subcontractors.name }).from(subcontractors),
+    db.select({
+      id: subcontractorCprWeeks.id,
+      subcontractorId: subcontractorCprWeeks.subcontractorId,
+      weekEndingDate: subcontractorCprWeeks.weekEndingDate,
+      receivedDate: subcontractorCprWeeks.receivedDate,
+      isCompliant: subcontractorCprWeeks.isCompliant,
+    }).from(subcontractorCprWeeks),
+  ]);
+  type ActionProjectRow = { id: string; name: string; status: string };
+  type ActionWeekRow = { id: string; projectId: string; payrollNumber: number; weekEndingDate: string; submittedAt: string | null };
+  type ActionSubRow = { id: string; projectId: string; name: string };
+  type ActionCprRow = { id: string; subcontractorId: string; weekEndingDate: string; receivedDate: string | null; isCompliant: number | null };
+  const typedProjectRows = projectRows as ActionProjectRow[];
+  const typedWorkerRows = workerRows as Array<{ projectId: string }>;
+  const typedWeekRows = weekRows as ActionWeekRow[];
+  const typedSubRows = subRows as ActionSubRow[];
+  const typedCprRows = cprRows as ActionCprRow[];
+
+  const projectMap = new Map<string, ActionProjectRow>(
+    typedProjectRows
+      .filter((p) => projectIds.has(p.id) && p.status !== 'archived')
+      .map((p) => [p.id, p]),
+  );
+  const workerCount = new Map<string, number>();
+  for (const row of typedWorkerRows) {
+    if (!projectMap.has(row.projectId)) continue;
+    workerCount.set(row.projectId, (workerCount.get(row.projectId) ?? 0) + 1);
+  }
+
+  const weeksByProject = new Map<string, ActionWeekRow[]>();
+  for (const week of typedWeekRows) {
+    if (!projectMap.has(week.projectId)) continue;
+    const arr = weeksByProject.get(week.projectId) ?? [];
+    arr.push(week);
+    weeksByProject.set(week.projectId, arr);
+  }
+
+  const subProjectMap = new Map<string, { projectId: string; name: string }>();
+  for (const sub of typedSubRows) {
+    if (projectMap.has(sub.projectId)) subProjectMap.set(sub.id, { projectId: sub.projectId, name: sub.name });
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const weekLimit = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const compliance = await getBatchProjectCompliance(db, userId);
+  const actions: ContractorAction[] = [];
+
+  for (const [projectId, project] of projectMap) {
+    const summary = compliance.get(projectId);
+    if ((summary?.violationCount ?? 0) > 0) {
+      actions.push({
+        id: `${projectId}:violations`,
+        projectId,
+        projectName: project.name,
+        type: 'violation',
+        priority: 'critical',
+        label: `Resolve ${summary!.violationCount} compliance violation${summary!.violationCount === 1 ? '' : 's'}`,
+        detail: 'Fix wages, overtime, deductions, or apprenticeship issues before this CPR is certified.',
+        to: `/projects/${projectId}/payroll`,
+        dueDate: null,
+      });
+    }
+
+    const projectWeeks = (weeksByProject.get(projectId) ?? []).slice().sort((a, b) => a.weekEndingDate.localeCompare(b.weekEndingDate));
+    const openWeeks = projectWeeks.filter((w) => !w.submittedAt);
+    const overdue = openWeeks.filter((w) => daysBetween(today, w.weekEndingDate) > 7);
+    const dueSoon = openWeeks.filter((w) => w.weekEndingDate >= today && w.weekEndingDate <= weekLimit);
+    const targetOverdue = overdue[0];
+    if (targetOverdue) {
+      actions.push({
+        id: `${projectId}:overdue:${targetOverdue.id}`,
+        projectId,
+        projectName: project.name,
+        type: 'overdue_payroll',
+        priority: 'high',
+        label: `Submit Payroll Week ${targetOverdue.payrollNumber}`,
+        detail: `Week ending ${targetOverdue.weekEndingDate} is past the 7-day certified payroll window.`,
+        to: `/projects/${projectId}/payroll/${targetOverdue.id}`,
+        dueDate: targetOverdue.weekEndingDate,
+      });
+    } else if (dueSoon[0]) {
+      actions.push({
+        id: `${projectId}:due:${dueSoon[0].id}`,
+        projectId,
+        projectName: project.name,
+        type: 'due_payroll',
+        priority: 'medium',
+        label: `Finish Payroll Week ${dueSoon[0].payrollNumber}`,
+        detail: `Week ending ${dueSoon[0].weekEndingDate} is coming due.`,
+        to: `/projects/${projectId}/payroll/${dueSoon[0].id}`,
+        dueDate: dueSoon[0].weekEndingDate,
+      });
+    }
+
+    if ((workerCount.get(projectId) ?? 0) === 0) {
+      actions.push({
+        id: `${projectId}:workers`,
+        projectId,
+        projectName: project.name,
+        type: 'setup',
+        priority: 'medium',
+        label: 'Add workers and classifications',
+        detail: 'Payroll cannot be certified until workers and trade classifications exist.',
+        to: `/projects/${projectId}/workers`,
+        dueDate: null,
+      });
+    } else if (projectWeeks.length === 0) {
+      actions.push({
+        id: `${projectId}:weeks`,
+        projectId,
+        projectName: project.name,
+        type: 'setup',
+        priority: 'medium',
+        label: 'Create the first payroll week',
+        detail: 'Set up weekly CPR tracking for this project.',
+        to: `/projects/${projectId}/payroll`,
+        dueDate: null,
+      });
+    }
+  }
+
+  for (const cpr of typedCprRows) {
+    const sub = subProjectMap.get(cpr.subcontractorId);
+    if (!sub) continue;
+    const status = getCprQueueStatus(cpr.weekEndingDate, cpr.receivedDate, cpr.isCompliant);
+    if (status !== 'overdue' && status !== 'received-non-compliant') continue;
+    const project = projectMap.get(sub.projectId);
+    if (!project) continue;
+    actions.push({
+      id: `${sub.projectId}:sub-cpr:${cpr.id}`,
+      projectId: sub.projectId,
+      projectName: project.name,
+      type: 'subcontractor_cpr',
+      priority: status === 'overdue' ? 'high' : 'medium',
+      label: status === 'overdue' ? `Collect CPR from ${sub.name}` : `Review non-compliant CPR from ${sub.name}`,
+      detail: `Subcontractor week ending ${cpr.weekEndingDate} needs contractor follow-up.`,
+      to: `/projects/${sub.projectId}`,
+      dueDate: cpr.weekEndingDate,
+    });
+  }
+
+  const priorityRank: Record<ContractorAction['priority'], number> = { critical: 0, high: 1, medium: 2, low: 3 };
+  actions.sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority] || (a.dueDate ?? '9999-99-99').localeCompare(b.dueDate ?? '9999-99-99'));
+
+  res.json({ actions: actions.slice(0, 12) });
 });
 
 // GET /api/dashboard/compliance-trend

@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import supertest from 'supertest';
+import { randomUUID } from 'crypto';
 import { app } from '../../src/server/index.js';
 import type { WorkerComplianceHistory } from '../../src/server/services/complianceService.js';
+import {
+  pinWdToProject,
+  upsertClassifications,
+  upsertWageDetermination,
+} from '../../src/server/services/wageCache.js';
 
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
@@ -19,7 +25,7 @@ async function registerUser(suffix: string): Promise<string> {
   return Array.isArray(cookies) ? cookies.join('; ') : cookies;
 }
 
-async function seedFixture(cookie: string): Promise<{ weekId: string }> {
+async function seedFixture(cookie: string): Promise<{ projectId: string; weekId: string }> {
   const pRes = await supertest(app)
     .post('/api/projects')
     .set('Cookie', cookie)
@@ -54,7 +60,7 @@ async function seedFixture(cookie: string): Promise<{ weekId: string }> {
     .send({ projectId, weekEndingDate: '2025-04-06', payrollNumber: 1 });
   const weekId = wkRes.body.id as string;
 
-  return { weekId };
+  return { projectId, weekId };
 }
 
 // ── Project-level fixture helpers ─────────────────────────────────────────
@@ -129,6 +135,64 @@ async function seedProjectWithViolation(
   return { projectId, weekId };
 }
 
+async function seedPrivateProjectWithCleanPayroll(
+  cookie: string,
+): Promise<{ projectId: string; weekId: string }> {
+  const pRes = await supertest(app)
+    .post('/api/projects')
+    .set('Cookie', cookie)
+    .send({
+      name: 'Submit Ready Private Project',
+      state: 'TX',
+      county: 'Travis',
+      contractType: 'private',
+      awardDate: '2025-03-01',
+      fundingType: 'state',
+    });
+  const projectId = pRes.body.data?.project?.id as string;
+
+  const wRes = await supertest(app)
+    .post(`/api/projects/${projectId}/workers`)
+    .set('Cookie', cookie)
+    .send({ name: 'Submit Ready Worker' });
+  const workerId = wRes.body.data?.worker?.id as string;
+
+  await supertest(app)
+    .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+    .set('Cookie', cookie)
+    .send({
+      tradeCode: 'CARP',
+      tradeDescription: 'Carpenter',
+      laborType: 'journeyworker',
+    });
+
+  const workersRes = await supertest(app)
+    .get(`/api/projects/${projectId}/workers`)
+    .set('Cookie', cookie);
+  const classificationId = workersRes.body.data?.workers?.[0]?.classifications?.[0]?.id as string;
+
+  const wkRes = await supertest(app)
+    .post('/api/payroll/weeks')
+    .set('Cookie', cookie)
+    .send({ projectId, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+  const weekId = wkRes.body.id as string;
+
+  await supertest(app)
+    .post('/api/payroll/entries')
+    .set('Cookie', cookie)
+    .send({
+      payrollWeekId: weekId,
+      workerId,
+      classificationId,
+      monSt: 8,
+      baseRateSnapshot: 50,
+      fringeRateSnapshot: 10,
+      deductions: 20,
+    });
+
+  return { projectId, weekId };
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────
 
 describe('GET /api/compliance/:weekId', () => {
@@ -182,6 +246,145 @@ describe('GET /api/compliance/:weekId', () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.violations)).toBe(true);
+  });
+});
+
+describe('GET /api/compliance/:weekId/submit-ready', () => {
+  it('returns blockers for federal payroll without a locked WD and without entries', async () => {
+    const cookie = await registerUser('submit-ready-blocked');
+    const { weekId } = await seedFixture(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/compliance/${weekId}/submit-ready`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('not_ready');
+    expect(res.body.blockers).toBeGreaterThan(0);
+    expect(res.body.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'wd-lock', severity: 'blocker' }),
+        expect.objectContaining({ id: 'payroll-entries', severity: 'blocker' }),
+      ]),
+    );
+  });
+
+  it('does not block federal submit-ready when a WD is pinned for the project', async () => {
+    const cookie = await registerUser('submit-ready-pinned-wd');
+    const { projectId, weekId } = await seedFixture(cookie);
+    const now = new Date();
+    const wdId = upsertWageDetermination({
+      id: randomUUID(),
+      source: 'federal-dol',
+      wdNumber: `TX-PINNED-${Date.now()}`,
+      revisionNumber: 3,
+      state: 'TX',
+      county: 'Travis',
+      constructionType: 'Building',
+      publishDate: '2025-01-01',
+      rawDocument: 'Pinned WD for submit-ready federal blocker test.',
+      cachedAt: now.toISOString(),
+      cacheExpiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    upsertClassifications(wdId, [
+      { code: 'CARP', description: 'Carpenter', baseRate: 45, fringeRate: 20, totalRate: 65 },
+    ]);
+    pinWdToProject(projectId, wdId, 'Building', null);
+
+    const res = await supertest(app)
+      .get(`/api/compliance/${weekId}/submit-ready`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'wd-lock', severity: 'pass' }),
+      ]),
+    );
+    expect(res.body.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'wd-lock', severity: 'blocker' }),
+      ]),
+    );
+  });
+
+  it('returns needs_review when payroll is clean but reviewer warnings remain', async () => {
+    const cookie = await registerUser('submit-ready-review');
+    const { weekId } = await seedPrivateProjectWithCleanPayroll(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/compliance/${weekId}/submit-ready`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.blockers).toBe(0);
+    expect(res.body.status).toBe('needs_review');
+    expect(res.body.score).toBeGreaterThan(70);
+    expect(res.body.summary.entryCount).toBe(1);
+    expect(res.body.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'compliance-review', severity: 'pass' }),
+        expect.objectContaining({ id: 'export-readiness', severity: 'pass' }),
+      ]),
+    );
+  });
+
+  it('returns 403 when the week belongs to a different user', async () => {
+    const ownerCookie = await registerUser('submit-ready-owner-403');
+    const { weekId } = await seedFixture(ownerCookie);
+    const otherCookie = await registerUser('submit-ready-other-403');
+
+    const res = await supertest(app)
+      .get(`/api/compliance/${weekId}/submit-ready`)
+      .set('Cookie', otherCookie);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/compliance/methodology', () => {
+  it('returns versioned rule profiles and human-review boundaries', async () => {
+    const cookie = await registerUser('methodology');
+
+    const res = await supertest(app)
+      .get('/api/compliance/methodology')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.version).toMatch(/prevailing-wage/);
+    expect(res.body.data.positioning).toContain('human review');
+    expect(res.body.data.profiles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'federal-dbra-cwhssa' }),
+        expect.objectContaining({ id: 'california-public-works' }),
+      ]),
+    );
+    expect(res.body.data.notAutomated.length).toBeGreaterThan(0);
+  });
+});
+
+describe('GET /api/compliance/:weekId/evidence', () => {
+  it('returns payroll evidence with profile, wage source, rate snapshots, and compliance result', async () => {
+    const cookie = await registerUser('week-evidence');
+    const { weekId } = await seedPrivateProjectWithCleanPayroll(cookie);
+
+    const res = await supertest(app)
+      .get(`/api/compliance/${weekId}/evidence`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.methodologyVersion).toMatch(/prevailing-wage/);
+    expect(res.body.data.profile).toEqual(expect.objectContaining({ id: 'private-advisory' }));
+    expect(res.body.data.payrollRows).toEqual([
+      expect.objectContaining({
+        rateSnapshot: expect.objectContaining({ baseRate: expect.any(Number), fringeRate: expect.any(Number) }),
+        hours: expect.objectContaining({ total: expect.any(Number) }),
+      }),
+    ]);
+    expect(res.body.data.compliance).toEqual(expect.objectContaining({ weekId }));
+    expect(res.body.data.humanReviewChecklist.length).toBeGreaterThan(0);
   });
 });
 

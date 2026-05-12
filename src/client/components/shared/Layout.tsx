@@ -4,11 +4,13 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { BottomTabBar } from './BottomTabBar';
 import { useQuery } from '@tanstack/react-query';
 import { Menu, X, Clock } from 'lucide-react';
+import { CopilotWidget } from '../copilot/CopilotWidget';
 import { useAuth } from '../../hooks/useAuth';
 import { useSyncStatus } from '../../hooks/useSyncStatus';
 import { OfflineBanner, OfflineBadge } from '../ui/OfflineBanner';
 import { SyncStatusIndicator } from '../ui/SyncStatusIndicator';
 import { PwaInstallBanner } from '../ui/PwaInstallBanner';
+import { ProjectWorkspaceNav } from '../projects/ProjectWorkspaceNav';
 
 function navCls({ isActive }: { isActive: boolean }) {
   return `text-sm font-medium transition-colors ${
@@ -77,6 +79,11 @@ export function Layout({ children }: LayoutProps) {
 
   const isOwner = team?.isOwner ?? false;
   const syncStatus = useSyncStatus();
+  const projectId = (() => {
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments[0] !== 'projects') return null;
+    return segments[1] ?? null;
+  })();
 
   async function handleLogout() {
     await logout();
@@ -112,7 +119,7 @@ export function Layout({ children }: LayoutProps) {
 
           {/* Desktop nav links */}
           <div className="hidden sm:flex items-center gap-6">
-            <NavLink to="/dashboard" className={navCls}>Projects</NavLink>
+            <NavLink to="/dashboard" className={navCls}>Dashboard</NavLink>
             <NavLink to="/field" className={({ isActive }) =>
               `flex items-center gap-1.5 text-sm font-medium transition-colors ${isActive ? 'text-brand-gold' : 'text-gray-400 hover:text-white'}`
             }>
@@ -121,17 +128,29 @@ export function Layout({ children }: LayoutProps) {
             </NavLink>
             <NavLink to="/wages" className={navCls}>Wage Lookup</NavLink>
             <NavLink to="/reports" className={navCls}>Reports</NavLink>
+            <NavLink to="/compliance-methodology" className={navCls}>Methodology</NavLink>
             <NavLink to="/team" className={navCls}>Team</NavLink>
             <NavLink to="/settings/integrations" className={navCls}>Integrations</NavLink>
-            <NavLink to="/settings/security" className={navCls}>Security</NavLink>
-            <NavLink to="/settings/api-keys" className={navCls}>API Keys</NavLink>
-            <NavLink to="/settings/webhooks" className={navCls}>Webhooks</NavLink>
-            {isOwner && (
-              <>
-                <NavLink to="/billing" className={navCls}>Billing</NavLink>
-                <NavLink to="/admin/coverage" className={navCls}>Coverage</NavLink>
-              </>
-            )}
+            <details className="relative group">
+              <summary className="list-none cursor-pointer text-sm font-medium text-gray-400 transition-colors hover:text-white">
+                Settings
+              </summary>
+              <div className="absolute right-0 mt-3 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
+                <Link to="/settings/security" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Security</Link>
+                <Link to="/settings/api-keys" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">API Keys</Link>
+                <Link to="/settings/webhooks" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Webhooks</Link>
+                <Link to="/settings/sso" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">SSO</Link>
+                <Link to="/settings/mfa" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">MFA</Link>
+                {isOwner && (
+                  <>
+                    <div className="my-2 border-t border-gray-100" />
+                    <Link to="/billing" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Billing</Link>
+                    <Link to="/admin/coverage" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Coverage Admin</Link>
+                    <Link to="/admin/copilot" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Copilot Audit</Link>
+                  </>
+                )}
+              </div>
+            </details>
             <div className="w-px h-4 bg-white/15" aria-hidden="true" />
             <OfflineBadge />
             <SyncStatusIndicator status={syncStatus} />
@@ -181,7 +200,7 @@ export function Layout({ children }: LayoutProps) {
                 onClick={() => setDrawerOpen(false)}
                 className={({ isActive }) => mobileNavCls(isActive)}
               >
-                Projects
+                Dashboard
               </NavLink>
               <NavLink
                 to="/field"
@@ -206,6 +225,13 @@ export function Layout({ children }: LayoutProps) {
                 Reports
               </NavLink>
               <NavLink
+                to="/compliance-methodology"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                Methodology
+              </NavLink>
+              <NavLink
                 to="/team"
                 onClick={() => setDrawerOpen(false)}
                 className={({ isActive }) => mobileNavCls(isActive)}
@@ -219,6 +245,9 @@ export function Layout({ children }: LayoutProps) {
               >
                 Integrations
               </NavLink>
+              <div className="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Settings
+              </div>
               <NavLink
                 to="/settings/security"
                 onClick={() => setDrawerOpen(false)}
@@ -240,8 +269,25 @@ export function Layout({ children }: LayoutProps) {
               >
                 Webhooks
               </NavLink>
+              <NavLink
+                to="/settings/sso"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                SSO
+              </NavLink>
+              <NavLink
+                to="/settings/mfa"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                MFA
+              </NavLink>
               {isOwner && (
                 <>
+                  <div className="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    Owner Admin
+                  </div>
                   <NavLink
                     to="/billing"
                     onClick={() => setDrawerOpen(false)}
@@ -255,6 +301,13 @@ export function Layout({ children }: LayoutProps) {
                     className={({ isActive }) => mobileNavCls(isActive)}
                   >
                     Coverage
+                  </NavLink>
+                  <NavLink
+                    to="/admin/copilot"
+                    onClick={() => setDrawerOpen(false)}
+                    className={({ isActive }) => mobileNavCls(isActive)}
+                  >
+                    Copilot
                   </NavLink>
                 </>
               )}
@@ -277,8 +330,17 @@ export function Layout({ children }: LayoutProps) {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {children}
+        {projectId ? (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+            <ProjectWorkspaceNav projectId={projectId} />
+            <div className="min-w-0">{children}</div>
+          </div>
+        ) : (
+          children
+        )}
       </main>
+
+      <CopilotWidget />
 
       {/* Phase 97: Mobile bottom tab bar */}
       <BottomTabBar />

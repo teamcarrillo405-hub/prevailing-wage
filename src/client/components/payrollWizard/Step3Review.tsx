@@ -26,11 +26,21 @@ interface WeekViolation {
   detail: string;
 }
 
+interface DeductionViolation {
+  entryId: string;
+  workerId: string;
+  workerName: string;
+  deductions: number;
+  grossWages: number;
+  deductionPct: number;
+}
+
 interface ComplianceResponse {
   weekId: string;
   projectId: string;
   violations: ComplianceViolation[];
   weekViolations: WeekViolation[];
+  deductionViolations: DeductionViolation[];
   hasViolations: boolean;
   certProperPayment: boolean;
   certAccuratePayroll: boolean;
@@ -73,15 +83,18 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
 
   const violations = compliance?.violations ?? [];
   const weekViolations = compliance?.weekViolations ?? [];
+  const deductionViolations = compliance?.deductionViolations ?? [];
   const entries = weekData?.entries ?? [];
   const totalGross = entries.reduce((sum, e) => sum + (e.entry.grossWages ?? 0), 0);
   const totalNet = entries.reduce((sum, e) => sum + (e.entry.netPay ?? 0), 0);
 
-  const hasViolations = violations.length > 0 || weekViolations.length > 0;
+  const hasViolations = compliance?.hasViolations ?? (
+    violations.length > 0 || weekViolations.length > 0 || deductionViolations.length > 0
+  );
 
   // Deduplicated list of worker names from entry-level violations
-  const affectedWorkers = violations.length > 0
-    ? [...new Set(violations.map((v) => v.workerName))]
+  const affectedWorkers = violations.length > 0 || deductionViolations.length > 0
+    ? [...new Set([...violations, ...deductionViolations].map((v) => v.workerName))]
     : [];
 
   return (
@@ -95,12 +108,12 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
         )}
         {!cError && !hasViolations && (
           <p className="text-sm text-green-700">
-            All {entries.length} worker{entries.length === 1 ? '' : 's'} pass federal minimums.
+            No blocking wage, overtime, deduction, or apprentice issue was detected for {entries.length} worker{entries.length === 1 ? '' : 's'}.
           </p>
         )}
         {!cError && hasViolations && (
           <div className="rounded-sm border border-red-200 bg-red-50 p-3 mb-3 text-sm text-red-700">
-            <p className="font-semibold mb-1">Hours corrections required before you can certify.</p>
+            <p className="font-semibold mb-1">Payroll review required before certification.</p>
             {affectedWorkers.length > 0 && (
               <p>
                 Fix the issues below for{' '}
@@ -122,7 +135,7 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
               </p>
             )}
             {affectedWorkers.length === 0 && (
-              <p>Review the week-level issues below, then go back to correct the hours grid.</p>
+              <p>Review the week-level issues below, then go back to correct the payroll grid.</p>
             )}
           </div>
         )}
@@ -148,6 +161,21 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
             className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 mb-2 text-sm"
           >
             <strong>{w.violationType}</strong>: {w.detail}
+          </div>
+        ))}
+        {deductionViolations.map((v, i) => (
+          <div
+            key={`deduction-${v.entryId}-${i}`}
+            className="rounded-sm border border-amber-300 bg-amber-50 p-3 mb-2 text-sm"
+          >
+            <button
+              type="button"
+              className="font-semibold underline cursor-pointer hover:text-amber-900"
+              onClick={() => onBack([v.workerId])}
+            >
+              {v.workerName}
+            </button>{' '}
+            - deduction review: ${v.deductions.toFixed(2)} non-tax deductions from ${v.grossWages.toFixed(2)} gross ({v.deductionPct}%).
           </div>
         ))}
       </section>
@@ -197,7 +225,7 @@ export function Step3Review({ projectId, weekId, onBack }: Props) {
           variant="secondary"
           onClick={() =>
             hasViolations
-              ? onBack(violations.map((v) => v.workerId))
+              ? onBack([...violations, ...deductionViolations].map((v) => v.workerId))
               : onBack()
           }
         >

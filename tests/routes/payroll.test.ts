@@ -90,6 +90,169 @@ describe('payroll routes', () => {
     expect(Array.isArray(res.body.entries)).toBe(true);
   });
 
+  it('POST /api/payroll/entries repairs zero rates from the project-pinned WD', async () => {
+    const cookie = await registerAndLogin('entry-zero-rates-pinned-wd');
+    const county = `Pinned Payroll County ${Date.now()}`;
+    const projectRes = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Pinned Payroll Rate Project',
+        state: 'CA',
+        county,
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-01-01',
+        fundingType: 'federal',
+      });
+    const projectId = projectRes.body.data?.project?.id as string;
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const { upsertWageDetermination, upsertClassifications, pinWdToProject } = await import('../../src/server/services/wageCache.js');
+    const now = new Date();
+
+    const pinnedWdId = upsertWageDetermination({
+      id: `payroll-pinned-wd-${Date.now()}`,
+      source: 'federal-dol',
+      wdNumber: `PAYROLL-PINNED-${Date.now()}`,
+      revisionNumber: 0,
+      state: 'CA',
+      county,
+      constructionType: 'Building',
+      publishDate: '2025-01-01',
+      rawDocument: 'Pinned WD used to repair zero entry rates.',
+      cachedAt: now.toISOString(),
+      cacheExpiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    upsertClassifications(pinnedWdId, [
+      { code: 'CARP', description: 'Carpenter', baseRate: 44.15, fringeRate: 19.82, totalRate: 63.97 },
+    ]);
+    pinWdToProject(projectId, pinnedWdId, 'Building', null);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2025-01-26', payrollNumber: 4 });
+    const weekId = weekRes.body.id as string;
+
+    const entryRes = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        tueSt: 8,
+        wedSt: 8,
+        thuSt: 8,
+        friSt: 8,
+        baseRateSnapshot: 0,
+        fringeRateSnapshot: 0,
+        grossWages: null,
+        netPay: null,
+      });
+
+    expect(entryRes.status).toBe(201);
+    const detailRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    const entry = detailRes.body.entries[0].entry;
+    expect(entry.baseRateSnapshot).toBe(44.15);
+    expect(entry.fringeRateSnapshot).toBe(19.82);
+    expect(entry.grossWages).toBeCloseTo((44.15 + 19.82) * 40);
+  });
+
+  it('POST /api/payroll/entries repairs apprentice zero rates using apprentice percent', async () => {
+    const cookie = await registerAndLogin('entry-zero-rates-apprentice');
+    const county = `Apprentice Payroll County ${Date.now()}`;
+    const projectRes = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Apprentice Payroll Rate Project',
+        state: 'CA',
+        county,
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-01-01',
+        fundingType: 'federal',
+      });
+    const projectId = projectRes.body.data?.project?.id as string;
+
+    const workerRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers`)
+      .set('Cookie', cookie)
+      .send({ name: 'Apprentice Rate Worker' });
+    const workerId = workerRes.body.data?.worker?.id as string;
+
+    const classRes = await supertest(app)
+      .post(`/api/projects/${projectId}/workers/${workerId}/classifications`)
+      .set('Cookie', cookie)
+      .send({
+        tradeCode: 'ELEC',
+        tradeDescription: 'Electrician',
+        laborType: 'apprentice',
+        apprenticePercent: 50,
+        programName: 'IBEW Registered Apprenticeship Program',
+      });
+    const classificationId = classRes.body.data?.classification?.id as string;
+
+    const { upsertWageDetermination, upsertClassifications, pinWdToProject } = await import('../../src/server/services/wageCache.js');
+    const now = new Date();
+    const pinnedWdId = upsertWageDetermination({
+      id: `payroll-apprentice-pinned-wd-${Date.now()}`,
+      source: 'federal-dol',
+      wdNumber: `PAYROLL-APP-PINNED-${Date.now()}`,
+      revisionNumber: 0,
+      state: 'CA',
+      county,
+      constructionType: 'Building',
+      publishDate: '2025-01-01',
+      rawDocument: 'Pinned WD used to repair apprentice zero entry rates.',
+      cachedAt: now.toISOString(),
+      cacheExpiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    upsertClassifications(pinnedWdId, [
+      { code: 'ELEC', description: 'Electrician', baseRate: 44.15, fringeRate: 19.82, totalRate: 63.97 },
+    ]);
+    pinWdToProject(projectId, pinnedWdId, 'Building', null);
+
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2025-02-02', payrollNumber: 5 });
+    const weekId = weekRes.body.id as string;
+
+    const entryRes = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        tueSt: 8,
+        wedSt: 8,
+        thuSt: 8,
+        friSt: 8,
+        baseRateSnapshot: 0,
+        fringeRateSnapshot: 0,
+        grossWages: null,
+        netPay: null,
+      });
+
+    expect(entryRes.status).toBe(201);
+    const detailRes = await supertest(app)
+      .get(`/api/payroll/weeks/${weekId}`)
+      .set('Cookie', cookie);
+    const entry = detailRes.body.entries[0].entry;
+    expect(entry.baseRateSnapshot).toBe(22.08);
+    expect(entry.fringeRateSnapshot).toBe(19.82);
+    expect(entry.grossWages).toBeCloseTo((22.08 + 19.82) * 40);
+  });
+
   it('PUT /api/payroll/entries/:id upserts daily hours for a worker', async () => {
     const cookie = await registerAndLogin('put-entries');
     const projectId = await createProject(cookie);

@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import rateLimit from 'express-rate-limit';
 import { getDb } from '../db/index.js';
-import { users, projectMembers, teamInvites } from '../db/schema.js';
+import { users, projectMembers, teamInvites, onboardingProfiles } from '../db/schema.js';
 import { hashPassword, verifyPassword, createSessionToken } from '../services/auth.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -44,6 +44,8 @@ const RegisterSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
   inviteCode: z.string().optional(),
+  hccMembershipNumber: z.string().trim().min(3).max(64).optional(),
+  companyName: z.string().trim().min(2).max(160).optional(),
 });
 
 const LoginSchema = z.object({
@@ -53,7 +55,7 @@ const LoginSchema = z.object({
 
 // POST /api/auth/register
 authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (req, res) => {
-  const { email, password, inviteCode } = req.body as z.infer<typeof RegisterSchema>;
+  const { email, password, inviteCode, hccMembershipNumber, companyName } = req.body as z.infer<typeof RegisterSchema>;
 
   if (process.env.INVITE_CODE && inviteCode !== process.env.INVITE_CODE) {
     res.status(403).json({ error: 'Invalid invitation code' });
@@ -77,6 +79,8 @@ authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (r
     id,
     email,
     passwordHash,
+    hccMembershipNumber: hccMembershipNumber || null,
+    companyName: companyName || null,
     createdAt: now,
     updatedAt: now,
   });
@@ -86,7 +90,17 @@ authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (r
   res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
   void insertLoginAttempt({ email, success: true, ipAddress: req.ip });
   void insertSecurityEvent({ userId: id, eventType: 'register', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined });
-  res.status(201).json({ data: { user: { id, email } } });
+  res.status(201).json({
+    data: {
+      user: {
+        id,
+        email,
+        hccMembershipNumber: hccMembershipNumber || null,
+        companyName: companyName || null,
+        onboardingCompletedAt: null,
+      },
+    },
+  });
 });
 
 // POST /api/auth/login
@@ -126,7 +140,22 @@ authRouter.post('/login', loginLimiter, validate(LoginSchema), async (req, res) 
   res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
   void insertLoginAttempt({ email, success: true, ipAddress: req.ip });
   void insertSecurityEvent({ userId: user.id, eventType: 'login_success', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined });
-  res.status(200).json({ data: { user: { id: user.id, email: user.email } } });
+  const [profile] = await db
+    .select({ completedAt: onboardingProfiles.completedAt })
+    .from(onboardingProfiles)
+    .where(eq(onboardingProfiles.userId, user.id))
+    .limit(1);
+  res.status(200).json({
+    data: {
+      user: {
+        id: user.id,
+        email: user.email,
+        hccMembershipNumber: user.hccMembershipNumber ?? null,
+        companyName: user.companyName ?? null,
+        onboardingCompletedAt: profile?.completedAt ?? null,
+      },
+    },
+  });
 });
 
 // ── POST /api/auth/mfa-login ──────────────────────────────────────────────
@@ -197,7 +226,22 @@ authRouter.post('/mfa-login', mfaLoginLimiter, validate(MfaLoginSchema), async (
     userAgent: req.headers['user-agent'] as string | undefined,
     metadata: { mfaMethod: method },
   });
-  res.status(200).json({ data: { user: { id: user.id, email: user.email } } });
+  const [profile] = await db
+    .select({ completedAt: onboardingProfiles.completedAt })
+    .from(onboardingProfiles)
+    .where(eq(onboardingProfiles.userId, user.id))
+    .limit(1);
+  res.status(200).json({
+    data: {
+      user: {
+        id: user.id,
+        email: user.email,
+        hccMembershipNumber: user.hccMembershipNumber ?? null,
+        companyName: user.companyName ?? null,
+        onboardingCompletedAt: profile?.completedAt ?? null,
+      },
+    },
+  });
 });
 
 // POST /api/auth/logout
@@ -286,8 +330,41 @@ authRouter.post('/accept-invite', validate(AcceptInviteSchema), async (req, res)
 });
 
 // GET /api/auth/me
-authRouter.get('/me', requireAuth, (req, res) => {
-  res.json({ data: { user: { id: req.user!.userId, email: req.user!.email } } });
+authRouter.get('/me', requireAuth, async (req, res) => {
+  const db = getDb();
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      hccMembershipNumber: users.hccMembershipNumber,
+      companyName: users.companyName,
+    })
+    .from(users)
+    .where(eq(users.id, req.user!.userId))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const [profile] = await db
+    .select({ completedAt: onboardingProfiles.completedAt })
+    .from(onboardingProfiles)
+    .where(eq(onboardingProfiles.userId, user.id))
+    .limit(1);
+
+  res.json({
+    data: {
+      user: {
+        id: user.id,
+        email: user.email,
+        hccMembershipNumber: user.hccMembershipNumber ?? null,
+        companyName: user.companyName ?? null,
+        onboardingCompletedAt: profile?.completedAt ?? null,
+      },
+    },
+  });
 });
 
 // GET /api/auth/token — returns the raw session JWT so mobile clients can use
