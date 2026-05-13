@@ -126,19 +126,26 @@ export function Layout({ children }: LayoutProps) {
               <Clock className="w-3.5 h-3.5" />
               Field
             </NavLink>
-            <NavLink to="/wages" className={navCls}>Wage Lookup</NavLink>
             <NavLink to="/reports" className={navCls}>Reports</NavLink>
-            <NavLink to="/state-support" className={navCls}>States</NavLink>
-            <NavLink to="/pilot-intake" className={navCls}>Pilot</NavLink>
-            <NavLink to="/competitive-readiness" className={navCls}>Readiness</NavLink>
-            <NavLink to="/compliance-methodology" className={navCls}>Methodology</NavLink>
             <NavLink to="/team" className={navCls}>Team</NavLink>
-            <NavLink to="/settings/integrations" className={navCls}>Integrations</NavLink>
+            <details className="relative group">
+              <summary className="list-none cursor-pointer text-sm font-medium text-gray-400 transition-colors hover:text-white">
+                Tools
+              </summary>
+              <div className="absolute right-0 mt-3 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
+                <Link to="/wages" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Wage Lookup</Link>
+                <Link to="/state-support" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">State Coverage</Link>
+                <Link to="/compliance-methodology" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Methodology</Link>
+                <Link to="/competitive-readiness" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Readiness Plan</Link>
+                <Link to="/pilot-intake" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Pilot Intake</Link>
+              </div>
+            </details>
             <details className="relative group">
               <summary className="list-none cursor-pointer text-sm font-medium text-gray-400 transition-colors hover:text-white">
                 Settings
               </summary>
               <div className="absolute right-0 mt-3 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
+                <Link to="/settings/integrations" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Integrations</Link>
                 <Link to="/settings/security" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Security</Link>
                 <Link to="/settings/api-keys" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">API Keys</Link>
                 <Link to="/settings/webhooks" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Webhooks</Link>
@@ -214,46 +221,11 @@ export function Layout({ children }: LayoutProps) {
                 Field Clock
               </NavLink>
               <NavLink
-                to="/wages"
-                onClick={() => setDrawerOpen(false)}
-                className={({ isActive }) => mobileNavCls(isActive)}
-              >
-                Wage Lookup
-              </NavLink>
-              <NavLink
                 to="/reports"
                 onClick={() => setDrawerOpen(false)}
                 className={({ isActive }) => mobileNavCls(isActive)}
               >
                 Reports
-              </NavLink>
-              <NavLink
-                to="/state-support"
-                onClick={() => setDrawerOpen(false)}
-                className={({ isActive }) => mobileNavCls(isActive)}
-              >
-                State Support
-              </NavLink>
-              <NavLink
-                to="/pilot-intake"
-                onClick={() => setDrawerOpen(false)}
-                className={({ isActive }) => mobileNavCls(isActive)}
-              >
-                Pilot Intake
-              </NavLink>
-              <NavLink
-                to="/competitive-readiness"
-                onClick={() => setDrawerOpen(false)}
-                className={({ isActive }) => mobileNavCls(isActive)}
-              >
-                Competitive Readiness
-              </NavLink>
-              <NavLink
-                to="/compliance-methodology"
-                onClick={() => setDrawerOpen(false)}
-                className={({ isActive }) => mobileNavCls(isActive)}
-              >
-                Methodology
               </NavLink>
               <NavLink
                 to="/team"
@@ -262,6 +234,28 @@ export function Layout({ children }: LayoutProps) {
               >
                 Team
               </NavLink>
+              <div className="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Tools
+              </div>
+              {[
+                ['/wages', 'Wage Lookup'],
+                ['/state-support', 'State Coverage'],
+                ['/compliance-methodology', 'Methodology'],
+                ['/competitive-readiness', 'Readiness Plan'],
+                ['/pilot-intake', 'Pilot Intake'],
+              ].map(([to, label]) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setDrawerOpen(false)}
+                  className={({ isActive }) => mobileNavCls(isActive)}
+                >
+                  {label}
+                </NavLink>
+              ))}
+              <div className="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Settings
+              </div>
               <NavLink
                 to="/settings/integrations"
                 onClick={() => setDrawerOpen(false)}
@@ -269,9 +263,6 @@ export function Layout({ children }: LayoutProps) {
               >
                 Integrations
               </NavLink>
-              <div className="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                Settings
-              </div>
               <NavLink
                 to="/settings/security"
                 onClick={() => setDrawerOpen(false)}

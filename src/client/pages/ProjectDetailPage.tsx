@@ -2226,8 +2226,8 @@ export function ProjectDetailPage() {
 
           <HelpCallout
             icon={Workflow}
-            title="Your Project Workflow"
-            body={<>Complete all four steps before generating your <TermTooltip term="WH-347" definition={WH347_DEF} />. Submitting an incomplete certified payroll can trigger a DOL audit.</>}
+            title="Complete the project in order"
+            body={<>Use the workflow on the left: setup, wage rates, workers, payroll, audit packet, then exports. Complete each step before generating your <TermTooltip term="WH-347" definition={WH347_DEF} />.</>}
           />
 
           <WorkflowProgress steps={steps} />
@@ -2522,7 +2522,7 @@ export function ProjectDetailPage() {
           {/* Wage determinations panel */}
           <div id="wage-determinations" className="scroll-mt-24">
           <Card className="mt-8 shadow-card-elevated">
-            <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Wage Determinations</h2>
+            <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Wage Rates</h2>
             {/* Stale WD banner — COMP-06 Phase 88 */}
             {showStaleBanner && primaryPin && (
               <StaleWdBanner lastFetchedAt={primaryPin.lastFetchedAt} />

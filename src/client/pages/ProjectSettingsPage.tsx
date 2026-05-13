@@ -853,7 +853,7 @@ export function ProjectSettingsPage() {
             &larr; Back to project
           </Link>
           <h1 className="font-headline text-xl font-bold text-brand-navy mt-1">
-            Project Settings
+            Project Setup
           </h1>
           <p className="text-sm text-gray-500">{project.name}</p>
         </div>

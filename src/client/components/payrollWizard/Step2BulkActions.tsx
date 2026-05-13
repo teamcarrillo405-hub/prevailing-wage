@@ -88,8 +88,8 @@ export function Step2BulkActions({ onApplyStandardWeekAll, projectState, toggles
           <ToggleChip
             active={toggles.caFica}
             onClick={() => onToggle('caFica')}
-            label="CA deductions (FICA, FIT, SIT)"
-            title="Show tax withholding columns — FICA, Federal/State income tax, SDI"
+            label="CA payroll deductions"
+            title="Show A-1-131 deduction fields from the payroll register: taxes, SDI, union dues, health/welfare, pension, savings, and other deductions."
           />
         </>
       )}

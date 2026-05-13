@@ -254,15 +254,15 @@ export function ProjectActivityPage() {
         </Link>
 
         <PageHeader
-          title="Evidence Dashboard"
-          subtitle="Audit trail, payroll submissions, field photos, and GPS-backed activity"
+          title="Audit Packet"
+          subtitle="Submission proof, payroll records, photos, GPS activity, and audit trail"
         />
 
         <div className="grid grid-cols-1 md:grid-cols-[1.15fr_0.85fr] gap-4 mb-4">
           <Card padding="sm">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Evidence status</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Audit packet status</p>
                 <p className="mt-2 text-2xl font-semibold text-gray-900">
                   {evidenceSummary && evidenceSummary.payrollWeekCount === 0
                     ? 'No payroll weeks yet'
@@ -311,7 +311,7 @@ export function ProjectActivityPage() {
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Required vs collected</p>
                 <p className="mt-1 text-sm text-gray-600">
-                  Evidence packet readiness based on payroll submission, audit, photo, and GPS proof.
+                  Click a category to see the exact week and page that needs attention.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -395,7 +395,7 @@ export function ProjectActivityPage() {
                         className="flex items-center justify-between gap-3 rounded border border-gray-200 bg-white px-3 py-2 text-sm hover:border-brand-gold hover:bg-brand-gold/5"
                       >
                         <span>
-                          <span className="font-medium text-gray-900">Week {week.payrollNumber}</span>
+                          <span className="font-medium text-gray-900">Open Week {week.payrollNumber}</span>
                           <span className="block text-xs text-gray-500">
                             {selectedRequirement.key === 'payroll_submissions'
                               ? 'Open submission status'

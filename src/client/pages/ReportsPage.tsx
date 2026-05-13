@@ -321,7 +321,7 @@ export function ReportsPage() {
         {/* Page header */}
         <div className="flex items-center justify-between">
           <PageHeader
-            title="Reports"
+            title="Reports & Exports"
             action={
               <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 print-hidden">
                 &larr; Project

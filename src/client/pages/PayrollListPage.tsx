@@ -228,13 +228,13 @@ export function PayrollListPage() {
         </button>
 
         <PageHeader
-          title="Payroll Weeks"
+          title="Payroll"
         />
 
         <HelpCallout
           icon={FileCheck}
-          title="Your Payroll Weeks"
-          body={<>Each week records your workers' hours and pay. Create a new payroll week for each reporting period. Download the <TermTooltip term="WH-347" definition={WH347_DEF} /> when all entries are complete.</>}
+          title="Work one week at a time"
+          body={<>Create or open the current week, enter hours and deductions, clear blockers, then download the <TermTooltip term="WH-347" definition={WH347_DEF} /> and any state forms.</>}
         />
 
         {isLoading && <PayrollListSkeleton />}

@@ -261,6 +261,14 @@ export function Step2HoursGrid({
 
   return (
     <div>
+      <div className="mb-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
+        <p className="text-sm font-semibold text-gray-900">Enter payroll in order</p>
+        <div className="mt-2 grid gap-2 text-xs text-gray-600 sm:grid-cols-3">
+          <p><span className="font-semibold text-gray-900">1. Hours:</span> enter straight time, overtime, and double-time where required.</p>
+          <p><span className="font-semibold text-gray-900">2. Rates:</span> confirm base and fringe rates match the wage determination.</p>
+          <p><span className="font-semibold text-gray-900">3. Deductions:</span> use payroll-register values for taxes, benefits, dues, and other A-1-131 deductions.</p>
+        </div>
+      </div>
       <Step2BulkActions
         onApplyStandardWeekAll={applyStandardWeekToAll}
         projectState={projectState}

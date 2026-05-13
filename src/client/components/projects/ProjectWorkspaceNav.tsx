@@ -7,7 +7,6 @@ import {
   Database,
   FileCheck,
   LayoutDashboard,
-  Settings,
   ShieldCheck,
   Users,
 } from 'lucide-react';
@@ -144,17 +143,19 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
         ? 'ready'
         : 'in_progress';
 
-  const items = [
-    { label: 'Overview', to: base, icon: LayoutDashboard, exact: true, status: readinessStatus === 'ready' ? 'ready' : 'warning' },
-    { label: 'Setup', to: `${base}/settings`, icon: BriefcaseBusiness, status: setupComplete ? 'complete' : 'warning' },
-    { label: 'Wage Determination', to: `${base}#wage-determinations`, icon: Database, hash: '#wage-determinations', status: primaryWd ? 'complete' : 'blocked' },
-    { label: 'Workers', to: `${base}/workers`, icon: Users, status: workers.length > 0 ? 'complete' : 'warning' },
-    { label: 'Payroll', to: `${base}/payroll`, icon: FileCheck, status: openPayrollWeeks > 0 ? 'warning' : payrollStarted ? 'complete' : 'warning' },
+  const workflowItems = [
+    { step: 1, label: 'Project Home', helper: 'Next action', to: base, icon: LayoutDashboard, exact: true, status: readinessStatus === 'ready' ? 'ready' : 'warning' },
+    { step: 2, label: 'Setup', helper: 'Agency, jobsite, required fields', to: `${base}/settings`, icon: BriefcaseBusiness, status: setupComplete ? 'complete' : 'warning' },
+    { step: 3, label: 'Wage Rates', helper: 'Determinations and classifications', to: `${base}#wage-determinations`, icon: Database, hash: '#wage-determinations', status: primaryWd ? 'complete' : 'blocked' },
+    { step: 4, label: 'Workers', helper: 'Roster and classifications', to: `${base}/workers`, icon: Users, status: workers.length > 0 ? 'complete' : 'warning' },
+    { step: 5, label: 'Payroll', helper: 'Hours, deductions, compliance', to: `${base}/payroll`, icon: FileCheck, status: openPayrollWeeks > 0 ? 'warning' : payrollStarted ? 'complete' : 'warning' },
+    { step: 6, label: 'Audit Packet', helper: 'Evidence and submission proof', to: `${base}/activity`, icon: Activity, status: violationCount > 0 ? 'warning' : 'clean' },
+    { step: 7, label: 'Reports & Exports', helper: 'Final records', to: `${base}/reports`, icon: FileCheck, status: submittedWeeks > 0 ? 'complete' : 'warning' },
+  ];
+
+  const supportItems = [
     { label: 'Subcontractors', to: `${base}#subcontractors`, icon: ShieldCheck, hash: '#subcontractors', status: openCprItems > 0 ? 'warning' : 'clean' },
     { label: 'Field Clock', to: `${base}/field`, icon: Clock, status: 'in_progress' },
-    { label: 'Reports & Exports', to: `${base}/reports`, icon: FileCheck, status: submittedWeeks > 0 ? 'complete' : 'warning' },
-    { label: 'Evidence / Audit Trail', to: `${base}/activity`, icon: Activity, status: violationCount > 0 ? 'warning' : 'clean' },
-    { label: 'Settings', to: `${base}/settings`, icon: Settings, status: 'in_progress' },
   ];
 
   function isHashActive(item: { hash?: string; to: string }) {
@@ -206,7 +207,60 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
         </div>
 
         <nav className="max-h-[66vh] overflow-y-auto p-2" aria-label="Project workflow">
-          {items.map((item) => {
+          <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Client workflow
+          </p>
+          {workflowItems.map((item) => {
+            const Icon = item.icon;
+            const active = isRouteActive(item);
+            return item.hash ? (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={`mb-1 flex min-h-[52px] items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  active ? 'bg-nav-dark text-white' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
+                }`}
+              >
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  active ? 'bg-brand-gold text-nav-dark' : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {item.step}
+                </span>
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block">{item.label}</span>
+                  <span className={`block text-[11px] font-normal ${active ? 'text-gray-300' : 'text-gray-500'}`}>{item.helper}</span>
+                </span>
+                <span className={`h-2 w-2 shrink-0 rounded-full ${item.status === 'blocked' ? 'bg-red-500' : item.status === 'warning' ? 'bg-amber-400' : 'bg-emerald-500'}`} />
+              </Link>
+            ) : (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                end={item.exact}
+                className={() => `mb-1 flex min-h-[52px] items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  active ? 'bg-nav-dark text-white' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
+                }`}
+              >
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  active ? 'bg-brand-gold text-nav-dark' : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {item.step}
+                </span>
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block">{item.label}</span>
+                  <span className={`block text-[11px] font-normal ${active ? 'text-gray-300' : 'text-gray-500'}`}>{item.helper}</span>
+                </span>
+                <span className={`h-2 w-2 shrink-0 rounded-full ${item.status === 'blocked' ? 'bg-red-500' : item.status === 'warning' ? 'bg-amber-400' : 'bg-emerald-500'}`} />
+              </NavLink>
+            );
+          })}
+          <div className="my-2 border-t border-gray-100" />
+          <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Supporting tools
+          </p>
+          {supportItems.map((item) => {
             const Icon = item.icon;
             const active = isRouteActive(item);
             return item.hash ? (
@@ -225,7 +279,6 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
               <NavLink
                 key={item.label}
                 to={item.to}
-                end={item.exact}
                 className={() => `mb-1 flex min-h-[44px] items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                   active ? 'bg-nav-dark text-white' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
                 }`}
