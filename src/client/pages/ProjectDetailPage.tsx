@@ -2044,6 +2044,13 @@ export function ProjectDetailPage() {
     staleTime: 60_000,
   });
 
+  const { data: cprQueueData } = useQuery({
+    queryKey: ['subcontractor-cpr-queue', id],
+    queryFn: () => api.get<{ data: { queue: SubcontractorCprQueueItem[]; summary: SubcontractorCprQueueSummary } }>(`/projects/${id}/subcontractor-cpr-queue`),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+
   const { data: weeksData } = useQuery({
     queryKey: ['payroll-weeks', id],
     queryFn: () => api.get<{ weeks: { id: string; submittedAt: string | null; weekEndingDate: string; payrollNumber: number }[] }>(`/payroll/projects/${id}/weeks`),
