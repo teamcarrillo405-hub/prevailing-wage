@@ -164,11 +164,23 @@ router.get('/:id/subcontractor-cpr-queue', async (req, res) => {
       notes: cpr?.notes ?? null,
       uploadTokenExpiresAt: cpr?.uploadTokenExpiresAt ?? null,
       uploadedAt: cpr?.uploadedAt ?? null,
+      canRequestUpload: Boolean(sub.contactEmail && (status === 'overdue' || status === 'not-received')),
+      requiresCorrection: status === 'received-non-compliant',
+      evidenceState:
+        status === 'received-compliant'
+          ? 'accepted'
+          : status === 'received-non-compliant'
+          ? 'correction-required'
+          : cpr?.uploadTokenExpiresAt
+          ? 'request-sent'
+          : 'not-requested',
       nextAction:
         status === 'received-compliant'
           ? 'No action needed.'
           : status === 'received-non-compliant'
           ? 'Request corrected CPR and document the issue.'
+          : cpr?.uploadTokenExpiresAt
+          ? 'Follow up on the active upload request.'
           : sub.contactEmail
           ? 'Send CPR upload request.'
           : 'Add a subcontractor contact email.',
@@ -186,6 +198,8 @@ router.get('/:id/subcontractor-cpr-queue', async (req, res) => {
     notReceived: queue.filter((row) => row.status === 'not-received').length,
     nonCompliant: queue.filter((row) => row.status === 'received-non-compliant').length,
     readyToRequest: queue.filter((row) => row.contactEmail && (row.status === 'overdue' || row.status === 'not-received')).length,
+    correctionRequired: queue.filter((row) => row.requiresCorrection).length,
+    missingContact: queue.filter((row) => !row.contactEmail && (row.status === 'overdue' || row.status === 'not-received')).length,
   };
 
   res.json({ data: { queue, summary } });

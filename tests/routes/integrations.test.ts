@@ -52,6 +52,32 @@ async function createPayrollWeek(cookie: string, projectId: string, weekEndingDa
 // ── QB Integration Routes ─────────────────────────────────────────────────
 
 describe('QB integration routes', () => {
+  it('GET /api/integrations/readiness returns provider next actions', async () => {
+    const cookie = await registerAndLogin('readiness');
+    const res = await supertest(app)
+      .get('/api/integrations/readiness')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('import-ready');
+    expect(res.body.data.pilotRule).toMatch(/reconciled/i);
+    expect(res.body.data.providers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'quickbooks',
+          connected: false,
+          supportedFlows: expect.arrayContaining(['time activity sync']),
+          nextAction: expect.stringMatching(/Connect QuickBooks|payroll register/i),
+        }),
+        expect.objectContaining({
+          id: 'procore',
+          connected: false,
+          supportedFlows: expect.arrayContaining(['timesheet entry preview']),
+        }),
+      ]),
+    );
+  });
+
   // Test 1: GET /qbo/employees — unauthenticated returns 401/403
   it('GET /api/integrations/qbo/employees without auth cookie returns 401 or 403', async () => {
     const res = await supertest(app)

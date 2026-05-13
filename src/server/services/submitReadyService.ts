@@ -4,6 +4,7 @@ import * as schema from '../db/schema.js';
 import { computeCompliance } from './complianceService.js';
 import { getPayrollEntries, getPayrollWeek } from './payrollService.js';
 import { countComplianceViolations, resolveComplianceProfile } from './complianceRules.js';
+import { getSubmitReadyFixTarget, type SubmitReadyFixTarget } from '../../shared/submitReadyFixTargets.js';
 
 export type SubmitReadySeverity = 'blocker' | 'warning' | 'pass';
 export type SubmitReadyCategory =
@@ -23,6 +24,7 @@ export interface SubmitReadyIssue {
   title: string;
   detail: string;
   actionId?: string;
+  fix?: SubmitReadyFixTarget;
 }
 
 export interface SubmitReadyResult {
@@ -252,6 +254,7 @@ export async function computeSubmitReady(
     detail: signature
       ? 'A contractor signature is saved for this project.'
       : 'Add a contractor signature before final package generation when a signed statement is required.',
+    actionId: signature ? undefined : 'prepare-signature',
   });
 
   const subs = await db
@@ -282,6 +285,7 @@ export async function computeSubmitReady(
         severity: 'blocker',
         title: 'Subcontractor CPR non-compliant',
         detail: `${nonCompliant.length} subcontractor CPR record(s) are marked non-compliant for this week.`,
+        actionId: 'review-subcontractor-cpr',
       });
     } else if (missing.length > 0 || pending.length > 0) {
       issues.push({
@@ -290,6 +294,7 @@ export async function computeSubmitReady(
         severity: 'warning',
         title: 'Subcontractor CPR follow-up',
         detail: `${missing.length} missing and ${pending.length} pending subcontractor CPR record(s) for this week.`,
+        actionId: 'review-subcontractor-cpr',
       });
     } else {
       issues.push({
@@ -335,6 +340,7 @@ export async function computeSubmitReady(
     severity: exportReady ? 'pass' : 'blocker',
     title: exportReady ? 'Export can be prepared' : 'Export not ready',
     detail: `${exportLabelForState(project.state)} should be generated only after blockers are cleared.`,
+    actionId: exportReady ? undefined : 'review-export-readiness',
   });
 
   const blockers = issues.filter((issue) => issue.severity === 'blocker').length;
@@ -360,7 +366,10 @@ export async function computeSubmitReady(
     blockers,
     warnings,
     passes,
-    issues,
+    issues: issues.map((issue) => ({
+      ...issue,
+      fix: getSubmitReadyFixTarget(issue.id, issue.actionId),
+    })),
     summary: {
       entryCount: entries.length,
       totalHours: rawEntries.reduce((sum: number, entry: PayrollEntrySelect) => sum + totalHours(entry), 0),

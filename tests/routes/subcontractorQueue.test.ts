@@ -70,9 +70,13 @@ describe('subcontractor CPR chase board', () => {
           payrollWeekId,
           weekId: null,
           weekEndingDate: '2025-01-12',
+          canRequestUpload: true,
+          evidenceState: 'not-requested',
+          nextAction: 'Send CPR upload request.',
         }),
       ]),
     );
+    expect(res.body.data.summary.readyToRequest).toBeGreaterThanOrEqual(1);
   });
 
   it('creates an upload request from the chase board', async () => {
@@ -96,5 +100,7 @@ describe('subcontractor CPR chase board', () => {
     const item = queueRes.body.data.queue.find((row: any) => row.subcontractorId === subId);
     expect(item.weekId).toBeTruthy();
     expect(item.uploadTokenExpiresAt).toBeTruthy();
+    expect(item.evidenceState).toBe('request-sent');
+    expect(item.nextAction).toBe('Follow up on the active upload request.');
   });
 });

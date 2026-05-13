@@ -181,6 +181,82 @@ router.get('/event-count', async (req, res) => {
   res.json({ data: { lastSevenDays: Number(total) } });
 });
 
+router.get('/evidence-room', async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      totpEnabled: users.totpEnabled,
+      sessionVersion: users.sessionVersion,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const [{ value: securityEventCount }] = await db
+    .select({ value: count() })
+    .from(securityEvents)
+    .where(and(eq(securityEvents.userId, userId), gte(securityEvents.createdAt, thirtyDaysAgo)));
+
+  const controls = [
+    {
+      id: 'mfa',
+      label: 'Multi-factor authentication',
+      status: user.totpEnabled ? 'implemented' : 'action-needed',
+      evidence: user.totpEnabled ? 'TOTP is enabled for this account.' : 'Enable TOTP before enterprise pilot signoff.',
+    },
+    {
+      id: 'session-revocation',
+      label: 'Session revocation',
+      status: 'implemented',
+      evidence: `Current session version is ${user.sessionVersion ?? 0}; revoke-sessions invalidates older JWTs.`,
+    },
+    {
+      id: 'security-events',
+      label: 'Security event logging',
+      status: Number(securityEventCount) > 0 ? 'implemented' : 'needs-evidence',
+      evidence: `${Number(securityEventCount)} security event(s) recorded in the last 30 days for this user.`,
+    },
+    {
+      id: 'audit-integrity',
+      label: 'Audit hash-chain integrity',
+      status: 'implemented',
+      evidence: 'Project audit routes expose evidence packets and integrity-check coverage is tested.',
+    },
+    {
+      id: 'access-boundaries',
+      label: 'Role and tenant boundaries',
+      status: 'implemented',
+      evidence: 'Project access utilities enforce owner/member/auditor boundaries on scoped routes.',
+    },
+  ];
+
+  res.json({
+    data: {
+      generatedAt: new Date().toISOString(),
+      account: {
+        id: user.id,
+        email: user.email,
+        memberSince: user.createdAt,
+      },
+      controls,
+      nextActions: controls
+        .filter((control) => control.status !== 'implemented')
+        .map((control) => control.evidence),
+    },
+  });
+});
+
 function maskIp(ip: string | null): string | null {
   if (!ip) return null;
   // IPv4 — mask last octet

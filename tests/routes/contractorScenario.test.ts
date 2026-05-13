@@ -171,7 +171,15 @@ describe('internal contractor scenario', () => {
       expect.arrayContaining([
         expect.objectContaining({ id: 'wd-lock', severity: 'pass' }),
         expect.objectContaining({ id: 'import-review', severity: 'pass' }),
-        expect.objectContaining({ id: 'subcontractor-cpr', severity: 'warning' }),
+        expect.objectContaining({
+          id: 'subcontractor-cpr',
+          severity: 'warning',
+          fix: expect.objectContaining({
+            label: 'Open subcontractor CPR queue',
+            routeScope: 'project',
+            hash: 'subcontractor-cpr',
+          }),
+        }),
       ]),
     );
 

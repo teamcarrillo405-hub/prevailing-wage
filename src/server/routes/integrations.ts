@@ -14,6 +14,52 @@ import { randomBytes } from 'node:crypto';
 
 const integrationsRouter = Router();
 
+integrationsRouter.get('/readiness', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const [qbo, procore] = await Promise.all([
+    getQboConnection(userId),
+    getProcoreConnection(userId),
+  ]);
+
+  const providers = [
+    {
+      id: 'quickbooks',
+      label: 'QuickBooks Online',
+      connected: qbo.connected,
+      nearExpiry: qbo.nearExpiry,
+      supportedFlows: ['worker roster import', 'time activity sync', 'approved-hours commit', 'payroll register CSV reconciliation'],
+      nextAction: qbo.connected
+        ? qbo.nearExpiry
+          ? 'Reconnect QuickBooks before the refresh token expires.'
+          : 'Run employee sync, time sync, then reconcile payroll register totals before export.'
+        : 'Connect QuickBooks or import the payroll register CSV for the pilot week.',
+    },
+    {
+      id: 'procore',
+      label: 'Procore',
+      connected: procore.connected,
+      nearExpiry: procore.nearExpiry,
+      supportedFlows: ['timesheet entry preview', 'approved timesheet import', 'project time handoff'],
+      nextAction: procore.connected
+        ? procore.nearExpiry
+          ? 'Reconnect Procore before the refresh token expires.'
+          : 'Preview timesheet entries, match workers/classifications, then commit approved hours.'
+        : 'Connect Procore when the contractor uses Procore timecards; otherwise use payroll import.',
+    },
+  ];
+  const connectedCount = providers.filter((provider) => provider.connected).length;
+
+  res.json({
+    data: {
+      status: connectedCount > 0 ? 'integration-ready' : 'import-ready',
+      connectedCount,
+      totalProviders: providers.length,
+      providers,
+      pilotRule: 'Do not rely on manual entry for production proof unless payroll source totals are reconciled and archived.',
+    },
+  });
+});
+
 // GET /api/integrations/qbo/status
 // Returns QBO connection status for the authenticated user.
 integrationsRouter.get('/qbo/status', requireAuth, async (req, res) => {

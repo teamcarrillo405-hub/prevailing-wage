@@ -13,6 +13,7 @@ import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
 import { Tooltip } from '../components/ui/Tooltip';
 import { PageHeader } from '../components/ui/PageHeader';
+import type { SubmitReadyFixTarget } from '../../shared/submitReadyFixTargets';
 
 const WH347_DEF = "The U.S. Department of Labor's official certified payroll form. Required weekly for federal prevailing wage projects. Submit to your contracting officer within 7 days of the week ending date.";
 const ECPR_XML_DEF = "Electronic Certified Payroll Report — Washington State's digital submission format. Required for public works projects in WA. Exported as an XML file and uploaded to L&I's online system.";
@@ -134,6 +135,7 @@ interface SubmitReadyIssue {
   title: string;
   detail: string;
   actionId?: string;
+  fix?: SubmitReadyFixTarget;
 }
 
 interface SubmitReadyResult {
@@ -1381,6 +1383,7 @@ export function PayrollWeekDetailPage() {
   }
 
   function submitReadyFixHint(issue: SubmitReadyIssue) {
+    if (issue.fix?.instruction) return `Fix target: ${issue.fix.instruction}`;
     if (issue.id === 'pay-calculation') return 'Fix target: open the affected payroll row and resave hours/rates/deductions.';
     if (issue.id === 'rate-snapshots') return 'Fix target: base rate and fringe rate on the affected payroll row.';
     if (issue.id === 'compliance-review') {
@@ -1395,6 +1398,7 @@ export function PayrollWeekDetailPage() {
   }
 
   function submitReadyActionLabel(issue: SubmitReadyIssue) {
+    if (issue.fix?.label && issue.id !== 'human-certification-review') return issue.fix.label;
     if (issue.id === 'signature') return 'Open signature section';
     if (issue.id === 'wd-lock') return 'Open wage determination section';
     if (issue.id === 'pay-calculation') return 'Open payroll row';
@@ -1454,6 +1458,11 @@ export function PayrollWeekDetailPage() {
 
     if (issue.actionId === 'prepare-missing-wd') {
       navigate(`/projects/${projectId}#wage-determinations`);
+      return;
+    }
+
+    if (issue.id === 'subcontractor-cpr') {
+      navigate(`/projects/${projectId}#subcontractor-cpr`);
       return;
     }
 
