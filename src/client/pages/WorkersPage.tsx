@@ -508,6 +508,15 @@ export function WorkersPage() {
     addWorker.mutate(form);
   }
 
+  function addWorkerErrorTarget() {
+    if (formError.includes('Worker name')) return 'Full Name';
+    if (formError.includes('SSN')) return 'Social Security Number';
+    if (formError.includes('trade')) return 'Trade';
+    if (formError.includes('Apprentice %')) return 'Program Wage %';
+    if (formError.includes('apprenticeship program')) return 'Registered Apprenticeship Program';
+    return 'Add Worker form';
+  }
+
   function handleEditSave(workerId: string) {
     setEditError('');
     if (!editForm.name.trim()) { setEditError('Name is required'); return; }
@@ -1268,17 +1277,22 @@ export function WorkersPage() {
         <Card>
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Add Worker</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Add Worker in 3 Steps</h2>
               <p className="mt-1 text-xs text-gray-500">
-                Add one worker at a time from the pilot roster. Roster CSV import is not available on this screen.
+                Start with identity, confirm the WH-347 address, then assign the trade classification. Optional union and apprenticeship details stay collapsed until needed.
               </p>
             </div>
             <Badge variant="neutral">Manual entry</Badge>
           </div>
+          <div className="mb-5 grid gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 sm:grid-cols-3">
+            <p><span className="font-semibold text-gray-950">1. Identity:</span> name and SSN if available.</p>
+            <p><span className="font-semibold text-gray-950">2. Address:</span> required for WH-347 export.</p>
+            <p><span className="font-semibold text-gray-950">3. Classification:</span> labor type, trade, and rate source.</p>
+          </div>
 
           <div className="space-y-4">
-            {/* Name + SSN + Union */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Name + SSN */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="add-worker-name" className="block text-xs text-gray-600 mb-1">Full Name *</label>
                 <input
@@ -1286,8 +1300,11 @@ export function WorkersPage() {
                   type="text"
                   value={form.name}
                   onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="e.g. John Smith"
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                  placeholder="e.g. Elena Rivera"
+                  aria-invalid={formError.includes('Worker name') ? 'true' : undefined}
+                  className={`w-full rounded border px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold ${
+                    formError.includes('Worker name') ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
               </div>
               <div>
@@ -1301,23 +1318,15 @@ export function WorkersPage() {
                   value={form.ssn}
                   onChange={e => setForm(p => ({ ...p, ssn: e.target.value.replace(/\D/g, '') }))}
                   placeholder="123456789"
-                  className="w-full rounded border border-gray-200 px-3 py-2 text-base bg-surface-muted focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                />
-              </div>
-              <div>
-                <label htmlFor="add-worker-union" className="block text-xs text-gray-600 mb-1">Trade Union (optional)</label>
-                <input
-                  id="add-worker-union"
-                  type="text"
-                  value={form.tradeUnion}
-                  onChange={e => setForm(p => ({ ...p, tradeUnion: e.target.value }))}
-                  placeholder="e.g. Carpenters Local 150"
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                  aria-invalid={formError.includes('SSN') ? 'true' : undefined}
+                  className={`w-full rounded border px-3 py-2 text-base bg-surface-muted focus:outline-hidden focus:ring-2 focus:ring-brand-gold ${
+                    formError.includes('SSN') ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                  }`}
                 />
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-sm font-semibold text-gray-900 mb-2">Address <span className="text-gray-400 font-normal normal-case">(required for WH-347)</span></p>
+              <p className="text-sm font-semibold text-gray-900 mb-2">Step 2: Address <span className="text-gray-400 font-normal normal-case">(required for WH-347)</span></p>
               <div className="space-y-2">
                 <label htmlFor="add-worker-street" className="sr-only">Street address</label>
                 <input
@@ -1371,6 +1380,17 @@ export function WorkersPage() {
                 <span className="text-xs font-normal text-gray-400 ml-1">(optional — click to expand)</span>
               </summary>
               <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <label htmlFor="add-worker-union" className="block text-xs text-gray-600 mb-1">Trade Union</label>
+                  <input
+                    id="add-worker-union"
+                    type="text"
+                    value={form.tradeUnion}
+                    onChange={e => setForm(p => ({ ...p, tradeUnion: e.target.value }))}
+                    placeholder="e.g. Carpenters Local 150"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
                 <div>
                   <label htmlFor="add-worker-union-local" className="sr-only">Union local</label>
                   <input
@@ -1462,7 +1482,7 @@ export function WorkersPage() {
 
             {/* Trade selection */}
             <div className="border-t border-gray-100 pt-4">
-              <p className="text-sm font-semibold text-gray-900 mb-3">Labor Type and Trade Classification</p>
+              <p className="text-sm font-semibold text-gray-900 mb-3">Step 3: Labor Type and Trade Classification</p>
 
               {wdLoading ? (
                 <p className="text-sm text-gray-400">Loading available trades...</p>
@@ -1491,7 +1511,10 @@ export function WorkersPage() {
                         value={form.apprenticePercent}
                         onChange={e => setForm(p => ({ ...p, apprenticePercent: e.target.value }))}
                         placeholder="From approved program"
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                        aria-invalid={formError.includes('Apprentice %') ? 'true' : undefined}
+                        className={`w-full rounded border px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold ${
+                          formError.includes('Apprentice %') ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                        }`}
                       />
                     </div>
                   )}
@@ -1506,7 +1529,10 @@ export function WorkersPage() {
                         placeholder="Approved program name"
                         value={form.apprenticeshipProgramName}
                         onChange={e => setForm(f => ({ ...f, apprenticeshipProgramName: e.target.value }))}
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                        aria-invalid={formError.includes('apprenticeship program') ? 'true' : undefined}
+                        className={`w-full rounded border px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden ${
+                          formError.includes('apprenticeship program') ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                        }`}
                       />
                     </div>
                   )}
@@ -1617,7 +1643,10 @@ export function WorkersPage() {
                         value={form.apprenticePercent}
                         onChange={e => setForm(p => ({ ...p, apprenticePercent: e.target.value }))}
                         placeholder="From approved program"
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                        aria-invalid={formError.includes('Apprentice %') ? 'true' : undefined}
+                        className={`w-full rounded border px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold ${
+                          formError.includes('Apprentice %') ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                        }`}
                       />
                     </div>
                   )}
@@ -1630,7 +1659,10 @@ export function WorkersPage() {
                         placeholder="Approved program name"
                         value={form.programName}
                         onChange={e => setForm(f => ({ ...f, programName: e.target.value }))}
-                        className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden"
+                        aria-invalid={formError.includes('apprenticeship program') ? 'true' : undefined}
+                        className={`w-full rounded border px-3 py-2 text-base focus:border-brand-gold focus:outline-hidden ${
+                          formError.includes('apprenticeship program') ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                        }`}
                       />
                     </div>
                   )}
@@ -1670,7 +1702,10 @@ export function WorkersPage() {
                       id="add-trade-select"
                       value={form.tradeCode}
                       onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value }))}
-                      className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                      aria-invalid={formError.includes('trade') ? 'true' : undefined}
+                      className={`w-full rounded border px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold ${
+                        formError.includes('trade') ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                      }`}
                     >
                       <option value="">— Select a trade —</option>
                       {wageClassifications.map(wc => (
@@ -1691,7 +1726,12 @@ export function WorkersPage() {
             </div>
           </div>
 
-          {formError && <p className="mt-3 text-xs text-red-600">{formError}</p>}
+          {formError && (
+            <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              <p className="font-semibold">Fix {addWorkerErrorTarget()}</p>
+              <p className="mt-0.5">{formError}</p>
+            </div>
+          )}
 
           <Button onClick={handleSubmit} disabled={addWorker.isPending} className="mt-5">
             {addWorker.isPending ? 'Saving...' : '+ Add Worker'}

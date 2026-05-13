@@ -1,5 +1,5 @@
 // src/client/components/payrollWizard/Step2GridRow.tsx
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { DAYS } from './types';
 import type { StateToggles } from './Step2BulkActions';
 
@@ -84,6 +84,7 @@ export function Step2GridRow({
   onBlur,
   onStandardWeek,
 }: Props) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const stTotal = useMemo(
     () => DAYS.reduce((sum, d) => sum + (values[`${d}St` as keyof HourValues] || 0), 0),
     [values]
@@ -260,6 +261,16 @@ export function Step2GridRow({
           >
             Standard
           </button>
+          {toggles.caFica && (
+            <button
+              type="button"
+              onClick={() => setDetailsOpen((open) => !open)}
+              className="text-xs text-gray-600 hover:text-gray-900 hover:underline whitespace-nowrap"
+              aria-expanded={detailsOpen}
+            >
+              {detailsOpen ? 'Hide details' : 'Details'}
+            </button>
+          )}
         </div>
       </td>
       {numCell('monSt')}{numCell('tueSt')}{numCell('wedSt')}{numCell('thuSt')}
@@ -307,7 +318,7 @@ export function Step2GridRow({
         {toggles.caDt && ` / ${dtTotal.toFixed(1)} DT`}
       </td>
     </tr>
-    {toggles.caFica && (
+    {toggles.caFica && detailsOpen && (
       <tr className={`border-b border-gray-100 ${highlighted ? 'bg-amber-50/60' : 'bg-amber-50/30'}`}>
         <td colSpan={40} className="px-3 py-3">
           <div className="rounded-md border border-amber-200 bg-white px-3 py-3">

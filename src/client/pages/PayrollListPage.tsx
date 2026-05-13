@@ -234,7 +234,7 @@ export function PayrollListPage() {
         <HelpCallout
           icon={FileCheck}
           title="Work one week at a time"
-          body={<>Create or open the current week, enter hours and deductions, clear blockers, then download the <TermTooltip term="WH-347" definition={WH347_DEF} /> and any state forms.</>}
+          body={<>Fastest path: copy the prior week when the crew is similar, or start fresh when the roster changed. After hours and deductions are entered, clear blockers, then download the <TermTooltip term="WH-347" definition={WH347_DEF} /> and any state forms.</>}
         />
 
         {isLoading && <PayrollListSkeleton />}
@@ -381,14 +381,14 @@ export function PayrollListPage() {
                       className="w-full text-left border border-gray-200 rounded px-4 py-3 hover:border-gray-400 transition-colors"
                     >
                       <span className="text-sm font-medium text-gray-900 block">Start Fresh</span>
-                      <span className="text-xs text-gray-500">Create a new week with no pre-filled entries</span>
+                      <span className="text-xs text-gray-500">Use this when the crew, rates, or classifications changed materially</span>
                     </button>
                     <button
                       onClick={handleChooseCopy}
                       className="w-full text-left border border-gray-200 rounded px-4 py-3 hover:border-gray-400 transition-colors"
                     >
-                      <span className="text-sm font-medium text-gray-900 block">Copy Previous Week</span>
-                      <span className="text-xs text-gray-500">Pre-fill entries from a previous week with current wage rates</span>
+                      <span className="text-sm font-medium text-gray-900 block">Copy Previous Week <span className="text-brand-gold">(recommended)</span></span>
+                      <span className="text-xs text-gray-500">Pre-fill the roster and hours, then adjust only what changed</span>
                     </button>
                   </div>
                   <div className="mt-4 flex justify-end">

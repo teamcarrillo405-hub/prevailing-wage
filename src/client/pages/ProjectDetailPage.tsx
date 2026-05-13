@@ -331,6 +331,7 @@ function ProjectReadinessPanel({
       priority: 'Audit',
     },
   ].filter(Boolean) as Array<{ label: string; detail: string; to: string; priority: string }>;
+  const primaryAction = actions[0];
 
   return (
     <Card className="mb-6 shadow-card-elevated">
@@ -356,6 +357,21 @@ function ProjectReadinessPanel({
           </div>
         </div>
       </div>
+      {primaryAction && (
+        <Link
+          to={primaryAction.to}
+          className="mt-4 flex flex-col gap-3 rounded-lg border border-brand-gold/50 bg-brand-gold/10 p-4 transition-colors hover:border-brand-gold sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Next best action</p>
+            <p className="mt-1 text-base font-semibold text-gray-950">{primaryAction.label}</p>
+            <p className="mt-1 text-sm text-gray-700">{primaryAction.detail}</p>
+          </div>
+          <span className="inline-flex min-h-10 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-nav-dark">
+            Start
+          </span>
+        </Link>
+      )}
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         {actions.map((action) => (
           <Link

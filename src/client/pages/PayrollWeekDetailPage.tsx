@@ -1227,6 +1227,7 @@ export function PayrollWeekDetailPage() {
       onClick: () => scrollToElement(submissionStatusSectionRef.current),
     },
   ];
+  const nextSubmissionStep = submissionSteps.find((step) => !step.complete) ?? submissionSteps[submissionSteps.length - 1];
 
   // Build a set of entry IDs that have violations for quick lookup
   const violationsByEntryId = new Map<string, ComplianceViolation>();
@@ -1839,6 +1840,13 @@ export function PayrollWeekDetailPage() {
               <p className="mt-1 text-sm text-gray-600">
                 Work left to right: review payroll, clear blockers, download forms, then record submission.
               </p>
+              <button
+                type="button"
+                onClick={nextSubmissionStep.onClick}
+                className="mt-3 inline-flex min-h-10 items-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90"
+              >
+                Next: {nextSubmissionStep.label}
+              </button>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4 lg:min-w-[680px]">
               {submissionSteps.map((step, index) => (
@@ -2206,7 +2214,7 @@ export function PayrollWeekDetailPage() {
                 title={week?.submittedAt ? 'This payroll week has been submitted and cannot be modified.' : undefined}
                 onClick={() => { setImportStep(1); setShowImportModal(true); }}
               >
-                Import from Payroll Provider
+                Import payroll file
               </Button>
             )}
             {/* Hidden on mobile — shown full-width above this row instead */}
@@ -4208,7 +4216,7 @@ export function PayrollWeekDetailPage() {
                 <div>
                   <p className="text-sm text-gray-600 mb-3">
                     {qboActivities.length} time {qboActivities.length === 1 ? 'record' : 'records'} found.
-                    Review below, then use <strong>Import from Payroll Provider</strong> with a QB export
+                    Review below, then use <strong>Import payroll file</strong> with a QB export
                     file to commit hours through the full matching pipeline.
                   </p>
                   <div className="overflow-x-auto">
