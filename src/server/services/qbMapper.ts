@@ -4,6 +4,9 @@
 // This mapper aggregates rows by employee, distributing hours into the correct
 // day-of-week and ST/OT bucket.
 
+import { extractImportPayDetails, mergeImportPayDetails } from './importPayDetails.js';
+import type { ImportPayDetails } from './importTypes.js';
+
 // ── QB Column Constants ────────────────────────────────────────────────────
 // QB Desktop: "Employee", "Date", "Duration", "Payroll Item"
 // QB Online:  "Employee Name", "Date", "Hours", "Service Item"
@@ -30,7 +33,7 @@ const DAY_PREFIX: Record<number, string> = {
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface QbAggregated {
+export interface QbAggregated extends ImportPayDetails {
   csvName: string; // original case from first occurrence
   monSt: number;
   tueSt: number;
@@ -102,6 +105,7 @@ export function mapQbRows(
       entries.set(key, { csvName: employeeRaw, ...emptyBuckets() });
     }
     const entry = entries.get(key)!;
+    mergeImportPayDetails(entry, extractImportPayDetails(row));
 
     // Parse date to determine day-of-week
     const date = parseQbDate(dateRaw);

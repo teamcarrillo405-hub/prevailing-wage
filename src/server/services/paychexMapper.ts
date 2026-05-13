@@ -1,4 +1,6 @@
 // src/server/services/paychexMapper.ts
+import { extractImportPayDetails, mergeImportPayDetails } from './importPayDetails.js';
+import type { ImportPayDetails } from './importTypes.js';
 // Maps Paychex Flex payroll export CSV rows to per-employee day buckets.
 // Each row is one time entry: Worker ID + Pay Component + Hours + Line Date.
 // Paychex has daily data (unlike ADP/Gusto weekly totals).
@@ -19,7 +21,7 @@ const DAY_OT_KEYS = ['sunOt', 'monOt', 'tueOt', 'wedOt', 'thuOt', 'friOt', 'satO
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface PaychexAggregated {
+export interface PaychexAggregated extends ImportPayDetails {
   providerWorkerId: string; // from "Worker ID" column — NOT csvName
   monSt: number;
   tueSt: number;
@@ -92,6 +94,7 @@ export function mapPaychexRows(
       entries.set(workerId, { providerWorkerId: workerId, ...emptyBuckets() });
     }
     const entry = entries.get(workerId)!;
+    mergeImportPayDetails(entry, extractImportPayDetails(row));
 
     // Parse date to determine day-of-week bucket
     const date = parseLineDate(lineDateRaw);

@@ -263,6 +263,29 @@ interface ImportedRow {
   friOt: number;
   satOt: number;
   sunOt: number;
+  payDetailsImported?: boolean;
+  grossWages?: number | null;
+  deductions?: number | null;
+  netPay?: number | null;
+  checkNumber?: string | null;
+  fringeHealthWelfare?: number | null;
+  fringePension?: number | null;
+  fringeVacation?: number | null;
+  fringeTraining?: number | null;
+  ficaTax?: number | null;
+  federalIncomeTax?: number | null;
+  stateIncomeTax?: number | null;
+  sdiTax?: number | null;
+  deductionVacationHoliday?: number | null;
+  deductionHealthWelfare?: number | null;
+  deductionPension?: number | null;
+  deductionTraining?: number | null;
+  deductionFundAdmin?: number | null;
+  deductionDues?: number | null;
+  deductionTravelSubsistence?: number | null;
+  deductionSavings?: number | null;
+  deductionOther?: number | null;
+  deductionOtherDescription?: string | null;
 }
 
 interface UnmatchedRow {
@@ -273,6 +296,29 @@ interface UnmatchedRow {
     monOt: number; tueOt: number; wedOt: number; thuOt: number;
     friOt: number; satOt: number; sunOt: number;
   };
+  payDetailsImported?: boolean;
+  grossWages?: number | null;
+  deductions?: number | null;
+  netPay?: number | null;
+  checkNumber?: string | null;
+  fringeHealthWelfare?: number | null;
+  fringePension?: number | null;
+  fringeVacation?: number | null;
+  fringeTraining?: number | null;
+  ficaTax?: number | null;
+  federalIncomeTax?: number | null;
+  stateIncomeTax?: number | null;
+  sdiTax?: number | null;
+  deductionVacationHoliday?: number | null;
+  deductionHealthWelfare?: number | null;
+  deductionPension?: number | null;
+  deductionTraining?: number | null;
+  deductionFundAdmin?: number | null;
+  deductionDues?: number | null;
+  deductionTravelSubsistence?: number | null;
+  deductionSavings?: number | null;
+  deductionOther?: number | null;
+  deductionOtherDescription?: string | null;
 }
 
 interface ConflictRow {
@@ -640,6 +686,29 @@ export function PayrollWeekDetailPage() {
           friOt: u.hours.friOt,
           satOt: u.hours.satOt,
           sunOt: u.hours.sunOt,
+          payDetailsImported: u.payDetailsImported,
+          grossWages: u.grossWages,
+          deductions: u.deductions,
+          netPay: u.netPay,
+          checkNumber: u.checkNumber,
+          fringeHealthWelfare: u.fringeHealthWelfare,
+          fringePension: u.fringePension,
+          fringeVacation: u.fringeVacation,
+          fringeTraining: u.fringeTraining,
+          ficaTax: u.ficaTax,
+          federalIncomeTax: u.federalIncomeTax,
+          stateIncomeTax: u.stateIncomeTax,
+          sdiTax: u.sdiTax,
+          deductionVacationHoliday: u.deductionVacationHoliday,
+          deductionHealthWelfare: u.deductionHealthWelfare,
+          deductionPension: u.deductionPension,
+          deductionTraining: u.deductionTraining,
+          deductionFundAdmin: u.deductionFundAdmin,
+          deductionDues: u.deductionDues,
+          deductionTravelSubsistence: u.deductionTravelSubsistence,
+          deductionSavings: u.deductionSavings,
+          deductionOther: u.deductionOther,
+          deductionOtherDescription: u.deductionOtherDescription,
         });
       });
 
@@ -1042,6 +1111,10 @@ export function PayrollWeekDetailPage() {
   function previewSelectedHours(preview: ImportPreviewResult | null): number {
     if (!preview) return 0;
     return preview.matched.reduce((sum, row, i) => sum + (importCheckedRows[i] ? rowHours(row) : 0), 0);
+  }
+  function previewPayDetailCount(preview: ImportPreviewResult | null): number {
+    if (!preview) return 0;
+    return preview.matched.filter((row, i) => importCheckedRows[i] && row.payDetailsImported).length;
   }
 
   // Pre-fill eCPR modal fields from project record when data loads
@@ -4634,7 +4707,7 @@ export function PayrollWeekDetailPage() {
                   </div>
 
                   {/* ADP amber banner — only when adpWeeklyTotalsOnly (D-13) */}
-                  <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                  <div className="mt-3 grid gap-2 sm:grid-cols-5">
                     <div className="rounded-sm border border-gray-200 bg-gray-50 p-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Selected rows</p>
                       <p className="mt-1 text-lg font-semibold text-gray-950">{previewSelectedCount(importPreview)}</p>
@@ -4651,9 +4724,13 @@ export function PayrollWeekDetailPage() {
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Conflicts</p>
                       <p className="mt-1 text-lg font-semibold text-gray-950">{importPreview.conflicts.length}</p>
                     </div>
+                    <div className="rounded-sm border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pay details</p>
+                      <p className="mt-1 text-lg font-semibold text-gray-950">{previewPayDetailCount(importPreview)}</p>
+                    </div>
                   </div>
                   <p className="mt-2 text-xs text-text-secondary">
-                    Select only the rows you want to commit. Gross and net pay are calculated from saved hours, rates, and deductions after import.
+                    Select only the rows you want to commit. If gross, deductions, net pay, check number, or benefit fields exist in the CSV, they will be imported with the row.
                   </p>
 
                   {importPreview.adpWeeklyTotalsOnly && (
@@ -4708,6 +4785,7 @@ export function PayrollWeekDetailPage() {
                                 </th>
                                 <th className="px-2 py-2 text-left text-xs font-semibold text-text-secondary">Worker</th>
                                 <th className="px-2 py-2 text-left text-xs font-semibold text-text-secondary">Classification</th>
+                                <th className="px-2 py-2 text-left text-xs font-semibold text-text-secondary">Pay details</th>
                                 {importPreview.adpWeeklyTotalsOnly ? (
                                   <>
                                     <th className="w-14 px-2 py-2 text-right text-xs font-semibold text-text-secondary">Total ST</th>
@@ -4745,6 +4823,21 @@ export function PayrollWeekDetailPage() {
                                   </td>
                                   <td className="px-2 py-2">{row.workerName}</td>
                                   <td className="px-2 py-2">{row.classificationName}</td>
+                                  <td className="px-2 py-2">
+                                    {row.payDetailsImported ? (
+                                      <div className="text-xs text-gray-700">
+                                        <p className="font-semibold text-gray-900">
+                                          Gross {row.grossWages != null ? `$${row.grossWages.toFixed(2)}` : 'included'}
+                                        </p>
+                                        <p>
+                                          Ded {row.deductions != null ? `$${row.deductions.toFixed(2)}` : '-'} / Net {row.netPay != null ? `$${row.netPay.toFixed(2)}` : '-'}
+                                        </p>
+                                        {row.checkNumber && <p>Check {row.checkNumber}</p>}
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">Calculated after import</span>
+                                    )}
+                                  </td>
                                   {importPreview.adpWeeklyTotalsOnly ? (
                                     <>
                                       <td className="px-2 py-2 text-right">{sumSt(row)}</td>

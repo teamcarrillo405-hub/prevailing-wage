@@ -3,6 +3,9 @@
 // Gusto exports weekly totals only — no daily breakdown.
 // All hours placed on Monday (same pattern as adpMapper.ts).
 
+import { extractImportPayDetails, mergeImportPayDetails } from './importPayDetails.js';
+import type { ImportPayDetails } from './importTypes.js';
+
 // ── Gusto Column Constants ─────────────────────────────────────────────────
 // Gusto Payroll Journal Report format: "Employee first name", "Employee last name",
 // "Regular hours", "Overtime hours" (optional), "Double overtime hours" (optional),
@@ -24,7 +27,7 @@ const REQUIRED_COLS = [
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface GustoAggregated {
+export interface GustoAggregated extends ImportPayDetails {
   csvName: string; // "First Last" original case from first occurrence
   monSt: number;
   tueSt: number;
@@ -100,6 +103,7 @@ export function mapGustoRows(
       entries.set(key, { csvName, ...emptyBuckets() });
     }
     const entry = entries.get(key)!;
+    mergeImportPayDetails(entry, extractImportPayDetails(row));
 
     // All hours go on Monday (weekly totals only — no daily breakdown in Gusto)
     const regHours = parseFloat(row[COL_REG_HOURS] ?? '0') || 0;

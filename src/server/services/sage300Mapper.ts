@@ -1,4 +1,6 @@
 // src/server/services/sage300Mapper.ts
+import { extractImportPayDetails, mergeImportPayDetails } from './importPayDetails.js';
+import type { ImportPayDetails } from './importTypes.js';
 // Maps Sage 300 CRE and Sage 100 Contractor payroll CSV rows to per-employee day buckets.
 //
 // Sage 300 CRE: detected by positional 9-column order; Employee field is numeric ID
@@ -30,7 +32,7 @@ const DAY_OT_KEYS = ['sunOt', 'monOt', 'tueOt', 'wedOt', 'thuOt', 'friOt', 'satO
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface Sage300Aggregated {
+export interface Sage300Aggregated extends ImportPayDetails {
   providerWorkerId: string; // numeric code from "Employee" column — NOT csvName
   monSt: number;
   tueSt: number;
@@ -48,7 +50,7 @@ export interface Sage300Aggregated {
   sunOt: number;
 }
 
-export interface Sage100Aggregated {
+export interface Sage100Aggregated extends ImportPayDetails {
   csvName: string; // original case from first occurrence (name-based path)
   monSt: number;
   tueSt: number;
@@ -145,6 +147,7 @@ export function mapSage300Rows(
       entries.set(employeeId, { providerWorkerId: employeeId, ...emptyBucketsId() });
     }
     const entry = entries.get(employeeId)!;
+    mergeImportPayDetails(entry, extractImportPayDetails(row));
 
     // Parse date to determine day-of-week bucket
     const date = parseSageDate(dateRaw);
@@ -188,6 +191,7 @@ export function mapSage100Rows(
       entries.set(key, { csvName: employeeName, ...emptyBucketsName() });
     }
     const entry = entries.get(key)!;
+    mergeImportPayDetails(entry, extractImportPayDetails(row));
 
     const hoursRaw = (row['Hours'] ?? '0').trim();
     const dateRaw = (row['Date'] ?? '').trim();

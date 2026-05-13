@@ -3,6 +3,9 @@
 // ADP Run exports weekly totals only (Reg Hours + O/T Hours) — no daily breakdown.
 // All hours are placed on Monday per the research decision (D-02 / plan critical notes).
 
+import { extractImportPayDetails, mergeImportPayDetails } from './importPayDetails.js';
+import type { ImportPayDetails } from './importTypes.js';
+
 // ── ADP Column Constants ───────────────────────────────────────────────────
 // ADP Run format: "Co Code", "File #", "First Name", "Last Name", "Reg Hours", "O/T Hours"
 
@@ -13,7 +16,7 @@ const COL_OT_HOURS = 'O/T Hours';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface AdpAggregated {
+export interface AdpAggregated extends ImportPayDetails {
   csvName: string; // "First Last" original case from first occurrence
   monSt: number;
   tueSt: number;
@@ -61,6 +64,7 @@ export function mapAdpRows(
       entries.set(key, { csvName, ...emptyBuckets() });
     }
     const entry = entries.get(key)!;
+    mergeImportPayDetails(entry, extractImportPayDetails(row));
 
     // All hours go on Monday (weekly totals only — no daily breakdown in ADP Run)
     const regHours = parseFloat(row[COL_REG_HOURS] ?? '0') || 0;

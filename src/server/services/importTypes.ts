@@ -5,6 +5,31 @@
 
 export type ImportProvider = 'quickbooks' | 'adp' | 'gusto' | 'paychex' | 'sage_300' | 'sage_100';
 
+export interface ImportPayDetails {
+  grossWages?: number | null;
+  deductions?: number | null;
+  netPay?: number | null;
+  checkNumber?: string | null;
+  fringeHealthWelfare?: number | null;
+  fringePension?: number | null;
+  fringeVacation?: number | null;
+  fringeTraining?: number | null;
+  ficaTax?: number | null;
+  federalIncomeTax?: number | null;
+  stateIncomeTax?: number | null;
+  sdiTax?: number | null;
+  deductionVacationHoliday?: number | null;
+  deductionHealthWelfare?: number | null;
+  deductionPension?: number | null;
+  deductionTraining?: number | null;
+  deductionFundAdmin?: number | null;
+  deductionDues?: number | null;
+  deductionTravelSubsistence?: number | null;
+  deductionSavings?: number | null;
+  deductionOther?: number | null;
+  deductionOtherDescription?: string | null;
+}
+
 export interface ImportedRow {
   csvName: string;
   workerId: string;
@@ -27,6 +52,29 @@ export interface ImportedRow {
   friOt: number;
   satOt: number;
   sunOt: number;
+  payDetailsImported?: boolean;
+  grossWages?: number | null;
+  deductions?: number | null;
+  netPay?: number | null;
+  checkNumber?: string | null;
+  fringeHealthWelfare?: number | null;
+  fringePension?: number | null;
+  fringeVacation?: number | null;
+  fringeTraining?: number | null;
+  ficaTax?: number | null;
+  federalIncomeTax?: number | null;
+  stateIncomeTax?: number | null;
+  sdiTax?: number | null;
+  deductionVacationHoliday?: number | null;
+  deductionHealthWelfare?: number | null;
+  deductionPension?: number | null;
+  deductionTraining?: number | null;
+  deductionFundAdmin?: number | null;
+  deductionDues?: number | null;
+  deductionTravelSubsistence?: number | null;
+  deductionSavings?: number | null;
+  deductionOther?: number | null;
+  deductionOtherDescription?: string | null;
   // Phase 108 (DBE-08): optional sub attribution stamped at import time
   subcontractorId?: string | null;
 }
@@ -49,6 +97,29 @@ export interface UnmatchedRow {
     satOt: number;
     sunOt: number;
   };
+  payDetailsImported?: boolean;
+  grossWages?: number | null;
+  deductions?: number | null;
+  netPay?: number | null;
+  checkNumber?: string | null;
+  fringeHealthWelfare?: number | null;
+  fringePension?: number | null;
+  fringeVacation?: number | null;
+  fringeTraining?: number | null;
+  ficaTax?: number | null;
+  federalIncomeTax?: number | null;
+  stateIncomeTax?: number | null;
+  sdiTax?: number | null;
+  deductionVacationHoliday?: number | null;
+  deductionHealthWelfare?: number | null;
+  deductionPension?: number | null;
+  deductionTraining?: number | null;
+  deductionFundAdmin?: number | null;
+  deductionDues?: number | null;
+  deductionTravelSubsistence?: number | null;
+  deductionSavings?: number | null;
+  deductionOther?: number | null;
+  deductionOtherDescription?: string | null;
 }
 
 export interface ConflictRow {

@@ -22,7 +22,9 @@ import { mapAdpRows } from './adpMapper.js';
 import { mapGustoRows } from './gustoMapper.js';
 import { mapPaychexRows } from './paychexMapper.js';
 import { isSage300CRE, mapSage300Rows, mapSage100Rows } from './sage300Mapper.js';
+import { hasImportPayDetails } from './importPayDetails.js';
 import type { ImportProvider, ImportPreviewResult, ImportedRow, UnmatchedRow, ConflictRow } from './importTypes.js';
+import type { ImportPayDetails } from './importTypes.js';
 import { resolveEffectiveClassificationRates } from './classificationRates.js';
 
 type DrizzleDb = BetterSQLite3Database<typeof schema>;
@@ -144,8 +146,8 @@ export async function parseImportFile(
   // Name-match providers (QB, ADP, Gusto, Sage 100): csvName field, resolved by name
   // ID-match providers (Paychex, Sage 300): providerWorkerId field, resolved by payroll_provider_mappings
 
-  type NameEntry = { csvName: string; monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number };
-  type IdEntry = { providerWorkerId: string; monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number };
+  type NameEntry = ImportPayDetails & { csvName: string; monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number };
+  type IdEntry = ImportPayDetails & { providerWorkerId: string; monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number };
 
   let nameEntriesMap: Map<string, NameEntry> | undefined;
   let idEntriesMap: Map<string, IdEntry> | undefined;
@@ -271,7 +273,35 @@ export async function parseImportFile(
   const conflicts: ConflictRow[] = [];
 
   // Helper: push an entry's hours into an UnmatchedRow
-  function pushUnmatched(displayName: string, entry: { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }) {
+  function payDetailPayload(entry: ImportPayDetails) {
+    return {
+      payDetailsImported: hasImportPayDetails(entry),
+      grossWages: entry.grossWages ?? null,
+      deductions: entry.deductions ?? null,
+      netPay: entry.netPay ?? null,
+      checkNumber: entry.checkNumber ?? null,
+      fringeHealthWelfare: entry.fringeHealthWelfare ?? null,
+      fringePension: entry.fringePension ?? null,
+      fringeVacation: entry.fringeVacation ?? null,
+      fringeTraining: entry.fringeTraining ?? null,
+      ficaTax: entry.ficaTax ?? null,
+      federalIncomeTax: entry.federalIncomeTax ?? null,
+      stateIncomeTax: entry.stateIncomeTax ?? null,
+      sdiTax: entry.sdiTax ?? null,
+      deductionVacationHoliday: entry.deductionVacationHoliday ?? null,
+      deductionHealthWelfare: entry.deductionHealthWelfare ?? null,
+      deductionPension: entry.deductionPension ?? null,
+      deductionTraining: entry.deductionTraining ?? null,
+      deductionFundAdmin: entry.deductionFundAdmin ?? null,
+      deductionDues: entry.deductionDues ?? null,
+      deductionTravelSubsistence: entry.deductionTravelSubsistence ?? null,
+      deductionSavings: entry.deductionSavings ?? null,
+      deductionOther: entry.deductionOther ?? null,
+      deductionOtherDescription: entry.deductionOtherDescription ?? null,
+    };
+  }
+
+  function pushUnmatched(displayName: string, entry: ImportPayDetails & { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }) {
     unmatched.push({
       csvName: displayName,
       hours: {
@@ -280,11 +310,12 @@ export async function parseImportFile(
         monOt: entry.monOt, tueOt: entry.tueOt, wedOt: entry.wedOt, thuOt: entry.thuOt,
         friOt: entry.friOt, satOt: entry.satOt, sunOt: entry.sunOt,
       },
+      ...payDetailPayload(entry),
     });
   }
 
   // Helper: push a matched entry
-  function pushMatched(csvName: string, workerMatch: WorkerRow, entry: { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }) {
+  function pushMatched(csvName: string, workerMatch: WorkerRow, entry: ImportPayDetails & { monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number; monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }) {
     matched.push({
       csvName,
       workerId: workerMatch.workerId,
@@ -297,6 +328,7 @@ export async function parseImportFile(
       friSt: entry.friSt, satSt: entry.satSt, sunSt: entry.sunSt,
       monOt: entry.monOt, tueOt: entry.tueOt, wedOt: entry.wedOt, thuOt: entry.thuOt,
       friOt: entry.friOt, satOt: entry.satOt, sunOt: entry.sunOt,
+      ...payDetailPayload(entry),
     });
   }
 
