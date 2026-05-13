@@ -28,8 +28,47 @@ const TEXT_FIELDS: Array<[keyof ImportPayDetails, string[]]> = [
   ['deductionOtherDescription', ['other deduction description', 'other deduction note', 'deduction note']],
 ];
 
+export const IMPORT_PAY_DETAIL_GROUPS = [
+  { key: 'grossWages', label: 'Gross wages', aliases: ['Gross Wages', 'Gross Pay', 'Gross Earnings', 'Total Gross'] },
+  { key: 'deductions', label: 'Total deductions', aliases: ['Total Deductions', 'Deductions', 'Deduction Total'] },
+  { key: 'netPay', label: 'Net pay', aliases: ['Net Pay', 'Net Wages', 'Net Amount', 'Net Check'] },
+  { key: 'checkNumber', label: 'Check number', aliases: ['Check Number', 'Check #', 'Check No'] },
+  { key: 'fringeHealthWelfare', label: 'Health/welfare fringe', aliases: ['Health Welfare Fringe', 'Health and Welfare Fringe', 'H&W Fringe'] },
+  { key: 'fringePension', label: 'Pension fringe', aliases: ['Pension Fringe'] },
+  { key: 'fringeVacation', label: 'Vacation fringe', aliases: ['Vacation Fringe', 'Vacation Holiday Fringe'] },
+  { key: 'fringeTraining', label: 'Training fringe', aliases: ['Training Fringe'] },
+  { key: 'ficaTax', label: 'FICA tax', aliases: ['FICA', 'FICA Tax', 'Social Security Medicare'] },
+  { key: 'federalIncomeTax', label: 'Federal income tax', aliases: ['Federal Income Tax', 'Federal Tax', 'FIT'] },
+  { key: 'stateIncomeTax', label: 'State income tax', aliases: ['State Income Tax', 'State Tax', 'SIT'] },
+  { key: 'sdiTax', label: 'SDI tax', aliases: ['SDI', 'SDI Tax', 'CA SDI'] },
+  { key: 'deductionVacationHoliday', label: 'Vacation/holiday deduction', aliases: ['Vacation Holiday Deduction', 'Vac Hol Deduction'] },
+  { key: 'deductionHealthWelfare', label: 'Health/welfare deduction', aliases: ['Health Welfare Deduction', 'Health and Welfare Deduction', 'H&W Deduction'] },
+  { key: 'deductionPension', label: 'Pension deduction', aliases: ['Pension Deduction'] },
+  { key: 'deductionTraining', label: 'Training deduction', aliases: ['Training Deduction'] },
+  { key: 'deductionFundAdmin', label: 'Fund admin deduction', aliases: ['Fund Admin Deduction', 'Fund Administration Deduction'] },
+  { key: 'deductionDues', label: 'Union dues', aliases: ['Dues', 'Union Dues', 'Dues Deduction'] },
+  { key: 'deductionTravelSubsistence', label: 'Travel/subsistence deduction', aliases: ['Travel Subsistence Deduction', 'Travel Deduction', 'Subsistence Deduction'] },
+  { key: 'deductionSavings', label: 'Savings deduction', aliases: ['Savings Deduction', 'Savings'] },
+  { key: 'deductionOther', label: 'Other deduction', aliases: ['Other Deduction', 'Other Deductions'] },
+  { key: 'deductionOtherDescription', label: 'Other deduction note', aliases: ['Other Deduction Description', 'Other Deduction Note', 'Deduction Note'] },
+] as const;
+
 function normalizeKey(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+export function analyzeImportPayDetailColumns(headers: string[]) {
+  const normalizedHeaders = new Set(headers.map(normalizeKey));
+  return IMPORT_PAY_DETAIL_GROUPS.map((group) => {
+    const matchedAlias = group.aliases.find((alias) => normalizedHeaders.has(normalizeKey(alias)));
+    return {
+      key: group.key,
+      label: group.label,
+      found: Boolean(matchedAlias),
+      matchedColumn: matchedAlias ?? null,
+      acceptedColumns: group.aliases,
+    };
+  });
 }
 
 function findValue(row: Record<string, string>, aliases: string[]) {

@@ -22,7 +22,7 @@ import { mapAdpRows } from './adpMapper.js';
 import { mapGustoRows } from './gustoMapper.js';
 import { mapPaychexRows } from './paychexMapper.js';
 import { isSage300CRE, mapSage300Rows, mapSage100Rows } from './sage300Mapper.js';
-import { hasImportPayDetails } from './importPayDetails.js';
+import { analyzeImportPayDetailColumns, hasImportPayDetails } from './importPayDetails.js';
 import type { ImportProvider, ImportPreviewResult, ImportedRow, UnmatchedRow, ConflictRow } from './importTypes.js';
 import type { ImportPayDetails } from './importTypes.js';
 import { resolveEffectiveClassificationRates } from './classificationRates.js';
@@ -465,6 +465,7 @@ export async function parseImportFile(
     matched,
     unmatched,
     conflicts,
+    columnCoverage: analyzeImportPayDetailColumns(fields),
   };
 
   if (adpWeeklyTotalsOnly) {

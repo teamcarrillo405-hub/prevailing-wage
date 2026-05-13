@@ -11,6 +11,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { getPayrollWeek, upsertPayrollEntry } from '../services/payrollService.js';
 import { parseImportFile } from '../services/importService.js';
+import { calculateCertifiedPayrollPay } from '../services/calculations.js';
 import { getDb } from '../db/index.js';
 import { payrollEntries, payrollImports, payrollProviderMappings, subcontractors } from '../db/schema.js';
 import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
@@ -55,28 +56,28 @@ const PROVIDER_GUIDANCE: Record<string, { label: string; requiredColumns: string
 
 const PROVIDER_TEMPLATE_ROWS: Record<string, string[][]> = {
   quickbooks: [
-    ['Employee', 'Project/Customer', 'Class/Trade', 'Mon Regular Hours', 'Tue Regular Hours', 'Wed Regular Hours', 'Thu Regular Hours', 'Fri Regular Hours', 'Sat Regular Hours', 'Sun Regular Hours', 'Overtime Hours'],
-    ['Maria Santos', 'Sample Federal Civic Center', 'Carpenter', '8', '8', '8', '8', '8', '0', '0', '0'],
+    ['Employee', 'Project/Customer', 'Class/Trade', 'Mon Regular Hours', 'Tue Regular Hours', 'Wed Regular Hours', 'Thu Regular Hours', 'Fri Regular Hours', 'Sat Regular Hours', 'Sun Regular Hours', 'Overtime Hours', 'Gross Wages', 'Total Deductions', 'Net Pay', 'Check Number', 'Health Welfare Fringe', 'Pension Fringe', 'Vacation Fringe', 'Training Fringe'],
+    ['Maria Santos', 'Sample Federal Civic Center', 'Carpenter', '8', '8', '8', '8', '8', '0', '0', '0', '2400.00', '318.45', '2081.55', '1024', '4.50', '6.25', '1.10', '0.75'],
   ],
   adp: [
-    ['Employee ID', 'Employee Name', 'Job', 'Earnings Code', 'Mon Hours', 'Tue Hours', 'Wed Hours', 'Thu Hours', 'Fri Hours', 'Sat Hours', 'Sun Hours'],
-    ['1001', 'Maria Santos', 'Sample Federal Civic Center', 'REG', '8', '8', '8', '8', '8', '0', '0'],
+    ['Employee ID', 'Employee Name', 'Job', 'Earnings Code', 'Mon Hours', 'Tue Hours', 'Wed Hours', 'Thu Hours', 'Fri Hours', 'Sat Hours', 'Sun Hours', 'Gross Wages', 'Total Deductions', 'Net Pay', 'Check Number', 'Federal Income Tax', 'State Income Tax', 'FICA Tax'],
+    ['1001', 'Maria Santos', 'Sample Federal Civic Center', 'REG', '8', '8', '8', '8', '8', '0', '0', '2400.00', '318.45', '2081.55', '1024', '190.00', '72.00', '56.45'],
   ],
   gusto: [
-    ['Employee', 'Work Location/Project', 'Regular Hours', 'Overtime Hours', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-    ['Maria Santos', 'Sample Federal Civic Center', '40', '0', '8', '8', '8', '8', '8', '0', '0'],
+    ['Employee', 'Work Location/Project', 'Regular Hours', 'Overtime Hours', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Gross Pay', 'Deductions', 'Net Pay', 'Check Number', 'Health Welfare Fringe', 'Pension Fringe'],
+    ['Maria Santos', 'Sample Federal Civic Center', '40', '0', '8', '8', '8', '8', '8', '0', '0', '2400.00', '318.45', '2081.55', '1024', '4.50', '6.25'],
   ],
   paychex: [
-    ['Employee ID', 'Employee Name', 'Labor Assignment', 'Pay Type', 'Hours', 'Week Ending'],
-    ['1001', 'Maria Santos', 'Sample Federal Civic Center / Carpenter', 'Regular', '40', '2026-02-01'],
+    ['Worker ID', 'Employee Name', 'Labor Assignment', 'Pay Component', 'Hours', 'Line Date', 'Gross Wages', 'Total Deductions', 'Net Pay', 'Check Number', 'Union Dues'],
+    ['1001', 'Maria Santos', 'Sample Federal Civic Center / Carpenter', 'Regular', '8', '02/01/2026', '480.00', '63.69', '416.31', '1024', '12.00'],
   ],
   sage_300: [
-    ['Employee', 'Job', 'Cost Code', 'Pay ID', 'Mon Hours', 'Tue Hours', 'Wed Hours', 'Thu Hours', 'Fri Hours', 'Sat Hours', 'Sun Hours'],
-    ['Maria Santos', 'Sample Federal Civic Center', 'CARP', 'REG', '8', '8', '8', '8', '8', '0', '0'],
+    ['Employee', 'Date', 'Job', 'Extra', 'Cost Code', 'Category', 'Certified', 'PayID', 'Units', 'Gross Wages', 'Total Deductions', 'Net Pay', 'Check Number', 'Pension Deduction'],
+    ['1001', '02/01/2026', 'Sample Federal Civic Center', '', 'CARP', 'LAB', 'Y', 'REG', '8', '480.00', '63.69', '416.31', '1024', '18.00'],
   ],
   sage_100: [
-    ['Employee', 'Job', 'Cost Code', 'Pay Type', 'Hours', 'Week Ending'],
-    ['Maria Santos', 'Sample Federal Civic Center', 'CARP', 'Regular', '40', '2026-02-01'],
+    ['Employee Name', 'Job', 'Cost Code', 'Pay Type', 'Hours', 'Date', 'Gross Wages', 'Total Deductions', 'Net Pay', 'Check Number', 'Other Deduction', 'Other Deduction Description'],
+    ['Maria Santos', 'Sample Federal Civic Center', 'CARP', 'Regular', '8', '02/01/2026', '480.00', '63.69', '416.31', '1024', '5.00', 'Tool repayment'],
   ],
 };
 
@@ -96,6 +97,24 @@ function entryHours(entry: typeof payrollEntries.$inferSelect): number {
     + entry.monOt + entry.tueOt + entry.wedOt + entry.thuOt + entry.friOt + entry.satOt + entry.sunOt
     + entry.monDt + entry.tueDt + entry.wedDt + entry.thuDt + entry.friDt + entry.satDt + entry.sunDt
   );
+}
+
+function entryPayDelta(entry: typeof payrollEntries.$inferSelect) {
+  const straightTimeHours = entry.monSt + entry.tueSt + entry.wedSt + entry.thuSt + entry.friSt + entry.satSt + entry.sunSt;
+  const overtimeHours = entry.monOt + entry.tueOt + entry.wedOt + entry.thuOt + entry.friOt + entry.satOt + entry.sunOt;
+  const doubleTimeHours = entry.monDt + entry.tueDt + entry.wedDt + entry.thuDt + entry.friDt + entry.satDt + entry.sunDt;
+  const calculated = calculateCertifiedPayrollPay({
+    baseRate: entry.baseRateSnapshot,
+    fringeRate: entry.fringeRateSnapshot,
+    straightTimeHours,
+    overtimeHours,
+    doubleTimeHours,
+  });
+  const calculatedGross = Math.round(calculated.totalWeeklyCost * 100) / 100;
+  const calculatedNet = Math.round((calculatedGross - (entry.deductions ?? 0)) * 100) / 100;
+  const grossDelta = entry.grossWages == null ? null : Math.round((entry.grossWages - calculatedGross) * 100) / 100;
+  const netDelta = entry.netPay == null ? null : Math.round((entry.netPay - calculatedNet) * 100) / 100;
+  return { calculatedGross, calculatedNet, grossDelta, netDelta };
 }
 
 // ── multer setup: memory storage, 5 MB limit, CSV MIME types only (D-14) ──
@@ -389,6 +408,12 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
   const missingPayCount = typedEntries.filter((entry) => entry.grossWages == null || entry.netPay == null).length;
   const totalHours = typedEntries.reduce((sum, entry) => sum + entryHours(entry), 0);
   const grossWages = typedEntries.reduce((sum, entry) => sum + (entry.grossWages ?? 0), 0);
+  const payDeltas = typedEntries.map((entry) => ({ entryId: entry.id, workerId: entry.workerId, ...entryPayDelta(entry) }));
+  const grossDeltaTotal = Math.round(payDeltas.reduce((sum, item) => sum + (item.grossDelta ?? 0), 0) * 100) / 100;
+  const netDeltaTotal = Math.round(payDeltas.reduce((sum, item) => sum + (item.netDelta ?? 0), 0) * 100) / 100;
+  const payDeltaReviewCount = payDeltas.filter(
+    (item) => Math.abs(item.grossDelta ?? 0) > 0.01 || Math.abs(item.netDelta ?? 0) > 0.01,
+  ).length;
   const issues: Array<{
     id: string;
     severity: ReconciliationSeverity;
@@ -434,6 +459,16 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
       title: `${missingPayCount} entr${missingPayCount === 1 ? 'y is' : 'ies are'} missing gross or net pay`,
       detail: 'Certified payroll exports need wage and net pay totals for each row.',
       nextAction: 'Recalculate or edit the payroll entries before submission.',
+    });
+  }
+
+  if (payDeltaReviewCount > 0) {
+    issues.push({
+      id: 'pay-delta-review',
+      severity: 'warning',
+      title: `${payDeltaReviewCount} entr${payDeltaReviewCount === 1 ? 'y has' : 'ies have'} imported pay deltas`,
+      detail: 'Imported gross or net pay differs from the calculated certified payroll amount.',
+      nextAction: 'Review imported payroll register totals against certified payroll calculations before signing.',
     });
   }
 
@@ -487,6 +522,9 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
         entryCount: typedEntries.length,
         totalHours,
         grossWages,
+        grossDeltaTotal,
+        netDeltaTotal,
+        payDeltaReviewCount,
         zeroRateCount,
         missingPayCount,
         providerMappingCount: providerMappings.length,
@@ -514,6 +552,7 @@ importRouter.get('/templates/:provider.csv', (req, res) => {
     res.status(404).json({ error: 'Unknown payroll import provider' });
     return;
   }
+
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${provider}-payroll-import-template.csv"`);
   res.send(csv);

@@ -229,6 +229,9 @@ interface ImportReconciliationResult {
     entryCount: number;
     totalHours: number;
     grossWages: number;
+    grossDeltaTotal?: number;
+    netDeltaTotal?: number;
+    payDeltaReviewCount?: number;
     zeroRateCount: number;
     missingPayCount: number;
     providerMappingCount: number;
@@ -334,6 +337,13 @@ interface ImportPreviewResult {
   matched: ImportedRow[];
   unmatched: UnmatchedRow[];
   conflicts: ConflictRow[];
+  columnCoverage?: Array<{
+    key: string;
+    label: string;
+    found: boolean;
+    matchedColumn: string | null;
+    acceptedColumns: readonly string[];
+  }>;
   adpWeeklyTotalsOnly?: boolean;
   gustoWeeklyTotalsOnly?: boolean;
   idMappingRequired?: boolean;
@@ -1115,6 +1125,14 @@ export function PayrollWeekDetailPage() {
   function previewPayDetailCount(preview: ImportPreviewResult | null): number {
     if (!preview) return 0;
     return preview.matched.filter((row, i) => importCheckedRows[i] && row.payDetailsImported).length;
+  }
+  function previewColumnCoverage(preview: ImportPreviewResult | null) {
+    const coverage = preview?.columnCoverage ?? [];
+    const coreKeys = new Set(['grossWages', 'deductions', 'netPay', 'checkNumber']);
+    const core = coverage.filter((item) => coreKeys.has(item.key));
+    const foundCore = core.filter((item) => item.found).length;
+    const foundAll = coverage.filter((item) => item.found).length;
+    return { coverage, core, foundCore, foundAll };
   }
 
   // Pre-fill eCPR modal fields from project record when data loads
@@ -2136,12 +2154,19 @@ export function PayrollWeekDetailPage() {
                     </Badge>
                   )}
                 </div>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {importReconciliationData.data.latestImport
-                    ? `${importReconciliationData.data.latestImport.committedCount} rows committed, ${importReconciliationData.data.latestImport.unmatchedCount} unmatched.`
-                    : 'No committed provider import has been recorded for this week.'}
-                </p>
-              </div>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    {importReconciliationData.data.latestImport
+                      ? `${importReconciliationData.data.latestImport.committedCount} rows committed, ${importReconciliationData.data.latestImport.unmatchedCount} unmatched.`
+                      : 'No committed provider import has been recorded for this week.'}
+                  </p>
+                  {(importReconciliationData.data.summary.payDeltaReviewCount ?? 0) > 0 && (
+                    <p className="mt-2 text-xs font-medium text-amber-700">
+                      {importReconciliationData.data.summary.payDeltaReviewCount} imported pay row{importReconciliationData.data.summary.payDeltaReviewCount === 1 ? '' : 's'} need review:
+                      gross delta ${Math.abs(importReconciliationData.data.summary.grossDeltaTotal ?? 0).toFixed(2)},
+                      net delta ${Math.abs(importReconciliationData.data.summary.netDeltaTotal ?? 0).toFixed(2)}.
+                    </p>
+                  )}
+                </div>
               <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[260px]">
                 <div>
                   <p className="text-lg font-semibold text-gray-900">{importReconciliationData.data.summary.entryCount}</p>
@@ -4694,6 +4719,37 @@ export function PayrollWeekDetailPage() {
 
               {importStep === 2 && importPreview && (
                 <>
+                  {(() => {
+                    const columnCoverage = previewColumnCoverage(importPreview);
+                    return (
+                      <div className="mb-3 rounded-sm border border-gray-200 bg-gray-50 p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Column preflight</p>
+                            <p className="mt-1 text-sm font-semibold text-gray-950">
+                              {columnCoverage.foundCore}/4 core pay columns found
+                            </p>
+                            <p className="mt-1 text-xs text-gray-600">
+                              {columnCoverage.foundAll} total payroll detail column{columnCoverage.foundAll === 1 ? '' : 's'} detected.
+                            </p>
+                          </div>
+                          <div className="flex max-w-xl flex-wrap gap-1">
+                            {columnCoverage.core.map((item) => (
+                              <span
+                                key={item.key}
+                                className={`rounded-sm border px-2 py-1 text-xs font-semibold ${
+                                  item.found ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'
+                                }`}
+                                title={item.found ? `Matched ${item.matchedColumn}` : `Accepted: ${item.acceptedColumns.join(', ')}`}
+                              >
+                                {item.label}: {item.found ? 'found' : 'missing'}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <p className="text-xs text-text-secondary">Step 2 of 3</p>
                   <h3 className="text-xl font-headline font-semibold text-gray-900">
                     Import Payroll — Step 2: Review Entries

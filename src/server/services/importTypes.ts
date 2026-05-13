@@ -135,6 +135,13 @@ export interface ImportPreviewResult {
   matched: ImportedRow[];
   unmatched: UnmatchedRow[];
   conflicts: ConflictRow[];
+  columnCoverage?: Array<{
+    key: string;
+    label: string;
+    found: boolean;
+    matchedColumn: string | null;
+    acceptedColumns: readonly string[];
+  }>;
   adpWeeklyTotalsOnly?: boolean;
   gustoWeeklyTotalsOnly?: boolean;
   idMappingRequired?: boolean;
