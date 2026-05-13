@@ -1285,8 +1285,19 @@ export function PayrollWeekDetailPage() {
     if (issue.id === 'wd-lock') return 'Fix target: project wage determination lock.';
     if (issue.id === 'signature') return 'Fix target: project signature/settings.';
     if (issue.id === 'import-review') return 'Fix target: import reconciliation or source payroll review.';
-    if (issue.id === 'human-certification-review') return 'Review target: Compliance Check and source payroll records.';
+    if (issue.id === 'human-certification-review') return 'Review target: Compliance Check and source payroll records. If complete, acknowledge the review here.';
     return 'Click to go to the fix.';
+  }
+
+  function submitReadyActionLabel(issue: SubmitReadyIssue) {
+    if (issue.id === 'signature') return 'Open signature section';
+    if (issue.id === 'wd-lock') return 'Open wage determination section';
+    if (issue.id === 'pay-calculation') return 'Open payroll row';
+    if (issue.id === 'rate-snapshots') return 'Open rate fields';
+    if (issue.id === 'compliance-review' || issue.actionId === 'review-week-violations') return 'Open exact payroll field';
+    if (issue.id === 'import-review' || issue.actionId === 'prepare-import-review') return entries.length > 0 ? 'Refresh payroll check' : 'Open import area';
+    if (issue.id === 'payroll-entries') return entries.length > 0 ? 'Refresh payroll check' : 'Open entries';
+    return 'Go to fix';
   }
 
   function scrollToSubmitReadyIssue(issue: SubmitReadyIssue) {
@@ -1830,6 +1841,49 @@ export function PayrollWeekDetailPage() {
             <span className="text-xs text-amber-600 font-medium shrink-0">Auto-saving...</span>
           )}
         </div>
+        {!isLoading && !isError && !week?.submittedAt && (
+          <Card padding="sm" className="mb-4 border border-brand-gold/40 bg-brand-gold/10">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Start here</p>
+                <h2 className="mt-1 text-base font-semibold text-gray-950">
+                  {hasPayrollEntries ? 'Review the payroll source before export' : 'Bring in payroll data before manual cleanup'}
+                </h2>
+                <p className="mt-1 text-sm text-gray-700">
+                  Import a payroll file or fill from field clock first. Use manual entry only for corrections and exceptions.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                {weekId && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => { setImportStep(1); setShowImportModal(true); }}
+                  >
+                    Import payroll file
+                  </Button>
+                )}
+                {weekId && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={fillFetching}
+                    onClick={handleFillFromPunches}
+                  >
+                    {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => scrollToElement(entriesSectionRef.current)}
+                >
+                  Review entries
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
         <Card padding="sm" className="mb-4 border border-gray-200 bg-white">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -1958,7 +2012,7 @@ export function PayrollWeekDetailPage() {
                           variant="ghost"
                           onClick={() => scrollToSubmitReadyIssue(issue)}
                         >
-                          Go to fix
+                          {submitReadyActionLabel(issue)}
                         </Button>
                       )}
                     </div>
@@ -4383,9 +4437,16 @@ export function PayrollWeekDetailPage() {
                   <h3 className="text-xl font-headline font-semibold text-gray-900">
                     Import Payroll — Step 1: Select File
                   </h3>
-                  <div className="mt-4">
-                    <label className="inline-block cursor-pointer rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50">
-                      Browse file
+                  <p className="mt-2 text-sm text-text-secondary">
+                    Upload the payroll export first. The system will match workers, preview totals, and flag rows that need manual review before anything is saved.
+                  </p>
+                  <div className="mt-4 rounded-lg border border-dashed border-brand-gold/60 bg-brand-gold/10 p-5">
+                    <p className="text-sm font-semibold text-gray-950">Recommended path</p>
+                    <p className="mt-1 text-xs text-gray-700">
+                      Use a CSV from QuickBooks, ADP, Gusto, Paychex, Sage, or the generic template.
+                    </p>
+                    <label className="mt-4 inline-flex cursor-pointer items-center rounded-sm bg-brand-gold px-4 py-2.5 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90">
+                      Choose payroll CSV
                       <input
                         type="file"
                         accept=".csv"
@@ -4400,7 +4461,7 @@ export function PayrollWeekDetailPage() {
                       />
                     </label>
                     {importFile && !importParsing && !importError && (
-                      <span className="ml-3 text-sm text-text-secondary">{importFile.name}</span>
+                      <span className="ml-3 text-sm font-medium text-gray-800">{importFile.name}</span>
                     )}
                     {importParsing && (
                       <span className="ml-3 text-sm text-text-secondary italic">Parsing...</span>

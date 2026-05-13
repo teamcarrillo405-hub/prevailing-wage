@@ -1,7 +1,7 @@
 // src/client/pages/ProjectActivityPage.tsx
 // Route: /projects/:id/activity
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
@@ -154,6 +154,7 @@ export function ProjectActivityPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedEvidenceKey, setSelectedEvidenceKey] = useState<EvidenceRequirement['key'] | null>(null);
+  const evidenceDetailRef = useRef<HTMLDivElement | null>(null);
 
   const from = searchParams.get('from') ?? '';
   const to = searchParams.get('to') ?? '';
@@ -226,6 +227,13 @@ export function ProjectActivityPage() {
         return !week.readyForPacket;
       })
     : [];
+
+  function selectEvidenceRequirement(key: EvidenceRequirement['key']) {
+    setSelectedEvidenceKey(key);
+    window.setTimeout(() => {
+      evidenceDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+  }
 
   // Build list with day-group headers
   type RowItem =
@@ -341,7 +349,7 @@ export function ProjectActivityPage() {
                   <button
                     key={item.key}
                     type="button"
-                    onClick={() => setSelectedEvidenceKey(item.key)}
+                    onClick={() => selectEvidenceRequirement(item.key)}
                     className={`border rounded p-3 min-h-[88px] text-left transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold ${
                       selectedRequirement?.key === item.key
                         ? 'border-brand-gold bg-brand-gold/10'
@@ -361,15 +369,19 @@ export function ProjectActivityPage() {
                     {isMissing && (
                       <p className="mt-2 text-xs text-amber-700">{item.missingCount} missing</p>
                     )}
+                    <p className="mt-2 text-xs font-semibold text-gray-800">
+                      {selectedRequirement?.key === item.key ? 'Showing action area below' : 'Show affected weeks'}
+                    </p>
                   </button>
                 );
               })}
             </div>
 
             {selectedRequirement && (
-              <div className="rounded border border-gray-200 bg-gray-50 p-3">
+              <div ref={evidenceDetailRef} tabIndex={-1} className="rounded border border-brand-gold/40 bg-brand-gold/10 p-3 focus:outline-none focus:ring-2 focus:ring-brand-gold">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Action area</p>
                     <p className="text-sm font-semibold text-gray-900">{selectedRequirement.label}</p>
                     <p className="mt-1 text-xs text-gray-600">
                       {selectedRequirement.status === 'complete'
