@@ -130,6 +130,26 @@ function getInitial(email: string | null): string {
   return email.charAt(0).toUpperCase();
 }
 
+function requirementGuidance(requirement: EvidenceRequirement): string {
+  if (requirement.key === 'payroll_submissions') {
+    return requirement.status === 'complete'
+      ? 'All payroll weeks have been marked submitted.'
+      : 'Payroll edits do not clear this gap. Open each week and record the submission in the Submission Status section.';
+  }
+  if (requirement.key === 'audit_trail') {
+    return 'Audit events are created automatically when workers, payroll, exports, or submissions change.';
+  }
+  if (requirement.key === 'photo_evidence') {
+    return 'Field photos are optional for this project setup, but collected photos strengthen the evidence packet.';
+  }
+  return 'GPS punches are optional for this project setup, but collected time punches strengthen the evidence packet.';
+}
+
+function requirementWeekLink(projectId: string | undefined, requirement: EvidenceRequirement, weekId: string) {
+  const base = `/projects/${projectId}/payroll/${weekId}`;
+  return requirement.key === 'payroll_submissions' ? `${base}#submission-status` : base;
+}
+
 export function ProjectActivityPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -358,6 +378,9 @@ export function ProjectActivityPage() {
                         ? 'This evidence category is optional for this project setup, but collected proof still appears in the packet.'
                         : `${selectedRequirement.missingCount} item${selectedRequirement.missingCount === 1 ? '' : 's'} still need evidence.`}
                     </p>
+                    <p className="mt-1 text-xs font-medium text-gray-700">
+                      {requirementGuidance(selectedRequirement)}
+                    </p>
                   </div>
                   <Badge variant={selectedRequirement.status === 'complete' ? 'compliant' : selectedRequirement.status === 'missing' ? 'warning' : 'neutral'}>
                     {selectedRequirement.status.replace('_', ' ')}
@@ -368,10 +391,17 @@ export function ProjectActivityPage() {
                     {selectedRequirementWeeks.slice(0, 5).map((week) => (
                       <Link
                         key={`${selectedRequirement.key}-${week.weekId}`}
-                        to={`/projects/${projectId}/payroll/${week.weekId}`}
+                        to={requirementWeekLink(projectId, selectedRequirement, week.weekId)}
                         className="flex items-center justify-between gap-3 rounded border border-gray-200 bg-white px-3 py-2 text-sm hover:border-brand-gold hover:bg-brand-gold/5"
                       >
-                        <span className="font-medium text-gray-900">Week {week.payrollNumber}</span>
+                        <span>
+                          <span className="font-medium text-gray-900">Week {week.payrollNumber}</span>
+                          <span className="block text-xs text-gray-500">
+                            {selectedRequirement.key === 'payroll_submissions'
+                              ? 'Open submission status'
+                              : week.missingEvidence.join(', ')}
+                          </span>
+                        </span>
                         <span className="text-xs text-gray-500">{week.weekEndingDate}</span>
                       </Link>
                     ))}

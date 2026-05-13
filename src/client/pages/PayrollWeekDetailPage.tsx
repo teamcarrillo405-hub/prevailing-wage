@@ -2667,7 +2667,7 @@ export function PayrollWeekDetailPage() {
 
         {/* Submission status panel */}
         {!isLoading && !isError && week && (
-          <Card padding="none" className="mt-6">
+          <Card id="submission-status" padding="none" className="mt-6 scroll-mt-24">
             <div className="px-5 py-3 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Submission Status</h2>
             </div>
