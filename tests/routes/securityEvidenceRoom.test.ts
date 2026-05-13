@@ -31,9 +31,11 @@ describe('security evidence room', () => {
         expect.objectContaining({ id: 'mfa', status: 'action-needed' }),
         expect.objectContaining({ id: 'session-revocation', status: 'implemented' }),
         expect.objectContaining({ id: 'audit-integrity', status: 'implemented' }),
-        expect.objectContaining({ id: 'access-boundaries', status: 'implemented' }),
+        expect.objectContaining({ id: 'tenant-rbac', status: 'implemented' }),
+        expect.objectContaining({ id: 'soc2', status: 'planned' }),
       ]),
     );
+    expect(res.body.data.summary.readinessPercent).toBeGreaterThan(60);
     expect(res.body.data.nextActions).toEqual(
       expect.arrayContaining([expect.stringMatching(/Enable TOTP/i)]),
     );

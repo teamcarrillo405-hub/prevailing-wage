@@ -15,6 +15,7 @@ import { calculateCertifiedPayrollPay } from '../services/calculations.js';
 import { getDb } from '../db/index.js';
 import { payrollEntries, payrollImports, payrollProviderMappings, subcontractors } from '../db/schema.js';
 import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
+import { reconcilePayrollSourceDetails } from '../services/payrollSourceReconciliation.js';
 
 export const importRouter = Router();
 importRouter.use(requireAuth);
@@ -414,6 +415,7 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
   const payDeltaReviewCount = payDeltas.filter(
     (item) => Math.abs(item.grossDelta ?? 0) > 0.01 || Math.abs(item.netDelta ?? 0) > 0.01,
   ).length;
+  const sourceReconciliation = reconcilePayrollSourceDetails(typedEntries);
   const issues: Array<{
     id: string;
     severity: ReconciliationSeverity;
@@ -469,6 +471,36 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
       title: `${payDeltaReviewCount} entr${payDeltaReviewCount === 1 ? 'y has' : 'ies have'} imported pay deltas`,
       detail: 'Imported gross or net pay differs from the calculated certified payroll amount.',
       nextAction: 'Review imported payroll register totals against certified payroll calculations before signing.',
+    });
+  }
+
+  if (sourceReconciliation.missingSourceDetailCount > 0 && typedEntries.length > 0) {
+    issues.push({
+      id: 'source-detail-coverage',
+      severity: 'warning',
+      title: `${sourceReconciliation.missingSourceDetailCount} entr${sourceReconciliation.missingSourceDetailCount === 1 ? 'y needs' : 'ies need'} deeper payroll-source detail`,
+      detail: 'Production proof should include gross pay, net pay, taxes, itemized deductions, check number, and fringe/contribution detail from payroll.',
+      nextAction: 'Import a payroll register with itemized deduction, tax, contribution, and check columns instead of retyping summary totals.',
+    });
+  }
+
+  if (sourceReconciliation.itemizedDeductionMismatchCount > 0) {
+    issues.push({
+      id: 'deduction-breakdown-mismatch',
+      severity: 'blocker',
+      title: `${sourceReconciliation.itemizedDeductionMismatchCount} entr${sourceReconciliation.itemizedDeductionMismatchCount === 1 ? 'y has' : 'ies have'} deduction breakdown mismatch`,
+      detail: 'The sum of imported taxes and itemized deductions does not equal total deductions.',
+      nextAction: 'Correct the payroll register mapping or edit the itemized deduction fields before signing.',
+    });
+  }
+
+  if (sourceReconciliation.netPayMismatchCount > 0) {
+    issues.push({
+      id: 'net-pay-mismatch',
+      severity: 'blocker',
+      title: `${sourceReconciliation.netPayMismatchCount} entr${sourceReconciliation.netPayMismatchCount === 1 ? 'y has' : 'ies have'} net pay mismatch`,
+      detail: 'Gross pay minus total deductions does not equal imported net pay.',
+      nextAction: 'Reconcile gross, deductions, and net pay to the payroll register before export.',
     });
   }
 
@@ -528,6 +560,11 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
         zeroRateCount,
         missingPayCount,
         providerMappingCount: providerMappings.length,
+        sourceDetailCompleteCount: sourceReconciliation.completeSourceRows,
+        sourceDetailMissingCount: sourceReconciliation.missingSourceDetailCount,
+        sourceCoverage: sourceReconciliation.coverage,
+        itemizedDeductionMismatchCount: sourceReconciliation.itemizedDeductionMismatchCount,
+        netPayMismatchCount: sourceReconciliation.netPayMismatchCount,
       },
       providerGuide: latestImport
         ? PROVIDER_GUIDANCE[latestImport.provider]

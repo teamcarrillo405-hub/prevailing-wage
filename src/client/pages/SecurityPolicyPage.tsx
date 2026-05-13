@@ -4,8 +4,11 @@
 
 import { Link } from 'react-router-dom';
 import { Lock, Shield, Server, Eye, Mail, FileCheck } from 'lucide-react';
+import { TRUST_CONTROLS, categoryLabel, summarizeTrustControls, type TrustControlStatus } from '../../shared/trustCenter';
 
 export function SecurityPolicyPage() {
+  const trustSummary = summarizeTrustControls(TRUST_CONTROLS);
+
   return (
     <div className="min-h-screen bg-white">
 
@@ -145,18 +148,39 @@ export function SecurityPolicyPage() {
             <FileCheck className="w-6 h-6 text-brand-gold" />
             <h2 className="text-2xl font-bold text-gray-900">Trust Center Controls</h2>
           </div>
+          <div className="mb-5 border border-gray-200 bg-gray-50 rounded-xl p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Public readiness posture</p>
+                <p className="mt-1 text-sm text-gray-600">
+                  Controls are marked as implemented, needs evidence, action needed, or planned so buyers can separate
+                  shipped protections from SOC 2 work still in progress.
+                </p>
+              </div>
+              <div className="sm:text-right">
+                <p className="text-3xl font-bold text-gray-900">{trustSummary.readinessPercent}%</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Trust readiness</p>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              { control: 'Audit logging', posture: 'Payroll, export, login, and administrative events retained for investigation.' },
-              { control: 'Backups', posture: 'Daily production backups with restore checks before major releases.' },
-              { control: 'Access reviews', posture: 'Organization roles and auditor permissions reviewed before enterprise go-live.' },
-              { control: 'Incident response', posture: '72-hour acknowledgement target and 14-day remediation timeline for validated reports.' },
-              { control: 'Data retention', posture: 'Project records retained while active and deleted within stated closure windows.' },
-              { control: 'Compliance methodology', posture: 'Prevailing wage rules and export readiness are documented in the methodology center.' },
-            ].map(({ control, posture }) => (
-              <div key={control} className="border border-gray-100 rounded-xl p-4">
-                <p className="text-sm font-semibold text-gray-900">{control}</p>
-                <p className="mt-1 text-sm text-gray-600">{posture}</p>
+            {TRUST_CONTROLS.map((control) => (
+              <div key={control.id} className="border border-gray-100 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                      {categoryLabel(control.category)}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-gray-900">{control.label}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${statusClass(control.status)}`}>
+                    {statusLabel(control.status)}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-gray-600">{control.buyerProof}</p>
+                {control.nextAction ? (
+                  <p className="mt-2 text-xs font-medium text-gray-500">{control.nextAction}</p>
+                ) : null}
               </div>
             ))}
           </div>
@@ -247,4 +271,30 @@ export function SecurityPolicyPage() {
       </footer>
     </div>
   );
+}
+
+function statusLabel(status: TrustControlStatus): string {
+  switch (status) {
+    case 'implemented':
+      return 'Implemented';
+    case 'needs-evidence':
+      return 'Needs evidence';
+    case 'action-needed':
+      return 'Action needed';
+    case 'planned':
+      return 'Planned';
+  }
+}
+
+function statusClass(status: TrustControlStatus): string {
+  switch (status) {
+    case 'implemented':
+      return 'bg-emerald-50 text-emerald-700';
+    case 'needs-evidence':
+      return 'bg-amber-50 text-amber-700';
+    case 'action-needed':
+      return 'bg-red-50 text-red-700';
+    case 'planned':
+      return 'bg-gray-100 text-gray-700';
+  }
 }

@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { buildProjectWorkflowState } from '../../lib/projectWorkflow';
 
 interface ProjectSummary {
   id: string;
@@ -119,38 +120,36 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
   const projectCompliance = complianceData?.projects.find((item) => item.id === projectId);
   const violationCount = projectCompliance?.violationCount ?? 0;
   const cprQueue = cprQueueData?.data.queue ?? [];
-  const submittedWeeks = weeks.filter((week) => week.submittedAt).length;
-  const openPayrollWeeks = weeks.length - submittedWeeks;
   const openCprItems = cprQueue.filter((item) => item.status !== 'received-compliant').length;
-
-  const setupComplete = Boolean(primaryWd && workers.length > 0);
-  const payrollStarted = weeks.length > 0;
-  const readyScore = [
-    Boolean(project),
-    Boolean(primaryWd),
-    workers.length > 0,
-    payrollStarted,
-    openPayrollWeeks === 0 && payrollStarted,
-    violationCount === 0,
-    openCprItems === 0,
-  ].filter(Boolean).length;
-  const readinessPct = Math.round((readyScore / 7) * 100);
-  const readinessStatus = violationCount > 0 || !primaryWd
-    ? 'blocked'
-    : openPayrollWeeks > 0 || openCprItems > 0
-      ? 'warning'
-      : setupComplete && payrollStarted
-        ? 'ready'
-        : 'in_progress';
-
+  const workflow = buildProjectWorkflowState({
+    projectId,
+    hasProject: Boolean(project),
+    hasPrimaryWageDetermination: Boolean(primaryWd),
+    workerCount: workers.length,
+    weeks,
+    violationCount,
+    openCprItems,
+  });
+  const readinessPct = workflow.readinessPct;
+  const readinessStatus = workflow.readinessStatus;
+  const openPayrollWeeks = workflow.openPayrollWeeks;
   const workflowItems = [
-    { step: 1, label: 'Project Home', helper: 'Next action', to: base, icon: LayoutDashboard, exact: true, status: readinessStatus === 'ready' ? 'ready' : 'warning' },
-    { step: 2, label: 'Setup', helper: 'Agency, jobsite, required fields', to: `${base}/settings`, icon: BriefcaseBusiness, status: setupComplete ? 'complete' : 'warning' },
-    { step: 3, label: 'Wage Rates', helper: 'Determinations and classifications', to: `${base}#wage-determinations`, icon: Database, hash: '#wage-determinations', status: primaryWd ? 'complete' : 'blocked' },
-    { step: 4, label: 'Workers', helper: 'Roster and classifications', to: `${base}/workers`, icon: Users, status: workers.length > 0 ? 'complete' : 'warning' },
-    { step: 5, label: 'Payroll', helper: 'Hours, deductions, compliance', to: `${base}/payroll`, icon: FileCheck, status: openPayrollWeeks > 0 ? 'warning' : payrollStarted ? 'complete' : 'warning' },
-    { step: 6, label: 'Audit Packet', helper: 'Evidence and submission proof', to: `${base}/activity`, icon: Activity, status: violationCount > 0 ? 'warning' : 'clean' },
-    { step: 7, label: 'Reports & Exports', helper: 'Final records', to: `${base}/reports`, icon: FileCheck, status: submittedWeeks > 0 ? 'complete' : 'warning' },
+    { step: 0, label: 'Project Home', helper: 'Do this next', to: base, icon: LayoutDashboard, exact: true, status: readinessStatus === 'ready' ? 'ready' : 'warning' },
+    ...workflow.steps.map((step) => ({
+      ...step,
+      icon: step.key === 'setup'
+        ? BriefcaseBusiness
+        : step.key === 'wage-rates'
+          ? Database
+          : step.key === 'workers'
+            ? Users
+            : step.key === 'payroll'
+              ? FileCheck
+              : step.key === 'audit-packet'
+                ? Activity
+                : FileCheck,
+      hash: step.to.includes('#') ? `#${step.to.split('#')[1]}` : undefined,
+    })),
   ];
 
   const supportItems = [
@@ -207,6 +206,16 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
         </div>
 
         <nav className="max-h-[66vh] overflow-y-auto p-2" aria-label="Project workflow">
+          {workflow.primaryAction && (
+            <Link
+              to={workflow.primaryAction.to}
+              className="mb-3 block rounded-md border border-brand-gold/40 bg-brand-gold/10 p-3 text-left transition-colors hover:border-brand-gold hover:bg-brand-gold/15"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">Do this next</p>
+              <p className="mt-1 text-sm font-semibold text-gray-950">{workflow.primaryAction.label}</p>
+              <p className="mt-1 text-xs leading-5 text-gray-600">{workflow.primaryAction.detail}</p>
+            </Link>
+          )}
           <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             Client workflow
           </p>
@@ -224,7 +233,7 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                   active ? 'bg-brand-gold text-nav-dark' : 'bg-gray-100 text-gray-700'
                 }`}>
-                  {item.step}
+                  {item.step === 0 ? <LayoutDashboard className="h-3.5 w-3.5" /> : item.step}
                 </span>
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="min-w-0 flex-1">
@@ -245,7 +254,7 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                   active ? 'bg-brand-gold text-nav-dark' : 'bg-gray-100 text-gray-700'
                 }`}>
-                  {item.step}
+                  {item.step === 0 ? <LayoutDashboard className="h-3.5 w-3.5" /> : item.step}
                 </span>
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="min-w-0 flex-1">

@@ -8,6 +8,7 @@ import { getDb } from '../db/index.js';
 import { users, securityEvents, loginAttempts } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { insertSecurityEvent } from '../db/auditHelpers.js';
+import { TRUST_CONTROLS, summarizeTrustControls } from '../../shared/trustCenter.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -208,38 +209,34 @@ router.get('/evidence-room', async (req, res) => {
     .from(securityEvents)
     .where(and(eq(securityEvents.userId, userId), gte(securityEvents.createdAt, thirtyDaysAgo)));
 
-  const controls = [
-    {
-      id: 'mfa',
-      label: 'Multi-factor authentication',
-      status: user.totpEnabled ? 'implemented' : 'action-needed',
-      evidence: user.totpEnabled ? 'TOTP is enabled for this account.' : 'Enable TOTP before enterprise pilot signoff.',
-    },
-    {
-      id: 'session-revocation',
-      label: 'Session revocation',
-      status: 'implemented',
-      evidence: `Current session version is ${user.sessionVersion ?? 0}; revoke-sessions invalidates older JWTs.`,
-    },
-    {
-      id: 'security-events',
-      label: 'Security event logging',
-      status: Number(securityEventCount) > 0 ? 'implemented' : 'needs-evidence',
-      evidence: `${Number(securityEventCount)} security event(s) recorded in the last 30 days for this user.`,
-    },
-    {
-      id: 'audit-integrity',
-      label: 'Audit hash-chain integrity',
-      status: 'implemented',
-      evidence: 'Project audit routes expose evidence packets and integrity-check coverage is tested.',
-    },
-    {
-      id: 'access-boundaries',
-      label: 'Role and tenant boundaries',
-      status: 'implemented',
-      evidence: 'Project access utilities enforce owner/member/auditor boundaries on scoped routes.',
-    },
-  ];
+  const controls = TRUST_CONTROLS.map((control) => {
+    if (control.id === 'mfa') {
+      return {
+        ...control,
+        status: user.totpEnabled ? 'implemented' as const : 'action-needed' as const,
+        evidence: user.totpEnabled ? 'TOTP is enabled for this account.' : 'Enable TOTP before enterprise pilot signoff.',
+        nextAction: user.totpEnabled ? undefined : 'Enable TOTP before enterprise pilot signoff.',
+      };
+    }
+
+    if (control.id === 'session-revocation') {
+      return {
+        ...control,
+        evidence: `Current session version is ${user.sessionVersion ?? 0}; revoke-sessions invalidates older JWTs.`,
+      };
+    }
+
+    if (control.id === 'security-events') {
+      return {
+        ...control,
+        status: Number(securityEventCount) > 0 ? 'implemented' as const : 'needs-evidence' as const,
+        evidence: `${Number(securityEventCount)} security event(s) recorded in the last 30 days for this user.`,
+      };
+    }
+
+    return control;
+  });
+  const summary = summarizeTrustControls(controls);
 
   res.json({
     data: {
@@ -250,9 +247,8 @@ router.get('/evidence-room', async (req, res) => {
         memberSince: user.createdAt,
       },
       controls,
-      nextActions: controls
-        .filter((control) => control.status !== 'implemented')
-        .map((control) => control.evidence),
+      summary,
+      nextActions: summary.openItems.map((item) => item.nextAction),
     },
   });
 });

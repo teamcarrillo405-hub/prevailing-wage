@@ -4,6 +4,7 @@ import { getDb } from '../db/index.js';
 import {
   auditLogs,
   payrollImports,
+  payrollEntries,
   payrollWeeks,
   projectPhotos,
   securityEvents,
@@ -17,6 +18,7 @@ import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { verifyAuditChain } from '../services/auditService.js';
 import { computeSubmitReady } from '../services/submitReadyService.js';
 import { buildWeekComplianceEvidence, getComplianceMethodology } from '../services/complianceMethodology.js';
+import { reconcilePayrollSourceDetails } from '../services/payrollSourceReconciliation.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -300,6 +302,230 @@ router.get('/:projectId/evidence-summary', async (req, res) => {
   }
 
   res.json({ data: await getEvidenceSummaryData(projectId) });
+});
+
+router.get('/:projectId/pilot-summary', async (req, res) => {
+  const projectId = req.params.projectId;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, req.user!.userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [evidence, weeks, imports, entries, cprRows] = await Promise.all([
+    getEvidenceSummaryData(projectId),
+    db.select().from(payrollWeeks).where(eq(payrollWeeks.projectId, projectId)).orderBy(desc(payrollWeeks.weekEndingDate)),
+    db
+      .select({
+        id: payrollImports.id,
+        payrollWeekId: payrollImports.payrollWeekId,
+        provider: payrollImports.provider,
+        sourceFilename: payrollImports.sourceFilename,
+        committedCount: payrollImports.committedCount,
+        unmatchedCount: payrollImports.unmatchedCount,
+        createdAt: payrollImports.createdAt,
+      })
+      .from(payrollImports)
+      .innerJoin(payrollWeeks, eq(payrollWeeks.id, payrollImports.payrollWeekId))
+      .where(eq(payrollWeeks.projectId, projectId)),
+    db
+      .select({ entry: payrollEntries })
+      .from(payrollEntries)
+      .innerJoin(payrollWeeks, eq(payrollWeeks.id, payrollEntries.payrollWeekId))
+      .where(eq(payrollWeeks.projectId, projectId)),
+    db
+      .select({
+        id: subcontractorCprWeeks.id,
+        receivedDate: subcontractorCprWeeks.receivedDate,
+        isCompliant: subcontractorCprWeeks.isCompliant,
+      })
+      .from(subcontractorCprWeeks)
+      .innerJoin(subcontractors, eq(subcontractors.id, subcontractorCprWeeks.subcontractorId))
+      .where(eq(subcontractors.projectId, projectId)),
+  ]);
+
+  const payrollEntryRows = entries.map((row: { entry: typeof payrollEntries.$inferSelect }) => row.entry);
+  const source = reconcilePayrollSourceDetails(payrollEntryRows);
+  const typedWeeks = weeks as Array<typeof payrollWeeks.$inferSelect>;
+  const submittedWeeks = typedWeeks.filter((week) => week.submittedAt).length;
+  const latestTwoWeeks = typedWeeks.slice(0, 2);
+  const submitReadyWeeks = await Promise.all(latestTwoWeeks.map((week) => computeSubmitReady(db, week.id)));
+  const submitReadyBlockers = submitReadyWeeks.reduce((sum, week) => sum + (week?.blockers ?? 0), 0);
+  const openCprCount = cprRows.filter((row: { receivedDate: string | null; isCompliant: number | null }) => !row.receivedDate || row.isCompliant !== 1).length;
+  const unmatchedImports = imports.reduce((sum: number, row: { unmatchedCount: number }) => sum + row.unmatchedCount, 0);
+
+  const gates = [
+    {
+      id: 'two-payroll-weeks',
+      label: 'Two real payroll weeks',
+      status: typedWeeks.length >= 2 ? 'pass' : 'blocker',
+      detail: `${typedWeeks.length} payroll week(s) exist for the pilot project.`,
+    },
+    {
+      id: 'submitted-weeks',
+      label: 'Submitted payroll proof',
+      status: submittedWeeks >= Math.min(2, typedWeeks.length || 2) ? 'pass' : 'blocker',
+      detail: `${submittedWeeks} payroll week(s) have submission metadata.`,
+    },
+    {
+      id: 'source-reconciliation',
+      label: 'Payroll source reconciliation',
+      status: source.entryCount > 0 && source.missingSourceDetailCount === 0 && source.netPayMismatchCount === 0 && source.itemizedDeductionMismatchCount === 0 ? 'pass' : 'warning',
+      detail: `${source.completeSourceRows}/${source.entryCount} payroll row(s) include complete source detail.`,
+    },
+    {
+      id: 'import-exceptions',
+      label: 'Import exceptions closed',
+      status: unmatchedImports === 0 && imports.length > 0 ? 'pass' : 'warning',
+      detail: `${imports.length} import audit row(s), ${unmatchedImports} unmatched provider worker(s).`,
+    },
+    {
+      id: 'submit-ready',
+      label: 'Submit-ready blockers closed',
+      status: submitReadyBlockers === 0 && submitReadyWeeks.length > 0 ? 'pass' : 'blocker',
+      detail: `${submitReadyBlockers} blocker(s) across latest pilot week checks.`,
+    },
+    {
+      id: 'subcontractor-cpr',
+      label: 'Subcontractor CPR evidence',
+      status: openCprCount === 0 ? 'pass' : 'warning',
+      detail: `${openCprCount} subcontractor CPR item(s) still open.`,
+    },
+    {
+      id: 'evidence-packet',
+      label: 'Evidence packet readiness',
+      status: evidence.readyForPacket ? 'pass' : 'warning',
+      detail: evidence.readyForPacket ? 'Evidence packet requirements are complete.' : `Missing: ${evidence.missingEvidence.join(', ') || 'review evidence requirements'}.`,
+    },
+  ];
+
+  const blockers = gates.filter((gate) => gate.status === 'blocker').length;
+  const warnings = gates.filter((gate) => gate.status === 'warning').length;
+
+  res.json({
+    data: {
+      projectId,
+      generatedAt: new Date().toISOString(),
+      status: blockers > 0 ? 'blocked' : warnings > 0 ? 'needs_review' : 'pilot_ready',
+      blockers,
+      warnings,
+      gates,
+      sourceReconciliation: source,
+      imports,
+      latestSubmitReady: submitReadyWeeks.filter(Boolean),
+      evidence,
+    },
+  });
+});
+
+router.get('/:projectId/reviewer-workbench', async (req, res) => {
+  const projectId = req.params.projectId;
+  const db = getDb();
+  let role: 'owner' | 'member' | 'auditor';
+
+  try {
+    const access = await assertProjectAccess(db, projectId, req.user!.userId);
+    role = access.role;
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [evidence, weekRows, cprRows] = await Promise.all([
+    getEvidenceSummaryData(projectId),
+    db
+      .select({
+        id: payrollWeeks.id,
+        payrollNumber: payrollWeeks.payrollNumber,
+        weekEndingDate: payrollWeeks.weekEndingDate,
+        submittedAt: payrollWeeks.submittedAt,
+        submittedTo: payrollWeeks.submittedTo,
+      })
+      .from(payrollWeeks)
+      .where(eq(payrollWeeks.projectId, projectId))
+      .orderBy(desc(payrollWeeks.weekEndingDate)),
+    db
+      .select({
+        id: subcontractorCprWeeks.id,
+        subcontractorName: subcontractors.name,
+        weekEndingDate: subcontractorCprWeeks.weekEndingDate,
+        receivedDate: subcontractorCprWeeks.receivedDate,
+        isCompliant: subcontractorCprWeeks.isCompliant,
+        notes: subcontractorCprWeeks.notes,
+      })
+      .from(subcontractorCprWeeks)
+      .innerJoin(subcontractors, eq(subcontractors.id, subcontractorCprWeeks.subcontractorId))
+      .where(eq(subcontractors.projectId, projectId)),
+  ]);
+
+  type ReviewerWeekRow = typeof weekRows[number];
+  type ReviewerCprRow = typeof cprRows[number];
+  const submitReady = await Promise.all(weekRows.map((week: ReviewerWeekRow) => computeSubmitReady(db, week.id)));
+  const blockerCount = submitReady.reduce((sum, week) => sum + (week?.blockers ?? 0), 0);
+  const warningCount = submitReady.reduce((sum, week) => sum + (week?.warnings ?? 0), 0);
+  const openCpr = cprRows.filter((row: ReviewerCprRow) => !row.receivedDate || row.isCompliant !== 1);
+  const reviewActions = [
+    blockerCount > 0
+      ? {
+          id: 'submit-ready-blockers',
+          severity: 'blocker',
+          label: 'Payroll blockers remain',
+          detail: `${blockerCount} submit-ready blocker(s) must be cleared before approval.`,
+        }
+      : null,
+    warningCount > 0
+      ? {
+          id: 'submit-ready-warnings',
+          severity: 'warning',
+          label: 'Warnings need reviewer acknowledgement',
+          detail: `${warningCount} warning(s) need documented review before filing.`,
+        }
+      : null,
+    openCpr.length > 0
+      ? {
+          id: 'subcontractor-cpr-open',
+          severity: 'warning',
+          label: 'Subcontractor CPR follow-up',
+          detail: `${openCpr.length} subcontractor CPR item(s) are missing, pending, or non-compliant.`,
+        }
+      : null,
+    !evidence.readyForPacket
+      ? {
+          id: 'evidence-missing',
+          severity: 'warning',
+          label: 'Evidence packet incomplete',
+          detail: evidence.missingEvidence.length > 0 ? `Missing: ${evidence.missingEvidence.join(', ')}.` : 'Review evidence packet requirements.',
+        }
+      : null,
+  ].filter(Boolean);
+
+  res.json({
+    data: {
+      projectId,
+      role,
+      permissions: {
+        canReview: true,
+        canEditPayroll: role !== 'auditor',
+        canApproveEvidence: role !== 'auditor',
+      },
+      status: blockerCount > 0 ? 'blocked' : reviewActions.length > 0 ? 'needs_review' : 'review_ready',
+      summary: {
+        payrollWeekCount: weekRows.length,
+        submittedWeekCount: weekRows.filter((week: ReviewerWeekRow) => week.submittedAt).length,
+        submitReadyBlockers: blockerCount,
+        submitReadyWarnings: warningCount,
+        openSubcontractorCpr: openCpr.length,
+        evidenceReady: evidence.readyForPacket,
+      },
+      reviewActions,
+      payrollWeeks: weekRows,
+      subcontractorCpr: cprRows,
+      evidence,
+    },
+  });
 });
 
 router.get('/:projectId/evidence-packet', async (req, res) => {

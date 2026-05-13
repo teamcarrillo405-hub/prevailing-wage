@@ -23,6 +23,7 @@ import { useToast } from '../contexts/ToastContext';
 import { SignaturePad } from '../components/ui/SignaturePad';
 import { PhotoGallery } from '../components/ui/PhotoGallery';
 import { ApprenticeshipDashboard } from '../components/ApprenticeshipDashboard';
+import { buildProjectWorkflowState } from '../lib/projectWorkflow';
 
 interface Project {
   id: string;
@@ -269,69 +270,26 @@ function ProjectReadinessPanel({
   weeks,
   violationCount,
   hasPrimaryWageDetermination,
+  openCprItems,
 }: {
   projectId: string;
   workersCount: number;
   weeks: { id: string; submittedAt: string | null; weekEndingDate?: string; payrollNumber?: number }[];
   violationCount: number;
   hasPrimaryWageDetermination: boolean;
+  openCprItems: number;
 }) {
-  const unsubmittedWeeks = weeks.filter((w) => !w.submittedAt);
-  const nextUnsubmitted = unsubmittedWeeks
-    .slice()
-    .sort((a, b) => String(a.weekEndingDate ?? '').localeCompare(String(b.weekEndingDate ?? '')))[0];
-
-  const actions = [
-    workersCount === 0
-      ? {
-          label: 'Add workers and classifications',
-          detail: 'Create worker records before entering certified payroll.',
-          to: `/projects/${projectId}/workers`,
-          priority: 'Required',
-        }
-      : null,
-    !hasPrimaryWageDetermination
-      ? {
-          label: 'Select wage determination',
-          detail: 'Confirm the SAM.gov wage determination that drives rates for this project.',
-          to: `/wages`,
-          priority: 'Required',
-        }
-      : null,
-    weeks.length === 0
-      ? {
-          label: 'Create payroll week',
-          detail: 'Start weekly CPR tracking for this project.',
-          to: `/projects/${projectId}/payroll`,
-          priority: 'Required',
-        }
-      : null,
-    violationCount > 0
-      ? {
-          label: `Resolve ${violationCount} compliance issue${violationCount === 1 ? '' : 's'}`,
-          detail: 'Fix wage, overtime, deduction, or apprenticeship items before certification.',
-          to: `/projects/${projectId}/payroll`,
-          priority: 'Critical',
-        }
-      : null,
-    nextUnsubmitted
-      ? {
-          label: `Finish Payroll Week ${nextUnsubmitted.payrollNumber ?? ''}`.trim(),
-          detail: nextUnsubmitted.weekEndingDate
-            ? `Week ending ${nextUnsubmitted.weekEndingDate} has not been submitted.`
-            : 'A payroll week has not been submitted.',
-          to: `/projects/${projectId}/payroll/${nextUnsubmitted.id}`,
-          priority: 'Next',
-        }
-      : null,
-    {
-      label: 'Review evidence packet',
-      detail: 'Confirm audit trail, field photos, GPS punches, and payroll submissions are export-ready.',
-      to: `/projects/${projectId}/activity`,
-      priority: 'Audit',
-    },
-  ].filter(Boolean) as Array<{ label: string; detail: string; to: string; priority: string }>;
-  const primaryAction = actions[0];
+  const workflow = buildProjectWorkflowState({
+    projectId,
+    hasProject: true,
+    hasPrimaryWageDetermination,
+    workerCount: workersCount,
+    weeks,
+    violationCount,
+    openCprItems,
+  });
+  const actions = workflow.actions;
+  const primaryAction = workflow.primaryAction;
 
   return (
     <Card className="mb-6 shadow-card-elevated">
@@ -348,12 +306,12 @@ function ProjectReadinessPanel({
             <p className="text-[11px] text-gray-500">Workers</p>
           </div>
           <div className="rounded border border-gray-200 px-3 py-2">
-            <p className="text-lg font-semibold text-gray-900">{weeks.length}</p>
-            <p className="text-[11px] text-gray-500">Weeks</p>
+            <p className="text-lg font-semibold text-gray-900">{workflow.openPayrollWeeks}</p>
+            <p className="text-[11px] text-gray-500">Open weeks</p>
           </div>
           <div className="rounded border border-gray-200 px-3 py-2">
-            <p className={`text-lg font-semibold ${violationCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{violationCount}</p>
-            <p className="text-[11px] text-gray-500">Issues</p>
+            <p className={`text-lg font-semibold ${violationCount + openCprItems > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{violationCount + openCprItems}</p>
+            <p className="text-[11px] text-gray-500">Fixes</p>
           </div>
         </div>
       </div>
@@ -2208,11 +2166,15 @@ export function ProjectDetailPage() {
   const violationCount = projectCompliance?.violationCount ?? 0;
   const maxCivilPenalty = violationCount * CIVIL_PENALTY_PER_VIOLATION;
 
+  const openCprItems = cprQueueData?.data.summary.total ?? 0;
   const steps = [
-    { label: 'Create Project', complete: true, to: `/projects/${id}` },
-    { label: 'Add Workers', complete: workers.length > 0, to: `/projects/${id}/workers` },
-    { label: 'Enter Payroll', complete: weeks.length > 0, to: `/projects/${id}/payroll` },
-    { label: 'Download WH-347', complete: weeks.some(w => w.submittedAt !== null), to: `/projects/${id}/payroll` },
+    { label: 'Setup', complete: true, to: `/projects/${id}/settings` },
+    { label: 'Wage Rates', complete: primaryPin !== null, to: `/projects/${id}#wage-determinations` },
+    { label: 'Workers', complete: workers.length > 0, to: `/projects/${id}/workers` },
+    { label: 'Payroll', complete: weeks.length > 0 && weeks.every(w => w.submittedAt !== null), to: `/projects/${id}/payroll` },
+    { label: 'Subcontractors', complete: openCprItems === 0, to: `/projects/${id}#subcontractors` },
+    { label: 'Audit Packet', complete: violationCount === 0 && openCprItems === 0, to: `/projects/${id}/activity` },
+    { label: 'Exports', complete: weeks.some(w => w.submittedAt !== null), to: `/projects/${id}/reports` },
   ];
 
   return (
@@ -2254,6 +2216,7 @@ export function ProjectDetailPage() {
             weeks={weeks}
             violationCount={violationCount}
             hasPrimaryWageDetermination={primaryPin !== null}
+            openCprItems={openCprItems}
           />
 
           <ProjectSetupGuidancePanel

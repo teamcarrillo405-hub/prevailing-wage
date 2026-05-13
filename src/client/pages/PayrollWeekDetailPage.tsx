@@ -237,6 +237,19 @@ interface ImportReconciliationResult {
     zeroRateCount: number;
     missingPayCount: number;
     providerMappingCount: number;
+    sourceDetailCompleteCount?: number;
+    sourceDetailMissingCount?: number;
+    sourceCoverage?: {
+      grossPay: number;
+      netPay: number;
+      totalDeductions: number;
+      taxBreakdown: number;
+      deductionBreakdown: number;
+      fringeBreakdown: number;
+      checkNumber: number;
+    };
+    itemizedDeductionMismatchCount?: number;
+    netPayMismatchCount?: number;
   };
   providerGuide?: {
     label: string;
@@ -2175,6 +2188,11 @@ export function PayrollWeekDetailPage() {
                       net delta ${Math.abs(importReconciliationData.data.summary.netDeltaTotal ?? 0).toFixed(2)}.
                     </p>
                   )}
+                  {importReconciliationData.data.summary.sourceCoverage && (
+                    <p className="mt-2 text-xs font-medium text-gray-700">
+                      Payroll-source detail complete on {importReconciliationData.data.summary.sourceDetailCompleteCount ?? 0} of {importReconciliationData.data.summary.entryCount} rows.
+                    </p>
+                  )}
                 </div>
               <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[260px]">
                 <div>
@@ -2207,6 +2225,26 @@ export function PayrollWeekDetailPage() {
                 </div>
               ))}
             </div>
+            {importReconciliationData.data.summary.sourceCoverage && (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  ['Gross', importReconciliationData.data.summary.sourceCoverage.grossPay],
+                  ['Net', importReconciliationData.data.summary.sourceCoverage.netPay],
+                  ['Deductions', importReconciliationData.data.summary.sourceCoverage.totalDeductions],
+                  ['Tax detail', importReconciliationData.data.summary.sourceCoverage.taxBreakdown],
+                  ['Deduction detail', importReconciliationData.data.summary.sourceCoverage.deductionBreakdown],
+                  ['Fringe detail', importReconciliationData.data.summary.sourceCoverage.fringeBreakdown],
+                  ['Check #', importReconciliationData.data.summary.sourceCoverage.checkNumber],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-sm border border-border-default px-3 py-2">
+                    <p className="text-xs text-text-secondary">{label}</p>
+                    <p className={`text-sm font-semibold ${Number(value) === 100 ? 'text-status-compliant' : 'text-status-warning'}`}>
+                      {value}%
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
             {importReconciliationData.data.providerGuide && (
               <div className="mt-4 rounded-sm border border-brand-gold/30 bg-brand-gold/5 px-3 py-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">

@@ -504,6 +504,19 @@ describe('GET /api/payroll/import/reconciliation/:weekId', () => {
             fringeRateSnapshot: 20,
             monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
             monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+            grossWages: 2600,
+            deductions: 300,
+            netPay: 2300,
+            checkNumber: '1001',
+            ficaTax: 100,
+            federalIncomeTax: 120,
+            stateIncomeTax: 50,
+            sdiTax: 10,
+            deductionDues: 20,
+            fringeHealthWelfare: 4,
+            fringePension: 6,
+            fringeVacation: 5,
+            fringeTraining: 5,
           },
         ],
       });
@@ -519,6 +532,10 @@ describe('GET /api/payroll/import/reconciliation/:weekId', () => {
     expect(res.body.data.summary.totalHours).toBe(40);
     expect(res.body.data.status).toBe('needs_review');
     expect(res.body.data.issues.some((issue: any) => issue.id === 'unmatched-workers')).toBe(true);
+    expect(res.body.data.summary.sourceDetailCompleteCount).toBe(1);
+    expect(res.body.data.summary.sourceCoverage.taxBreakdown).toBe(100);
+    expect(res.body.data.summary.sourceCoverage.deductionBreakdown).toBe(100);
+    expect(res.body.data.summary.itemizedDeductionMismatchCount).toBe(0);
   });
 
   it('warns when a week has no import and no entries', async () => {
