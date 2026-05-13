@@ -125,8 +125,27 @@ describe('buildPayrollAutomationSummary', () => {
     });
 
     expect(summary.changedRowReview.mode).toBe('changed_rows');
+    expect(summary.changedRowReview.status).toBe('pending');
     expect(summary.changedRowReview.unchangedRows).toBe(1);
     expect(summary.changedRowReview.changedRows).toBe(1);
+    expect(summary.tasks.find((task) => task.id === 'changed-row-review')?.status).toBe('warning');
+  });
+
+  it('clears reviewable payroll source exceptions after acknowledgement', () => {
+    const summary = buildPayrollAutomationSummary({
+      entries: [entry()],
+      latestImport: null,
+      providerMappingCount: 0,
+      sourceReconciliation: reconciliation(),
+      payDeltaReviewCount: 1,
+      payDeltaEntryIds: ['entry-1'],
+      acknowledgedIssueIds: ['payroll-automation-exceptions'],
+    });
+
+    expect(summary.exceptionCount).toBe(0);
+    expect(summary.changedRowReview.mode).toBe('exceptions_only');
+    expect(summary.changedRowReview.status).toBe('reviewed');
+    expect(summary.tasks.find((task) => task.id === 'exceptions')?.status).toBe('complete');
     expect(summary.tasks.find((task) => task.id === 'changed-row-review')?.status).toBe('complete');
   });
 });

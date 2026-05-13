@@ -13,7 +13,7 @@ import { getPayrollWeek, upsertPayrollEntry } from '../services/payrollService.j
 import { parseImportFile } from '../services/importService.js';
 import { calculateCertifiedPayrollPay } from '../services/calculations.js';
 import { getDb } from '../db/index.js';
-import { payrollEntries, payrollImports, payrollProviderMappings, payrollWeeks, subcontractors } from '../db/schema.js';
+import { payrollEntries, payrollImports, payrollProviderMappings, payrollWeeks, subcontractors, submitReadyAcknowledgements } from '../db/schema.js';
 import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
 import { reconcilePayrollSourceDetails } from '../services/payrollSourceReconciliation.js';
 import { buildPayrollAutomationSummary } from '../services/payrollAutomation.js';
@@ -412,7 +412,7 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
     return;
   }
 
-  const [entries, imports, previousWeeks] = await Promise.all([
+  const [entries, imports, previousWeeks, acknowledgements] = await Promise.all([
     db.select().from(payrollEntries).where(eq(payrollEntries.payrollWeekId, weekId)),
     db
       .select()
@@ -426,10 +426,16 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
       .where(and(eq(payrollWeeks.projectId, week.projectId), lt(payrollWeeks.weekEndingDate, week.weekEndingDate)))
       .orderBy(desc(payrollWeeks.weekEndingDate))
       .limit(1),
+    db
+      .select({ issueId: submitReadyAcknowledgements.issueId })
+      .from(submitReadyAcknowledgements)
+      .where(eq(submitReadyAcknowledgements.payrollWeekId, weekId)),
   ]);
 
   const latestImport = imports[0] as typeof payrollImports.$inferSelect | undefined;
   const typedEntries = entries as (typeof payrollEntries.$inferSelect)[];
+  const acknowledgedIssueIds = acknowledgements.map((row: { issueId: string }) => row.issueId);
+  const payDeltaReviewed = acknowledgedIssueIds.includes('payroll-automation-exceptions');
   const previousWeekId = previousWeeks[0]?.id;
   const previousEntries = previousWeekId
     ? await db.select().from(payrollEntries).where(eq(payrollEntries.payrollWeekId, previousWeekId)) as (typeof payrollEntries.$inferSelect)[]
@@ -466,6 +472,7 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
     sourceReconciliation,
     payDeltaReviewCount,
     payDeltaEntryIds,
+    acknowledgedIssueIds,
     zeroRateCount,
     missingPayCount,
     unmatchedCount: latestImport?.unmatchedCount ?? 0,
@@ -521,10 +528,16 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
   if (payDeltaReviewCount > 0) {
     issues.push({
       id: 'pay-delta-review',
-      severity: 'warning',
-      title: `${payDeltaReviewCount} entr${payDeltaReviewCount === 1 ? 'y has' : 'ies have'} imported pay deltas`,
-      detail: 'Imported gross or net pay differs from the calculated certified payroll amount.',
-      nextAction: 'Review imported payroll register totals against certified payroll calculations before signing.',
+      severity: payDeltaReviewed ? 'pass' : 'warning',
+      title: payDeltaReviewed
+        ? `${payDeltaReviewCount} imported pay delta${payDeltaReviewCount === 1 ? '' : 's'} reviewed`
+        : `${payDeltaReviewCount} entr${payDeltaReviewCount === 1 ? 'y has' : 'ies have'} imported pay deltas`,
+      detail: payDeltaReviewed
+        ? 'A reviewer acknowledged the imported payroll register totals for this week.'
+        : 'Imported gross or net pay differs from the calculated certified payroll amount.',
+      nextAction: payDeltaReviewed
+        ? 'Continue to compliance review and export readiness.'
+        : 'Review imported payroll register totals against certified payroll calculations before signing.',
     });
   }
 
@@ -611,6 +624,7 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
         grossDeltaTotal,
         netDeltaTotal,
         payDeltaReviewCount,
+        payDeltaReviewed,
         zeroRateCount,
         missingPayCount,
         providerMappingCount: providerMappings.length,

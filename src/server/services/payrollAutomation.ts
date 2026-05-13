@@ -47,6 +47,8 @@ export interface PayrollAutomationSummary {
   };
   changedRowReview: {
     mode: 'all_rows' | 'changed_rows' | 'exceptions_only';
+    status: 'not_required' | 'pending' | 'reviewed';
+    acknowledgementIssueId: 'payroll-changed-row-review' | 'payroll-automation-exceptions';
     currentRows: number;
     priorWeekRows: number;
     changedRows: number;
@@ -60,6 +62,13 @@ export interface PayrollAutomationSummary {
       reason: 'new' | 'changed' | 'exception';
       detail: string;
     }>;
+  };
+  reviewAcknowledgement: {
+    automationExceptionsReviewed: boolean;
+    changedRowsReviewed: boolean;
+    blockingExceptionCount: number;
+    reviewableExceptionCount: number;
+    unreviewedExceptionCount: number;
   };
   nextBestAction: PayrollAutomationTask;
   tasks: PayrollAutomationTask[];
@@ -131,6 +140,8 @@ function buildChangedRowReview(input: {
   entries: PayrollEntry[];
   previousEntries?: PayrollEntry[];
   exceptionEntryIds: Set<string>;
+  automationExceptionsReviewed: boolean;
+  changedRowsReviewed: boolean;
 }): PayrollAutomationSummary['changedRowReview'] {
   const previousEntries = input.previousEntries ?? [];
   const previousByWorkerClass = new Map(previousEntries.map((entry) => [`${entry.workerId}::${entry.classificationId}`, entry]));
@@ -170,9 +181,16 @@ function buildChangedRowReview(input: {
     : previousEntries.length > 0 && reviewRows.length < input.entries.length
     ? 'changed_rows'
     : 'all_rows';
+  const acknowledgementIssueId = mode === 'exceptions_only'
+    ? 'payroll-automation-exceptions'
+    : 'payroll-changed-row-review';
+  const reviewed = mode === 'exceptions_only' ? input.automationExceptionsReviewed : input.changedRowsReviewed;
+  const status = reviewRows.length === 0 ? 'not_required' : reviewed ? 'reviewed' : 'pending';
 
   return {
     mode,
+    status,
+    acknowledgementIssueId,
     currentRows: input.entries.length,
     priorWeekRows: previousEntries.length,
     changedRows,
@@ -245,6 +263,7 @@ export function buildPayrollAutomationSummary(input: {
   sourceReconciliation: PayrollSourceReconciliation;
   payDeltaReviewCount?: number;
   payDeltaEntryIds?: string[];
+  acknowledgedIssueIds?: string[];
   zeroRateCount?: number;
   missingPayCount?: number;
   unmatchedCount?: number;
@@ -256,6 +275,7 @@ export function buildPayrollAutomationSummary(input: {
     sourceReconciliation,
     payDeltaReviewCount = 0,
     payDeltaEntryIds = [],
+    acknowledgedIssueIds = [],
     zeroRateCount = 0,
     missingPayCount = 0,
     unmatchedCount = latestImport?.unmatchedCount ?? 0,
@@ -286,8 +306,20 @@ export function buildPayrollAutomationSummary(input: {
     + zeroRateCount
     + missingPayCount
     + unmatchedCount;
+  const blockingExceptionCount =
+    sourceReconciliation.itemizedDeductionMismatchCount
+    + sourceReconciliation.netPayMismatchCount
+    + sourceReconciliation.fringeMismatchCount
+    + zeroRateCount
+    + missingPayCount
+    + unmatchedCount;
+  const automationExceptionsReviewed = acknowledgedIssueIds.includes('payroll-automation-exceptions');
+  const changedRowsReviewed = acknowledgedIssueIds.includes('payroll-changed-row-review');
+  const reviewableExceptionCount = payDeltaReviewCount;
+  const unreviewedExceptionCount = automationExceptionsReviewed ? 0 : reviewableExceptionCount;
+  const effectiveExceptionCount = blockingExceptionCount + unreviewedExceptionCount;
 
-  const exceptionPenalty = hasEntries ? Math.min(mismatchCount / entryCount, 1) : 1;
+  const exceptionPenalty = hasEntries ? Math.min(effectiveExceptionCount / entryCount, 1) : 1;
   const score = Math.round(
     (hasEntries ? 10 : 0)
     + (latestImport ? 15 : 0)
@@ -325,6 +357,8 @@ export function buildPayrollAutomationSummary(input: {
     entries,
     previousEntries: input.previousEntries,
     exceptionEntryIds,
+    automationExceptionsReviewed,
+    changedRowsReviewed,
   });
   const providerAutomation = buildProviderAutomation({
     latestImport,
@@ -381,17 +415,33 @@ export function buildPayrollAutomationSummary(input: {
     {
       id: 'exceptions',
       label: 'Exceptions review',
-      status: mismatchCount > 0 ? (zeroRateCount > 0 || missingPayCount > 0 || sourceReconciliation.netPayMismatchCount > 0 ? 'blocked' : 'warning') : hasEntries ? 'complete' : 'ready',
-      detail: mismatchCount > 0
+      status: mismatchCount > 0
+        ? blockingExceptionCount > 0
+          ? 'blocked'
+          : automationExceptionsReviewed
+          ? 'complete'
+          : 'warning'
+        : hasEntries ? 'complete' : 'ready',
+      detail: mismatchCount > 0 && blockingExceptionCount > 0
         ? `${mismatchCount} automation exception${mismatchCount === 1 ? '' : 's'} need review before export.`
+        : mismatchCount > 0 && automationExceptionsReviewed
+        ? `${reviewableExceptionCount} payroll source exception${reviewableExceptionCount === 1 ? '' : 's'} reviewed and documented.`
+        : mismatchCount > 0
+        ? `${reviewableExceptionCount} payroll source exception${reviewableExceptionCount === 1 ? '' : 's'} need reviewer acknowledgement.`
         : 'No payroll automation exceptions detected.',
       target: 'exceptions',
     },
     {
       id: 'changed-row-review',
       label: 'Changed-row review',
-      status: changedRowReview.mode === 'all_rows' ? 'warning' : 'complete',
-      detail: changedRowReview.mode === 'exceptions_only'
+      status: changedRowReview.status === 'reviewed' || changedRowReview.status === 'not_required'
+        ? 'complete'
+        : changedRowReview.mode === 'all_rows'
+        ? 'warning'
+        : 'warning',
+      detail: changedRowReview.status === 'reviewed'
+        ? `${changedRowReview.reviewRows.length} review row${changedRowReview.reviewRows.length === 1 ? '' : 's'} acknowledged for this week.`
+        : changedRowReview.mode === 'exceptions_only'
         ? `${changedRowReview.exceptionRows} exception row${changedRowReview.exceptionRows === 1 ? '' : 's'} require review; unchanged rows can stay out of the way.`
         : changedRowReview.mode === 'changed_rows'
         ? `${changedRowReview.reviewRows.length} changed or new row${changedRowReview.reviewRows.length === 1 ? '' : 's'} need review.`
@@ -401,8 +451,8 @@ export function buildPayrollAutomationSummary(input: {
     {
       id: 'certification-export',
       label: 'Certification and export',
-      status: mismatchCount === 0 && hasEntries ? 'ready' : 'warning',
-      detail: mismatchCount === 0 && hasEntries
+      status: effectiveExceptionCount === 0 && changedRowReview.status !== 'pending' && hasEntries ? 'ready' : 'warning',
+      detail: effectiveExceptionCount === 0 && changedRowReview.status !== 'pending' && hasEntries
         ? 'Payroll is ready for human certification and CPR export checks.'
         : 'Resolve source, mapping, pay, and detail warnings before signing.',
       target: 'signature',
@@ -422,13 +472,20 @@ export function buildPayrollAutomationSummary(input: {
     automationMode,
     importedRows,
     mappedWorkers,
-    exceptionCount: mismatchCount,
+    exceptionCount: effectiveExceptionCount,
     reviewOnlyChangedRowsReady: Boolean(latestImport && providerMappingCount > 0 && sourceReconciliation.completeSourceRows > 0),
     priorWeekDeltaModeReady: hasEntries && changedRowReview.priorWeekRows > 0 && sourceReconciliation.completeSourceRows === entryCount && mismatchCount === 0,
     deductionAutomation,
     fringeAutomation,
     providerAutomation,
     changedRowReview,
+    reviewAcknowledgement: {
+      automationExceptionsReviewed,
+      changedRowsReviewed,
+      blockingExceptionCount,
+      reviewableExceptionCount,
+      unreviewedExceptionCount,
+    },
     nextBestAction,
     tasks,
   };

@@ -626,6 +626,24 @@ describe('GET /api/payroll/import/reconciliation/:weekId', () => {
     expect(res.body.data.automation.changedRowReview.priorWeekRows).toBe(1);
     expect(res.body.data.automation.changedRowReview.changedRows).toBe(1);
     expect(res.body.data.automation.changedRowReview.mode).toBe('exceptions_only');
+    expect(res.body.data.automation.changedRowReview.status).toBe('pending');
+
+    const ackRes = await supertest(app)
+      .post(`/api/compliance/${weekTwoId}/submit-ready/acknowledgements`)
+      .set('Cookie', cookie)
+      .send({ issueId: 'payroll-automation-exceptions' });
+
+    expect(ackRes.status).toBe(201);
+
+    const reviewedRes = await supertest(app)
+      .get(`/api/payroll/import/reconciliation/${weekTwoId}`)
+      .set('Cookie', cookie);
+
+    expect(reviewedRes.status).toBe(200);
+    expect(reviewedRes.body.data.status).toBe('reconciled');
+    expect(reviewedRes.body.data.summary.payDeltaReviewed).toBe(true);
+    expect(reviewedRes.body.data.automation.changedRowReview.status).toBe('reviewed');
+    expect(reviewedRes.body.data.automation.exceptionCount).toBe(0);
   });
 });
 

@@ -254,6 +254,8 @@ interface PayrollAutomationSummary {
   };
   changedRowReview: {
     mode: 'all_rows' | 'changed_rows' | 'exceptions_only';
+    status: 'not_required' | 'pending' | 'reviewed';
+    acknowledgementIssueId: 'payroll-changed-row-review' | 'payroll-automation-exceptions';
     currentRows: number;
     priorWeekRows: number;
     changedRows: number;
@@ -267,6 +269,13 @@ interface PayrollAutomationSummary {
       reason: 'new' | 'changed' | 'exception';
       detail: string;
     }>;
+  };
+  reviewAcknowledgement: {
+    automationExceptionsReviewed: boolean;
+    changedRowsReviewed: boolean;
+    blockingExceptionCount: number;
+    reviewableExceptionCount: number;
+    unreviewedExceptionCount: number;
   };
   nextBestAction: PayrollAutomationTask;
   tasks: PayrollAutomationTask[];
@@ -291,6 +300,7 @@ interface ImportReconciliationResult {
     grossDeltaTotal?: number;
     netDeltaTotal?: number;
     payDeltaReviewCount?: number;
+    payDeltaReviewed?: boolean;
     zeroRateCount: number;
     missingPayCount: number;
     providerMappingCount: number;
@@ -605,6 +615,7 @@ export function PayrollWeekDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['submit-ready', weekId] });
       queryClient.invalidateQueries({ queryKey: ['compliance', weekId] });
+      queryClient.invalidateQueries({ queryKey: ['import-reconciliation', weekId] });
     },
   });
 
@@ -1471,6 +1482,18 @@ export function PayrollWeekDetailPage() {
     navigate(`/projects/${projectId}/payroll/${weekId}/edit?${params.toString()}`);
   }
 
+  function payrollEntryLabel(entryId: string) {
+    const row = entries.find((item) => item.entry.id === entryId);
+    if (!row) return 'Payroll row';
+    return `${row.workerName} · ${row.tradeDescription}`;
+  }
+
+  function reviewRowBadgeVariant(reason: 'new' | 'changed' | 'exception') {
+    if (reason === 'exception') return 'warning' as const;
+    if (reason === 'new') return 'neutral' as const;
+    return 'compliant' as const;
+  }
+
   function firstComplianceFixTarget(): { entryId: string; field: string; label: string } | null {
     const wageViolation = complianceData?.violations?.[0];
     if (wageViolation) {
@@ -2249,13 +2272,15 @@ export function PayrollWeekDetailPage() {
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Exception-only review</p>
                       <p className="mt-1 text-sm font-semibold text-gray-950">
-                        {payrollAutomation.changedRowReview.priorWeekRows > 0
+                        {payrollAutomation.changedRowReview.status === 'reviewed'
+                          ? 'Reviewer acknowledgement recorded'
+                          : payrollAutomation.changedRowReview.priorWeekRows > 0
                           ? `${payrollAutomation.changedRowReview.unchangedRows} unchanged rows hidden from review load`
                           : 'First-week baseline in progress'}
                       </p>
                     </div>
-                    <Badge variant={payrollAutomation.changedRowReview.mode === 'all_rows' ? 'warning' : 'compliant'}>
-                      {payrollAutomation.changedRowReview.mode.replaceAll('_', ' ')}
+                    <Badge variant={payrollAutomation.changedRowReview.status === 'reviewed' ? 'compliant' : 'warning'}>
+                      {payrollAutomation.changedRowReview.status.replaceAll('_', ' ')}
                     </Badge>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -2271,6 +2296,53 @@ export function PayrollWeekDetailPage() {
                       </div>
                     ))}
                   </div>
+                  {payrollAutomation.changedRowReview.reviewRows.length > 0 && (
+                    <div className="mt-3 rounded-sm border border-gray-200 bg-gray-50">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Rows needing review</p>
+                        <Badge variant={payrollAutomation.changedRowReview.mode === 'exceptions_only' ? 'warning' : 'neutral'}>
+                          {payrollAutomation.changedRowReview.mode.replaceAll('_', ' ')}
+                        </Badge>
+                      </div>
+                      <div className="divide-y divide-gray-200">
+                        {payrollAutomation.changedRowReview.reviewRows.slice(0, 4).map((row) => (
+                          <button
+                            key={row.entryId}
+                            type="button"
+                            onClick={() => scrollToPayrollEntry(row.entryId)}
+                            className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                          >
+                            <span>
+                              <span className="block text-xs font-semibold text-gray-950">{payrollEntryLabel(row.entryId)}</span>
+                              <span className="mt-0.5 block text-xs leading-5 text-gray-600">{row.detail}</span>
+                            </span>
+                            <Badge variant={reviewRowBadgeVariant(row.reason)}>{row.reason}</Badge>
+                          </button>
+                        ))}
+                      </div>
+                      {payrollAutomation.changedRowReview.reviewRows.length > 4 && (
+                        <p className="border-t border-gray-200 px-3 py-2 text-xs text-gray-600">
+                          {payrollAutomation.changedRowReview.reviewRows.length - 4} more review row{payrollAutomation.changedRowReview.reviewRows.length - 4 === 1 ? '' : 's'} in payroll entries.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {payrollAutomation.changedRowReview.status === 'pending' && (
+                    <div className="mt-3 flex flex-col gap-2 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs leading-5 text-amber-900">
+                        Confirm the listed source differences against the payroll register. This records review evidence and clears the automation warning.
+                      </p>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        loading={acknowledgeSubmitReadyMutation.isPending}
+                        onClick={() => acknowledgeSubmitReadyMutation.mutate(payrollAutomation.changedRowReview.acknowledgementIssueId)}
+                        className="shrink-0"
+                      >
+                        Mark reviewed
+                      </Button>
+                    </div>
+                  )}
                   {payrollAutomation.providerAutomation.missingCapabilities.length > 0 && (
                     <div className="mt-3 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2">
                       <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">Still needed for live sync</p>
@@ -2426,8 +2498,8 @@ export function PayrollWeekDetailPage() {
                       : 'No committed provider import has been recorded for this week.'}
                   </p>
                   {(importReconciliationData.data.summary.payDeltaReviewCount ?? 0) > 0 && (
-                    <p className="mt-2 text-xs font-medium text-amber-700">
-                      {importReconciliationData.data.summary.payDeltaReviewCount} imported pay row{importReconciliationData.data.summary.payDeltaReviewCount === 1 ? '' : 's'} need review:
+                    <p className={`mt-2 text-xs font-medium ${importReconciliationData.data.summary.payDeltaReviewed ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {importReconciliationData.data.summary.payDeltaReviewCount} imported pay row{importReconciliationData.data.summary.payDeltaReviewCount === 1 ? '' : 's'} {importReconciliationData.data.summary.payDeltaReviewed ? 'reviewed' : 'need review'}:
                       gross delta ${Math.abs(importReconciliationData.data.summary.grossDeltaTotal ?? 0).toFixed(2)},
                       net delta ${Math.abs(importReconciliationData.data.summary.netDeltaTotal ?? 0).toFixed(2)}.
                     </p>

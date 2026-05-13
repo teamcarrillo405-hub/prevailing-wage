@@ -189,7 +189,13 @@ complianceRouter.post('/:weekId/submit-ready/acknowledgements', requireAuth, asy
   const note = typeof req.body?.note === 'string' ? req.body.note.trim() : null;
   const db = getDb();
 
-  if (issueId !== 'human-certification-review') {
+  const supportedAcknowledgements = new Set([
+    'human-certification-review',
+    'payroll-automation-exceptions',
+    'payroll-changed-row-review',
+  ]);
+
+  if (!supportedAcknowledgements.has(issueId)) {
     res.status(400).json({ error: 'Unsupported acknowledgement issue' });
     return;
   }
