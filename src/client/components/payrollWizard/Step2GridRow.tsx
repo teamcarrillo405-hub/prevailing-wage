@@ -119,6 +119,33 @@ export function Step2GridRow({
   }, [values]);
 
   const weeklyTotal = stTotal + otTotal + dtTotal;
+  const estimatedGross = useMemo(
+    () => (stTotal * baseRate) + (otTotal * baseRate * 1.5) + (dtTotal * baseRate * 2) + (weeklyTotal * fringeRate),
+    [baseRate, dtTotal, fringeRate, otTotal, stTotal, weeklyTotal]
+  );
+  const caItemizedDeductionTotal = useMemo(
+    () =>
+      (values.deductionVacationHoliday ?? 0) +
+      (values.deductionHealthWelfare ?? 0) +
+      (values.deductionPension ?? 0) +
+      (values.deductionTraining ?? 0) +
+      (values.deductionFundAdmin ?? 0) +
+      (values.deductionDues ?? 0) +
+      (values.deductionTravelSubsistence ?? 0) +
+      (values.deductionSavings ?? 0) +
+      (values.deductionOther ?? 0),
+    [
+      values.deductionVacationHoliday,
+      values.deductionHealthWelfare,
+      values.deductionPension,
+      values.deductionTraining,
+      values.deductionFundAdmin,
+      values.deductionDues,
+      values.deductionTravelSubsistence,
+      values.deductionSavings,
+      values.deductionOther,
+    ]
+  );
 
   function numCell(field: keyof HourValues) {
     // Derive the day key (e.g. 'mon', 'tue') from the field name.
@@ -261,16 +288,14 @@ export function Step2GridRow({
           >
             Standard
           </button>
-          {toggles.caFica && (
-            <button
-              type="button"
-              onClick={() => setDetailsOpen((open) => !open)}
-              className="text-xs text-gray-600 hover:text-gray-900 hover:underline whitespace-nowrap"
-              aria-expanded={detailsOpen}
-            >
-              {detailsOpen ? 'Hide details' : 'Details'}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setDetailsOpen((open) => !open)}
+            className="text-xs text-gray-600 hover:text-gray-900 hover:underline whitespace-nowrap"
+            aria-expanded={detailsOpen}
+          >
+            {detailsOpen ? 'Hide details' : 'Pay details'}
+          </button>
         </div>
       </td>
       {numCell('monSt')}{numCell('tueSt')}{numCell('wedSt')}{numCell('thuSt')}
@@ -318,62 +343,94 @@ export function Step2GridRow({
         {toggles.caDt && ` / ${dtTotal.toFixed(1)} DT`}
       </td>
     </tr>
-    {toggles.caFica && detailsOpen && (
+    {detailsOpen && (
       <tr className={`border-b border-gray-100 ${highlighted ? 'bg-amber-50/60' : 'bg-amber-50/30'}`}>
         <td colSpan={40} className="px-3 py-3">
           <div className="rounded-md border border-amber-200 bg-white px-3 py-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
-                  CA A-1-131 itemized deductions
+                  Pay, deductions, and contribution review
                 </p>
                 <p className="mt-1 text-xs text-gray-600">
-                  Enter these from the payroll register only when they apply to this worker.
+                  Use this panel to reconcile the payroll register before certified payroll export.
                 </p>
               </div>
               <span className="text-xs font-medium text-gray-500">{workerName}</span>
             </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              {caDeductionFields.map(([field, label, title]) => {
-                const v = values[field];
-                const numValue = typeof v === 'number' ? v : '';
-                return (
-                  <label key={field} className="block">
-                    <span className="mb-1 block text-[11px] font-medium text-gray-600" title={title}>{label}</span>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-sm border border-gray-200 bg-gray-50 p-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Hours</p>
+                <p className="mt-1 text-sm font-semibold text-gray-950">{weeklyTotal.toFixed(2)} total</p>
+                <p className="text-xs text-gray-600">{stTotal.toFixed(1)} ST / {otTotal.toFixed(1)} OT{toggles.caDt ? ` / ${dtTotal.toFixed(1)} DT` : ''}</p>
+              </div>
+              <div className="rounded-sm border border-gray-200 bg-gray-50 p-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Rates</p>
+                <p className="mt-1 text-sm font-semibold text-gray-950">${baseRate.toFixed(2)} base</p>
+                <p className="text-xs text-gray-600">${fringeRate.toFixed(2)} fringe credit/hr</p>
+              </div>
+              <div className="rounded-sm border border-gray-200 bg-gray-50 p-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Estimated gross</p>
+                <p className="mt-1 text-sm font-semibold text-gray-950">${estimatedGross.toFixed(2)}</p>
+                <p className="text-xs text-gray-600">Before total deductions</p>
+              </div>
+              <div className="rounded-sm border border-gray-200 bg-gray-50 p-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Deductions entered</p>
+                <p className="mt-1 text-sm font-semibold text-gray-950">${deductions.toFixed(2)}</p>
+                <p className="text-xs text-gray-600">{toggles.caFica ? `$${caItemizedDeductionTotal.toFixed(2)} itemized below` : 'Enter total in the row'}</p>
+              </div>
+            </div>
+            {toggles.caFica && (
+              <div className="mt-3 border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                  CA A-1-131 itemized deductions
+                </p>
+                <p className="mt-1 text-xs text-gray-600">
+                  Enter these from the payroll register only when they apply to this worker. The itemized fields support the state form; the row total remains the certified payroll total deduction.
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                  {caDeductionFields.map(([field, label, title]) => {
+                    const v = values[field];
+                    const numValue = typeof v === 'number' ? v : '';
+                    return (
+                      <label key={field} className="block">
+                        <span className="mb-1 block text-[11px] font-medium text-gray-600" title={title}>{label}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={numValue}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            onExtraChange(field, raw === '' ? null : Number(raw));
+                          }}
+                          onBlur={onBlur}
+                          onFocus={(e) => e.target.select()}
+                          className="w-full rounded-sm border border-gray-200 px-2 py-1 text-right text-sm focus:border-brand-gold focus:outline-hidden"
+                          data-worker-id={workerId}
+                          data-classification-id={classificationId}
+                          data-field={field}
+                        />
+                      </label>
+                    );
+                  })}
+                  <label className="block sm:col-span-2 lg:col-span-5">
+                    <span className="mb-1 block text-[11px] font-medium text-gray-600">Other deduction note</span>
                     <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={numValue}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        onExtraChange(field, raw === '' ? null : Number(raw));
-                      }}
+                      type="text"
+                      value={values.deductionOtherDescription ?? ''}
+                      maxLength={120}
+                      onChange={(e) => onExtraChange('deductionOtherDescription', e.target.value === '' ? null : e.target.value)}
                       onBlur={onBlur}
-                      onFocus={(e) => e.target.select()}
-                      className="w-full rounded-sm border border-gray-200 px-2 py-1 text-right text-sm focus:border-brand-gold focus:outline-hidden"
+                      className="w-full rounded-sm border border-gray-200 px-2 py-1 text-sm focus:border-brand-gold focus:outline-hidden"
                       data-worker-id={workerId}
                       data-classification-id={classificationId}
-                      data-field={field}
+                      data-field="deductionOtherDescription"
                     />
                   </label>
-                );
-              })}
-              <label className="block sm:col-span-2 lg:col-span-5">
-                <span className="mb-1 block text-[11px] font-medium text-gray-600">Other deduction note</span>
-                <input
-                  type="text"
-                  value={values.deductionOtherDescription ?? ''}
-                  maxLength={120}
-                  onChange={(e) => onExtraChange('deductionOtherDescription', e.target.value === '' ? null : e.target.value)}
-                  onBlur={onBlur}
-                  className="w-full rounded-sm border border-gray-200 px-2 py-1 text-sm focus:border-brand-gold focus:outline-hidden"
-                  data-worker-id={workerId}
-                  data-classification-id={classificationId}
-                  data-field="deductionOtherDescription"
-                />
-              </label>
-            </div>
+                </div>
+              </div>
+            )}
           </div>
         </td>
       </tr>

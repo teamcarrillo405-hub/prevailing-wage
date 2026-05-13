@@ -1029,6 +1029,20 @@ export function PayrollWeekDetailPage() {
   function sumOt(h: { monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number }): number {
     return h.monOt + h.tueOt + h.wedOt + h.thuOt + h.friOt + h.satOt + h.sunOt;
   }
+  function rowHours(h: {
+    monSt: number; tueSt: number; wedSt: number; thuSt: number; friSt: number; satSt: number; sunSt: number;
+    monOt: number; tueOt: number; wedOt: number; thuOt: number; friOt: number; satOt: number; sunOt: number;
+  }): number {
+    return sumSt(h) + sumOt(h);
+  }
+  function previewSelectedCount(preview: ImportPreviewResult | null): number {
+    if (!preview) return 0;
+    return preview.matched.filter((_, i) => importCheckedRows[i]).length;
+  }
+  function previewSelectedHours(preview: ImportPreviewResult | null): number {
+    if (!preview) return 0;
+    return preview.matched.reduce((sum, row, i) => sum + (importCheckedRows[i] ? rowHours(row) : 0), 0);
+  }
 
   // Pre-fill eCPR modal fields from project record when data loads
   useEffect(() => {
@@ -4620,6 +4634,28 @@ export function PayrollWeekDetailPage() {
                   </div>
 
                   {/* ADP amber banner — only when adpWeeklyTotalsOnly (D-13) */}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                    <div className="rounded-sm border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Selected rows</p>
+                      <p className="mt-1 text-lg font-semibold text-gray-950">{previewSelectedCount(importPreview)}</p>
+                    </div>
+                    <div className="rounded-sm border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Selected hours</p>
+                      <p className="mt-1 text-lg font-semibold text-gray-950">{previewSelectedHours(importPreview).toFixed(2)}</p>
+                    </div>
+                    <div className="rounded-sm border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Needs mapping</p>
+                      <p className="mt-1 text-lg font-semibold text-gray-950">{importPreview.unmatched.length}</p>
+                    </div>
+                    <div className={`rounded-sm border p-3 ${importPreview.conflicts.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Conflicts</p>
+                      <p className="mt-1 text-lg font-semibold text-gray-950">{importPreview.conflicts.length}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-text-secondary">
+                    Select only the rows you want to commit. Gross and net pay are calculated from saved hours, rates, and deductions after import.
+                  </p>
+
                   {importPreview.adpWeeklyTotalsOnly && (
                     <Card padding="sm" className="mt-3 border border-status-warning/30 bg-status-warning/10">
                       <p className="text-sm text-status-warning">
