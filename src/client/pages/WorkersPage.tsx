@@ -526,6 +526,12 @@ export function WorkersPage() {
     addClassification.mutate({ workerId });
   }
 
+  function focusAddWorkerForm() {
+    const nameInput = document.querySelector<HTMLInputElement>('#add-worker-name');
+    nameInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    nameInput?.focus();
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Layout>
@@ -535,12 +541,15 @@ export function WorkersPage() {
         <button onClick={() => navigate(`/projects/${projectId}`)} className="text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4 inline-flex items-center min-h-[44px] px-1">
           &larr; Back to Project
         </button>
-        <PageHeader title="Workers" />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <PageHeader title="Workers" />
+          <Button onClick={focusAddWorkerForm}>Add Worker</Button>
+        </div>
 
         <HelpCallout
           icon={Users}
           title="Register Your Workers"
-          body={<>Federal law requires every worker on a <TermTooltip term="Davis-Bacon" definition={DB_DEF} /> project to be logged with their classification and pay rate. Add all workers before entering payroll.</>}
+          body={<>Federal law requires every worker on a <TermTooltip term="Davis-Bacon" definition={DB_DEF} /> project to be logged with their classification and pay rate. This page supports manual worker entry; bulk roster import is not available yet.</>}
         />
 
         {/* WD status */}
@@ -580,12 +589,7 @@ export function WorkersPage() {
             heading="No workers on this project yet"
             message="Add your first worker to begin tracking prevailing wage compliance."
             action={
-              <Button
-                onClick={() => {
-                  const nameInput = document.querySelector<HTMLInputElement>('#add-worker-name');
-                  if (nameInput) nameInput.focus();
-                }}
-              >
+              <Button onClick={focusAddWorkerForm}>
                 Add Your First Worker
               </Button>
             }
@@ -1262,7 +1266,15 @@ export function WorkersPage() {
 
         {/* Add Worker form */}
         <Card>
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-5">Add Worker</h2>
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Add Worker</h2>
+              <p className="mt-1 text-xs text-gray-500">
+                Add one worker at a time from the pilot roster. Roster CSV import is not available on this screen.
+              </p>
+            </div>
+            <Badge variant="neutral">Manual entry</Badge>
+          </div>
 
           <div className="space-y-4">
             {/* Name + SSN + Union */}
