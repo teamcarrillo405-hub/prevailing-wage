@@ -2525,7 +2525,7 @@ export function ProjectDetailPage() {
           </div>
 
           {/* Phase 96: Contractor Signature */}
-          <div className="mt-8">
+          <div id="contractor-signature" className="mt-8 scroll-mt-24">
             <SignaturePad projectId={project.id} />
           </div>
 

@@ -1307,6 +1307,11 @@ export function PayrollWeekDetailPage() {
       return;
     }
 
+    if (issue.id === 'signature') {
+      navigate(`/projects/${projectId}#contractor-signature`);
+      return;
+    }
+
     scrollToElement(complianceSectionRef.current ?? entriesSectionRef.current ?? submitReadySectionRef.current);
     window.setTimeout(() => setActiveFixIssue(null), 10_000);
   }
