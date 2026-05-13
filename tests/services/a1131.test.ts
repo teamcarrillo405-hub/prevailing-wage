@@ -95,6 +95,11 @@ describe('fillA1131 - CAL-02', () => {
     expect(reDoc.getPageCount()).toBe(2);
   });
 
+  it('removes AcroForm widgets so generated values do not render with opaque field boxes', async () => {
+    const doc = await PDFDocument.load(filledBytes);
+    expect(doc.getForm().getFields()).toHaveLength(0);
+  });
+
   it('A1131WorkerRow interface has Sun-Sat DT fields in Sun-first order', () => {
     const worker = FIXTURE.workers[0]!;
     // Verify Sun-first day order by checking all day fields exist

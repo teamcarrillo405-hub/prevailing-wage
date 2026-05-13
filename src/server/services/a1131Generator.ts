@@ -1,29 +1,6 @@
-// src/server/services/a1131Generator.ts
-//
-// California DIR A-1-131 PDF fill — name-based AcroForm widget fill + flatten.
-//
-// Template: assets/a1131-fillable-template.pdf (built by
-// scripts/build-a1131-template.mts from the pre-rotated landscape
-// PDF assets/a1131-landscape.pdf + widget layout in
-// scripts/calibrate/a1131/widgets.json).
-//
-// The DOL's official DIR A-1-131 is portrait (612×1008) with /Rotate=90.
-// scripts/pre-rotate-a1131.mts flattens that rotation into the content
-// stream so our template is landscape-native (1008×612, /Rotate=0).
-// This bypasses the known pdf-lib flatten bug (PDFForm.js:465 hardcodes
-// rotation:0) which breaks widget positioning on rotated pages.
-//
-// Widget naming:
-//   header_*            : page 1 header text fields
-//   w{1..5}_*           : page 1 worker-row cells (span / ST / OT / DT sub-rows)
-//   cert_*              : page 2 certification text fields
-//   pageOfPages         : "Page X of Y" indicator when overflow triggers
-
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
 import path from 'path';
 import { readFileSync } from 'fs';
-
-// ── Interfaces (unchanged public API) ─────────────────────────────────────
 
 export interface A1131WorkerRow {
   entryNo: number;
@@ -68,18 +45,38 @@ export interface A1131Data {
   workers: A1131WorkerRow[];
 }
 
-const ROWS_PER_PAGE = 5;
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-const fmtDollar = (n: number | undefined) => (n != null && n > 0 ? n.toFixed(2) : '');
-const fmtHours  = (n: number | undefined) => (n != null && n > 0 ? String(n)  : '');
-
-function setText(form: ReturnType<PDFDocument['getForm']>, name: string, value: string): void {
-  try { form.getTextField(name).setText(value); } catch { /* widget not present — skip */ }
+interface A1131Widget {
+  name: string;
+  page: 0 | 1;
+  type: 'text' | 'checkbox';
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
-// ── Main entry ────────────────────────────────────────────────────────────
+const ROWS_PER_PAGE = 5;
+const WIDGET_LAYOUT_PATH = path.join(process.cwd(), 'scripts', 'calibrate', 'a1131', 'widgets.json');
+
+const fmtDollar = (n: number | undefined) => (n != null && n > 0 ? n.toFixed(2) : '');
+const fmtHours = (n: number | undefined) => (n != null && n > 0 ? String(n) : '');
+
+function loadWidgetMap(): Map<string, A1131Widget> {
+  const layout = JSON.parse(readFileSync(WIDGET_LAYOUT_PATH, 'utf8')) as { widgets: A1131Widget[] };
+  return new Map(layout.widgets.map((widget) => [widget.name, widget]));
+}
+
+function fitTextSize(text: string, width: number, baseSize: number, font: PDFFont): number {
+  let size = baseSize;
+  while (size > 4.25 && font.widthOfTextAtSize(text, size) > width) size -= 0.25;
+  return size;
+}
+
+function displayWorkerName(workerName: string): string {
+  if (!workerName.includes(',')) return workerName;
+  const [last, rest] = workerName.split(',');
+  return `${(last ?? '').trim()}, ${(rest ?? '').trim()}`;
+}
 
 export async function fillA1131(
   data: A1131Data,
@@ -96,24 +93,21 @@ export async function fillA1131(
     return fillSingleSet(data, chunks[0], 1, 1, templateBytes);
   }
 
-  // Overflow: fill each 5-worker chunk into a fresh template copy, flatten,
-  // merge into master PDF.
   const filledSets: Uint8Array[] = [];
   for (let setIdx = 0; setIdx < chunks.length; setIdx++) {
     filledSets.push(
       await fillSingleSet(data, chunks[setIdx], setIdx + 1, chunks.length, templateBytes),
     );
   }
+
   const master = await PDFDocument.create();
   for (const bytes of filledSets) {
     const src = await PDFDocument.load(bytes);
     const pages = await master.copyPages(src, src.getPageIndices());
-    for (const p of pages) master.addPage(p);
+    for (const page of pages) master.addPage(page);
   }
   return master.save();
 }
-
-// ── Per-page-set filler ───────────────────────────────────────────────────
 
 async function fillSingleSet(
   data: A1131Data,
@@ -123,104 +117,114 @@ async function fillSingleSet(
   templateBytes: Uint8Array | Buffer,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(templateBytes);
-  const form = pdfDoc.getForm();
+  const pages = pdfDoc.getPages();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const widgetMap = loadWidgetMap();
+  const black = rgb(0, 0, 0);
 
-  // Header
-  setText(form, 'header_contractorName',    data.contractorName);
-  setText(form, 'header_cslbLicense',       data.cslbLicense);
-  setText(form, 'header_contractorAddress', data.contractorAddress);
-  setText(form, 'header_payrollNumber',     data.payrollNumber);
-  setText(form, 'header_weekEndingDate',    data.weekEndingDate);
-  setText(form, 'header_wcPolicyNumber',    data.wcPolicyNumber);
-  setText(form, 'header_contractNo',        data.contractNo);
-  setText(form, 'header_projectLocation',   data.projectLocation);
+  const drawText = (
+    name: string,
+    value: string,
+    opts: { align?: 'left' | 'center' | 'right'; size?: number } = {},
+  ) => {
+    const widget = widgetMap.get(name);
+    if (!widget || !value) return;
+    const page = pages[widget.page];
+    if (!page) return;
+    const padding = 1.25;
+    const maxWidth = Math.max(1, widget.w - padding * 2);
+    const size = fitTextSize(value, maxWidth, opts.size ?? 6, font);
+    const textWidth = font.widthOfTextAtSize(value, size);
+    const x = opts.align === 'right'
+      ? widget.x + widget.w - textWidth - padding
+      : opts.align === 'center'
+        ? widget.x + (widget.w - textWidth) / 2
+        : widget.x + padding;
+    const y = widget.y + Math.max(1, (widget.h - size) / 2) - 0.5;
+    page.drawText(value, { x, y, size, font, color: black, maxWidth });
+  };
+
+  drawText('header_contractorName', data.contractorName);
+  drawText('header_cslbLicense', data.cslbLicense, { align: 'center' });
+  drawText('header_contractorAddress', data.contractorAddress);
+  drawText('header_payrollNumber', data.payrollNumber, { align: 'center' });
+  drawText('header_weekEndingDate', data.weekEndingDate, { align: 'center' });
+  drawText('header_wcPolicyNumber', data.wcPolicyNumber, { align: 'center' });
+  drawText('header_contractNo', data.contractNo, { align: 'center' });
+  drawText('header_projectLocation', data.projectLocation);
 
   if (totalSets > 1) {
-    setText(form, 'pageOfPages', `Page ${setNumber} of ${totalSets}`);
+    drawText('pageOfPages', `Page ${setNumber} of ${totalSets}`, { align: 'center' });
   }
 
-  // Worker rows
   for (let i = 0; i < workers.length; i++) {
-    const w = workers[i];
+    const worker = workers[i];
     const wk = `w${i + 1}`;
 
-    // Normalize worker name display ("Last, First" format)
-    let displayName = w.workerName;
-    if (w.workerName.includes(',')) {
-      const [last, rest] = w.workerName.split(',');
-      displayName = `${(last ?? '').trim()}, ${(rest ?? '').trim()}`;
-    }
+    drawText(`${wk}_entryNo`, String(worker.entryNo), { align: 'center' });
+    drawText(`${wk}_workerName`, displayWorkerName(worker.workerName));
+    drawText(`${wk}_identifyingNo`, worker.identifyingNo, { align: 'center' });
+    drawText(`${wk}_laborType`, worker.laborType === 'journeyworker' ? 'J' : 'RA', { align: 'center' });
+    drawText(`${wk}_classification`, worker.classification);
 
-    // Span fields
-    setText(form, `${wk}_entryNo`,        String(w.entryNo));
-    setText(form, `${wk}_workerName`,     displayName);
-    setText(form, `${wk}_identifyingNo`,  w.identifyingNo);
-    setText(form, `${wk}_laborType`,      w.laborType === 'journeyworker' ? 'J' : 'RA');
-    setText(form, `${wk}_classification`, w.classification);
+    drawText(`${wk}_monSt`, fmtHours(worker.monSt), { align: 'center' });
+    drawText(`${wk}_tueSt`, fmtHours(worker.tueSt), { align: 'center' });
+    drawText(`${wk}_wedSt`, fmtHours(worker.wedSt), { align: 'center' });
+    drawText(`${wk}_thuSt`, fmtHours(worker.thuSt), { align: 'center' });
+    drawText(`${wk}_friSt`, fmtHours(worker.friSt), { align: 'center' });
+    drawText(`${wk}_satSt`, fmtHours(worker.satSt), { align: 'center' });
+    drawText(`${wk}_sunSt`, fmtHours(worker.sunSt), { align: 'center' });
+    drawText(`${wk}_totalSt`, fmtHours(worker.totalSt), { align: 'center' });
+    drawText(`${wk}_stRate`, fmtDollar(worker.stRate), { align: 'right' });
+    drawText(`${wk}_grossWages`, fmtDollar(worker.grossWages), { align: 'right', size: 5.5 });
+    drawText(`${wk}_federalTax`, fmtDollar(worker.federalTax), { align: 'right' });
+    drawText(`${wk}_stateTax`, fmtDollar(worker.stateTax), { align: 'right' });
+    drawText(`${wk}_sdi`, fmtDollar(worker.sdi), { align: 'right' });
+    drawText(`${wk}_otherDeductions`, fmtDollar(worker.otherDeductions), { align: 'right' });
+    drawText(`${wk}_netPay`, fmtDollar(worker.netPay), { align: 'right', size: 5.5 });
 
-    // ST sub-row — Mon–Sun hours + totals + rate + money columns
-    setText(form, `${wk}_monSt`,           fmtHours(w.monSt));
-    setText(form, `${wk}_tueSt`,           fmtHours(w.tueSt));
-    setText(form, `${wk}_wedSt`,           fmtHours(w.wedSt));
-    setText(form, `${wk}_thuSt`,           fmtHours(w.thuSt));
-    setText(form, `${wk}_friSt`,           fmtHours(w.friSt));
-    setText(form, `${wk}_satSt`,           fmtHours(w.satSt));
-    setText(form, `${wk}_sunSt`,           fmtHours(w.sunSt));
-    setText(form, `${wk}_totalSt`,         fmtHours(w.totalSt));
-    setText(form, `${wk}_stRate`,          fmtDollar(w.stRate));
-    setText(form, `${wk}_grossWages`,      fmtDollar(w.grossWages));
-    setText(form, `${wk}_federalTax`,      fmtDollar(w.federalTax));
-    setText(form, `${wk}_stateTax`,        fmtDollar(w.stateTax));
-    setText(form, `${wk}_sdi`,             fmtDollar(w.sdi));
-    setText(form, `${wk}_otherDeductions`, fmtDollar(w.otherDeductions));
-    setText(form, `${wk}_netPay`,          fmtDollar(w.netPay));
+    drawText(`${wk}_monOt`, fmtHours(worker.monOt), { align: 'center' });
+    drawText(`${wk}_tueOt`, fmtHours(worker.tueOt), { align: 'center' });
+    drawText(`${wk}_wedOt`, fmtHours(worker.wedOt), { align: 'center' });
+    drawText(`${wk}_thuOt`, fmtHours(worker.thuOt), { align: 'center' });
+    drawText(`${wk}_friOt`, fmtHours(worker.friOt), { align: 'center' });
+    drawText(`${wk}_satOt`, fmtHours(worker.satOt), { align: 'center' });
+    drawText(`${wk}_sunOt`, fmtHours(worker.sunOt), { align: 'center' });
+    drawText(`${wk}_totalOt`, fmtHours(worker.totalOt), { align: 'center' });
+    drawText(`${wk}_otRate`, fmtDollar(worker.otRate), { align: 'right' });
+    drawText(`${wk}_fringeCredit`, fmtDollar(worker.fringeCredit), { align: 'right', size: 5.5 });
 
-    // OT sub-row
-    setText(form, `${wk}_monOt`,        fmtHours(w.monOt));
-    setText(form, `${wk}_tueOt`,        fmtHours(w.tueOt));
-    setText(form, `${wk}_wedOt`,        fmtHours(w.wedOt));
-    setText(form, `${wk}_thuOt`,        fmtHours(w.thuOt));
-    setText(form, `${wk}_friOt`,        fmtHours(w.friOt));
-    setText(form, `${wk}_satOt`,        fmtHours(w.satOt));
-    setText(form, `${wk}_sunOt`,        fmtHours(w.sunOt));
-    setText(form, `${wk}_totalOt`,      fmtHours(w.totalOt));
-    setText(form, `${wk}_otRate`,       fmtDollar(w.otRate));
-    setText(form, `${wk}_fringeCredit`, fmtDollar(w.fringeCredit));
-
-    // DT sub-row (CA-specific doubletime)
-    setText(form, `${wk}_monDt`,   fmtHours(w.monDt));
-    setText(form, `${wk}_tueDt`,   fmtHours(w.tueDt));
-    setText(form, `${wk}_wedDt`,   fmtHours(w.wedDt));
-    setText(form, `${wk}_thuDt`,   fmtHours(w.thuDt));
-    setText(form, `${wk}_friDt`,   fmtHours(w.friDt));
-    setText(form, `${wk}_satDt`,   fmtHours(w.satDt));
-    setText(form, `${wk}_sunDt`,   fmtHours(w.sunDt));
-    setText(form, `${wk}_totalDt`, fmtHours(w.totalDt));
-    setText(form, `${wk}_dtRate`,  fmtDollar(w.dtRate));
-
-    // Total deductions — drawn between OT and DT rows per form layout
-    setText(form, `${wk}_totalDeductions`, fmtDollar(w.totalDeductions));
+    drawText(`${wk}_monDt`, fmtHours(worker.monDt), { align: 'center' });
+    drawText(`${wk}_tueDt`, fmtHours(worker.tueDt), { align: 'center' });
+    drawText(`${wk}_wedDt`, fmtHours(worker.wedDt), { align: 'center' });
+    drawText(`${wk}_thuDt`, fmtHours(worker.thuDt), { align: 'center' });
+    drawText(`${wk}_friDt`, fmtHours(worker.friDt), { align: 'center' });
+    drawText(`${wk}_satDt`, fmtHours(worker.satDt), { align: 'center' });
+    drawText(`${wk}_sunDt`, fmtHours(worker.sunDt), { align: 'center' });
+    drawText(`${wk}_totalDt`, fmtHours(worker.totalDt), { align: 'center' });
+    drawText(`${wk}_dtRate`, fmtDollar(worker.dtRate), { align: 'right' });
+    drawText(`${wk}_totalDeductions`, fmtDollar(worker.totalDeductions), { align: 'right', size: 5.5 });
   }
 
-  // Page 2: certification
-  setText(form, 'cert_contractorName',
-    data.contractorName);
-  setText(form, 'cert_payrollDescription',
-    `Payroll #${data.payrollNumber} — ${data.projectLocation}`);
-  setText(form, 'cert_weekEndingDate',
-    data.weekEndingDate);
+  drawText('cert_contractorName', data.contractorName);
+  drawText('cert_payrollDescription', `Payroll #${data.payrollNumber} - ${data.projectLocation}`);
+  drawText('cert_weekEndingDate', data.weekEndingDate, { align: 'center' });
 
-  form.flatten();
+  try {
+    const form = pdfDoc.getForm();
+    for (const field of form.getFields()) form.removeField(field);
+  } catch {
+    // The production source is flat; this strips calibration widgets in tests.
+  }
+
   return pdfDoc.save();
 }
-
-// ── Template loader ───────────────────────────────────────────────────────
 
 export function getA1131TemplateBytes(): Uint8Array {
   const templatePath = path.join(
     process.cwd(),
     'assets',
-    'a1131-fillable-template.pdf',
+    'a1131-landscape.pdf',
   );
   return readFileSync(templatePath);
 }
