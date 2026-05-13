@@ -1,12 +1,14 @@
 // src/client/pages/ProjectActivityPage.tsx
 // Route: /projects/:id/activity
 import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActivityEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { AlertTriangle, Camera, CheckCircle2, ClipboardCheck, Clock3, Download, FileClock, ShieldCheck } from 'lucide-react';
@@ -131,6 +133,7 @@ function getInitial(email: string | null): string {
 export function ProjectActivityPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedEvidenceKey, setSelectedEvidenceKey] = useState<EvidenceRequirement['key'] | null>(null);
 
   const from = searchParams.get('from') ?? '';
   const to = searchParams.get('to') ?? '';
@@ -190,6 +193,19 @@ export function ProjectActivityPage() {
   }
 
   const items = data?.items ?? [];
+  const selectedRequirement =
+    evidenceSummary?.requirements.find((item) => item.key === selectedEvidenceKey) ??
+    evidenceSummary?.requirements.find((item) => item.status === 'missing') ??
+    evidenceSummary?.requirements[0] ??
+    null;
+  const selectedRequirementWeeks = selectedRequirement
+    ? (evidenceSummary?.weeks ?? []).filter((week) => {
+        if (selectedRequirement.key === 'payroll_submissions') return !week.submitted;
+        if (selectedRequirement.key === 'photo_evidence') return week.weekPhotoCount === 0;
+        if (selectedRequirement.key === 'gps_time_punches') return week.timePunchCount === 0;
+        return !week.readyForPacket;
+      })
+    : [];
 
   // Build list with day-group headers
   type RowItem =
@@ -302,7 +318,17 @@ export function ProjectActivityPage() {
                 const isMissing = item.status === 'missing';
                 const Icon = isComplete ? CheckCircle2 : isMissing ? AlertTriangle : Clock3;
                 return (
-                  <div key={item.key} className="border border-gray-200 rounded p-3 min-h-[88px]">
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setSelectedEvidenceKey(item.key)}
+                    className={`border rounded p-3 min-h-[88px] text-left transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                      selectedRequirement?.key === item.key
+                        ? 'border-brand-gold bg-brand-gold/10'
+                        : 'border-gray-200 hover:border-brand-gold hover:bg-brand-gold/5'
+                    }`}
+                    aria-pressed={selectedRequirement?.key === item.key}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium text-gray-900">{item.label}</p>
@@ -315,10 +341,48 @@ export function ProjectActivityPage() {
                     {isMissing && (
                       <p className="mt-2 text-xs text-amber-700">{item.missingCount} missing</p>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
+
+            {selectedRequirement && (
+              <div className="rounded border border-gray-200 bg-gray-50 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{selectedRequirement.label}</p>
+                    <p className="mt-1 text-xs text-gray-600">
+                      {selectedRequirement.status === 'complete'
+                        ? 'This evidence category is complete for the current packet.'
+                        : selectedRequirement.status === 'not_applicable'
+                        ? 'This evidence category is optional for this project setup, but collected proof still appears in the packet.'
+                        : `${selectedRequirement.missingCount} item${selectedRequirement.missingCount === 1 ? '' : 's'} still need evidence.`}
+                    </p>
+                  </div>
+                  <Badge variant={selectedRequirement.status === 'complete' ? 'compliant' : selectedRequirement.status === 'missing' ? 'warning' : 'neutral'}>
+                    {selectedRequirement.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+                {selectedRequirementWeeks.length > 0 ? (
+                  <div className="mt-3 grid gap-2">
+                    {selectedRequirementWeeks.slice(0, 5).map((week) => (
+                      <Link
+                        key={`${selectedRequirement.key}-${week.weekId}`}
+                        to={`/projects/${projectId}/payroll/${week.weekId}`}
+                        className="flex items-center justify-between gap-3 rounded border border-gray-200 bg-white px-3 py-2 text-sm hover:border-brand-gold hover:bg-brand-gold/5"
+                      >
+                        <span className="font-medium text-gray-900">Week {week.payrollNumber}</span>
+                        <span className="text-xs text-gray-500">{week.weekEndingDate}</span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-gray-600">
+                    No weekly gaps are currently associated with this category.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </Card>
 
