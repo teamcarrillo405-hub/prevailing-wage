@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Workflow, Settings, ChevronRight, Building2, Shield, AlertTriangle, Pencil } from 'lucide-react';
 import { api } from '../lib/api';
@@ -2048,6 +2048,7 @@ function ApprenticeshipSection({ projectId }: { projectId: string }) {
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['projects', id],
@@ -2106,6 +2107,16 @@ export function ProjectDetailPage() {
   const [complianceWarning, setComplianceWarning] = useState(false);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState<NotifSettings>(DEFAULT_NOTIF_SETTINGS);
+
+  useEffect(() => {
+    if (isLoading || !data?.data?.project || !location.hash) return;
+    const targetId = decodeURIComponent(location.hash.slice(1));
+    if (!targetId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [data?.data?.project, isLoading, location.hash]);
 
   const archiveMutation = useMutation({
     mutationFn: () => api.delete(`/projects/${id}`),
