@@ -1708,7 +1708,7 @@ export function PayrollWeekDetailPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto pb-24">
+      <div className="max-w-7xl mx-auto pb-24">
         {/* Hidden anchor for Blob download — must be outside modal so it persists when modal unmounts */}
         <a ref={hiddenAnchorRef} className="hidden" />
 
@@ -1735,9 +1735,10 @@ export function PayrollWeekDetailPage() {
             <span className="text-xs text-amber-600 font-medium shrink-0">Auto-saving...</span>
           )}
         </div>
+        <section className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         {submitReadyData && (
-          <div ref={submitReadySectionRef} tabIndex={-1}>
-            <Card padding="default" className="mb-4 border border-border-default">
+          <div ref={submitReadySectionRef} tabIndex={-1} className="xl:row-span-2">
+            <Card padding="default" className="h-full border border-border-default">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1812,7 +1813,7 @@ export function PayrollWeekDetailPage() {
         )}
         {importReconciliationData?.data && (
           <div ref={importReconciliationSectionRef} tabIndex={-1}>
-            <Card padding="default" className="mb-4 border border-border-default">
+            <Card padding="default" className="h-full border border-border-default">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1855,7 +1856,7 @@ export function PayrollWeekDetailPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-4 grid gap-2 lg:grid-cols-2 xl:grid-cols-1">
               {importReconciliationData.data.issues.slice(0, 3).map((issue) => (
                 <div key={issue.id} className="rounded-sm border border-border-default px-3 py-2">
                   <div className="flex items-start justify-between gap-3">
@@ -1890,7 +1891,7 @@ export function PayrollWeekDetailPage() {
           </div>
         )}
         {stateReadinessData?.data && (
-          <Card padding="default" className="mb-4 border border-border-default">
+          <Card padding="default" className="border border-border-default">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1929,6 +1930,7 @@ export function PayrollWeekDetailPage() {
             </div>
           </Card>
         )}
+        </section>
         {/* MOB-13: sticky download bar with iOS safe-area padding */}
         <div
           className="sticky bottom-0 z-10 bg-white border-t border-brand-navy/10 px-4 sm:px-6 pt-3 -mx-4 sm:-mx-6 mt-8"
@@ -2568,14 +2570,14 @@ export function PayrollWeekDetailPage() {
               <h2 className="text-base font-semibold text-gray-900">Submission Status</h2>
             </div>
             {week.submittedAt ? (
-              <div className="px-5 py-4 flex items-center justify-between">
+              <div className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                 <div className="flex items-center gap-3">
                   <Badge variant="compliant">Submitted</Badge>
                   <span className="text-sm text-gray-700">
                     {week.submittedAt} — {week.submittedTo}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 md:justify-end">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -2596,7 +2598,7 @@ export function PayrollWeekDetailPage() {
             ) : showSubmitForm ? (
               <div className="px-5 py-4 space-y-3">
                 <p className="text-sm text-gray-600">Record the submission date and agency name.</p>
-                <div className="flex gap-3 items-end">
+                <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)] md:items-end">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Submission Date</label>
                     <input
@@ -2640,7 +2642,7 @@ export function PayrollWeekDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="px-5 py-4 flex items-center justify-between">
+              <div className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                 <div className="flex items-center gap-2">
                   <Badge variant="neutral">Not Submitted</Badge>
                   <span className="text-sm text-gray-500 inline-flex items-baseline gap-1"><TermTooltip term="WH-347" definition={WH347_DEF} /> not yet submitted to agency.</span>

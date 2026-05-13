@@ -25,3 +25,4 @@ uploads/
 .claude/worktrees/
 output/playwright/
 .dev-*.log
+dev-server*.log
