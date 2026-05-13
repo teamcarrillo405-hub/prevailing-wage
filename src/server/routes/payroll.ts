@@ -2,9 +2,9 @@
 import { logger } from '../logger.js';
 import { Router } from 'express';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { payrollEntries, workers, projects } from '../db/schema.js';
+import { payrollEntries, payrollWeeks, workers, projects } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
@@ -134,6 +134,21 @@ router.post('/weeks', validate(CreateWeekSchema), async (req, res) => {
     }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [existingWeek] = await db
+    .select({ id: payrollWeeks.id })
+    .from(payrollWeeks)
+    .where(
+      and(
+        eq(payrollWeeks.projectId, body.projectId),
+        eq(payrollWeeks.payrollNumber, body.payrollNumber),
+      ),
+    )
+    .limit(1);
+  if (existingWeek) {
+    res.status(409).json({ error: `Payroll Week #${body.payrollNumber} already exists for this project.` });
     return;
   }
 
