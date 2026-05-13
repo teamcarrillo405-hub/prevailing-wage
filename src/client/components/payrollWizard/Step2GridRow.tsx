@@ -33,6 +33,16 @@ export interface RowExtras {
   federalIncomeTax: number | null;
   stateIncomeTax: number | null;
   sdiTax: number | null;
+  deductionVacationHoliday: number | null;
+  deductionHealthWelfare: number | null;
+  deductionPension: number | null;
+  deductionTraining: number | null;
+  deductionFundAdmin: number | null;
+  deductionDues: number | null;
+  deductionTravelSubsistence: number | null;
+  deductionSavings: number | null;
+  deductionOther: number | null;
+  deductionOtherDescription: string | null;
 }
 
 export type RowValues = HourValues & RowExtras;
@@ -198,7 +208,7 @@ export function Step2GridRow({
     );
   }
 
-  function extraTextCell(field: 'checkNumber', width: string = 'w-24') {
+  function extraTextCell(field: 'checkNumber' | 'deductionOtherDescription', width: string = 'w-24') {
     const v = values[field] ?? '';
     return (
       <td className="px-1 py-1">
@@ -276,7 +286,21 @@ export function Step2GridRow({
           {extraNumCell('ficaTax')}
           {extraNumCell('federalIncomeTax')}
           {extraNumCell('stateIncomeTax')}
-          {toggles.caFica && extraNumCell('sdiTax')}
+          {toggles.caFica && (
+            <>
+              {extraNumCell('sdiTax')}
+              {extraNumCell('deductionVacationHoliday')}
+              {extraNumCell('deductionHealthWelfare')}
+              {extraNumCell('deductionPension')}
+              {extraNumCell('deductionTraining')}
+              {extraNumCell('deductionFundAdmin')}
+              {extraNumCell('deductionDues')}
+              {extraNumCell('deductionTravelSubsistence')}
+              {extraNumCell('deductionSavings')}
+              {extraNumCell('deductionOther')}
+              {extraTextCell('deductionOtherDescription', 'w-32')}
+            </>
+          )}
         </>
       )}
       <td className="px-3 py-2 text-right text-sm font-semibold whitespace-nowrap">

@@ -366,6 +366,17 @@ export const payrollEntries = sqliteTable('payroll_entries', {
   stateIncomeTax: real('state_income_tax'),
   // Phase 66 — CA SDI (State Disability Insurance); CA projects only
   sdiTax: real('sdi_tax'),
+  // CA A-1-131 section (8) itemized deductions, contributions, and payments.
+  deductionVacationHoliday: real('deduction_vacation_holiday'),
+  deductionHealthWelfare: real('deduction_health_welfare'),
+  deductionPension: real('deduction_pension'),
+  deductionTraining: real('deduction_training'),
+  deductionFundAdmin: real('deduction_fund_admin'),
+  deductionDues: real('deduction_dues'),
+  deductionTravelSubsistence: real('deduction_travel_subsistence'),
+  deductionSavings: real('deduction_savings'),
+  deductionOther: real('deduction_other'),
+  deductionOtherDescription: text('deduction_other_description'),
   // Phase 32 — user attribution (nullable for all existing rows per D-09)
   createdByUserId: text('created_by_user_id').references(() => users.id),
   updatedByUserId: text('updated_by_user_id').references(() => users.id),

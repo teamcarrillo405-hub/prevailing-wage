@@ -442,6 +442,13 @@
       "when": 1778646000000,
       "tag": "0071_submit_ready_acknowledgements",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1778653000000,
+      "tag": "0072_ca_a1131_deduction_items",
+      "breakpoints": true
     }
   ]
 }

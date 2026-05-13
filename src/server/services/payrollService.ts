@@ -103,6 +103,16 @@ export interface UpsertPayrollEntryInput {
   federalIncomeTax?: number | null;
   stateIncomeTax?: number | null;
   sdiTax?: number | null;
+  deductionVacationHoliday?: number | null;
+  deductionHealthWelfare?: number | null;
+  deductionPension?: number | null;
+  deductionTraining?: number | null;
+  deductionFundAdmin?: number | null;
+  deductionDues?: number | null;
+  deductionTravelSubsistence?: number | null;
+  deductionSavings?: number | null;
+  deductionOther?: number | null;
+  deductionOtherDescription?: string | null;
   // Phase 108 (DBE-08): optional sub attribution (null = GC direct labor)
   subcontractorId?: string | null;
   userId?: string; // populated from req.user.id on POST/PUT; undefined for amendment copies
@@ -365,6 +375,16 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     federalIncomeTax: input.federalIncomeTax ?? null,
     stateIncomeTax: input.stateIncomeTax ?? null,
     sdiTax: input.sdiTax ?? null,
+    deductionVacationHoliday: input.deductionVacationHoliday ?? null,
+    deductionHealthWelfare: input.deductionHealthWelfare ?? null,
+    deductionPension: input.deductionPension ?? null,
+    deductionTraining: input.deductionTraining ?? null,
+    deductionFundAdmin: input.deductionFundAdmin ?? null,
+    deductionDues: input.deductionDues ?? null,
+    deductionTravelSubsistence: input.deductionTravelSubsistence ?? null,
+    deductionSavings: input.deductionSavings ?? null,
+    deductionOther: input.deductionOther ?? null,
+    deductionOtherDescription: input.deductionOtherDescription ?? null,
     // Phase 108 (DBE-08): optional sub attribution
     subcontractorId: input.subcontractorId ?? null,
     createdByUserId: input.userId ?? null,
@@ -421,6 +441,16 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
         federalIncomeTax: values.federalIncomeTax,
         stateIncomeTax: values.stateIncomeTax,
         sdiTax: values.sdiTax,
+        deductionVacationHoliday: values.deductionVacationHoliday,
+        deductionHealthWelfare: values.deductionHealthWelfare,
+        deductionPension: values.deductionPension,
+        deductionTraining: values.deductionTraining,
+        deductionFundAdmin: values.deductionFundAdmin,
+        deductionDues: values.deductionDues,
+        deductionTravelSubsistence: values.deductionTravelSubsistence,
+        deductionSavings: values.deductionSavings,
+        deductionOther: values.deductionOther,
+        deductionOtherDescription: values.deductionOtherDescription,
         subcontractorId: values.subcontractorId,
         updatedByUserId: values.updatedByUserId,
         updatedAt: now,

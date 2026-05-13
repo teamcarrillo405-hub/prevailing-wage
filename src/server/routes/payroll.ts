@@ -84,6 +84,16 @@ const UpsertEntrySchema = z.object({
   federalIncomeTax: z.number().min(0).nullable().optional(),
   stateIncomeTax: z.number().min(0).nullable().optional(),
   sdiTax: z.number().min(0).nullable().optional(),
+  deductionVacationHoliday: z.number().min(0).nullable().optional(),
+  deductionHealthWelfare: z.number().min(0).nullable().optional(),
+  deductionPension: z.number().min(0).nullable().optional(),
+  deductionTraining: z.number().min(0).nullable().optional(),
+  deductionFundAdmin: z.number().min(0).nullable().optional(),
+  deductionDues: z.number().min(0).nullable().optional(),
+  deductionTravelSubsistence: z.number().min(0).nullable().optional(),
+  deductionSavings: z.number().min(0).nullable().optional(),
+  deductionOther: z.number().min(0).nullable().optional(),
+  deductionOtherDescription: z.string().max(120).nullable().optional(),
   // Phase 42 — IL non-prevailing-wage hours
   nonPwHours: z.number().min(0).nullable().optional(),
   // Phase 49 — MA payroll entry fields

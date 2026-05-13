@@ -28,6 +28,16 @@ export const STANDARD_WEEK: RowValues = {
   nonPwHours: null,
   checkNumber: null, allOtherHours: null, totalWeekGrossWages: null,
   ficaTax: null, federalIncomeTax: null, stateIncomeTax: null, sdiTax: null,
+  deductionVacationHoliday: null,
+  deductionHealthWelfare: null,
+  deductionPension: null,
+  deductionTraining: null,
+  deductionFundAdmin: null,
+  deductionDues: null,
+  deductionTravelSubsistence: null,
+  deductionSavings: null,
+  deductionOther: null,
+  deductionOtherDescription: null,
 };
 
 function ToggleChip({ active, onClick, label, title }: { active: boolean; onClick: () => void; label: string; title?: string }) {

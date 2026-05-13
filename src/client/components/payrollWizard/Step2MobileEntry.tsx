@@ -63,6 +63,25 @@ function hasDayOver24(row: GridWorkerRow): boolean {
   return false;
 }
 
+const TAX_DEDUCTION_FIELDS: Array<[keyof RowExtras, string]> = [
+  ['ficaTax', 'FICA'],
+  ['federalIncomeTax', 'Fed Tax'],
+  ['stateIncomeTax', 'State Tax'],
+];
+
+const CA_A1131_DEDUCTION_FIELDS: Array<[keyof RowExtras, string]> = [
+  ['sdiTax', 'SDI'],
+  ['deductionVacationHoliday', 'Vac/Hol'],
+  ['deductionHealthWelfare', 'H&W Ded'],
+  ['deductionPension', 'Pension Ded'],
+  ['deductionTraining', 'Training'],
+  ['deductionFundAdmin', 'Fund Admin'],
+  ['deductionDues', 'Dues'],
+  ['deductionTravelSubsistence', 'Trav/Subs'],
+  ['deductionSavings', 'Savings'],
+  ['deductionOther', 'Other'],
+];
+
 export function Step2MobileEntry({
   rows,
   toggles,
@@ -537,88 +556,16 @@ export function Step2MobileEntry({
               <div className="space-y-1.5">
                 <span className="text-sm font-medium text-gray-700">Tax Deductions</span>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">FICA</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={
-                        typeof activeRow.values.ficaTax === 'number'
-                          ? activeRow.values.ficaTax
-                          : ''
-                      }
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        onExtraChange(
-                          activeRow.workerId,
-                          activeRow.classificationId,
-                          'ficaTax',
-                          raw === '' ? null : Number(raw)
-                        );
-                      }}
-                      onBlur={() => onBlur(activeRow.workerId, activeRow.classificationId)}
-                      className="w-full py-3 px-3 text-base border border-gray-300 rounded-sm focus:outline-none focus:border-brand-gold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Fed Tax</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={
-                        typeof activeRow.values.federalIncomeTax === 'number'
-                          ? activeRow.values.federalIncomeTax
-                          : ''
-                      }
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        onExtraChange(
-                          activeRow.workerId,
-                          activeRow.classificationId,
-                          'federalIncomeTax',
-                          raw === '' ? null : Number(raw)
-                        );
-                      }}
-                      onBlur={() => onBlur(activeRow.workerId, activeRow.classificationId)}
-                      className="w-full py-3 px-3 text-base border border-gray-300 rounded-sm focus:outline-none focus:border-brand-gold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">State Tax</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={
-                        typeof activeRow.values.stateIncomeTax === 'number'
-                          ? activeRow.values.stateIncomeTax
-                          : ''
-                      }
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        onExtraChange(
-                          activeRow.workerId,
-                          activeRow.classificationId,
-                          'stateIncomeTax',
-                          raw === '' ? null : Number(raw)
-                        );
-                      }}
-                      onBlur={() => onBlur(activeRow.workerId, activeRow.classificationId)}
-                      className="w-full py-3 px-3 text-base border border-gray-300 rounded-sm focus:outline-none focus:border-brand-gold"
-                    />
-                  </div>
-                  {toggles.caFica && (
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">SDI</label>
+                  {[...TAX_DEDUCTION_FIELDS, ...(toggles.caFica ? CA_A1131_DEDUCTION_FIELDS : [])].map(([field, label]) => (
+                    <div key={field}>
+                      <label className="block text-xs text-gray-500 mb-1">{label}</label>
                       <input
                         type="number"
                         min={0}
                         step={0.01}
                         value={
-                          typeof activeRow.values.sdiTax === 'number'
-                            ? activeRow.values.sdiTax
+                          typeof activeRow.values[field] === 'number'
+                            ? (activeRow.values[field] as number)
                             : ''
                         }
                         onChange={(e) => {
@@ -626,12 +573,38 @@ export function Step2MobileEntry({
                           onExtraChange(
                             activeRow.workerId,
                             activeRow.classificationId,
-                            'sdiTax',
+                            field,
                             raw === '' ? null : Number(raw)
                           );
                         }}
                         onBlur={() => onBlur(activeRow.workerId, activeRow.classificationId)}
                         className="w-full py-3 px-3 text-base border border-gray-300 rounded-sm focus:outline-none focus:border-brand-gold"
+                        data-worker-id={activeRow.workerId}
+                        data-classification-id={activeRow.classificationId}
+                        data-field={field}
+                      />
+                    </div>
+                  ))}
+                  {toggles.caFica && (
+                    <div className="col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1">Other note</label>
+                      <input
+                        type="text"
+                        maxLength={120}
+                        value={activeRow.values.deductionOtherDescription ?? ''}
+                        onChange={(e) =>
+                          onExtraChange(
+                            activeRow.workerId,
+                            activeRow.classificationId,
+                            'deductionOtherDescription',
+                            e.target.value === '' ? null : e.target.value
+                          )
+                        }
+                        onBlur={() => onBlur(activeRow.workerId, activeRow.classificationId)}
+                        className="w-full py-3 px-3 text-base border border-gray-300 rounded-sm focus:outline-none focus:border-brand-gold"
+                        data-worker-id={activeRow.workerId}
+                        data-classification-id={activeRow.classificationId}
+                        data-field="deductionOtherDescription"
                       />
                     </div>
                   )}

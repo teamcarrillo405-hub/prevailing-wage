@@ -23,12 +23,23 @@ export interface A1131WorkerRow {
   dtRate: number;
   grossWages: number;
   federalTax: number;
+  ficaTax: number;
   stateTax: number;
   sdi: number;
+  vacationHoliday: number;
+  healthWelfare: number;
+  pension: number;
+  training: number;
+  fundAdmin: number;
+  dues: number;
+  travelSubsistence: number;
+  savings: number;
   otherDeductions: number;
+  otherDeductionDescription?: string;
   totalDeductions: number;
   netPay: number;
   fringeCredit: number;
+  checkNumber?: string | null;
 }
 
 export interface A1131Data {
@@ -84,6 +95,23 @@ function adjustedWidget(widget: A1131Widget): A1131Widget {
   }
   return widget;
 }
+
+const DEDUCTION_COL = {
+  federalTax: { x: 638, w: 40, row: 'top' },
+  ficaTax: { x: 682, w: 38, row: 'top' },
+  stateTax: { x: 720, w: 38, row: 'top' },
+  sdi: { x: 761, w: 35, row: 'top' },
+  vacationHoliday: { x: 797, w: 32, row: 'top' },
+  healthWelfare: { x: 830, w: 38, row: 'top' },
+  pension: { x: 869, w: 38, row: 'top' },
+  training: { x: 638, w: 40, row: 'bottom' },
+  fundAdmin: { x: 682, w: 38, row: 'bottom' },
+  dues: { x: 720, w: 38, row: 'bottom' },
+  travelSubsistence: { x: 761, w: 35, row: 'bottom' },
+  savings: { x: 797, w: 32, row: 'bottom' },
+  otherDeductions: { x: 830, w: 38, row: 'bottom' },
+  totalDeductions: { x: 869, w: 38, row: 'bottom' },
+} as const;
 
 export async function fillA1131(
   data: A1131Data,
@@ -152,6 +180,42 @@ async function fillSingleSet(
     page.drawText(value, { x, y, size, font, color: black, maxWidth });
   };
 
+  const drawAt = (
+    pageIndex: 0 | 1,
+    value: string,
+    widget: { x: number; y: number; w: number; h: number },
+    opts: { align?: 'left' | 'center' | 'right'; size?: number } = {},
+  ) => {
+    if (!value) return;
+    const page = pages[pageIndex];
+    if (!page) return;
+    const padding = 1.25;
+    const maxWidth = Math.max(1, widget.w - padding * 2);
+    const size = fitTextSize(value, maxWidth, opts.size ?? 5, font);
+    const textWidth = font.widthOfTextAtSize(value, size);
+    const x = opts.align === 'right'
+      ? widget.x + widget.w - textWidth - padding
+      : opts.align === 'center'
+        ? widget.x + (widget.w - textWidth) / 2
+        : widget.x + padding;
+    const y = widget.y + Math.max(1, (widget.h - size) / 2) - 0.5;
+    page.drawText(value, { x, y, size, font, color: black, maxWidth });
+  };
+
+  const drawDeduction = (
+    row: number,
+    field: keyof typeof DEDUCTION_COL,
+    value: string,
+  ) => {
+    const anchor = widgetMap.get(`w${row}_${field === 'ficaTax' ? 'federalTax' : field}`);
+    const totalAnchor = widgetMap.get(`w${row}_totalDeductions`);
+    const col = DEDUCTION_COL[field];
+    const y = col.row === 'bottom'
+      ? (totalAnchor?.y ?? 0) - 4
+      : (anchor?.y ?? widgetMap.get(`w${row}_federalTax`)?.y ?? 0) - 4;
+    drawAt(0, value, { x: col.x, y, w: col.w, h: 9 }, { align: 'right', size: 5 });
+  };
+
   drawText('header_contractorName', data.contractorName, { size: 5.25 });
   drawText('header_cslbLicense', data.cslbLicense, { align: 'center', size: 5.25 });
   drawText('header_contractorAddress', data.contractorAddress, { size: 5.25 });
@@ -185,10 +249,6 @@ async function fillSingleSet(
     drawText(`${wk}_totalSt`, fmtHours(worker.totalSt), { align: 'center' });
     drawText(`${wk}_stRate`, fmtDollar(worker.stRate), { align: 'right' });
     drawText(`${wk}_grossWages`, fmtDollar(worker.grossWages), { align: 'right', size: 5.5 });
-    drawText(`${wk}_federalTax`, fmtDollar(worker.federalTax), { align: 'right', size: 5 });
-    drawText(`${wk}_stateTax`, fmtDollar(worker.stateTax), { align: 'right', size: 5 });
-    drawText(`${wk}_sdi`, fmtDollar(worker.sdi), { align: 'right', size: 5 });
-    drawText(`${wk}_otherDeductions`, fmtDollar(worker.otherDeductions), { align: 'right', size: 5 });
     drawText(`${wk}_netPay`, fmtDollar(worker.netPay), { align: 'right', size: 5.5 });
 
     drawText(`${wk}_monOt`, fmtHours(worker.monOt), { align: 'center' });
@@ -210,7 +270,23 @@ async function fillSingleSet(
     drawText(`${wk}_sunDt`, fmtHours(worker.sunDt), { align: 'center' });
     drawText(`${wk}_totalDt`, fmtHours(worker.totalDt), { align: 'center' });
     drawText(`${wk}_dtRate`, fmtDollar(worker.dtRate), { align: 'right' });
-    drawText(`${wk}_totalDeductions`, fmtDollar(worker.totalDeductions), { align: 'right', size: 5 });
+    drawDeduction(i + 1, 'federalTax', fmtDollar(worker.federalTax));
+    drawDeduction(i + 1, 'ficaTax', fmtDollar(worker.ficaTax));
+    drawDeduction(i + 1, 'stateTax', fmtDollar(worker.stateTax));
+    drawDeduction(i + 1, 'sdi', fmtDollar(worker.sdi));
+    drawDeduction(i + 1, 'vacationHoliday', fmtDollar(worker.vacationHoliday));
+    drawDeduction(i + 1, 'healthWelfare', fmtDollar(worker.healthWelfare));
+    drawDeduction(i + 1, 'pension', fmtDollar(worker.pension));
+    drawDeduction(i + 1, 'training', fmtDollar(worker.training));
+    drawDeduction(i + 1, 'fundAdmin', fmtDollar(worker.fundAdmin));
+    drawDeduction(i + 1, 'dues', fmtDollar(worker.dues));
+    drawDeduction(i + 1, 'travelSubsistence', fmtDollar(worker.travelSubsistence));
+    drawDeduction(i + 1, 'savings', fmtDollar(worker.savings));
+    drawDeduction(i + 1, 'otherDeductions', fmtDollar(worker.otherDeductions));
+    drawDeduction(i + 1, 'totalDeductions', fmtDollar(worker.totalDeductions));
+    if (worker.checkNumber) {
+      drawAt(0, worker.checkNumber, { x: 953, y: widgetMap.get(`${wk}_netPay`)?.y ?? 0, w: 40, h: 11 }, { align: 'center', size: 5 });
+    }
   }
 
   drawText('cert_contractorName', data.contractorName);

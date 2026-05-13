@@ -38,6 +38,17 @@ export interface GridRow {
   ficaTax: number | null;
   federalIncomeTax: number | null;
   stateIncomeTax: number | null;
+  sdiTax: number | null;
+  deductionVacationHoliday: number | null;
+  deductionHealthWelfare: number | null;
+  deductionPension: number | null;
+  deductionTraining: number | null;
+  deductionFundAdmin: number | null;
+  deductionDues: number | null;
+  deductionTravelSubsistence: number | null;
+  deductionSavings: number | null;
+  deductionOther: number | null;
+  deductionOtherDescription: string | null;
   fringeHealthWelfare: number | null;
   fringePension: number | null;
   fringeVacation: number | null;

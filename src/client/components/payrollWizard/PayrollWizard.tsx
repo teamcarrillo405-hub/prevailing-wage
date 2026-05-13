@@ -64,6 +64,16 @@ interface WeekDetail {
       federalIncomeTax: number | null;
       stateIncomeTax: number | null;
       sdiTax: number | null;
+      deductionVacationHoliday: number | null;
+      deductionHealthWelfare: number | null;
+      deductionPension: number | null;
+      deductionTraining: number | null;
+      deductionFundAdmin: number | null;
+      deductionDues: number | null;
+      deductionTravelSubsistence: number | null;
+      deductionSavings: number | null;
+      deductionOther: number | null;
+      deductionOtherDescription: string | null;
     };
     workerName: string;
     tradeDescription: string;
@@ -252,6 +262,16 @@ function emptyRowValues(): RowValues {
     nonPwHours: null,
     checkNumber: null, allOtherHours: null, totalWeekGrossWages: null,
     ficaTax: null, federalIncomeTax: null, stateIncomeTax: null, sdiTax: null,
+    deductionVacationHoliday: null,
+    deductionHealthWelfare: null,
+    deductionPension: null,
+    deductionTraining: null,
+    deductionFundAdmin: null,
+    deductionDues: null,
+    deductionTravelSubsistence: null,
+    deductionSavings: null,
+    deductionOther: null,
+    deductionOtherDescription: null,
   };
 }
 
@@ -287,6 +307,16 @@ function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefin
         federalIncomeTax: e.entry.federalIncomeTax,
         stateIncomeTax: e.entry.stateIncomeTax,
         sdiTax: e.entry.sdiTax,
+        deductionVacationHoliday: e.entry.deductionVacationHoliday,
+        deductionHealthWelfare: e.entry.deductionHealthWelfare,
+        deductionPension: e.entry.deductionPension,
+        deductionTraining: e.entry.deductionTraining,
+        deductionFundAdmin: e.entry.deductionFundAdmin,
+        deductionDues: e.entry.deductionDues,
+        deductionTravelSubsistence: e.entry.deductionTravelSubsistence,
+        deductionSavings: e.entry.deductionSavings,
+        deductionOther: e.entry.deductionOther,
+        deductionOtherDescription: e.entry.deductionOtherDescription,
       },
     }));
   }
@@ -316,6 +346,10 @@ const FOCUS_FIELDS = new Set<PayrollFocusField>([
   'fringeHealthWelfare', 'fringePension', 'fringeVacation', 'fringeTraining',
   'nonPwHours', 'checkNumber', 'allOtherHours', 'totalWeekGrossWages',
   'ficaTax', 'federalIncomeTax', 'stateIncomeTax', 'sdiTax',
+  'deductionVacationHoliday', 'deductionHealthWelfare', 'deductionPension',
+  'deductionTraining', 'deductionFundAdmin', 'deductionDues',
+  'deductionTravelSubsistence', 'deductionSavings', 'deductionOther',
+  'deductionOtherDescription',
 ]);
 
 function buildFocusTarget(weekData: WeekDetail | undefined, searchParams: URLSearchParams): PayrollFocusTarget | null {
