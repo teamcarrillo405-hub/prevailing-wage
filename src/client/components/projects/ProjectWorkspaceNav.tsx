@@ -168,8 +168,8 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
   }
 
   return (
-    <aside className="lg:sticky lg:top-[92px]">
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+    <aside className="lg:sticky lg:top-[92px] lg:h-[calc(100dvh-116px)]">
+      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 p-4">
           <Link to={base} className="block">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Project</p>
@@ -205,7 +205,7 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
           </div>
         </div>
 
-        <nav className="max-h-[66vh] overflow-y-auto p-2" aria-label="Project workflow">
+        <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Project workflow">
           {workflow.primaryAction && (
             <Link
               to={workflow.primaryAction.to}
