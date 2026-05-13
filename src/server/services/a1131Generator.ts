@@ -78,6 +78,13 @@ function displayWorkerName(workerName: string): string {
   return `${(last ?? '').trim()}, ${(rest ?? '').trim()}`;
 }
 
+function adjustedWidget(widget: A1131Widget): A1131Widget {
+  if (/^w\d+_(federalTax|stateTax|sdi|otherDeductions|totalDeductions)$/.test(widget.name)) {
+    return { ...widget, y: widget.y - 4, h: Math.max(8, widget.h - 2) };
+  }
+  return widget;
+}
+
 export async function fillA1131(
   data: A1131Data,
   templateBytes: Uint8Array | Buffer,
@@ -127,8 +134,9 @@ async function fillSingleSet(
     value: string,
     opts: { align?: 'left' | 'center' | 'right'; size?: number } = {},
   ) => {
-    const widget = widgetMap.get(name);
-    if (!widget || !value) return;
+    const sourceWidget = widgetMap.get(name);
+    if (!sourceWidget || !value) return;
+    const widget = adjustedWidget(sourceWidget);
     const page = pages[widget.page];
     if (!page) return;
     const padding = 1.25;
@@ -144,14 +152,14 @@ async function fillSingleSet(
     page.drawText(value, { x, y, size, font, color: black, maxWidth });
   };
 
-  drawText('header_contractorName', data.contractorName);
-  drawText('header_cslbLicense', data.cslbLicense, { align: 'center' });
-  drawText('header_contractorAddress', data.contractorAddress);
-  drawText('header_payrollNumber', data.payrollNumber, { align: 'center' });
-  drawText('header_weekEndingDate', data.weekEndingDate, { align: 'center' });
-  drawText('header_wcPolicyNumber', data.wcPolicyNumber, { align: 'center' });
-  drawText('header_contractNo', data.contractNo, { align: 'center' });
-  drawText('header_projectLocation', data.projectLocation);
+  drawText('header_contractorName', data.contractorName, { size: 5.25 });
+  drawText('header_cslbLicense', data.cslbLicense, { align: 'center', size: 5.25 });
+  drawText('header_contractorAddress', data.contractorAddress, { size: 5.25 });
+  drawText('header_payrollNumber', data.payrollNumber, { align: 'center', size: 5.25 });
+  drawText('header_weekEndingDate', data.weekEndingDate, { align: 'center', size: 5.25 });
+  drawText('header_wcPolicyNumber', data.wcPolicyNumber, { align: 'center', size: 5.25 });
+  drawText('header_contractNo', data.contractNo, { align: 'center', size: 5.25 });
+  drawText('header_projectLocation', data.projectLocation, { size: 5.25 });
 
   if (totalSets > 1) {
     drawText('pageOfPages', `Page ${setNumber} of ${totalSets}`, { align: 'center' });
@@ -177,10 +185,10 @@ async function fillSingleSet(
     drawText(`${wk}_totalSt`, fmtHours(worker.totalSt), { align: 'center' });
     drawText(`${wk}_stRate`, fmtDollar(worker.stRate), { align: 'right' });
     drawText(`${wk}_grossWages`, fmtDollar(worker.grossWages), { align: 'right', size: 5.5 });
-    drawText(`${wk}_federalTax`, fmtDollar(worker.federalTax), { align: 'right' });
-    drawText(`${wk}_stateTax`, fmtDollar(worker.stateTax), { align: 'right' });
-    drawText(`${wk}_sdi`, fmtDollar(worker.sdi), { align: 'right' });
-    drawText(`${wk}_otherDeductions`, fmtDollar(worker.otherDeductions), { align: 'right' });
+    drawText(`${wk}_federalTax`, fmtDollar(worker.federalTax), { align: 'right', size: 5 });
+    drawText(`${wk}_stateTax`, fmtDollar(worker.stateTax), { align: 'right', size: 5 });
+    drawText(`${wk}_sdi`, fmtDollar(worker.sdi), { align: 'right', size: 5 });
+    drawText(`${wk}_otherDeductions`, fmtDollar(worker.otherDeductions), { align: 'right', size: 5 });
     drawText(`${wk}_netPay`, fmtDollar(worker.netPay), { align: 'right', size: 5.5 });
 
     drawText(`${wk}_monOt`, fmtHours(worker.monOt), { align: 'center' });
@@ -192,7 +200,6 @@ async function fillSingleSet(
     drawText(`${wk}_sunOt`, fmtHours(worker.sunOt), { align: 'center' });
     drawText(`${wk}_totalOt`, fmtHours(worker.totalOt), { align: 'center' });
     drawText(`${wk}_otRate`, fmtDollar(worker.otRate), { align: 'right' });
-    drawText(`${wk}_fringeCredit`, fmtDollar(worker.fringeCredit), { align: 'right', size: 5.5 });
 
     drawText(`${wk}_monDt`, fmtHours(worker.monDt), { align: 'center' });
     drawText(`${wk}_tueDt`, fmtHours(worker.tueDt), { align: 'center' });
@@ -203,7 +210,7 @@ async function fillSingleSet(
     drawText(`${wk}_sunDt`, fmtHours(worker.sunDt), { align: 'center' });
     drawText(`${wk}_totalDt`, fmtHours(worker.totalDt), { align: 'center' });
     drawText(`${wk}_dtRate`, fmtDollar(worker.dtRate), { align: 'right' });
-    drawText(`${wk}_totalDeductions`, fmtDollar(worker.totalDeductions), { align: 'right', size: 5.5 });
+    drawText(`${wk}_totalDeductions`, fmtDollar(worker.totalDeductions), { align: 'right', size: 5 });
   }
 
   drawText('cert_contractorName', data.contractorName);
