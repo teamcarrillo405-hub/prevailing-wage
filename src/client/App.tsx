@@ -83,6 +83,9 @@ const StateSupportPage = React.lazy(() =>
 const PilotIntakePage = React.lazy(() =>
   import('./pages/PilotIntakePage').then(m => ({ default: m.PilotIntakePage }))
 );
+const CompetitiveReadinessPage = React.lazy(() =>
+  import('./pages/CompetitiveReadinessPage').then(m => ({ default: m.CompetitiveReadinessPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -184,6 +187,7 @@ export default function App() {
                 <Route path="/classification-assist" element={<ClassificationAssistPage />} />
                 <Route path="/compliance-methodology" element={<ComplianceMethodologyPage />} />
                 <Route path="/pilot-intake" element={<PilotIntakePage />} />
+                <Route path="/competitive-readiness" element={<CompetitiveReadinessPage />} />
               </Route>
 
               {/* Public pages — no auth required */}
