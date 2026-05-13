@@ -246,7 +246,7 @@ export function WageLookupPage() {
           <button
             type="button"
             onClick={() => navigate(`/projects/${defaultProjectId}#wage-determinations`)}
-            className="inline-flex min-h-[44px] items-center rounded-sm border border-brand-gold px-3 py-2 font-medium text-brand-gold hover:bg-brand-gold/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
+            className="inline-flex min-h-[44px] items-center rounded-sm border border-brand-gold px-3 py-2 font-medium text-black hover:bg-brand-gold/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
           >
             Project WD panel
           </button>

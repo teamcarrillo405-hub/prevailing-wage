@@ -1080,7 +1080,7 @@ export function DashboardPage() {
           <p className="text-red-600 text-sm mb-4">Failed to load projects. Please refresh.</p>
           <button
             onClick={() => refetch()}
-            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-3 min-h-[44px] bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-3 min-h-[44px] bg-transparent text-black border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
           >
             Try Again
           </button>

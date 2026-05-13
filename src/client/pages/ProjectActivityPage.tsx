@@ -325,7 +325,7 @@ export function ProjectActivityPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handleExportEvidencePacket('json')}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-brand-gold text-brand-gold rounded hover:bg-brand-gold/10 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-brand-gold text-black rounded hover:bg-brand-gold/10 transition-colors"
                 >
                   <Download className="h-4 w-4" />
                   JSON packet
@@ -510,7 +510,7 @@ export function ProjectActivityPage() {
             <button
               onClick={handleExportCsv}
               title="Export all project activity as CSV — includes timestamps, user, action type, and details for every recorded event."
-              className="px-3 py-1.5 text-sm border border-brand-gold text-brand-gold rounded hover:bg-brand-gold/10 transition-colors"
+              className="px-3 py-1.5 text-sm border border-brand-gold text-black rounded hover:bg-brand-gold/10 transition-colors"
             >
               Export CSV
             </button>
@@ -580,14 +580,14 @@ export function ProjectActivityPage() {
               <button
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page <= 1}
-                className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-black hover:bg-brand-gold/10 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= data.totalPages}
-                className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-brand-gold hover:bg-brand-gold/10 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-black hover:bg-brand-gold/10 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next
               </button>

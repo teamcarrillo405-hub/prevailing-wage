@@ -213,7 +213,7 @@ function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean
             <div className={
               step.complete
                 ? 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold bg-status-compliant text-white'
-                : 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold border-2 border-brand-navy/30 text-gray-400 bg-white group-hover:border-brand-gold group-hover:text-brand-gold transition-colors'
+                : 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold border-2 border-brand-navy/30 text-gray-400 bg-white group-hover:border-brand-gold group-hover:text-black transition-colors'
             }>
               {step.complete ? '\u2713' : i + 1}
             </div>
@@ -2193,7 +2193,7 @@ export function ProjectDetailPage() {
           <p className="text-red-600 text-sm mb-4">Project not found or access denied.</p>
           <button
             onClick={() => refetch()}
-            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-3 min-h-[44px] bg-transparent text-brand-gold border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+            className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-3 min-h-[44px] bg-transparent text-black border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
           >
             Try Again
           </button>
