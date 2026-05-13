@@ -344,7 +344,7 @@ describe('POST /api/payroll/import/commit', () => {
 
     // Verify payrollImports audit row via test DB
     const db = (globalThis as any).__testDb;
-    const { payrollImports } = await import('../../src/server/db/schema.js');
+    const { payrollImports, payrollProviderMappings } = await import('../../src/server/db/schema.js');
     const { eq } = await import('drizzle-orm');
     const auditRows = await db
       .select()
@@ -357,6 +357,14 @@ describe('POST /api/payroll/import/commit', () => {
     expect(audit.committedCount).toBe(1);
     expect(audit.unmatchedCount).toBe(1);
     expect(audit.sourceFilename).toBe('payroll-week5.csv');
+
+    const mappingRows = await db
+      .select()
+      .from(payrollProviderMappings)
+      .where(eq(payrollProviderMappings.projectId, projectId));
+    expect(mappingRows.length).toBe(1);
+    expect(mappingRows[0].providerWorkerId).toBe('Commit Worker One');
+    expect(mappingRows[0].workerId).toBe(workerId);
   });
 
   it('returns 409 when worker already has an entry for the week', async () => {
@@ -536,6 +544,9 @@ describe('GET /api/payroll/import/reconciliation/:weekId', () => {
     expect(res.body.data.summary.sourceCoverage.taxBreakdown).toBe(100);
     expect(res.body.data.summary.sourceCoverage.deductionBreakdown).toBe(100);
     expect(res.body.data.summary.itemizedDeductionMismatchCount).toBe(0);
+    expect(res.body.data.automation.confidenceScore).toBeGreaterThanOrEqual(75);
+    expect(res.body.data.automation.tasks.some((task: any) => task.id === 'mapping-memory')).toBe(true);
+    expect(res.body.data.summary.automationConfidenceScore).toBe(res.body.data.automation.confidenceScore);
   });
 
   it('warns when a week has no import and no entries', async () => {

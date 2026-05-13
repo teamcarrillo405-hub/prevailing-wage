@@ -16,6 +16,7 @@ import { getDb } from '../db/index.js';
 import { payrollEntries, payrollImports, payrollProviderMappings, subcontractors } from '../db/schema.js';
 import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
 import { reconcilePayrollSourceDetails } from '../services/payrollSourceReconciliation.js';
+import { buildPayrollAutomationSummary } from '../services/payrollAutomation.js';
 
 export const importRouter = Router();
 importRouter.use(requireAuth);
@@ -116,6 +117,12 @@ function entryPayDelta(entry: typeof payrollEntries.$inferSelect) {
   const grossDelta = entry.grossWages == null ? null : Math.round((entry.grossWages - calculatedGross) * 100) / 100;
   const netDelta = entry.netPay == null ? null : Math.round((entry.netPay - calculatedNet) * 100) / 100;
   return { calculatedGross, calculatedNet, grossDelta, netDelta };
+}
+
+function providerWorkerIdFor(row: ImportedRow) {
+  const providerWorkerId = (row as ImportedRow & { providerWorkerId?: unknown }).providerWorkerId;
+  if (typeof providerWorkerId === 'string' && providerWorkerId.trim()) return providerWorkerId.trim();
+  return row.csvName?.trim() || null;
 }
 
 // ── multer setup: memory storage, 5 MB limit, CSV MIME types only (D-14) ──
@@ -327,6 +334,28 @@ importRouter.post('/commit', async (req, res) => {
       workerName: row.workerName,
       payrollNumber: week.payrollNumber,
     });
+
+    const providerWorkerId = providerWorkerIdFor(row);
+    if (providerWorkerId) {
+      await db
+        .insert(payrollProviderMappings)
+        .values({
+          id: randomUUID(),
+          projectId: week.projectId,
+          provider: body.provider,
+          providerWorkerId,
+          workerId: row.workerId,
+          createdAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [
+            payrollProviderMappings.projectId,
+            payrollProviderMappings.provider,
+            payrollProviderMappings.providerWorkerId,
+          ],
+          set: { workerId: row.workerId },
+        });
+    }
   }
 
   // Insert payrollImports audit row (D-11)
@@ -416,6 +445,16 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
     (item) => Math.abs(item.grossDelta ?? 0) > 0.01 || Math.abs(item.netDelta ?? 0) > 0.01,
   ).length;
   const sourceReconciliation = reconcilePayrollSourceDetails(typedEntries);
+  const automation = buildPayrollAutomationSummary({
+    entries: typedEntries,
+    latestImport,
+    providerMappingCount: providerMappings.length,
+    sourceReconciliation,
+    payDeltaReviewCount,
+    zeroRateCount,
+    missingPayCount,
+    unmatchedCount: latestImport?.unmatchedCount ?? 0,
+  });
   const issues: Array<{
     id: string;
     severity: ReconciliationSeverity;
@@ -565,7 +604,11 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
         sourceCoverage: sourceReconciliation.coverage,
         itemizedDeductionMismatchCount: sourceReconciliation.itemizedDeductionMismatchCount,
         netPayMismatchCount: sourceReconciliation.netPayMismatchCount,
+        fringeMismatchCount: sourceReconciliation.fringeMismatchCount,
+        automationConfidenceScore: automation.confidenceScore,
+        automationExceptionCount: automation.exceptionCount,
       },
+      automation,
       providerGuide: latestImport
         ? PROVIDER_GUIDANCE[latestImport.provider]
         : {

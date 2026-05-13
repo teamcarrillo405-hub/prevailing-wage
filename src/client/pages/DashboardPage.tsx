@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard, FolderOpen, AlertTriangle, TrendingUp, Download, FileText, ShieldAlert, ClipboardCheck, Grid2X2, List, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, AlertTriangle, TrendingUp, Download, FileText, ShieldAlert, ClipboardCheck, Grid2X2, List, ArrowRight } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -16,7 +16,6 @@ import { ProjectForm } from '../components/projects/ProjectForm';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { ProjectsEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { ComplianceOverviewCard } from '../components/compliance/ComplianceOverviewCard';
 import { DueSoonPanel } from '../components/dashboard/DueSoonPanel';
@@ -611,15 +610,17 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <ProjectsCommandPanel
-          activeProjectCount={activeProjectCount}
-          urgentFixes={urgentContractorActions.length}
-          payrollDue={duePayrollActions.length || dueSoonCount}
-          setupGaps={setupActions.length}
-          subCprGaps={subcontractorActions.length}
-          onNewProject={() => setShowForm(true)}
-        />
+      <div className={projects.length > 0 ? 'grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]' : 'space-y-6'}>
+        {projects.length > 0 && (
+          <ProjectsCommandPanel
+            activeProjectCount={activeProjectCount}
+            urgentFixes={urgentContractorActions.length}
+            payrollDue={duePayrollActions.length || dueSoonCount}
+            setupGaps={setupActions.length}
+            subCprGaps={subcontractorActions.length}
+            onNewProject={() => setShowForm(true)}
+          />
+        )}
         <div className="min-w-0">
 
       {projects.length > 0 && (
@@ -673,11 +674,13 @@ export function DashboardPage() {
       )}
 
 
-      <HelpCallout
-        icon={LayoutDashboard}
-        title="Your Project Dashboard"
-        body="Each project tracks a separate federal job. Add workers and enter payroll weekly to keep your certified payroll current and DOL-ready."
-      />
+      {projects.length > 0 && (
+        <HelpCallout
+          icon={LayoutDashboard}
+          title="Your Project Dashboard"
+          body="Each project tracks a separate federal job. Add workers and enter payroll weekly to keep your certified payroll current and DOL-ready."
+        />
+      )}
 
       {onboardingAnswers && (
         <details className="mb-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -733,45 +736,64 @@ export function DashboardPage() {
       )}
 
       {!isLoading && !isError && projects.length === 0 && (
-        <div className="bg-brand-navy text-white rounded-xl p-8 mb-8">
-          <h2 className="text-2xl font-bold mb-2">Welcome to PrevailingWage</h2>
-          <p className="text-white/80 mb-6">Get your first certified payroll report in under 10 minutes.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {[
-              { n: '1', label: 'Create a Project', desc: 'Enter project name, state, and funding type' },
-              { n: '2', label: 'Add Workers', desc: 'Add workers with trade classifications' },
-              { n: '3', label: 'Enter Payroll', desc: 'Enter weekly hours — import from QuickBooks or CSV' },
-              { n: '4', label: 'Download CPR', desc: 'State-certified WH-347 or state-specific form' },
-            ].map(({ n, label, desc }) => (
-              <div key={n} className="bg-white/10 rounded-lg p-4">
-                <div className="w-8 h-8 bg-brand-gold text-brand-navy font-bold rounded-full flex items-center justify-center mb-3 text-sm">{n}</div>
-                <p className="font-semibold text-sm mb-1">{label}</p>
-                <p className="text-white/70 text-xs">{desc}</p>
+        <section className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="p-6 sm:p-8">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">First project setup</p>
+              <h2 className="mt-2 text-2xl font-semibold text-gray-950">Create the job, then follow the guided path.</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+                Start with contract basics. Federal jobs route directly to wage determination search, then workers, payroll, forms, and submission.
+              </p>
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {[
+                  { n: '1', label: 'Project contract', desc: 'Job name, state, county, funding, and award date.' },
+                  { n: '2', label: 'Wage determination', desc: 'Lock the WD number and revision from the contract.' },
+                  { n: '3', label: 'Workers and rates', desc: 'Add workers, classifications, and source-linked rates.' },
+                  { n: '4', label: 'Payroll week', desc: 'Import or enter hours, deductions, forms, and submission.' },
+                ].map(({ n, label, desc }) => (
+                  <div key={n} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-950 text-xs font-bold text-white">{n}</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-950">{label}</p>
+                        <p className="mt-1 text-xs leading-5 text-gray-600">{desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+              <button
+                onClick={() => setShowForm(true)}
+                className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-brand-gold px-5 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90"
+              >
+                Create first project
+              </button>
+            </div>
+            <aside className="border-t border-gray-200 bg-gray-50 p-6 lg:border-l lg:border-t-0">
+              <p className="text-sm font-semibold text-gray-950">Your saved setup</p>
+              <div className="mt-4 space-y-3 text-sm">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">States</p>
+                  <p className="mt-1 text-gray-800">{onboardingAnswers?.primaryStates.join(', ') || 'Not set'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Payroll source</p>
+                  <p className="mt-1 capitalize text-gray-800">{onboardingAnswers?.payrollProvider?.replaceAll('_', ' ') || 'Not set'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Recommended next</p>
+                  <p className="mt-1 text-gray-700">{recommendedNextSteps[0] ?? 'Create one federal Davis-Bacon project.'}</p>
+                </div>
+              </div>
+              <Link to="/onboarding" className="mt-5 inline-flex text-sm font-semibold text-brand-gold hover:underline">
+                Edit onboarding
+              </Link>
+            </aside>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-brand-gold text-brand-navy font-bold px-6 py-3 rounded-lg hover:bg-brand-gold/90 transition-colors"
-          >
-            Create Your First Project &rarr;
-          </button>
-        </div>
+        </section>
       )}
 
-      {showOnboarding && !isLoading && projects.length === 0 && (
-        <OnboardingChecklist
-          hasProjects={false}
-          hasWorkers={onboardingHasWorkers}
-          hasPayroll={onboardingHasPayroll}
-          hasWageDetermination={false}
-          hasReport={onboardingHasPayroll}
-          firstProjectId={projects[0]?.id}
-          onDismiss={handleDismissOnboarding}
-        />
-      )}
-
-      <details id="management-reports" className="mb-8 scroll-mt-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <details id="management-reports" hidden={projects.length === 0} className="mb-8 scroll-mt-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <summary className="cursor-pointer text-sm font-semibold text-gray-900">
           Management reports and analytics
           <span className="ml-2 text-xs font-normal text-gray-500">
@@ -1031,16 +1053,22 @@ export function DashboardPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto px-4 py-6 sm:py-10">
           <div
-            className="bg-white rounded-2xl shadow-card-hover w-full max-w-lg p-7 mx-auto max-h-[calc(100dvh-3rem)] overflow-y-auto"
+            className="bg-white rounded-xl shadow-card-hover w-full max-w-3xl p-0 mx-auto max-h-[calc(100dvh-3rem)] overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-project-modal-title"
           >
-            <h3 id="new-project-modal-title" className="font-headline text-2xl text-text-primary mb-6">New Project</h3>
+            <div className="sticky top-0 z-10 border-b border-gray-100 bg-white px-5 py-4 sm:px-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Project setup</p>
+              <h3 id="new-project-modal-title" className="mt-1 font-headline text-xl text-text-primary">New Project</h3>
+              <p className="mt-1 text-sm text-gray-500">Enter the contract basics first. State-specific fields stay grouped below.</p>
+            </div>
+            <div className="px-5 py-5 sm:px-6">
             <ProjectForm
               onSuccess={() => setShowForm(false)}
               onCancel={() => setShowForm(false)}
             />
+            </div>
           </div>
         </div>
       )}
@@ -1057,18 +1085,6 @@ export function DashboardPage() {
             Try Again
           </button>
         </div>
-      )}
-
-      {!isLoading && !isError && projects.length === 0 && (
-        <EmptyState
-          illustration={<ProjectsEmptyIllustration />}
-          icon={FolderOpen}
-          heading="No projects yet"
-          message="Create your first project to start tracking certified payroll. You'll need your project location to pull prevailing wage rates from SAM.gov."
-          action={
-            <Button onClick={() => setShowForm(true)}>Create Your First Project</Button>
-          }
-        />
       )}
 
       {!isLoading && !isError && projects.length > 0 && filteredProjects.length === 0 && (
@@ -1176,7 +1192,7 @@ export function DashboardPage() {
       )}
 
       {/* DASH-04 / TRUST-02: Economic Impact Section */}
-      {economicData?.data && (
+      {economicData?.data && projects.length > 0 && (
         <details className="mt-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <summary className="cursor-pointer text-sm font-semibold text-gray-900">
             Economic impact reports

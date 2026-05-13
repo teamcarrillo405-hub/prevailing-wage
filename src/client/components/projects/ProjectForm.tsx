@@ -222,7 +222,22 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+      <div className="grid gap-2 sm:grid-cols-3">
+        {[
+          ['1', 'Contract basics'],
+          ['2', 'Project identifiers'],
+          ['3', 'Requirements'],
+        ].map(([step, label]) => (
+          <div key={step} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-950 text-xs font-bold text-white">{step}</span>
+              <span className="text-xs font-semibold text-gray-800">{label}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {onboardingAnswers && (
         <div className="rounded-lg border border-brand-gold/40 bg-brand-gold/10 px-4 py-3 text-sm text-gray-800">
           <p className="font-semibold text-gray-900">Pre-filled from onboarding</p>
@@ -232,6 +247,13 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           </p>
         </div>
       )}
+
+      <section className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="mb-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Step 1</p>
+        <h4 className="mt-1 text-sm font-semibold text-gray-950">Contract basics</h4>
+        <p className="mt-1 text-xs text-gray-500">Use the exact job location and award date from the contract documents.</p>
+      </div>
 
       <div>
         <label htmlFor="proj-name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -248,7 +270,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
         {errors.name && <p className="text-red-600 text-xs mt-1">{errors.name.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="proj-state" className="block text-sm font-medium text-gray-700 mb-1">
             State (2-letter)
@@ -320,7 +342,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="proj-award-date" className="block text-sm font-medium text-gray-700 mb-1">
             Award date
@@ -359,6 +381,16 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           )}
         </div>
       </div>
+
+      </section>
+
+      {(isCA || isWA || isNY || isIL || isTX || isFL || isMA || isNJ || isMN || isVA) && (
+      <section className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="mb-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Step 2</p>
+          <h4 className="mt-1 text-sm font-semibold text-gray-950">Project identifiers</h4>
+          <p className="mt-1 text-xs text-gray-500">Only fields required for the selected state appear here.</p>
+        </div>
 
       {isCA && (
         <div className="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
@@ -609,7 +641,16 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
         </div>
       )}
 
+      </section>
+      )}
+
       {isFederalOrState && (
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="mb-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Step 3</p>
+          <h4 className="mt-1 text-sm font-semibold text-gray-950">Requirements</h4>
+          <p className="mt-1 text-xs text-gray-500">Set project-level apprenticeship requirements before payroll begins.</p>
+        </div>
         <div className="space-y-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <p className="text-sm font-medium text-yellow-800">Apprenticeship Requirements</p>
 
@@ -663,6 +704,7 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             </button>
           </div>
         </div>
+        </section>
       )}
 
       {importPrompt && (

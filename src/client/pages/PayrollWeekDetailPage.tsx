@@ -215,6 +215,40 @@ interface ImportReconciliationIssue {
   nextAction: string;
 }
 
+interface PayrollAutomationTask {
+  id: string;
+  label: string;
+  status: 'complete' | 'warning' | 'blocked' | 'ready';
+  detail: string;
+  target: 'import' | 'entries' | 'mapping' | 'deductions' | 'fringes' | 'exceptions' | 'signature' | 'submission';
+}
+
+interface PayrollAutomationSummary {
+  confidenceScore: number;
+  confidenceLabel: 'needs_setup' | 'needs_review' | 'strong' | 'ready';
+  automationMode: 'manual' | 'provider_import' | 'mapped_provider_import';
+  importedRows: number;
+  mappedWorkers: number;
+  exceptionCount: number;
+  reviewOnlyChangedRowsReady: boolean;
+  priorWeekDeltaModeReady: boolean;
+  deductionAutomation: {
+    status: 'missing' | 'partial' | 'complete';
+    totalRows: number;
+    itemizedRows: number;
+    taxRows: number;
+    mismatchCount: number;
+  };
+  fringeAutomation: {
+    status: 'missing' | 'partial' | 'complete';
+    totalRows: number;
+    itemizedRows: number;
+    mismatchCount: number;
+  };
+  nextBestAction: PayrollAutomationTask;
+  tasks: PayrollAutomationTask[];
+}
+
 interface ImportReconciliationResult {
   weekId: string;
   projectId: string;
@@ -250,7 +284,11 @@ interface ImportReconciliationResult {
     };
     itemizedDeductionMismatchCount?: number;
     netPayMismatchCount?: number;
+    fringeMismatchCount?: number;
+    automationConfidenceScore?: number;
+    automationExceptionCount?: number;
   };
+  automation?: PayrollAutomationSummary;
   providerGuide?: {
     label: string;
     requiredColumns: string[];
@@ -1317,13 +1355,16 @@ export function PayrollWeekDetailPage() {
     submitted: boolean;
     nextAction: string;
   }>;
+  const payrollAutomation = importReconciliationData?.data.automation;
   const submissionSteps = [
     {
-      label: 'Review payroll',
-      detail: hasPayrollEntries ? `${entries.length} payroll entr${entries.length === 1 ? 'y' : 'ies'} ready for review.` : 'Enter worker hours and pay first.',
-      complete: hasPayrollEntries && payRowsComplete,
-      action: 'Open entries',
-      onClick: () => scrollToElement(entriesSectionRef.current),
+      label: 'Automate source',
+      detail: payrollAutomation
+        ? `${payrollAutomation.confidenceScore}/100 automation confidence. ${payrollAutomation.nextBestAction.label}.`
+        : hasPayrollEntries ? `${entries.length} payroll entr${entries.length === 1 ? 'y' : 'ies'} ready for review.` : 'Import payroll or enter worker hours and pay.',
+      complete: Boolean(payrollAutomation && payrollAutomation.confidenceScore >= 85 && payrollAutomation.exceptionCount === 0),
+      action: payrollAutomation ? payrollAutomation.nextBestAction.label : 'Open entries',
+      onClick: () => payrollAutomation ? scrollToAutomationTarget(payrollAutomation.nextBestAction.target) : scrollToElement(entriesSectionRef.current),
     },
     {
       label: 'Clear blockers',
@@ -1361,6 +1402,36 @@ export function PayrollWeekDetailPage() {
     if (!target) return;
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     target.focus({ preventScroll: true });
+  }
+
+  function scrollToAutomationTarget(target: PayrollAutomationTask['target']) {
+    if (target === 'entries' || target === 'deductions' || target === 'fringes') {
+      scrollToElement(entriesSectionRef.current);
+      return;
+    }
+    if (target === 'import' || target === 'mapping' || target === 'exceptions') {
+      scrollToElement(importReconciliationSectionRef.current);
+      return;
+    }
+    if (target === 'signature') {
+      scrollToElement(complianceSectionRef.current ?? submitReadySectionRef.current);
+      return;
+    }
+    scrollToElement(submissionStatusSectionRef.current);
+  }
+
+  function automationStatusClasses(status: PayrollAutomationTask['status']) {
+    if (status === 'complete') return 'border-emerald-200 bg-emerald-50 text-emerald-900';
+    if (status === 'blocked') return 'border-red-200 bg-red-50 text-red-900';
+    if (status === 'warning') return 'border-amber-200 bg-amber-50 text-amber-900';
+    return 'border-gray-200 bg-white text-gray-900';
+  }
+
+  function automationBadgeVariant(status: PayrollAutomationTask['status']) {
+    if (status === 'complete') return 'compliant' as const;
+    if (status === 'blocked') return 'violation' as const;
+    if (status === 'warning') return 'warning' as const;
+    return 'neutral' as const;
   }
 
   function scrollToPayrollEntry(entryId: string) {
@@ -1404,7 +1475,7 @@ export function PayrollWeekDetailPage() {
       return target ? `Fix target: ${target.label}.` : 'Fix target: Compliance Check panel.';
     }
     if (issue.id === 'wd-lock') return 'Fix target: project wage determination lock.';
-    if (issue.id === 'signature') return 'Fix target: project signature/settings.';
+    if (issue.id === 'signature') return 'Fix target: Project Home > Contractor signature.';
     if (issue.id === 'import-review') return 'Fix target: import reconciliation or source payroll review.';
     if (issue.id === 'human-certification-review') return 'Review target: Compliance Check and source payroll records. If complete, acknowledge the review here.';
     return 'Click to go to the fix.';
@@ -1418,7 +1489,7 @@ export function PayrollWeekDetailPage() {
     if (issue.id === 'rate-snapshots') return 'Open rate fields';
     if (issue.id === 'compliance-review' || issue.actionId === 'review-week-violations') return 'Open exact payroll field';
     if (issue.id === 'import-review' || issue.actionId === 'prepare-import-review') return entries.length > 0 ? 'Refresh payroll check' : 'Open import area';
-    if (issue.id === 'payroll-entries') return entries.length > 0 ? 'Refresh payroll check' : 'Open entries';
+    if (issue.id === 'payroll-entries') return 'Open payroll entries';
     return 'Go to fix';
   }
 
@@ -1458,13 +1529,9 @@ export function PayrollWeekDetailPage() {
     }
 
     if (issue.actionId === 'prepare-import-review' || issue.id === 'payroll-entries') {
-      if (issue.id === 'payroll-entries' && entries.length > 0) {
-        queryClient.invalidateQueries({ queryKey: ['submit-ready', weekId] });
-        queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
-        window.setTimeout(() => setActiveFixIssue(null), 3000);
-        return;
-      }
       scrollToElement(entries.length > 0 ? entriesSectionRef.current : importReconciliationSectionRef.current ?? entriesSectionRef.current);
+      queryClient.invalidateQueries({ queryKey: ['submit-ready', weekId] });
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
       window.setTimeout(() => setActiveFixIssue(null), 10_000);
       return;
     }
@@ -1475,7 +1542,7 @@ export function PayrollWeekDetailPage() {
     }
 
     if (issue.id === 'subcontractor-cpr') {
-      navigate(`/projects/${projectId}#subcontractor-cpr`);
+      navigate(`/projects/${projectId}#subcontractors`);
       return;
     }
 
@@ -2012,8 +2079,9 @@ export function PayrollWeekDetailPage() {
           </Card>
         )}
         <Card padding="sm" className="mb-4 border border-gray-200 bg-white">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Submission checklist</p>
               <h2 className="mt-1 text-lg font-semibold text-gray-950">
                 Finish this week in four steps
@@ -2021,15 +2089,16 @@ export function PayrollWeekDetailPage() {
               <p className="mt-1 text-sm text-gray-600">
                 Work left to right: review payroll, clear blockers, download forms, then record submission.
               </p>
+              </div>
               <button
                 type="button"
                 onClick={nextSubmissionStep.onClick}
-                className="mt-3 inline-flex min-h-10 items-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90"
+                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90"
               >
                 Next: {nextSubmissionStep.label}
               </button>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4 lg:min-w-[680px]">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {submissionSteps.map((step, index) => (
                 <button
                   key={step.label}
@@ -2057,6 +2126,90 @@ export function PayrollWeekDetailPage() {
           </div>
         </Card>
         <section className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        {payrollAutomation && (
+          <div className="xl:col-span-2">
+            <Card padding="default" className="border border-gray-200 bg-white">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-3xl">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Payroll automation</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-3">
+                    <h2 className="text-xl font-semibold text-gray-950">Week command center</h2>
+                    <Badge
+                      variant={
+                        payrollAutomation.confidenceLabel === 'ready'
+                          ? 'compliant'
+                          : payrollAutomation.confidenceLabel === 'strong'
+                          ? 'neutral'
+                          : 'warning'
+                      }
+                    >
+                      {payrollAutomation.confidenceScore}/100 confidence
+                    </Badge>
+                    <Badge variant="neutral">{payrollAutomation.automationMode.replaceAll('_', ' ')}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                    Next action: {payrollAutomation.nextBestAction.detail}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => scrollToAutomationTarget(payrollAutomation.nextBestAction.target)}
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90"
+                >
+                  Go to fix
+                </button>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Imported rows</p>
+                  <p className="mt-1 text-2xl font-semibold text-gray-950">{payrollAutomation.importedRows}</p>
+                  <p className="mt-1 text-xs text-gray-600">{payrollAutomation.mappedWorkers} workers mapped for future imports.</p>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Deductions</p>
+                  <p className="mt-1 text-2xl font-semibold capitalize text-gray-950">{payrollAutomation.deductionAutomation.status}</p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    {payrollAutomation.deductionAutomation.itemizedRows} itemized, {payrollAutomation.deductionAutomation.taxRows} tax rows.
+                  </p>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Fringes</p>
+                  <p className="mt-1 text-2xl font-semibold capitalize text-gray-950">{payrollAutomation.fringeAutomation.status}</p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    {payrollAutomation.fringeAutomation.itemizedRows} of {payrollAutomation.fringeAutomation.totalRows} rows include detail.
+                  </p>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Review mode</p>
+                  <p className="mt-1 text-2xl font-semibold text-gray-950">
+                    {payrollAutomation.reviewOnlyChangedRowsReady ? 'Ready' : 'Setup'}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    {payrollAutomation.priorWeekDeltaModeReady ? 'Prior-week delta checks can run.' : 'Needs complete source detail first.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-2 lg:grid-cols-2">
+                {payrollAutomation.tasks.map((task) => (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => scrollToAutomationTarget(task.target)}
+                    className={`rounded-md border px-3 py-3 text-left transition-colors hover:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold ${automationStatusClasses(task.status)}`}
+                  >
+                    <span className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">{task.label}</span>
+                      <Badge variant={automationBadgeVariant(task.status)}>{task.status}</Badge>
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-gray-700">{task.detail}</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
         {submitReadyData && (
           <div ref={submitReadySectionRef} tabIndex={-1} className="xl:row-span-2">
             <Card padding="default" className="h-full border border-border-default">
