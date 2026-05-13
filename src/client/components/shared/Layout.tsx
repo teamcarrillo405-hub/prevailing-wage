@@ -347,7 +347,9 @@ export function Layout({ children }: LayoutProps) {
       >
         {projectId ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <ProjectWorkspaceNav projectId={projectId} />
+            <div className="hidden lg:block">
+              <ProjectWorkspaceNav projectId={projectId} />
+            </div>
             <div className="min-w-0">{children}</div>
           </div>
         ) : (
