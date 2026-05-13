@@ -398,6 +398,8 @@ export function PayrollWeekDetailPage() {
   const complianceSectionRef = useRef<HTMLDivElement>(null);
   const submitReadySectionRef = useRef<HTMLDivElement>(null);
   const importReconciliationSectionRef = useRef<HTMLDivElement>(null);
+  const requiredFormsSectionRef = useRef<HTMLDivElement>(null);
+  const submissionStatusSectionRef = useRef<HTMLDivElement>(null);
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
   const [activeFixIssue, setActiveFixIssue] = useState<SubmitReadyIssue | null>(null);
 
@@ -1195,6 +1197,36 @@ export function PayrollWeekDetailPage() {
     submitted: boolean;
     nextAction: string;
   }>;
+  const submissionSteps = [
+    {
+      label: 'Review payroll',
+      detail: hasPayrollEntries ? `${entries.length} payroll entr${entries.length === 1 ? 'y' : 'ies'} ready for review.` : 'Enter worker hours and pay first.',
+      complete: hasPayrollEntries && payRowsComplete,
+      action: 'Open entries',
+      onClick: () => scrollToElement(entriesSectionRef.current),
+    },
+    {
+      label: 'Clear blockers',
+      detail: hasBlockingCompliance || hasSubmitReadyBlockers ? 'Resolve listed blockers before exporting forms.' : 'No blocking payroll issues detected.',
+      complete: !hasBlockingCompliance && !hasSubmitReadyBlockers,
+      action: 'Open checks',
+      onClick: () => scrollToElement(submitReadySectionRef.current ?? complianceSectionRef.current),
+    },
+    {
+      label: 'Download forms',
+      detail: canGenerateCertifiedPayroll ? 'WH-347 and required state forms are available.' : 'Forms unlock after payroll and checks are complete.',
+      complete: canGenerateCertifiedPayroll,
+      action: 'Open forms',
+      onClick: () => scrollToElement(requiredFormsSectionRef.current),
+    },
+    {
+      label: 'Mark submitted',
+      detail: week?.submittedAt ? `Submitted to ${week.submittedTo ?? 'agency'}.` : 'Record where and when the certified payroll was submitted.',
+      complete: Boolean(week?.submittedAt),
+      action: 'Open submission',
+      onClick: () => scrollToElement(submissionStatusSectionRef.current),
+    },
+  ];
 
   // Build a set of entry IDs that have violations for quick lookup
   const violationsByEntryId = new Map<string, ComplianceViolation>();
@@ -1797,6 +1829,44 @@ export function PayrollWeekDetailPage() {
             <span className="text-xs text-amber-600 font-medium shrink-0">Auto-saving...</span>
           )}
         </div>
+        <Card padding="sm" className="mb-4 border border-gray-200 bg-white">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Submission checklist</p>
+              <h2 className="mt-1 text-lg font-semibold text-gray-950">
+                Finish this week in four steps
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Work left to right: review payroll, clear blockers, download forms, then record submission.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4 lg:min-w-[680px]">
+              {submissionSteps.map((step, index) => (
+                <button
+                  key={step.label}
+                  type="button"
+                  onClick={step.onClick}
+                  className={`rounded-md border px-3 py-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                    step.complete
+                      ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-300'
+                      : 'border-amber-200 bg-amber-50 hover:border-amber-300'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                      step.complete ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                    }`}>
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-950">{step.label}</span>
+                  </span>
+                  <span className="mt-2 block text-xs leading-5 text-gray-600">{step.detail}</span>
+                  <span className="mt-2 block text-xs font-semibold text-gray-900">{step.action}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </Card>
         <section className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         {submitReadyData && (
           <div ref={submitReadySectionRef} tabIndex={-1} className="xl:row-span-2">
@@ -2519,6 +2589,7 @@ export function PayrollWeekDetailPage() {
         <div className="lg:col-span-1 space-y-6">
 
         {!isLoading && !isError && (
+          <div ref={requiredFormsSectionRef} tabIndex={-1} className="scroll-mt-24">
           <Card padding="none">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold text-gray-900">Week Readiness</h2>
@@ -2542,6 +2613,7 @@ export function PayrollWeekDetailPage() {
               ))}
             </div>
           </Card>
+          </div>
         )}
 
         {!isLoading && !isError && (
@@ -2687,7 +2759,8 @@ export function PayrollWeekDetailPage() {
 
         {/* Submission status panel */}
         {!isLoading && !isError && week && (
-          <Card id="submission-status" padding="none" className="mt-6 scroll-mt-24">
+          <div ref={submissionStatusSectionRef} tabIndex={-1} className="scroll-mt-24">
+          <Card id="submission-status" padding="none" className="mt-6">
             <div className="px-5 py-3 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Submission Status</h2>
             </div>
@@ -2880,6 +2953,7 @@ export function PayrollWeekDetailPage() {
               </>
             )}
           </Card>
+          </div>
         )}
 
         </div>{/* end lg:col-span-1 sidebar */}

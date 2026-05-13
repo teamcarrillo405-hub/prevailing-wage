@@ -226,7 +226,20 @@ export function Step2GridRow({
     );
   }
 
+  const caDeductionFields: Array<[keyof RowExtras, string, string]> = [
+    ['deductionVacationHoliday', 'Vac/Hol', 'Vacation and holiday deductions'],
+    ['deductionHealthWelfare', 'H&W Ded', 'Health and welfare deductions'],
+    ['deductionPension', 'Pension Ded', 'Pension deductions'],
+    ['deductionTraining', 'Training', 'Training fund deductions'],
+    ['deductionFundAdmin', 'Fund Admin', 'Fund administration deductions'],
+    ['deductionDues', 'Dues', 'Union dues'],
+    ['deductionTravelSubsistence', 'Travel/Subs', 'Travel or subsistence deductions'],
+    ['deductionSavings', 'Savings', 'Savings deductions'],
+    ['deductionOther', 'Other', 'Other deductions'],
+  ];
+
   return (
+    <>
     <tr
       className={`border-b border-gray-100 transition-colors ${highlighted ? 'bg-amber-50 border-l-4 border-l-amber-400' : ''}`}
       data-highlighted={highlighted ? 'true' : undefined}
@@ -286,21 +299,7 @@ export function Step2GridRow({
           {extraNumCell('ficaTax')}
           {extraNumCell('federalIncomeTax')}
           {extraNumCell('stateIncomeTax')}
-          {toggles.caFica && (
-            <>
-              {extraNumCell('sdiTax')}
-              {extraNumCell('deductionVacationHoliday')}
-              {extraNumCell('deductionHealthWelfare')}
-              {extraNumCell('deductionPension')}
-              {extraNumCell('deductionTraining')}
-              {extraNumCell('deductionFundAdmin')}
-              {extraNumCell('deductionDues')}
-              {extraNumCell('deductionTravelSubsistence')}
-              {extraNumCell('deductionSavings')}
-              {extraNumCell('deductionOther')}
-              {extraTextCell('deductionOtherDescription', 'w-32')}
-            </>
-          )}
+          {toggles.caFica && extraNumCell('sdiTax')}
         </>
       )}
       <td className="px-3 py-2 text-right text-sm font-semibold whitespace-nowrap">
@@ -308,5 +307,66 @@ export function Step2GridRow({
         {toggles.caDt && ` / ${dtTotal.toFixed(1)} DT`}
       </td>
     </tr>
+    {toggles.caFica && (
+      <tr className={`border-b border-gray-100 ${highlighted ? 'bg-amber-50/60' : 'bg-amber-50/30'}`}>
+        <td colSpan={40} className="px-3 py-3">
+          <div className="rounded-md border border-amber-200 bg-white px-3 py-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                  CA A-1-131 itemized deductions
+                </p>
+                <p className="mt-1 text-xs text-gray-600">
+                  Enter these from the payroll register only when they apply to this worker.
+                </p>
+              </div>
+              <span className="text-xs font-medium text-gray-500">{workerName}</span>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              {caDeductionFields.map(([field, label, title]) => {
+                const v = values[field];
+                const numValue = typeof v === 'number' ? v : '';
+                return (
+                  <label key={field} className="block">
+                    <span className="mb-1 block text-[11px] font-medium text-gray-600" title={title}>{label}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={numValue}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        onExtraChange(field, raw === '' ? null : Number(raw));
+                      }}
+                      onBlur={onBlur}
+                      onFocus={(e) => e.target.select()}
+                      className="w-full rounded-sm border border-gray-200 px-2 py-1 text-right text-sm focus:border-brand-gold focus:outline-hidden"
+                      data-worker-id={workerId}
+                      data-classification-id={classificationId}
+                      data-field={field}
+                    />
+                  </label>
+                );
+              })}
+              <label className="block sm:col-span-2 lg:col-span-5">
+                <span className="mb-1 block text-[11px] font-medium text-gray-600">Other deduction note</span>
+                <input
+                  type="text"
+                  value={values.deductionOtherDescription ?? ''}
+                  maxLength={120}
+                  onChange={(e) => onExtraChange('deductionOtherDescription', e.target.value === '' ? null : e.target.value)}
+                  onBlur={onBlur}
+                  className="w-full rounded-sm border border-gray-200 px-2 py-1 text-sm focus:border-brand-gold focus:outline-hidden"
+                  data-worker-id={workerId}
+                  data-classification-id={classificationId}
+                  data-field="deductionOtherDescription"
+                />
+              </label>
+            </div>
+          </div>
+        </td>
+      </tr>
+    )}
+    </>
   );
 }

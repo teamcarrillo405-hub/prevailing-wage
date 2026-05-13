@@ -345,20 +345,6 @@ export function Step2HoursGrid({
                     <th className="px-1 py-2 text-center text-xs font-semibold bg-blue-50">Fringe $</th>
                   </>
                 )}
-                {toggles.caFica && (
-                  <>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Vac/Hol</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">H&W Ded</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Pension Ded</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Training</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Fund Admin</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Dues</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Trav/Subs</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Savings</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Other</th>
-                    <th className="px-1 py-2 text-center text-xs font-semibold bg-amber-50">Other Note</th>
-                  </>
-                )}
                 {toggles.ilNonPw && (
                   <th
                     className="px-1 py-2 text-center text-xs font-semibold bg-purple-50"
