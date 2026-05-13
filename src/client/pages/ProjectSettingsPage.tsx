@@ -8,7 +8,7 @@ import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { useToast } from '../contexts/ToastContext';
-import { getStateSupport } from '../../shared/stateSupport';
+import { getStateSupport, validateStateProjectField } from '../../shared/stateSupport';
 
 interface Project {
   id: string;
@@ -271,6 +271,7 @@ function StateProjectFieldsSection({
   const support = useMemo(() => getStateSupport(project.state), [project.state]);
   const fields = support.requiredProjectFields;
   const [values, setValues] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const next: Record<string, string> = {};
@@ -288,6 +289,34 @@ function StateProjectFieldsSection({
     input.scrollIntoView({ behavior: 'smooth', block: 'center' });
     window.setTimeout(() => input.focus(), 250);
   }, [focusField, fields]);
+
+  const fieldErrors = useMemo(() => {
+    const next: Record<string, string> = {};
+    for (const field of fields) {
+      const error = validateStateProjectField(project.state, field.key, values[field.key]);
+      if (error) next[field.key] = error;
+    }
+    return next;
+  }, [fields, project.state, values]);
+  const hasFieldErrors = Object.keys(fieldErrors).length > 0;
+
+  function focusStateField(key: string) {
+    const input = document.getElementById(`state-field-${key}`) as HTMLInputElement | null;
+    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => input?.focus(), 250);
+  }
+
+  function handleSaveStateFields() {
+    const nextTouched = Object.fromEntries(fields.map((field) => [field.key, true]));
+    setTouched(nextTouched);
+    const firstErrorKey = fields.find((field) => fieldErrors[field.key])?.key;
+    if (firstErrorKey) {
+      toast.error(fieldErrors[firstErrorKey]);
+      focusStateField(firstErrorKey);
+      return;
+    }
+    saveStateFields.mutate();
+  }
 
   const saveStateFields = useMutation({
     mutationFn: () =>
@@ -338,8 +367,20 @@ function StateProjectFieldsSection({
                 type="text"
                 value={values[field.key] ?? ''}
                 onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                onBlur={() => setTouched((current) => ({ ...current, [field.key]: true }))}
+                aria-invalid={Boolean(touched[field.key] && fieldErrors[field.key])}
+                aria-describedby={fieldErrors[field.key] ? `state-field-${field.key}-error` : undefined}
+                className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                  touched[field.key] && fieldErrors[field.key]
+                    ? 'border-red-300 bg-red-50 focus:ring-red-200'
+                    : 'border-gray-300 focus:ring-brand-gold'
+                }`}
               />
+              {touched[field.key] && fieldErrors[field.key] && (
+                <p id={`state-field-${field.key}-error`} className="mt-1 text-xs font-medium text-red-700">
+                  {fieldErrors[field.key]}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -352,7 +393,7 @@ function StateProjectFieldsSection({
       {fields.length > 0 && (
         <button
           type="button"
-          onClick={() => saveStateFields.mutate()}
+          onClick={handleSaveStateFields}
           disabled={saveStateFields.isPending}
           className="px-5 py-2 rounded font-semibold text-sm text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
         >

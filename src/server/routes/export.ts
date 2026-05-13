@@ -81,7 +81,7 @@ import {
   generateTxCprPdf,
   type TxCprInput,
 } from '../services/txCprPdfGenerator.js';
-import { getStateSupport } from '../../shared/stateSupport.js';
+import { getStateSupport, validateStateProjectField } from '../../shared/stateSupport.js';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
 
@@ -129,12 +129,19 @@ router.get('/state-readiness/:weekId', async (req, res) => {
     const state = String(project.state ?? '').toUpperCase();
     const config = getStateSupport(state);
 
-    const requiredFields = config.requiredProjectFields.map((field) => ({
-      ...field,
-      present: typeof projectRecord[field.key] === 'string'
-        ? String(projectRecord[field.key]).trim().length > 0
-        : projectRecord[field.key] != null,
-    }));
+    const requiredFields = config.requiredProjectFields.map((field) => {
+      const value = projectRecord[field.key];
+      const present = typeof value === 'string'
+        ? String(value).trim().length > 0
+        : value != null;
+      const error = validateStateProjectField(state, field.key, value);
+      return {
+        ...field,
+        present,
+        valid: !error,
+        error,
+      };
+    });
 
     return res.json({
       data: {
@@ -151,7 +158,10 @@ router.get('/state-readiness/:weekId', async (req, res) => {
         missingFields: requiredFields
           .filter((field) => !field.present)
           .map(({ key, label }) => ({ key, label })),
-        ready: requiredFields.every((field) => field.present),
+        invalidFields: requiredFields
+          .filter((field) => field.present && !field.valid)
+          .map(({ key, label, error }) => ({ key, label, error })),
+        ready: requiredFields.every((field) => field.present && field.valid),
       },
     });
   } catch (err) {

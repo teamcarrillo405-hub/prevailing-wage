@@ -200,8 +200,9 @@ interface StateExportReadiness {
   nextGate?: string;
   ready: boolean;
   supportedExports: string[];
-  requiredFields: Array<{ key: string; label: string; present: boolean }>;
+  requiredFields: Array<{ key: string; label: string; present: boolean; valid?: boolean; error?: string | null }>;
   missingFields: Array<{ key: string; label: string }>;
+  invalidFields?: Array<{ key: string; label: string; error?: string | null }>;
 }
 
 interface ImportReconciliationIssue {
@@ -1992,7 +1993,11 @@ export function PayrollWeekDetailPage() {
               </div>
               {!stateReadinessData.data.ready && (
                 <Link
-                  to={`/projects/${projectId}/settings?field=${encodeURIComponent(stateReadinessData.data.missingFields[0]?.key ?? '')}`}
+                  to={`/projects/${projectId}/settings?field=${encodeURIComponent(
+                    stateReadinessData.data.missingFields[0]?.key
+                      ?? stateReadinessData.data.invalidFields?.[0]?.key
+                      ?? '',
+                  )}`}
                   className="inline-flex items-center justify-center rounded-sm border border-border-default px-3 py-2 text-xs font-semibold text-gray-800 hover:border-brand-gold hover:bg-brand-gold/5"
                 >
                   Complete Fields
@@ -2000,22 +2005,29 @@ export function PayrollWeekDetailPage() {
               )}
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {stateReadinessData.data.requiredFields.map((field) => (
+              {stateReadinessData.data.requiredFields.map((field) => {
+                const hasError = !field.present || field.valid === false;
+                return (
                 <Link
                   key={field.key}
                   to={`/projects/${projectId}/settings?field=${encodeURIComponent(field.key)}`}
                   className={`flex items-center justify-between rounded-sm border px-3 py-2 text-sm transition-colors ${
-                    field.present
+                    !hasError
                       ? 'border-border-default hover:border-brand-gold hover:bg-brand-gold/5'
                       : 'border-amber-200 bg-amber-50 hover:border-amber-400'
                   }`}
+                  title={field.error ?? undefined}
                 >
-                  <span className="text-gray-700">{field.label}</span>
-                  <Badge variant={field.present ? 'compliant' : 'warning'}>
-                    {field.present ? 'Ready' : 'Missing'}
+                  <span className="text-gray-700">
+                    {field.label}
+                    {field.error && <span className="block text-xs text-amber-700">{field.error}</span>}
+                  </span>
+                  <Badge variant={!hasError ? 'compliant' : 'warning'}>
+                    {!field.present ? 'Missing' : field.valid === false ? 'Invalid' : 'Ready'}
                   </Badge>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           </Card>
         )}

@@ -139,6 +139,46 @@ describe('GET /api/export/preflight/:format/:weekId', () => {
     );
   });
 
+  it('reports invalid jurisdiction fields with field-level errors', async () => {
+    const cookie = await registerUser('state-readiness-invalid');
+    const projectId = await createProject(cookie, 'CA', {
+      cslbLicense: '123456',
+      wcPolicyNumber: 'WC-2026-789',
+    });
+    await supertest(app)
+      .patch(`/api/projects/${projectId}`)
+      .set('Cookie', cookie)
+      .send({
+        contractorFein: '12345678',
+        dirProjectId: 'DIR-123',
+        awardingAgency: 'City of Los Angeles',
+        contractNumber: 'C-100',
+      });
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .get(`/api/export/state-readiness/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.ready).toBe(false);
+    expect(res.body.data.requiredFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'contractorFein',
+          present: true,
+          valid: false,
+          error: 'Contractor FEIN must be exactly 9 digits.',
+        }),
+      ]),
+    );
+    expect(res.body.data.invalidFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'contractorFein' }),
+      ]),
+    );
+  });
+
   it('flags missing California eCPR project fields, worker address, and fringe breakdown', async () => {
     const cookie = await registerUser('preflight-missing');
     const projectId = await createProject(cookie, 'CA', {

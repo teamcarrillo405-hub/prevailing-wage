@@ -290,8 +290,10 @@ export async function computeExportPreflight(
         id: 'ecpr-contractor-fein',
         category: 'project',
         severity: 'blocker',
-        title: 'Contractor FEIN required',
-        detail: 'Enter a 9-digit contractor FEIN before generating California eCPR XML.',
+        title: fein ? 'Contractor FEIN invalid' : 'Contractor FEIN required',
+        detail: fein
+          ? `Contractor FEIN must be exactly 9 digits. Current value has ${fein.length} digit(s).`
+          : 'Enter a 9-digit contractor FEIN before generating California eCPR XML.',
         fix: projectSettingsFix(week.projectId, 'contractorFein', 'Add FEIN'),
       });
     }

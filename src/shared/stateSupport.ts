@@ -163,3 +163,25 @@ export function isStateSpecificExportEnabled(state: string | null | undefined): 
   const support = getStateSupport(state);
   return support.status !== 'not_supported';
 }
+
+export function validateStateProjectField(
+  state: string | null | undefined,
+  key: string,
+  value: unknown,
+): string | null {
+  const support = getStateSupport(state);
+  const field = support.requiredProjectFields.find((candidate) => candidate.key === key);
+  if (!field) return null;
+
+  const text = typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim();
+  if (!text) return `${field.label} is required.`;
+
+  if (support.state === 'CA' && key === 'contractorFein') {
+    const digits = text.replace(/\D/g, '');
+    if (!/^\d{9}$/.test(digits)) {
+      return 'Contractor FEIN must be exactly 9 digits.';
+    }
+  }
+
+  return null;
+}
