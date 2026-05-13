@@ -30,6 +30,15 @@ export const COMPETITIVE_READINESS: CompetitiveReadinessItem[] = [
     status: 'building',
   },
   {
+    id: 'payroll-source-of-truth',
+    category: 'Payroll Automation',
+    competitorAdvantage: 'Competitors reduce duplicate entry through payroll interfaces, time tracking, union/payroll complexity handling, and audit-ready payroll handoffs.',
+    currentPosition: 'Manual entry can run the pilot, but contractors still need to pull deductions, gross pay, net pay, and fringe details from their payroll source of truth.',
+    executionGate: 'Ship a better import-first workflow that accepts payroll register exports with hours, gross pay, deductions, net pay, and fringe details; then prove a best workflow through repeatable provider mappings or direct integrations.',
+    testPlan: 'Run the same payroll week three ways: manual entry, mapped CSV import, and a repeatable provider import; reconcile totals and log every field that still requires retyping.',
+    status: 'gap',
+  },
+  {
     id: 'agency-workflows',
     category: 'Agency Workflow',
     competitorAdvantage: 'PRISM and eMars are positioned around prime, subcontractor, agency review, statements of compliance, and audit workflows.',
