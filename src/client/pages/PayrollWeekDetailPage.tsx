@@ -2054,7 +2054,7 @@ export function PayrollWeekDetailPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto pb-24">
+      <div className="w-full pb-24">
         {/* Hidden anchor for Blob download — must be outside modal so it persists when modal unmounts */}
         <a ref={hiddenAnchorRef} className="hidden" />
 

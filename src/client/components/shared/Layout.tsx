@@ -102,7 +102,7 @@ export function Layout({ children }: LayoutProps) {
       </a>
 
       <nav className="bg-nav-dark sticky top-0 z-40" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-[68px]">
+        <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 flex items-center justify-between h-[68px]">
           {/* Logo + wordmark */}
           <Link to="/dashboard" className="flex items-center gap-3 group" aria-label="HCC Prevailing Wage — home">
             <img
@@ -341,7 +341,7 @@ export function Layout({ children }: LayoutProps) {
 
       <main
         id="main-content"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 page-enter pb-14 md:pb-8"
+        className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 py-8 page-enter pb-14 md:pb-8"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -362,7 +362,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Footer — public links */}
       <footer className="border-t border-gray-200 mt-12 py-6 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-start justify-between gap-4">
+        <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-xl">
             <p className="text-xs text-gray-400">&copy; 2026 PrevWage</p>
             <p className="mt-1 text-xs leading-5 text-gray-500">
