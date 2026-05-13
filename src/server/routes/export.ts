@@ -44,11 +44,13 @@ import {
 } from '../services/waCprXmlGenerator.js';
 import {
   fillWh347,
+  getWh347TemplateBytes,
   type Wh347Data,
   type Wh347WorkerRow,
 } from '../services/wh347Generator.js';
 import {
   fillA1131,
+  getA1131TemplateBytes,
   type A1131Data,
   type A1131WorkerRow,
 } from '../services/a1131Generator.js';
@@ -352,8 +354,7 @@ router.get('/wh347/:weekId', async (req, res) => {
   };
 
   // 6. Load template PDF and fill
-  const templatePath = path.join(process.cwd(), 'assets', 'wh347-official-2025.pdf');
-  const templateBytes = readFileSync(templatePath);
+  const templateBytes = getWh347TemplateBytes();
   const filledPdf = await fillWh347(wh347Data, templateBytes);
 
   // 7. Stream as PDF download
@@ -476,8 +477,7 @@ router.get('/a1131/:weekId', async (req, res) => {
   };
 
   // 7. Load template + fill
-  const templatePath = path.join(process.cwd(), 'assets', 'a1131-official.pdf');
-  const templateBytes = readFileSync(templatePath);
+  const templateBytes = getA1131TemplateBytes();
   const filledPdf = await fillA1131(a1131Data, templateBytes);
 
   // 8. Stream as PDF download

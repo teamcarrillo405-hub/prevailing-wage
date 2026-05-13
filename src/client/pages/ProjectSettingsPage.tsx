@@ -281,6 +281,14 @@ function StateProjectFieldsSection({
     setValues(next);
   }, [project, fields]);
 
+  useEffect(() => {
+    if (!focusField) return;
+    const input = document.getElementById(`state-field-${focusField}`) as HTMLInputElement | null;
+    if (!input) return;
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => input.focus(), 250);
+  }, [focusField, fields]);
+
   const saveStateFields = useMutation({
     mutationFn: () =>
       api.patch<{ data: { project: Project } }>(`/projects/${projectId}`, Object.fromEntries(

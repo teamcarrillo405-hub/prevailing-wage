@@ -1992,7 +1992,7 @@ export function PayrollWeekDetailPage() {
               </div>
               {!stateReadinessData.data.ready && (
                 <Link
-                  to={`/projects/${projectId}/settings`}
+                  to={`/projects/${projectId}/settings?field=${encodeURIComponent(stateReadinessData.data.missingFields[0]?.key ?? '')}`}
                   className="inline-flex items-center justify-center rounded-sm border border-border-default px-3 py-2 text-xs font-semibold text-gray-800 hover:border-brand-gold hover:bg-brand-gold/5"
                 >
                   Complete Fields
@@ -2001,12 +2001,20 @@ export function PayrollWeekDetailPage() {
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {stateReadinessData.data.requiredFields.map((field) => (
-                <div key={field.key} className="flex items-center justify-between rounded-sm border border-border-default px-3 py-2 text-sm">
+                <Link
+                  key={field.key}
+                  to={`/projects/${projectId}/settings?field=${encodeURIComponent(field.key)}`}
+                  className={`flex items-center justify-between rounded-sm border px-3 py-2 text-sm transition-colors ${
+                    field.present
+                      ? 'border-border-default hover:border-brand-gold hover:bg-brand-gold/5'
+                      : 'border-amber-200 bg-amber-50 hover:border-amber-400'
+                  }`}
+                >
                   <span className="text-gray-700">{field.label}</span>
                   <Badge variant={field.present ? 'compliant' : 'warning'}>
                     {field.present ? 'Ready' : 'Missing'}
                   </Badge>
-                </div>
+                </Link>
               ))}
             </div>
           </Card>
