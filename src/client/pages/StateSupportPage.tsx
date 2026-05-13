@@ -114,6 +114,9 @@ export function StateSupportPage() {
         </section>
 
         <div className="flex flex-wrap gap-3">
+          <Link to="/pilot-intake" className="inline-flex min-h-11 items-center rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-gray-950 hover:bg-brand-gold/90">
+            Open Pilot Intake
+          </Link>
           <Link to="/methodology" className="inline-flex min-h-11 items-center rounded bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy/90">
             Methodology
           </Link>

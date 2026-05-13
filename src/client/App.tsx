@@ -80,6 +80,9 @@ const PublicComplianceMethodologyPage = React.lazy(() =>
 const StateSupportPage = React.lazy(() =>
   import('./pages/StateSupportPage').then(m => ({ default: m.StateSupportPage }))
 );
+const PilotIntakePage = React.lazy(() =>
+  import('./pages/PilotIntakePage').then(m => ({ default: m.PilotIntakePage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -180,6 +183,7 @@ export default function App() {
                 <Route path="/checklists" element={<OfflineChecklistPage />} />
                 <Route path="/classification-assist" element={<ClassificationAssistPage />} />
                 <Route path="/compliance-methodology" element={<ComplianceMethodologyPage />} />
+                <Route path="/pilot-intake" element={<PilotIntakePage />} />
               </Route>
 
               {/* Public pages — no auth required */}

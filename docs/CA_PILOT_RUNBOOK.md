@@ -19,16 +19,17 @@ Use this runbook for the first California contractor pilot. Do not mark Californ
 
 1. Confirm production `/api/ready` returns `ready`.
 2. Confirm `/state-support` lists CA as `Production Pilot`.
-3. Confirm the pilot user can register, complete onboarding, and create a CA project.
-4. Confirm project settings capture:
+3. Open `/pilot-intake` and complete the intake checklist before loading source payroll or worker records.
+4. Confirm the pilot user can register, complete onboarding, and create a CA project.
+5. Confirm project settings capture:
    - CSLB license
    - Workers comp policy
    - Contractor FEIN
    - DIR project ID
    - Awarding agency
    - Contract number
-5. Download the payroll import template for the contractor payroll provider.
-6. Save the source payroll export and agency reference documents outside the repo in the pilot evidence folder.
+6. Download the payroll import template for the contractor payroll provider.
+7. Save the source payroll export and agency reference documents outside the repo in the pilot evidence folder.
 
 ## Pilot Script
 
