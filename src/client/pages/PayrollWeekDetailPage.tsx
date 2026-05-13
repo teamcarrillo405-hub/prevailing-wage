@@ -1206,13 +1206,49 @@ export function PayrollWeekDetailPage() {
     window.setTimeout(() => setHighlightedEntryId(null), 3500);
   }
 
+  function openPayrollEntryEditor(entryId: string, field: string = 'deductions') {
+    const params = new URLSearchParams({ entryId, field });
+    navigate(`/projects/${projectId}/payroll/${weekId}/edit?${params.toString()}`);
+  }
+
+  function firstComplianceFixTarget(): { entryId: string; field: string; label: string } | null {
+    const wageViolation = complianceData?.violations?.[0];
+    if (wageViolation) {
+      if (wageViolation.violationType === 'under-wage') {
+        return { entryId: wageViolation.entryId, field: 'baseRate', label: `${wageViolation.workerName}: base rate` };
+      }
+      if (wageViolation.violationType === 'ca-daily-dt') {
+        return { entryId: wageViolation.entryId, field: 'monDt', label: `${wageViolation.workerName}: daily double-time hours` };
+      }
+      return { entryId: wageViolation.entryId, field: 'monOt', label: `${wageViolation.workerName}: overtime hours` };
+    }
+    const deductionViolation = complianceData?.deductionViolations?.[0];
+    if (deductionViolation) {
+      return { entryId: deductionViolation.entryId, field: 'deductions', label: `${deductionViolation.workerName}: deductions` };
+    }
+    return null;
+  }
+
+  function submitReadyFixHint(issue: SubmitReadyIssue) {
+    if (issue.id === 'pay-calculation') return 'Fix target: open the affected payroll row and resave hours/rates/deductions.';
+    if (issue.id === 'rate-snapshots') return 'Fix target: base rate and fringe rate on the affected payroll row.';
+    if (issue.id === 'compliance-review') {
+      const target = firstComplianceFixTarget();
+      return target ? `Fix target: ${target.label}.` : 'Fix target: Compliance Check panel.';
+    }
+    if (issue.id === 'wd-lock') return 'Fix target: project wage determination lock.';
+    if (issue.id === 'signature') return 'Fix target: project signature/settings.';
+    if (issue.id === 'import-review') return 'Fix target: import reconciliation or source payroll review.';
+    if (issue.id === 'human-certification-review') return 'Review target: Compliance Check and source payroll records.';
+    return 'Click to go to the fix.';
+  }
+
   function scrollToSubmitReadyIssue(issue: SubmitReadyIssue) {
     setActiveFixIssue(issue);
     if (issue.id === 'pay-calculation') {
       const row = entries.find(({ entry }) => entry.grossWages == null || entry.netPay == null);
       if (row) {
-        scrollToPayrollEntry(row.entry.id);
-        window.setTimeout(() => setActiveFixIssue(null), 10_000);
+        openPayrollEntryEditor(row.entry.id, 'deductions');
         return;
       }
     }
@@ -1220,19 +1256,15 @@ export function PayrollWeekDetailPage() {
     if (issue.id === 'rate-snapshots') {
       const row = entries.find(({ entry }) => entry.baseRateSnapshot === 0 && entry.fringeRateSnapshot === 0);
       if (row) {
-        scrollToPayrollEntry(row.entry.id);
-        window.setTimeout(() => setActiveFixIssue(null), 10_000);
+        openPayrollEntryEditor(row.entry.id, 'baseRate');
         return;
       }
     }
 
     if (issue.actionId === 'review-week-violations' || issue.id === 'compliance-review') {
-      const violationEntryId =
-        complianceData?.violations?.[0]?.entryId ??
-        complianceData?.deductionViolations?.[0]?.entryId;
-      if (violationEntryId) {
-        scrollToPayrollEntry(violationEntryId);
-        window.setTimeout(() => setActiveFixIssue(null), 10_000);
+      const target = firstComplianceFixTarget();
+      if (target) {
+        openPayrollEntryEditor(target.entryId, target.field);
         return;
       }
       scrollToElement(complianceSectionRef.current);
@@ -1797,7 +1829,7 @@ export function PayrollWeekDetailPage() {
                     <div>
                       <p className="text-sm font-medium text-gray-900">{issue.title}</p>
                       <p className="text-xs text-text-secondary">{issue.detail}</p>
-                      <p className="mt-1 text-xs font-medium text-brand-gold">Click to go to the fix.</p>
+                      <p className="mt-1 text-xs font-medium text-brand-gold">{submitReadyFixHint(issue)}</p>
                     </div>
                     <Badge variant={issue.severity === 'blocker' ? 'violation' : 'warning'}>
                       {issue.severity}
@@ -2490,13 +2522,24 @@ export function PayrollWeekDetailPage() {
                       {v.violationType === 'cwhssa-ot' && (
                         <TermTooltip term="CWHSSA OT" definition={CWHSSA_OT_DEF} className="mt-0.5 shrink-0" />
                       )}
-                      <span>
+                      <span className="flex-1">
                         <span className="font-medium">{v.workerName}</span>
                         {': expected $'}{v.expected.toFixed(2)}{', paid $'}{v.actual.toFixed(2)}{' (delta $'}{v.delta.toFixed(2)}{')'}
                         <span className="block text-xs text-gray-500 mt-0.5">
                           Fix: {getViolationFix(v)}
                         </span>
                       </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openPayrollEntryEditor(
+                          v.entryId,
+                          v.violationType === 'under-wage' ? 'baseRate' : v.violationType === 'ca-daily-dt' ? 'monDt' : 'monOt',
+                        )}
+                      >
+                        Open field
+                      </Button>
                     </li>
                   ))}
                   {complianceData.weekViolations?.map((wv, i) => (
@@ -2549,10 +2592,20 @@ export function PayrollWeekDetailPage() {
                   </p>
                   <ul className="space-y-1">
                     {complianceData!.deductionViolations!.map((dv, i) => (
-                      <li key={i} className="text-xs text-amber-800">
-                        <span className="font-semibold">{dv.workerName}</span>
-                        {': '}${dv.deductions.toFixed(2)} deducted from ${dv.grossWages.toFixed(2)} gross ({dv.deductionPct}%)
-                        <span className="block text-amber-700">Fix: {getDeductionFix()}</span>
+                      <li key={i} className="flex items-start justify-between gap-3 text-xs text-amber-800">
+                        <span>
+                          <span className="font-semibold">{dv.workerName}</span>
+                          {': '}${dv.deductions.toFixed(2)} deducted from ${dv.grossWages.toFixed(2)} gross ({dv.deductionPct}%)
+                          <span className="block text-amber-700">Fix: {getDeductionFix()}</span>
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openPayrollEntryEditor(dv.entryId, 'deductions')}
+                        >
+                          Open field
+                        </Button>
                       </li>
                     ))}
                   </ul>

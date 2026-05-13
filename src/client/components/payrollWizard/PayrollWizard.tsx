@@ -1,10 +1,10 @@
 // src/client/components/payrollWizard/PayrollWizard.tsx
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useWizardState } from './useWizardState';
 import { Step1Roster, type Step1Values, type RosterRow } from './Step1Roster';
-import { Step2HoursGrid, type GridWorkerRow } from './Step2HoursGrid';
+import { Step2HoursGrid, type GridWorkerRow, type PayrollFocusField, type PayrollFocusTarget } from './Step2HoursGrid';
 import type { RowValues } from './Step2GridRow';
 import { Step3Review } from './Step3Review';
 import { StepProgress, StepTransition } from './StepTransition';
@@ -76,6 +76,7 @@ interface ProjectResponse {
 
 export function PayrollWizard({ projectId, weekId }: Props) {
   const [state, dispatch] = useWizardState(weekId);
+  const [searchParams] = useSearchParams();
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [error, setError] = useState<string | null>(null);
   const [step1, setStep1] = useState<Step1Values | null>(null);
@@ -180,12 +181,14 @@ export function PayrollWizard({ projectId, weekId }: Props) {
 
     if (state.step === 'hours') {
       const gridRows = buildGridRows(step1, weekData);
+      const focusTarget = buildFocusTarget(weekData, searchParams);
       return (
         <Step2HoursGrid
           initialRows={gridRows}
           projectState={projectState}
           saveStatus={saveStatus}
           highlightedWorkerIds={highlightWorkerIds}
+          focusTarget={focusTarget}
           onRowChange={(row) => {
             markDirty({
               workerId: row.workerId,
@@ -301,4 +304,31 @@ function buildGridRows(step1: Step1Values | null, weekData: WeekDetail | undefin
       }));
   }
   return [];
+}
+
+const FOCUS_FIELDS = new Set<PayrollFocusField>([
+  'monSt', 'tueSt', 'wedSt', 'thuSt', 'friSt', 'satSt', 'sunSt',
+  'monOt', 'tueOt', 'wedOt', 'thuOt', 'friOt', 'satOt', 'sunOt',
+  'monDt', 'tueDt', 'wedDt', 'thuDt', 'friDt', 'satDt', 'sunDt',
+  'baseRate', 'fringeRate', 'deductions',
+  'fringeHealthWelfare', 'fringePension', 'fringeVacation', 'fringeTraining',
+  'nonPwHours', 'checkNumber', 'allOtherHours', 'totalWeekGrossWages',
+  'ficaTax', 'federalIncomeTax', 'stateIncomeTax', 'sdiTax',
+]);
+
+function buildFocusTarget(weekData: WeekDetail | undefined, searchParams: URLSearchParams): PayrollFocusTarget | null {
+  if (!weekData) return null;
+  const entryId = searchParams.get('entryId');
+  if (!entryId) return null;
+  const row = weekData.entries.find((candidate) => candidate.entry.id === entryId);
+  if (!row) return null;
+  const rawField = searchParams.get('field');
+  const field = rawField && FOCUS_FIELDS.has(rawField as PayrollFocusField)
+    ? rawField as PayrollFocusField
+    : undefined;
+  return {
+    workerId: row.entry.workerId,
+    classificationId: row.entry.classificationId,
+    field,
+  };
 }

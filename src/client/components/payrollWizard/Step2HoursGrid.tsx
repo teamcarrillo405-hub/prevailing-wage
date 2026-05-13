@@ -24,11 +24,23 @@ export interface GridWorkerRow {
   values: RowValues;
 }
 
+export type PayrollFocusField =
+  | keyof HourValues
+  | keyof RowExtras
+  | MetaField;
+
+export interface PayrollFocusTarget {
+  workerId: string;
+  classificationId: string;
+  field?: PayrollFocusField;
+}
+
 interface Props {
   initialRows: GridWorkerRow[];
   projectState: string;
   saveStatus?: 'idle' | 'pending' | 'saving' | 'queued' | 'conflict';
   highlightedWorkerIds?: Set<string>;
+  focusTarget?: PayrollFocusTarget | null;
   onRowChange: (row: GridWorkerRow) => void;
   onReview: () => void;
   onBack: () => void;
@@ -45,7 +57,16 @@ const INITIAL_TOGGLES: StateToggles = {
   njDeductions: false,
 };
 
-export function Step2HoursGrid({ initialRows, projectState, saveStatus, highlightedWorkerIds, onRowChange, onReview, onBack }: Props) {
+export function Step2HoursGrid({
+  initialRows,
+  projectState,
+  saveStatus,
+  highlightedWorkerIds,
+  focusTarget,
+  onRowChange,
+  onReview,
+  onBack,
+}: Props) {
   const [rows, setRows] = useState(initialRows);
   const [toggles, setToggles] = useState<StateToggles>(INITIAL_TOGGLES);
 
@@ -54,6 +75,23 @@ export function Step2HoursGrid({ initialRows, projectState, saveStatus, highligh
     const el = document.querySelector<HTMLElement>('[data-highlighted="true"]');
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [highlightedWorkerIds]);
+
+  useEffect(() => {
+    if (!focusTarget) return;
+    const selector = focusTarget.field
+      ? `input[data-worker-id="${focusTarget.workerId}"][data-classification-id="${focusTarget.classificationId}"][data-field="${focusTarget.field}"]`
+      : `[data-worker-id="${focusTarget.workerId}"][data-classification-id="${focusTarget.classificationId}"]`;
+    const focusTimer = window.setTimeout(() => {
+      const matches = Array.from(document.querySelectorAll<HTMLElement>(selector));
+      const target = matches.find((match) => match.getClientRects().length > 0) ?? matches[0];
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (target instanceof HTMLInputElement) {
+        target.focus();
+        target.select();
+      }
+    }, 150);
+    return () => window.clearTimeout(focusTimer);
+  }, [focusTarget]);
 
   const onToggle = useCallback((key: keyof StateToggles) => {
     setToggles((t) => ({ ...t, [key]: !t[key] }));
@@ -236,6 +274,7 @@ export function Step2HoursGrid({ initialRows, projectState, saveStatus, highligh
           rows={rows}
           toggles={toggles}
           saveStatus={saveStatus}
+          focusTarget={focusTarget}
           onCellChange={(workerId, classId, field, value) => updateCell(workerId, classId, field, value)}
           onMetaChange={(workerId, classId, field, value) => updateMeta(workerId, classId, field, value)}
           onExtraChange={(workerId, classId, field, value) => updateExtra(workerId, classId, field, value)}

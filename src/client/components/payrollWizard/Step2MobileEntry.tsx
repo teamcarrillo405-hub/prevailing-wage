@@ -4,6 +4,7 @@ import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { DAYS } from './types';
 import type { GridWorkerRow } from './Step2HoursGrid';
+import type { PayrollFocusTarget } from './Step2HoursGrid';
 import type { HourValues, RowExtras, MetaField } from './Step2GridRow';
 import type { StateToggles } from './Step2BulkActions';
 
@@ -11,6 +12,7 @@ interface Props {
   rows: GridWorkerRow[];
   toggles: StateToggles;
   saveStatus?: 'idle' | 'pending' | 'saving' | 'queued' | 'conflict';
+  focusTarget?: PayrollFocusTarget | null;
   onCellChange: (workerId: string, classificationId: string, field: keyof HourValues, value: number) => void;
   onMetaChange: (workerId: string, classificationId: string, field: MetaField, value: number) => void;
   onExtraChange: (workerId: string, classificationId: string, field: keyof RowExtras, value: number | string | null) => void;
@@ -65,6 +67,7 @@ export function Step2MobileEntry({
   rows,
   toggles,
   saveStatus,
+  focusTarget,
   onCellChange,
   onMetaChange,
   onExtraChange,
@@ -84,6 +87,25 @@ export function Step2MobileEntry({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [activeIdx]);
+
+  useEffect(() => {
+    if (!focusTarget) return;
+    if (!window.matchMedia('(max-width: 639px)').matches) return;
+    const targetIdx = rows.findIndex(
+      (row) => row.workerId === focusTarget.workerId && row.classificationId === focusTarget.classificationId,
+    );
+    if (targetIdx === -1) return;
+    setActiveIdx(targetIdx);
+    const focusTimer = window.setTimeout(() => {
+      const target = document.querySelector<HTMLInputElement>(
+        `input[data-worker-id="${focusTarget.workerId}"][data-classification-id="${focusTarget.classificationId}"][data-field="${focusTarget.field ?? 'deductions'}"]`,
+      );
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target?.focus();
+      target?.select();
+    }, 200);
+    return () => window.clearTimeout(focusTimer);
+  }, [focusTarget, rows]);
 
   const activeRow = activeIdx !== null ? rows[activeIdx] : null;
 
@@ -224,6 +246,9 @@ export function Step2MobileEntry({
                             ? 'border-red-400 focus:border-red-400'
                             : 'border-gray-300 focus:border-brand-gold'
                         }`}
+                        data-worker-id={activeRow.workerId}
+                        data-classification-id={activeRow.classificationId}
+                        data-field={stField}
                       />
                     </div>
                     <div>
@@ -247,6 +272,9 @@ export function Step2MobileEntry({
                             ? 'border-red-400 focus:border-red-400'
                             : 'border-gray-300 focus:border-brand-gold'
                         }`}
+                        data-worker-id={activeRow.workerId}
+                        data-classification-id={activeRow.classificationId}
+                        data-field={otField}
                       />
                     </div>
                     {toggles.caDt && (
@@ -271,6 +299,9 @@ export function Step2MobileEntry({
                               ? 'border-red-400 focus:border-red-400'
                               : 'border-gray-300 focus:border-brand-gold'
                           }`}
+                          data-worker-id={activeRow.workerId}
+                          data-classification-id={activeRow.classificationId}
+                          data-field={dtField}
                         />
                       </div>
                     )}
@@ -300,6 +331,9 @@ export function Step2MobileEntry({
                     }
                     onBlur={() => onBlur(activeRow.workerId, activeRow.classificationId)}
                     className="w-full py-3 px-3 text-base border border-gray-300 rounded-sm focus:outline-none focus:border-brand-gold"
+                    data-worker-id={activeRow.workerId}
+                    data-classification-id={activeRow.classificationId}
+                    data-field="baseRate"
                   />
                 </div>
                 <div>
@@ -319,6 +353,9 @@ export function Step2MobileEntry({
                     }
                     onBlur={() => onBlur(activeRow.workerId, activeRow.classificationId)}
                     className="w-full py-3 px-3 text-base border border-gray-300 rounded-sm focus:outline-none focus:border-brand-gold"
+                    data-worker-id={activeRow.workerId}
+                    data-classification-id={activeRow.classificationId}
+                    data-field="fringeRate"
                   />
                 </div>
                 <div>
@@ -338,6 +375,9 @@ export function Step2MobileEntry({
                     }
                     onBlur={() => onBlur(activeRow.workerId, activeRow.classificationId)}
                     className="w-full py-3 px-3 text-base border border-gray-300 rounded-sm focus:outline-none focus:border-brand-gold"
+                    data-worker-id={activeRow.workerId}
+                    data-classification-id={activeRow.classificationId}
+                    data-field="deductions"
                   />
                 </div>
               </div>
