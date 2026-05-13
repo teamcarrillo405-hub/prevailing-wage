@@ -205,6 +205,8 @@ export function PayrollWizard({ projectId, weekId }: Props) {
             await Promise.all([
               qc.invalidateQueries({ queryKey: ['payroll-week', state.weekId] }),
               qc.invalidateQueries({ queryKey: ['compliance', state.weekId] }),
+              qc.invalidateQueries({ queryKey: ['submit-ready', state.weekId] }),
+              qc.invalidateQueries({ queryKey: ['import-reconciliation', state.weekId] }),
             ]);
             advance();
           }}

@@ -394,6 +394,18 @@ export const payrollImports = sqliteTable('payroll_imports', {
   createdAt: text('created_at').notNull(),
 });
 
+export const submitReadyAcknowledgements = sqliteTable('submit_ready_acknowledgements', {
+  id: text('id').primaryKey(),
+  payrollWeekId: text('payroll_week_id').notNull().references(() => payrollWeeks.id, { onDelete: 'cascade' }),
+  issueId: text('issue_id').notNull(),
+  acknowledgedByUserId: text('acknowledged_by_user_id').notNull().references(() => users.id),
+  note: text('note'),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  submitReadyAckUnique: uniqueIndex('submit_ready_ack_unique').on(table.payrollWeekId, table.issueId),
+  submitReadyAckWeekIdx: index('idx_submit_ready_ack_week').on(table.payrollWeekId),
+}));
+
 // ── Phase 44: Provider Mappings (IMPORT-04) ────────────────────────────────
 // Stores user-confirmed links between a provider's worker ID and our internal
 // worker. Mappings persist across imports. Unique per (project, provider, providerWorkerId).

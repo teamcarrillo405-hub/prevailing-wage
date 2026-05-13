@@ -103,6 +103,14 @@ export async function computeSubmitReady(
   const compliance = await computeCompliance(db, weekId);
   const profile = resolveComplianceProfile(project);
   const issues: SubmitReadyIssue[] = [];
+  const acknowledgements = await db
+    .select({
+      issueId: schema.submitReadyAcknowledgements.issueId,
+      createdAt: schema.submitReadyAcknowledgements.createdAt,
+    })
+    .from(schema.submitReadyAcknowledgements)
+    .where(eq(schema.submitReadyAcknowledgements.payrollWeekId, weekId));
+  const acknowledgedIssueIds = new Set(acknowledgements.map((row) => row.issueId));
 
   issues.push({
     id: 'project-selected',
@@ -219,13 +227,16 @@ export async function computeSubmitReady(
     });
   }
 
+  const humanCertificationAcknowledged = acknowledgedIssueIds.has('human-certification-review');
   issues.push({
     id: 'human-certification-review',
     category: 'compliance',
-    severity: 'warning',
-    title: 'Human certification review required',
-    detail: `Before signing, confirm: ${profile.humanReviewRequired.slice(0, 3).join('; ')}.`,
-    actionId: 'review-week-violations',
+    severity: humanCertificationAcknowledged ? 'pass' : 'warning',
+    title: humanCertificationAcknowledged ? 'Human certification review acknowledged' : 'Human certification review required',
+    detail: humanCertificationAcknowledged
+      ? 'A responsible reviewer acknowledged the final source-record review for this payroll week.'
+      : `Before signing, confirm: ${profile.humanReviewRequired.slice(0, 3).join('; ')}.`,
+    actionId: humanCertificationAcknowledged ? undefined : 'acknowledge-human-certification-review',
   });
 
   const [signature] = await db

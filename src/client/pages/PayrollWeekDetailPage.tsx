@@ -461,6 +461,18 @@ export function PayrollWeekDetailPage() {
   const [submitDate, setSubmitDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [submitAgency, setSubmitAgency] = useState('');
 
+  const acknowledgeSubmitReadyMutation = useMutation({
+    mutationFn: (issueId: string) =>
+      api.post<{ data: { issueId: string; acknowledged: boolean; createdAt: string } }>(
+        `/compliance/${weekId}/submit-ready/acknowledgements`,
+        { issueId },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submit-ready', weekId] });
+      queryClient.invalidateQueries({ queryKey: ['compliance', weekId] });
+    },
+  });
+
   const submitMutation = useMutation({
     mutationFn: () =>
       api.patch(`/payroll/weeks/${weekId}/submit`, {
@@ -1245,6 +1257,12 @@ export function PayrollWeekDetailPage() {
 
   function scrollToSubmitReadyIssue(issue: SubmitReadyIssue) {
     setActiveFixIssue(issue);
+    if (issue.id === 'human-certification-review') {
+      scrollToElement(complianceSectionRef.current ?? submitReadySectionRef.current);
+      window.setTimeout(() => setActiveFixIssue(null), 10_000);
+      return;
+    }
+
     if (issue.id === 'pay-calculation') {
       const row = entries.find(({ entry }) => entry.grossWages == null || entry.netPay == null);
       if (row) {
@@ -1273,6 +1291,12 @@ export function PayrollWeekDetailPage() {
     }
 
     if (issue.actionId === 'prepare-import-review' || issue.id === 'payroll-entries') {
+      if (issue.id === 'payroll-entries' && entries.length > 0) {
+        queryClient.invalidateQueries({ queryKey: ['submit-ready', weekId] });
+        queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+        window.setTimeout(() => setActiveFixIssue(null), 3000);
+        return;
+      }
       scrollToElement(entries.length > 0 ? entriesSectionRef.current : importReconciliationSectionRef.current ?? entriesSectionRef.current);
       window.setTimeout(() => setActiveFixIssue(null), 10_000);
       return;
@@ -1820,21 +1844,41 @@ export function PayrollWeekDetailPage() {
                 .filter((issue) => issue.severity !== 'pass')
                 .slice(0, 4)
                 .map((issue) => (
-                  <button
+                  <div
                     key={issue.id}
-                    type="button"
-                    onClick={() => scrollToSubmitReadyIssue(issue)}
-                    className="flex w-full items-start justify-between gap-3 rounded-sm border border-border-default px-3 py-2 text-left transition-colors hover:border-brand-gold hover:bg-brand-gold/5 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                    className="flex w-full items-start justify-between gap-3 rounded-sm border border-border-default px-3 py-2 text-left"
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-900">{issue.title}</p>
                       <p className="text-xs text-text-secondary">{issue.detail}</p>
                       <p className="mt-1 text-xs font-medium text-brand-gold">{submitReadyFixHint(issue)}</p>
                     </div>
-                    <Badge variant={issue.severity === 'blocker' ? 'violation' : 'warning'}>
-                      {issue.severity}
-                    </Badge>
-                  </button>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <Badge variant={issue.severity === 'blocker' ? 'violation' : 'warning'}>
+                        {issue.severity}
+                      </Badge>
+                      {issue.id === 'human-certification-review' ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          loading={acknowledgeSubmitReadyMutation.isPending}
+                          onClick={() => acknowledgeSubmitReadyMutation.mutate(issue.id)}
+                        >
+                          Acknowledge
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => scrollToSubmitReadyIssue(issue)}
+                        >
+                          Go to fix
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 ))}
               {submitReadyData.issues.every((issue) => issue.severity === 'pass') && (
                 <p className="text-sm text-status-compliant">All pre-submission checks are passing.</p>

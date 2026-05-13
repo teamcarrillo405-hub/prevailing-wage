@@ -6,6 +6,7 @@ import { logger } from '../logger.js';
 // Note: This router is registered in index.ts (Plan 04).
 
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import { eq, and, isNull } from 'drizzle-orm';
 import { stringify } from 'csv-stringify/sync';
 import { requireAuth } from '../middleware/auth.js';
@@ -179,6 +180,62 @@ complianceRouter.get('/:weekId/submit-ready', requireAuth, async (req, res) => {
   }
 
   res.json(result);
+});
+
+complianceRouter.post('/:weekId/submit-ready/acknowledgements', requireAuth, async (req, res) => {
+  const weekId = req.params.weekId as string;
+  const userId = req.user!.userId;
+  const issueId = typeof req.body?.issueId === 'string' ? req.body.issueId : '';
+  const note = typeof req.body?.note === 'string' ? req.body.note.trim() : null;
+  const db = getDb();
+
+  if (issueId !== 'human-certification-review') {
+    res.status(400).json({ error: 'Unsupported acknowledgement issue' });
+    return;
+  }
+
+  const [week] = await db
+    .select({ projectId: schema.payrollWeeks.projectId })
+    .from(schema.payrollWeeks)
+    .where(eq(schema.payrollWeeks.id, weekId))
+    .limit(1);
+
+  if (!week) {
+    res.status(404).json({ error: 'Payroll week not found' });
+    return;
+  }
+
+  try {
+    await assertProjectAccess(db, week.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const createdAt = new Date().toISOString();
+  await db
+    .insert(schema.submitReadyAcknowledgements)
+    .values({
+      id: randomUUID(),
+      payrollWeekId: weekId,
+      issueId,
+      acknowledgedByUserId: userId,
+      note,
+      createdAt,
+    })
+    .onConflictDoUpdate({
+      target: [
+        schema.submitReadyAcknowledgements.payrollWeekId,
+        schema.submitReadyAcknowledgements.issueId,
+      ],
+      set: {
+        acknowledgedByUserId: userId,
+        note,
+        createdAt,
+      },
+    });
+
+  res.status(201).json({ data: { issueId, acknowledged: true, createdAt } });
 });
 
 complianceRouter.get('/:weekId/evidence', requireAuth, async (req, res) => {

@@ -435,6 +435,13 @@
       "when": 1778000000000,
       "tag": "0070_integration_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1778646000000,
+      "tag": "0071_submit_ready_acknowledgements",
+      "breakpoints": true
     }
   ]
 }
