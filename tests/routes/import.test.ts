@@ -61,11 +61,16 @@ async function createWorker(cookie: string, projectId: string, name: string): Pr
   return { workerId, classificationId };
 }
 
-async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-01-12'): Promise<string> {
+async function createPayrollWeek(
+  cookie: string,
+  projectId: string,
+  weekEndingDate = '2025-01-12',
+  payrollNumber = 1
+): Promise<string> {
   const res = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId, weekEndingDate, payrollNumber: 1 });
+    .send({ projectId, weekEndingDate, payrollNumber });
   expect(res.status).toBe(201);
   return res.body.id as string;
 }
@@ -562,6 +567,65 @@ describe('GET /api/payroll/import/reconciliation/:weekId', () => {
     expect(res.body.data.status).toBe('needs_review');
     expect(res.body.data.latestImport).toBeNull();
     expect(res.body.data.issues[0].id).toBe('no-import');
+  });
+
+  it('returns changed-row review when a prior week baseline exists', async () => {
+    const cookie = await registerAndLogin('reconciliation-delta');
+    const projectId = await createProject(cookie);
+    const { workerId, classificationId } = await createWorker(cookie, projectId, 'Delta Worker');
+    const weekOneId = await createPayrollWeek(cookie, projectId, '2025-02-09', 1);
+    const weekTwoId = await createPayrollWeek(cookie, projectId, '2025-02-16', 2);
+
+    async function commitWeek(weekId: string, grossWages: number) {
+      const res = await supertest(app)
+        .post('/api/payroll/import/commit')
+        .set('Cookie', cookie)
+        .send({
+          weekId,
+          provider: 'quickbooks',
+          sourceFilename: 'qb.csv',
+          unmatchedCount: 0,
+          matched: [
+            {
+              csvName: 'Delta Worker',
+              workerId,
+              workerName: 'Delta Worker',
+              classificationId,
+              classificationName: 'Carpenter',
+              baseRateSnapshot: 45,
+              fringeRateSnapshot: 20,
+              monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
+              monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+              grossWages,
+              deductions: 300,
+              netPay: grossWages - 300,
+              checkNumber: '1001',
+              ficaTax: 100,
+              federalIncomeTax: 120,
+              stateIncomeTax: 50,
+              sdiTax: 10,
+              deductionDues: 20,
+              fringeHealthWelfare: 4,
+              fringePension: 6,
+              fringeVacation: 5,
+              fringeTraining: 5,
+            },
+          ],
+        });
+      expect(res.status).toBe(200);
+    }
+
+    await commitWeek(weekOneId, 2600);
+    await commitWeek(weekTwoId, 2800);
+
+    const res = await supertest(app)
+      .get(`/api/payroll/import/reconciliation/${weekTwoId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.automation.changedRowReview.priorWeekRows).toBe(1);
+    expect(res.body.data.automation.changedRowReview.changedRows).toBe(1);
+    expect(res.body.data.automation.changedRowReview.mode).toBe('exceptions_only');
   });
 });
 

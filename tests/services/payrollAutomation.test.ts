@@ -86,6 +86,8 @@ describe('buildPayrollAutomationSummary', () => {
     expect(summary.automationMode).toBe('mapped_provider_import');
     expect(summary.deductionAutomation.status).toBe('complete');
     expect(summary.fringeAutomation.status).toBe('complete');
+    expect(summary.providerAutomation.status).toBe('mapping_ready');
+    expect(summary.providerAutomation.liveSyncAvailable).toBe(false);
   });
 
   it('blocks certification when deductions or net pay do not reconcile', () => {
@@ -104,5 +106,27 @@ describe('buildPayrollAutomationSummary', () => {
     expect(summary.confidenceLabel).toBe('needs_review');
     expect(summary.tasks.find((task) => task.id === 'deduction-detail')?.status).toBe('blocked');
     expect(summary.nextBestAction.id).toBe('deduction-detail');
+  });
+
+  it('switches to changed-row review when a prior week baseline exists', () => {
+    const prior = entry({ id: 'prior-entry', payrollWeekId: 'week-0' });
+    const summary = buildPayrollAutomationSummary({
+      entries: [
+        entry({ id: 'entry-1', grossWages: 2600 }),
+        entry({ id: 'entry-2', workerId: 'worker-2', grossWages: 2800 }),
+      ],
+      previousEntries: [
+        prior,
+        entry({ id: 'prior-entry-2', payrollWeekId: 'week-0', workerId: 'worker-2', grossWages: 2700 }),
+      ],
+      latestImport: null,
+      providerMappingCount: 0,
+      sourceReconciliation: reconciliation({ entryCount: 2, completeSourceRows: 2 }),
+    });
+
+    expect(summary.changedRowReview.mode).toBe('changed_rows');
+    expect(summary.changedRowReview.unchangedRows).toBe(1);
+    expect(summary.changedRowReview.changedRows).toBe(1);
+    expect(summary.tasks.find((task) => task.id === 'changed-row-review')?.status).toBe('complete');
   });
 });

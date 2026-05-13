@@ -6,14 +6,14 @@ import { logger } from '../logger.js';
 import { Router } from 'express';
 import multer from 'multer';
 import { randomUUID } from 'crypto';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, lt } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
 import { getPayrollWeek, upsertPayrollEntry } from '../services/payrollService.js';
 import { parseImportFile } from '../services/importService.js';
 import { calculateCertifiedPayrollPay } from '../services/calculations.js';
 import { getDb } from '../db/index.js';
-import { payrollEntries, payrollImports, payrollProviderMappings, subcontractors } from '../db/schema.js';
+import { payrollEntries, payrollImports, payrollProviderMappings, payrollWeeks, subcontractors } from '../db/schema.js';
 import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
 import { reconcilePayrollSourceDetails } from '../services/payrollSourceReconciliation.js';
 import { buildPayrollAutomationSummary } from '../services/payrollAutomation.js';
@@ -412,7 +412,7 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
     return;
   }
 
-  const [entries, imports] = await Promise.all([
+  const [entries, imports, previousWeeks] = await Promise.all([
     db.select().from(payrollEntries).where(eq(payrollEntries.payrollWeekId, weekId)),
     db
       .select()
@@ -420,10 +420,20 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
       .where(eq(payrollImports.payrollWeekId, weekId))
       .orderBy(desc(payrollImports.createdAt))
       .limit(1),
+    db
+      .select({ id: payrollWeeks.id })
+      .from(payrollWeeks)
+      .where(and(eq(payrollWeeks.projectId, week.projectId), lt(payrollWeeks.weekEndingDate, week.weekEndingDate)))
+      .orderBy(desc(payrollWeeks.weekEndingDate))
+      .limit(1),
   ]);
 
   const latestImport = imports[0] as typeof payrollImports.$inferSelect | undefined;
   const typedEntries = entries as (typeof payrollEntries.$inferSelect)[];
+  const previousWeekId = previousWeeks[0]?.id;
+  const previousEntries = previousWeekId
+    ? await db.select().from(payrollEntries).where(eq(payrollEntries.payrollWeekId, previousWeekId)) as (typeof payrollEntries.$inferSelect)[]
+    : [];
   const providerMappings = latestImport
     ? await db
         .select({ id: payrollProviderMappings.id })
@@ -444,13 +454,18 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
   const payDeltaReviewCount = payDeltas.filter(
     (item) => Math.abs(item.grossDelta ?? 0) > 0.01 || Math.abs(item.netDelta ?? 0) > 0.01,
   ).length;
+  const payDeltaEntryIds = payDeltas
+    .filter((item) => Math.abs(item.grossDelta ?? 0) > 0.01 || Math.abs(item.netDelta ?? 0) > 0.01)
+    .map((item) => item.entryId);
   const sourceReconciliation = reconcilePayrollSourceDetails(typedEntries);
   const automation = buildPayrollAutomationSummary({
     entries: typedEntries,
+    previousEntries,
     latestImport,
     providerMappingCount: providerMappings.length,
     sourceReconciliation,
     payDeltaReviewCount,
+    payDeltaEntryIds,
     zeroRateCount,
     missingPayCount,
     unmatchedCount: latestImport?.unmatchedCount ?? 0,

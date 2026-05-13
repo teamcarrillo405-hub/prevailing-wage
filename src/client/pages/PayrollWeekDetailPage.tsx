@@ -245,6 +245,29 @@ interface PayrollAutomationSummary {
     itemizedRows: number;
     mismatchCount: number;
   };
+  providerAutomation: {
+    provider: string | null;
+    status: 'manual' | 'csv_ready' | 'mapping_ready' | 'sync_ready';
+    liveSyncAvailable: boolean;
+    setupSteps: Array<{ id: string; label: string; status: PayrollAutomationTask['status']; detail: string }>;
+    missingCapabilities: string[];
+  };
+  changedRowReview: {
+    mode: 'all_rows' | 'changed_rows' | 'exceptions_only';
+    currentRows: number;
+    priorWeekRows: number;
+    changedRows: number;
+    unchangedRows: number;
+    newRows: number;
+    removedRows: number;
+    exceptionRows: number;
+    reviewRows: Array<{
+      entryId: string;
+      workerId: string;
+      reason: 'new' | 'changed' | 'exception';
+      detail: string;
+    }>;
+  };
   nextBestAction: PayrollAutomationTask;
   tasks: PayrollAutomationTask[];
 }
@@ -2183,11 +2206,79 @@ export function PayrollWeekDetailPage() {
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Review mode</p>
                   <p className="mt-1 text-2xl font-semibold text-gray-950">
-                    {payrollAutomation.reviewOnlyChangedRowsReady ? 'Ready' : 'Setup'}
+                    {payrollAutomation.changedRowReview.mode === 'exceptions_only'
+                      ? 'Exceptions'
+                      : payrollAutomation.changedRowReview.mode === 'changed_rows'
+                      ? 'Changed'
+                      : 'All rows'}
                   </p>
                   <p className="mt-1 text-xs text-gray-600">
-                    {payrollAutomation.priorWeekDeltaModeReady ? 'Prior-week delta checks can run.' : 'Needs complete source detail first.'}
+                    {payrollAutomation.changedRowReview.reviewRows.length} row{payrollAutomation.changedRowReview.reviewRows.length === 1 ? '' : 's'} need review.
                   </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div className="rounded-md border border-gray-200 bg-white p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Provider automation</p>
+                      <p className="mt-1 text-sm font-semibold capitalize text-gray-950">
+                        {payrollAutomation.providerAutomation.status.replaceAll('_', ' ')}
+                      </p>
+                    </div>
+                    <Badge variant={payrollAutomation.providerAutomation.liveSyncAvailable ? 'compliant' : 'warning'}>
+                      {payrollAutomation.providerAutomation.liveSyncAvailable ? 'live sync' : 'csv + memory'}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {payrollAutomation.providerAutomation.setupSteps.map((step) => (
+                      <div key={step.id} className="flex items-start justify-between gap-3 rounded-sm border border-gray-100 bg-gray-50 px-3 py-2">
+                        <div>
+                          <p className="text-xs font-semibold text-gray-900">{step.label}</p>
+                          <p className="mt-0.5 text-xs leading-5 text-gray-600">{step.detail}</p>
+                        </div>
+                        <Badge variant={automationBadgeVariant(step.status)}>{step.status}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-md border border-gray-200 bg-white p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Exception-only review</p>
+                      <p className="mt-1 text-sm font-semibold text-gray-950">
+                        {payrollAutomation.changedRowReview.priorWeekRows > 0
+                          ? `${payrollAutomation.changedRowReview.unchangedRows} unchanged rows hidden from review load`
+                          : 'First-week baseline in progress'}
+                      </p>
+                    </div>
+                    <Badge variant={payrollAutomation.changedRowReview.mode === 'all_rows' ? 'warning' : 'compliant'}>
+                      {payrollAutomation.changedRowReview.mode.replaceAll('_', ' ')}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      ['Changed', payrollAutomation.changedRowReview.changedRows],
+                      ['New', payrollAutomation.changedRowReview.newRows],
+                      ['Exceptions', payrollAutomation.changedRowReview.exceptionRows],
+                      ['Removed', payrollAutomation.changedRowReview.removedRows],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-sm border border-gray-100 bg-gray-50 px-3 py-2">
+                        <p className="text-xs text-gray-500">{label}</p>
+                        <p className="text-lg font-semibold text-gray-950">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {payrollAutomation.providerAutomation.missingCapabilities.length > 0 && (
+                    <div className="mt-3 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">Still needed for live sync</p>
+                      <p className="mt-1 text-xs leading-5 text-amber-900">
+                        {payrollAutomation.providerAutomation.missingCapabilities.slice(0, 3).join(', ')}.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
