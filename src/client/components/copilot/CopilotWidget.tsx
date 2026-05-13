@@ -662,7 +662,7 @@ export function CopilotWidget() {
                           type="button"
                           onClick={() => applyAction(message.preparedAction!)}
                           disabled={loading}
-                          className="inline-flex min-h-[36px] items-center gap-1.5 rounded-md bg-brand-gold px-2.5 py-1.5 text-xs font-semibold text-nav-dark transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex min-h-[36px] items-center gap-1.5 rounded-md bg-brand-gold px-2.5 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
                           {message.preparedAction.applyLabel ?? 'Apply approved action'}
@@ -760,7 +760,7 @@ export function CopilotWidget() {
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-brand-gold text-nav-dark transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-brand-gold text-black transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
@@ -773,7 +773,7 @@ export function CopilotWidget() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-gold text-nav-dark shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-gold text-black shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2"
         aria-label={open ? 'Hide PrevWage Copilot' : 'Open PrevWage Copilot'}
       >
         {open ? <X className="h-6 w-6" aria-hidden="true" /> : <MessageSquare className="h-6 w-6" aria-hidden="true" />}

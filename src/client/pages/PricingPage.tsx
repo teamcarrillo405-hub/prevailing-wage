@@ -145,7 +145,7 @@ function PricingNav() {
         </Link>
         <Link
           to="/register"
-          className="bg-brand-gold text-nav-dark font-semibold px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity"
+          className="bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity"
         >
           Get Started Free
         </Link>
@@ -237,7 +237,7 @@ function PricingCards() {
             </button>
             <span className="text-sm font-medium text-nav-dark">
               Annual
-              <span className="ml-1.5 bg-brand-gold text-nav-dark text-xs font-bold px-1.5 py-0.5 rounded">
+              <span className="ml-1.5 bg-brand-gold text-black text-xs font-bold px-1.5 py-0.5 rounded">
                 Save 20%
               </span>
             </span>
@@ -258,7 +258,7 @@ function PricingCards() {
               {/* Most Popular badge */}
               {plan.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-brand-gold text-nav-dark text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                  <span className="bg-brand-gold text-black text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
                     {plan.badge}
                   </span>
                 </div>
@@ -312,7 +312,7 @@ function PricingCards() {
                 to={plan.ctaTo}
                 className={`block text-center font-semibold py-3 rounded-lg transition-colors ${
                   plan.highlight
-                    ? 'bg-brand-gold text-nav-dark hover:opacity-90'
+                    ? 'bg-brand-gold text-black hover:opacity-90'
                     : 'border border-nav-dark text-nav-dark hover:bg-gray-50'
                 }`}
               >

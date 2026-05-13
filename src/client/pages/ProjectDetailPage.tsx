@@ -325,7 +325,7 @@ function ProjectReadinessPanel({
             <p className="mt-1 text-base font-semibold text-gray-950">{primaryAction.label}</p>
             <p className="mt-1 text-sm text-gray-700">{primaryAction.detail}</p>
           </div>
-          <span className="inline-flex min-h-10 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-nav-dark">
+          <span className="inline-flex min-h-10 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-black">
             Start
           </span>
         </Link>
@@ -1363,7 +1363,7 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
                     }}
                     className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
                       certForm.certTypes.split(',').map(s => s.trim()).includes(t)
-                        ? 'bg-brand-gold/90 text-white border-brand-gold'
+                        ? 'bg-brand-gold/90 text-black border-brand-gold'
                         : 'border-border-default text-gray-600 hover:border-brand-gold'
                     }`}
                   >

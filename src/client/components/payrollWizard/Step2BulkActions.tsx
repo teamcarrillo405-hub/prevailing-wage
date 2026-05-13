@@ -48,7 +48,7 @@ function ToggleChip({ active, onClick, label, title }: { active: boolean; onClic
       title={title}
       className={`text-xs px-3 py-1 rounded-full border transition-colors ${
         active
-          ? 'bg-brand-gold text-nav-dark border-brand-gold'
+          ? 'bg-brand-gold text-black border-brand-gold'
           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
       }`}
     >

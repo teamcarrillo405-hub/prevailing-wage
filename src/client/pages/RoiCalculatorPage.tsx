@@ -219,7 +219,7 @@ export function RoiCalculatorPage() {
             <button
               type="submit"
               disabled={!canSubmit || status === 'sent'}
-              className="w-full bg-brand-gold text-nav-dark font-semibold text-base px-8 py-4 rounded-lg
+              className="w-full bg-brand-gold text-black font-semibold text-base px-8 py-4 rounded-lg
                          hover:brightness-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Sending...' : 'Send My Free Report'}

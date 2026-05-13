@@ -2139,7 +2139,7 @@ export function PayrollWeekDetailPage() {
               <button
                 type="button"
                 onClick={nextSubmissionStep.onClick}
-                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90"
+                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-black hover:bg-brand-gold/90"
               >
                 Next: {nextSubmissionStep.label}
               </button>
@@ -2200,7 +2200,7 @@ export function PayrollWeekDetailPage() {
                 <button
                   type="button"
                   onClick={() => scrollToAutomationTarget(payrollAutomation.nextBestAction.target)}
-                  className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-black hover:bg-brand-gold/90"
                 >
                   Go to fix
                 </button>
@@ -2661,7 +2661,7 @@ export function PayrollWeekDetailPage() {
             {weekId && week && !week.isFinal && !week.submittedAt && (
               <Link
                 to={`/projects/${projectId}/payroll/${weekId}/edit`}
-                className="inline-flex items-center justify-center text-xs px-3 py-2.5 min-h-[44px] font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 transition-colors"
+                className="inline-flex items-center justify-center text-xs px-3 py-2.5 min-h-[44px] font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors"
               >
                 Edit hours
               </Link>
@@ -2830,7 +2830,7 @@ export function PayrollWeekDetailPage() {
         )}
 
         {activeFixIssue && (
-          <div className="mb-4 rounded-lg border border-brand-gold bg-brand-gold/10 px-4 py-3 text-sm text-nav-dark">
+          <div className="mb-4 rounded-lg border border-brand-gold bg-brand-gold/10 px-4 py-3 text-sm text-black">
             <p className="font-semibold">Fix target: {activeFixIssue.title}</p>
             <p className="mt-1 text-xs text-gray-700">{activeFixIssue.detail}</p>
             {activeFixIssue.actionLabel && (
@@ -3822,7 +3822,7 @@ export function PayrollWeekDetailPage() {
                         // Navigate to edit page where user can apply the hours
                         window.location.href = `/projects/${projectId}/payroll/${weekId}/edit`;
                       }}
-                      className="rounded bg-brand-gold text-nav-dark text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90"
+                      className="rounded bg-brand-gold text-black text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90"
                     >
                       Go to Edit Hours
                     </button>
@@ -4920,7 +4920,7 @@ export function PayrollWeekDetailPage() {
                     <p className="mt-1 text-xs text-gray-700">
                       Use a CSV from QuickBooks, ADP, Gusto, Paychex, Sage, or the generic template.
                     </p>
-                    <label className="mt-4 inline-flex cursor-pointer items-center rounded-sm bg-brand-gold px-4 py-2.5 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90">
+                    <label className="mt-4 inline-flex cursor-pointer items-center rounded-sm bg-brand-gold px-4 py-2.5 text-sm font-semibold text-black hover:bg-brand-gold/90">
                       Choose payroll CSV
                       <input
                         type="file"

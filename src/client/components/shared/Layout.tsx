@@ -23,7 +23,7 @@ function navCls({ isActive }: { isActive: boolean }) {
 function mobileNavCls(isActive: boolean) {
   return `flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
     isActive
-      ? 'bg-brand-gold text-nav-dark'
+      ? 'bg-brand-gold text-black'
       : 'text-gray-700 hover:bg-gray-100'
   }`;
 }
@@ -96,7 +96,7 @@ export function Layout({ children }: LayoutProps) {
       <PwaInstallBanner />
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-brand-gold focus:text-nav-dark focus:font-semibold focus:rounded focus:text-sm"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-brand-gold focus:text-black focus:font-semibold focus:rounded focus:text-sm"
       >
         Skip to main content
       </a>

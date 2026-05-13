@@ -18,7 +18,7 @@ export function SecurityPolicyPage() {
           <Link to="/" className="font-semibold text-white">PrevWage</Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-gray-900 font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
           >
             Start Free
           </Link>

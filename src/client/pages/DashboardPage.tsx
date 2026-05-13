@@ -120,7 +120,7 @@ function ProjectsCommandPanel({
           <button
             type="button"
             onClick={onNewProject}
-            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-brand-gold px-4 text-sm font-semibold text-nav-dark hover:opacity-90"
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-brand-gold px-4 text-sm font-semibold text-black hover:opacity-90"
           >
             New Project
           </button>
@@ -641,14 +641,14 @@ export function DashboardPage() {
               {primaryTodayAction ? (
                 <Link
                   to={primaryTodayAction.to}
-                  className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-semibold text-nav-dark hover:opacity-90"
+                  className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-semibold text-black hover:opacity-90"
                 >
                   Open next fix
                 </Link>
               ) : (
                 <Link
                   to="/reports"
-                  className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-semibold text-nav-dark hover:opacity-90"
+                  className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-semibold text-black hover:opacity-90"
                 >
                   Review reports
                 </Link>
@@ -764,7 +764,7 @@ export function DashboardPage() {
               </div>
               <button
                 onClick={() => setShowForm(true)}
-                className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-brand-gold px-5 text-sm font-semibold text-nav-dark hover:bg-brand-gold/90"
+                className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-brand-gold px-5 text-sm font-semibold text-black hover:bg-brand-gold/90"
               >
                 Create first project
               </button>
@@ -987,7 +987,7 @@ export function DashboardPage() {
                   aria-pressed={savedView === view.value}
                   className={`min-h-[72px] rounded-lg border px-3 py-2 text-left transition-colors ${
                     savedView === view.value
-                      ? 'border-brand-gold bg-brand-gold/10 text-gray-950'
+                      ? 'border-brand-gold bg-brand-gold/10 text-black'
                       : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-brand-gold/60 hover:bg-white'
                   }`}
                 >
@@ -1039,7 +1039,7 @@ export function DashboardPage() {
                 aria-pressed={complianceFilter === opt.value}
                 className={`text-sm px-3.5 py-2.5 rounded-xl border transition-all duration-150 active:scale-95 min-h-[44px] ${
                   complianceFilter === opt.value
-                    ? 'bg-brand-gold text-nav-dark border-brand-gold font-medium shadow-sm'
+                    ? 'bg-brand-gold text-black border-brand-gold font-medium shadow-sm'
                     : 'bg-white text-text-secondary border-border-default hover:border-brand-gold hover:text-text-primary shadow-card'
                 }`}
               >

@@ -169,7 +169,7 @@ export function ManualWageEntryForm({ state, county, onSuccess }: Props) {
           type="button"
           onClick={() => mutation.mutate()}
           disabled={mutation.isPending || !wdNumber || rows.some((r) => !r.tradeCode || !r.tradeDescription || !r.baseRate)}
-          className="px-5 py-2 rounded font-semibold text-gray-900 disabled:opacity-50 bg-brand-gold"
+          className="px-5 py-2 rounded font-semibold text-black disabled:opacity-50 bg-brand-gold"
         >
           {mutation.isPending ? 'Saving...' : 'Save Manual Entry'}
         </button>

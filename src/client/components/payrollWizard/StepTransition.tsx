@@ -32,7 +32,7 @@ export function StepProgress({ currentStep }: StepProgressProps) {
                   aria-current={active ? 'step' : undefined}
                   className={[
                     'w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 text-sm font-semibold',
-                    done    ? 'bg-brand-gold text-nav-dark' : '',
+                    done    ? 'bg-brand-gold text-black' : '',
                     active  ? 'bg-nav-dark text-white ring-2 ring-brand-gold ring-offset-2' : '',
                     upcoming ? 'bg-gray-200 text-gray-400' : '',
                   ].join(' ')}

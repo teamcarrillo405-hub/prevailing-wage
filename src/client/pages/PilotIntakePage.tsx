@@ -199,7 +199,7 @@ export function PilotIntakePage() {
                   onClick={() => updateStatus(status)}
                   className={`min-h-10 rounded border px-2 text-xs font-semibold transition-colors ${
                     intake.status === status
-                      ? 'border-brand-gold bg-brand-gold/15 text-gray-950'
+                      ? 'border-brand-gold bg-brand-gold/15 text-black'
                       : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                   }`}
                 >

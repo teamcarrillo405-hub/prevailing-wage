@@ -17,7 +17,7 @@ export function CaseStudyPage() {
           </Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-gray-900 font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
           >
             Start Free
           </Link>
@@ -176,7 +176,7 @@ export function CaseStudyPage() {
               export alone saved us a full day of rework every month."
             </p>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-brand-gold rounded-full flex items-center justify-center text-gray-900 font-bold text-lg">
+              <div className="w-12 h-12 bg-brand-gold rounded-full flex items-center justify-center text-black font-bold text-lg">
                 MG
               </div>
               <div>
@@ -285,7 +285,7 @@ export function CaseStudyPage() {
         </p>
         <Link
           to="/register"
-          className="inline-block bg-brand-gold text-gray-900 font-semibold px-8 py-4 rounded-xl text-lg hover:bg-brand-gold/90 transition-colors"
+          className="inline-block bg-brand-gold text-black font-semibold px-8 py-4 rounded-xl text-lg hover:bg-brand-gold/90 transition-colors"
         >
           Start Free — No Credit Card Required
         </Link>

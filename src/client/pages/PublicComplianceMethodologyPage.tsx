@@ -33,7 +33,7 @@ export function PublicComplianceMethodologyPage() {
           <Link to="/" className="font-headline text-lg font-bold">HCC Prevailing Wage</Link>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm font-semibold text-gray-700 hover:text-gray-950">Log in</Link>
-            <Link to="/register" className="inline-flex min-h-10 items-center rounded-sm bg-brand-gold px-4 text-sm font-bold text-nav-dark">
+            <Link to="/register" className="inline-flex min-h-10 items-center rounded-sm bg-brand-gold px-4 text-sm font-bold text-black">
               Create account
             </Link>
           </div>
@@ -50,7 +50,7 @@ export function PublicComplianceMethodologyPage() {
             {methodology?.positioning ?? 'Automated checks support certified payroll review, but final certification remains a human responsibility.'}
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link to="/register" className="inline-flex min-h-12 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-bold text-nav-dark">
+            <Link to="/register" className="inline-flex min-h-12 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-bold text-black">
               Start setup
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>

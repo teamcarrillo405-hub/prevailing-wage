@@ -107,7 +107,7 @@ function TestimonialsGrid() {
               </p>
               <footer className="flex items-center gap-3">
                 {/* Gold initials avatar */}
-                <div className="w-10 h-10 bg-brand-gold text-nav-dark font-bold rounded-full flex items-center justify-center text-sm flex-shrink-0">
+                <div className="w-10 h-10 bg-brand-gold text-black font-bold rounded-full flex items-center justify-center text-sm flex-shrink-0">
                   {t.initials}
                 </div>
                 <div>

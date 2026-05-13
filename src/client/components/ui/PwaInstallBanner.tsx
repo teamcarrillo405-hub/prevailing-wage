@@ -31,7 +31,7 @@ export function PwaInstallBanner() {
         {!isIos && canInstall && (
           <button
             onClick={() => void promptInstall()}
-            className="min-h-[44px] px-4 py-2 rounded-lg bg-brand-gold text-nav-dark font-semibold text-sm hover:bg-brand-gold/90 transition-colors"
+            className="min-h-[44px] px-4 py-2 rounded-lg bg-brand-gold text-black font-semibold text-sm hover:bg-brand-gold/90 transition-colors"
           >
             Install
           </button>

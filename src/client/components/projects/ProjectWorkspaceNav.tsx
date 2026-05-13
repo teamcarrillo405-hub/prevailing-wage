@@ -231,7 +231,7 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
                 }`}
               >
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  active ? 'bg-brand-gold text-nav-dark' : 'bg-gray-100 text-gray-700'
+                  active ? 'bg-brand-gold text-black' : 'bg-gray-100 text-gray-700'
                 }`}>
                   {item.step === 0 ? <LayoutDashboard className="h-3.5 w-3.5" /> : item.step}
                 </span>
@@ -252,7 +252,7 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
                 }`}
               >
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  active ? 'bg-brand-gold text-nav-dark' : 'bg-gray-100 text-gray-700'
+                  active ? 'bg-brand-gold text-black' : 'bg-gray-100 text-gray-700'
                 }`}>
                   {item.step === 0 ? <LayoutDashboard className="h-3.5 w-3.5" /> : item.step}
                 </span>

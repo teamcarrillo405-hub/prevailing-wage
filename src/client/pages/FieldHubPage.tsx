@@ -102,7 +102,7 @@ export function FieldHubPage() {
           </p>
           <Link
             to="/dashboard"
-            className="inline-flex items-center rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-gold/90 transition-colors min-h-[44px]"
+            className="inline-flex items-center rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-semibold text-black hover:bg-brand-gold/90 transition-colors min-h-[44px]"
           >
             Go to Projects
           </Link>
@@ -149,7 +149,7 @@ export function FieldHubPage() {
               {/* Clock In CTA */}
               <Link
                 to={`/projects/${project.id}/field`}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gold px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-brand-gold/90 transition-colors min-h-[44px] mt-auto"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gold px-4 py-3 text-sm font-semibold text-black hover:bg-brand-gold/90 transition-colors min-h-[44px] mt-auto"
               >
                 <MapPin className="h-4 w-4" />
                 Clock In

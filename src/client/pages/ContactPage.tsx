@@ -67,7 +67,7 @@ export function ContactPage() {
           </Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-gray-900 font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
           >
             Start Free
           </Link>
@@ -257,7 +257,7 @@ export function ContactPage() {
               </p>
               <Link
                 to="/register"
-                className="block text-center bg-brand-gold text-nav-dark font-semibold py-2.5 rounded-lg text-sm hover:bg-brand-gold/90 transition-colors"
+                className="block text-center bg-brand-gold text-black font-semibold py-2.5 rounded-lg text-sm hover:bg-brand-gold/90 transition-colors"
               >
                 Create free account
               </Link>

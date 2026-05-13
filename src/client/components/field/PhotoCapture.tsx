@@ -357,7 +357,7 @@ export function PhotoCapture({ projectId, weekId, onUploaded }: PhotoCaptureProp
           <div className="flex gap-2">
             <button
               onClick={captureFrame}
-              className="flex-1 rounded-sm bg-brand-gold text-nav-dark text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90 transition-colors"
+              className="flex-1 rounded-sm bg-brand-gold text-black text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90 transition-colors"
             >
               Capture
             </button>
@@ -414,7 +414,7 @@ export function PhotoCapture({ projectId, weekId, onUploaded }: PhotoCaptureProp
             <button
               onClick={handleUpload}
               disabled={uploading}
-              className="flex-1 rounded-sm bg-brand-gold text-nav-dark text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
+              className="flex-1 rounded-sm bg-brand-gold text-black text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
             >
               {uploading ? 'Uploading...' : 'Upload Photo'}
             </button>

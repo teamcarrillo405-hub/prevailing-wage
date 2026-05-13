@@ -117,7 +117,7 @@ NY,New York,NY-DOL-2025-001,Building,CARP,Carpenter,journeyworker,71.00,35.50`}
           type="button"
           onClick={handleImport}
           disabled={loading || !selectedFile}
-          className={`px-5 py-2 rounded font-semibold text-gray-900 disabled:bg-gray-200 disabled:text-gray-400${loading || !selectedFile ? '' : ' bg-brand-gold'}`}
+          className={`px-5 py-2 rounded font-semibold text-black disabled:bg-gray-200 disabled:text-gray-400${loading || !selectedFile ? '' : ' bg-brand-gold'}`}
         >
           {loading ? 'Importing...' : 'Import'}
         </button>

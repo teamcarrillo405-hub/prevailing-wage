@@ -270,7 +270,7 @@ export function PayrollListPage() {
               <h2 className="font-headline text-base text-text-primary">Payroll Weeks</h2>
               <button
                 onClick={handleNewWeekClick}
-                className="bg-brand-gold text-nav-dark font-semibold hover:bg-brand-gold/90 border border-transparent inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 text-sm px-4 py-2"
+                className="bg-brand-gold text-black font-semibold hover:bg-brand-gold/90 border border-transparent inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 text-sm px-4 py-2"
               >
                 + New Week
               </button>
@@ -310,7 +310,7 @@ export function PayrollListPage() {
                         {Number(week.workerCount ?? 0) > 0 && week.totalGross != null ? (
                           <a
                             href={`/api/export/wh347/${week.id}`}
-                            className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-nav-dark hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
+                            className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
                             onClick={(e) => {
                               e.stopPropagation();
                               toast.success('WH-347 downloading - submit to your contracting officer within 7 days of the week ending date.');

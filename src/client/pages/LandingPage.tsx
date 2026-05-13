@@ -118,7 +118,7 @@ function HeroSection() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
               to="/register"
-              className="inline-flex min-h-12 items-center justify-center rounded-md bg-brand-gold px-6 text-sm font-bold text-nav-dark hover:opacity-90"
+              className="inline-flex min-h-12 items-center justify-center rounded-md bg-brand-gold px-6 text-sm font-bold text-black hover:opacity-90"
             >
               Create member account
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -303,7 +303,7 @@ function FaqSection() {
 
 function CtaSection() {
   return (
-    <section className="bg-brand-gold px-5 py-16 text-nav-dark sm:px-8">
+    <section className="bg-brand-gold px-5 py-16 text-black sm:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="font-headline text-4xl font-bold">Ready to test the workflow?</h2>

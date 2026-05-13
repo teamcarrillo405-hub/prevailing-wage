@@ -108,7 +108,7 @@ export function CaseStudiesPage() {
           </Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-gray-900 font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
           >
             Start Free
           </Link>
@@ -187,7 +187,7 @@ export function CaseStudiesPage() {
         </p>
         <Link
           to="/register"
-          className="inline-block bg-brand-gold text-gray-900 font-semibold px-8 py-4 rounded-xl text-lg hover:bg-brand-gold/90 transition-colors"
+          className="inline-block bg-brand-gold text-black font-semibold px-8 py-4 rounded-xl text-lg hover:bg-brand-gold/90 transition-colors"
         >
           Create Free Account
         </Link>

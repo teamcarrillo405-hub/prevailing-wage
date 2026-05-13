@@ -45,7 +45,7 @@ export function ApiDocsPage() {
           <div className="mt-6 flex gap-4">
             <Link
               to="/settings/api-keys"
-              className="inline-block bg-brand-gold text-gray-900 font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-brand-gold/90 transition-colors"
+              className="inline-block bg-brand-gold text-black font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-brand-gold/90 transition-colors"
             >
               Generate API Key
             </Link>
@@ -368,7 +368,7 @@ GET /api/audit/{projectId}/evidence-packet?format=csv
           <p className="text-gray-400 mb-6">Generate your first API key from the Settings panel.</p>
           <Link
             to="/settings/api-keys"
-            className="inline-block bg-brand-gold text-gray-900 font-semibold px-6 py-3 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="inline-block bg-brand-gold text-black font-semibold px-6 py-3 rounded-lg hover:bg-brand-gold/90 transition-colors"
           >
             Go to API Keys
           </Link>
