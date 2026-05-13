@@ -279,7 +279,7 @@ app.use(
 // Production: serve Vite-built React app as static files with SPA catch-all (per D-12)
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(join(__dirname, '../../dist/client')));
-  app.get('*', (_req, res) => {
+  app.get(/.*/, (_req, res) => {
     res.sendFile(join(__dirname, '../../dist/client/index.html'));
   });
 }

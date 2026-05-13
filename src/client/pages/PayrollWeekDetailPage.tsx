@@ -194,6 +194,10 @@ interface ExportPreflightResult {
 interface StateExportReadiness {
   state: string;
   label: string;
+  status?: string;
+  statusLabel?: string;
+  launchDecision?: string;
+  nextGate?: string;
   ready: boolean;
   supportedExports: string[];
   requiredFields: Array<{ key: string; label: string; present: boolean }>;
@@ -729,7 +733,7 @@ export function PayrollWeekDetailPage() {
     CA: { downloadLabel: 'Download CA A-1-131', route: 'a1131' },
     WA: { downloadLabel: 'Download WA F700-065-000', route: 'f700' },
     NY: { downloadLabel: 'Download NY PW-12', route: 'pw12' },
-    IL: { downloadLabel: 'Download IL Certified Transcript', route: 'il-transcript' },
+    IL: { downloadLabel: 'Download IL Certified Transcript', route: 'il-pdf' },
     TX: { downloadLabel: 'Download WH-347 (TX)', route: 'wh347' },
     FL: { downloadLabel: 'Download WH-347 (FL)', route: 'wh347' },
     MA: { downloadLabel: 'Download MA DLS Payroll', route: 'ma-cpr' },
@@ -1898,6 +1902,11 @@ export function PayrollWeekDetailPage() {
                 <p className="mt-1 text-sm text-text-secondary">
                   {stateReadinessData.data.label}: {stateReadinessData.data.supportedExports.join(', ')}.
                 </p>
+                {stateReadinessData.data.statusLabel && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {stateReadinessData.data.statusLabel}. {stateReadinessData.data.nextGate}
+                  </p>
+                )}
               </div>
               {!stateReadinessData.data.ready && (
                 <Link

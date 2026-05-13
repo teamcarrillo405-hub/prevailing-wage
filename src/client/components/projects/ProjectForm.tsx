@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import type { OnboardingAnswers, OnboardingResponse } from '../../types/onboarding';
+import { getStateSupport } from '../../../shared/stateSupport';
 
 const CreateProjectSchema = z.object({
   name: z.string().min(1, 'Job name is required').max(200),
@@ -43,6 +44,8 @@ const CreateProjectSchema = z.object({
   // Phase 51 — New Jersey-specific fields
   njPwcNumber: z.string().max(50).optional(),
   njContractId: z.string().max(100).optional(),
+  mnContractId: z.string().max(100).optional(),
+  vaContractId: z.string().max(100).optional(),
   // Phase 70 — Apprenticeship enforcement (IRA/IIJA flag only; ratio table is managed separately)
   isIraIijaProject: z.boolean().optional(),
   projectSettings: z.string().optional(),
@@ -162,7 +165,13 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const isFL = stateValue?.toUpperCase() === 'FL';
   const isMA = stateValue?.toUpperCase() === 'MA';
   const isNJ = stateValue?.toUpperCase() === 'NJ';
+  const isMN = stateValue?.toUpperCase() === 'MN';
+  const isVA = stateValue?.toUpperCase() === 'VA';
   const isFederalOrState = fundingTypeValue === 'federal' || fundingTypeValue === 'state';
+  const stateSupport = stateValue && stateValue.length === 2 ? getStateSupport(stateValue) : null;
+  const showStateGate =
+    stateSupport &&
+    ['controlled_pilot', 'federal_first', 'internal_validation', 'not_supported'].includes(stateSupport.status);
 
   async function onSubmit(data: ProjectFields) {
     setApiError(null);
@@ -276,6 +285,16 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
       {fundingTypeValue === 'federal' && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
           After this project is created, the system will automatically search federal WDs for this county with this project already selected. Review the WD number/revision from the award documents, then lock it to the project.
+        </div>
+      )}
+
+      {showStateGate && stateSupport && (
+        <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+          <p className="font-semibold text-gray-950">
+            {stateSupport.name}: {stateSupport.statusLabel}
+          </p>
+          <p className="mt-1">{stateSupport.launchDecision}</p>
+          <p className="mt-1 text-xs text-gray-600">{stateSupport.nextGate}</p>
         </div>
       )}
 
@@ -544,6 +563,48 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
           </div>
           <p className="text-xs text-indigo-600">
             NJ MW-562 certified payroll download will be available on payroll weeks.
+          </p>
+        </div>
+      )}
+
+      {isMN && (
+        <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm font-medium text-gray-800">Minnesota Project Fields</p>
+          <div>
+            <label htmlFor="mnContractId" className="block text-sm font-medium text-gray-700">
+              MN Contract ID
+            </label>
+            <input
+              id="mnContractId"
+              type="text"
+              {...register('mnContractId')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="DLI or agency contract identifier"
+            />
+          </div>
+          <p className="text-xs text-gray-600">
+            MN export is internal validation only until pilot evidence is complete.
+          </p>
+        </div>
+      )}
+
+      {isVA && (
+        <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm font-medium text-gray-800">Virginia Project Fields</p>
+          <div>
+            <label htmlFor="vaContractId" className="block text-sm font-medium text-gray-700">
+              VA Contract ID
+            </label>
+            <input
+              id="vaContractId"
+              type="text"
+              {...register('vaContractId')}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-brand-gold focus:outline-none"
+              placeholder="DOLI or agency contract identifier"
+            />
+          </div>
+          <p className="text-xs text-gray-600">
+            VA export is internal validation only until pilot evidence is complete.
           </p>
         </div>
       )}

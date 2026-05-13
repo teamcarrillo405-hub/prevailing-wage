@@ -13,12 +13,13 @@ Run this checklist before every production deployment and after any data-model, 
 
 - Start the production build or deployed environment.
 - Run `QA_BASE_URL=https://your-domain.example npm run qa:deployment`.
-- Confirm `/`, `/api/health`, `/api/ready`, `/methodology`, `/security`, and `/api-docs` return expected responses.
+- Confirm `/`, `/api/health`, `/api/ready`, `/methodology`, `/state-support`, `/security`, and `/api/docs` return expected responses.
 - Treat `/api/ready` returning `503 not_ready` as a release blocker in production unless the only missing checks are optional drains such as Sentry, Logtail, or email.
 
 ## Workflow Checks
 
 - Create or open a sample project and verify the sample badge appears.
+- For state expansion releases, confirm the target state appears in `docs/STATE_EXPANSION_READINESS.md` with an explicit launch decision.
 - Confirm payroll import templates download for QuickBooks, ADP, Gusto, Paychex, Sage 300, and Sage 100.
 - Import a sample CSV, resolve unmatched workers, and verify import reconciliation updates.
 - Run submit-ready checks and confirm blocker rows link to the fix location.

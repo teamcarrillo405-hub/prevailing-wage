@@ -1,23 +1,46 @@
 // Phase 75 — Project Settings Page — GPS clock-in configuration (MOB-09)
 // Phase 83 — Transfer Ownership section added
 // Route: /projects/:projectId/settings
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { useToast } from '../contexts/ToastContext';
+import { getStateSupport } from '../../shared/stateSupport';
 
 interface Project {
   id: string;
   name: string;
+  state: string;
   gpsClockInEnabled: boolean;
   gpsLatitude: number | null;
   gpsLongitude: number | null;
   gpsRadiusMeters: number | null;
   projectSettings: string | null;
   apprenticeshipRequirements: string | null;
+  cslbLicense: string | null;
+  wcPolicyNumber: string | null;
+  ubiNumber: string | null;
+  lniCertificate: string | null;
+  wcAccount: string | null;
+  contractorFein: string | null;
+  dirProjectId: string | null;
+  awardingAgency: string | null;
+  contractNumber: string | null;
+  pwiaIntentId: string | null;
+  nyprcNumber: string | null;
+  nysContractorRegNumber: string | null;
+  txdotProjectId: string | null;
+  txContractorLicense: string | null;
+  txAwardingAgency: string | null;
+  maDlsProjectId: string | null;
+  maSicCode: string | null;
+  njPwcNumber: string | null;
+  njContractId: string | null;
+  mnContractId: string | null;
+  vaContractId: string | null;
 }
 
 interface SubcontractorSummary {
@@ -234,6 +257,104 @@ function ReportScheduleSection({ projectId, projectSettings }: { projectId: stri
 }
 
 // ── Transfer Ownership section ─────────────────────────────────────────────
+function StateProjectFieldsSection({
+  project,
+  projectId,
+  focusField,
+}: {
+  project: Project;
+  projectId: string;
+  focusField: string | null;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const support = useMemo(() => getStateSupport(project.state), [project.state]);
+  const fields = support.requiredProjectFields;
+  const [values, setValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const field of fields) {
+      const value = project[field.key as keyof Project];
+      next[field.key] = typeof value === 'string' ? value : '';
+    }
+    setValues(next);
+  }, [project, fields]);
+
+  const saveStateFields = useMutation({
+    mutationFn: () =>
+      api.patch<{ data: { project: Project } }>(`/projects/${projectId}`, Object.fromEntries(
+        fields.map((field) => [field.key, values[field.key]?.trim() ?? '']),
+      )),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('State fields saved');
+    },
+    onError: () => {
+      toast.error('Failed to save state fields');
+    },
+  });
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="font-headline text-base font-semibold text-gray-900">
+            State Export Fields
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">
+            {support.name}: {support.statusLabel}. {support.launchDecision}
+          </p>
+        </div>
+        <Link to="/state-support" className="text-sm font-semibold text-brand-gold hover:underline">
+          View support
+        </Link>
+      </div>
+
+      {fields.length === 0 ? (
+        <p className="rounded border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+          No additional state project fields are required by the current support profile.
+        </p>
+      ) : (
+        <div className="grid gap-3">
+          {fields.map((field) => (
+            <div
+              key={field.key}
+              className={focusField === field.key ? 'rounded border border-brand-gold bg-brand-gold/10 p-3' : ''}
+            >
+              <label htmlFor={`state-field-${field.key}`} className="block text-xs font-medium text-gray-700 mb-1">
+                {field.label}
+              </label>
+              <input
+                id={`state-field-${field.key}`}
+                type="text"
+                value={values[field.key] ?? ''}
+                onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="rounded border border-gray-100 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-600">
+        Next gate: {support.nextGate}
+      </div>
+
+      {fields.length > 0 && (
+        <button
+          type="button"
+          onClick={() => saveStateFields.mutate()}
+          disabled={saveStateFields.isPending}
+          className="px-5 py-2 rounded font-semibold text-sm text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+        >
+          {saveStateFields.isPending ? 'Saving...' : 'Save State Fields'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function TransferOwnershipSection({ projectId, projectName }: { projectId: string; projectName: string }) {
   const { toast } = useToast();
 
@@ -451,8 +572,10 @@ function TransferOwnershipSection({ projectId, projectName }: { projectId: strin
 
 export function ProjectSettingsPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const location = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const focusField = new URLSearchParams(location.search).get('field');
 
   const { data: projectData, isLoading } = useQuery({
     queryKey: ['project', projectId],
@@ -755,6 +878,8 @@ export function ProjectSettingsPage() {
             )}
           </div>
         )}
+
+        <StateProjectFieldsSection project={project} projectId={projectId!} focusField={focusField} />
 
         {/* GPS Settings Card */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">

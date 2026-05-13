@@ -42,6 +42,8 @@ const CreateProjectSchema = z.object({
   // Phase 51 — NJ project fields
   njPwcNumber: z.string().max(50).optional(),
   njContractId: z.string().max(100).optional(),
+  mnContractId: z.string().max(100).optional(),
+  vaContractId: z.string().max(100).optional(),
   projectSettings: z.string().optional(),
   // Phase 70 — Apprenticeship ratio enforcement
   apprenticeshipRequirements: z.string().optional(), // JSON string
@@ -54,6 +56,11 @@ const IMMUTABLE_FIELDS = ['awardDate', 'fundingType', 'wdIdentifier', 'wdModNumb
 const UpdateProjectSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   status: z.enum(['active', 'closed']).optional(),
+  cslbLicense: z.string().max(50).optional().nullable(),
+  wcPolicyNumber: z.string().max(100).optional().nullable(),
+  ubiNumber: z.string().max(50).optional().nullable(),
+  lniCertificate: z.string().max(100).optional().nullable(),
+  wcAccount: z.string().max(100).optional().nullable(),
   contractorFein: z.string().max(9).optional(),
   dirProjectId: z.string().max(18).optional(),
   awardingAgency: z.string().max(56).optional(),
@@ -72,6 +79,8 @@ const UpdateProjectSchema = z.object({
   // Phase 51 — NJ project fields
   njPwcNumber: z.string().max(50).optional().nullable(),
   njContractId: z.string().max(100).optional().nullable(),
+  mnContractId: z.string().max(100).optional().nullable(),
+  vaContractId: z.string().max(100).optional().nullable(),
   projectSettings: z.string().optional(),
   // Phase 70 — Apprenticeship ratio enforcement
   apprenticeshipRequirements: z.string().optional().nullable(),
@@ -145,6 +154,8 @@ router.post('/', validate(CreateProjectSchema), async (req, res) => {
     maSicCode: body.maSicCode ?? null,
     njPwcNumber: body.njPwcNumber ?? null,
     njContractId: body.njContractId ?? null,
+    mnContractId: body.mnContractId ?? null,
+    vaContractId: body.vaContractId ?? null,
     projectSettings: body.projectSettings ?? null,
     apprenticeshipRequirements: body.apprenticeshipRequirements ?? null,
     isIraIijaProject: body.isIraIijaProject ?? false,
@@ -267,6 +278,8 @@ router.patch('/:id', async (req, res) => {
       ...(updates.maSicCode !== undefined && { maSicCode: updates.maSicCode }),
       ...(updates.njPwcNumber !== undefined && { njPwcNumber: updates.njPwcNumber }),
       ...(updates.njContractId !== undefined && { njContractId: updates.njContractId }),
+      ...(updates.mnContractId !== undefined && { mnContractId: updates.mnContractId }),
+      ...(updates.vaContractId !== undefined && { vaContractId: updates.vaContractId }),
       ...(resolvedProjectSettings !== undefined && { projectSettings: resolvedProjectSettings }),
       // Phase 75 — GPS clock-in settings
       ...(updates.gpsClockInEnabled !== undefined && { gpsClockInEnabled: updates.gpsClockInEnabled }),

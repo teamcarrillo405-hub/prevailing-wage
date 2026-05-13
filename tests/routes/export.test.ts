@@ -127,6 +127,8 @@ describe('GET /api/export/preflight/:format/:weekId', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.state).toBe('CA');
+    expect(res.body.data.status).toBe('production_pilot');
+    expect(res.body.data.statusLabel).toBe('Production Pilot');
     expect(res.body.data.supportedExports).toContain('A-1-131 PDF');
     expect(res.body.data.ready).toBe(false);
     expect(res.body.data.missingFields).toEqual(
@@ -737,5 +739,77 @@ describe('GET /api/export/nj-mw562/:weekId - NJ-02', () => {
       .get(`/api/export/nj-mw562/${weekId}`)
       .set('Cookie', cookieB);
     expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/export/mn-dli/:weekId - STATE-14', () => {
+  it('returns 400 when project state is not MN', async () => {
+    const cookie = await registerUser('mn-dli-non-mn');
+    const projectId = await createProject(cookie, 'CA');
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .get(`/api/export/mn-dli/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Minnesota|MN/i);
+  });
+
+  it('returns 200 with PDF for valid MN week', async () => {
+    const cookie = await registerUser('mn-dli-valid');
+    const projectId = await createProject(cookie, 'MN', { county: 'Hennepin', mnContractId: 'MN-DLI-001' });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId, {
+      addressStreet: '100 Main St',
+      addressCity: 'Minneapolis',
+      addressState: 'MN',
+      addressZip: '55401',
+    });
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId, { checkNumber: '1001' });
+
+    const res = await supertest(app)
+      .get(`/api/export/mn-dli/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toContain('mn-dli-');
+  });
+});
+
+describe('GET /api/export/va-doli/:weekId - STATE-15', () => {
+  it('returns 400 when project state is not VA', async () => {
+    const cookie = await registerUser('va-doli-non-va');
+    const projectId = await createProject(cookie, 'CA');
+    const weekId = await createPayrollWeek(cookie, projectId);
+
+    const res = await supertest(app)
+      .get(`/api/export/va-doli/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Virginia|VA/i);
+  });
+
+  it('returns 200 with PDF for valid VA week', async () => {
+    const cookie = await registerUser('va-doli-valid');
+    const projectId = await createProject(cookie, 'VA', { county: 'Fairfax', vaContractId: 'VA-DOLI-001' });
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId, {
+      addressStreet: '100 Main St',
+      addressCity: 'Fairfax',
+      addressState: 'VA',
+      addressZip: '22030',
+    });
+    const weekId = await createPayrollWeek(cookie, projectId);
+    await createPayrollEntry(cookie, weekId, workerId, classificationId, { checkNumber: '1001' });
+
+    const res = await supertest(app)
+      .get(`/api/export/va-doli/${weekId}`)
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toContain('va-doli-');
   });
 });

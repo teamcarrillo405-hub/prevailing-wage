@@ -77,6 +77,9 @@ const ComplianceMethodologyPage = React.lazy(() =>
 const PublicComplianceMethodologyPage = React.lazy(() =>
   import('./pages/PublicComplianceMethodologyPage').then(m => ({ default: m.PublicComplianceMethodologyPage }))
 );
+const StateSupportPage = React.lazy(() =>
+  import('./pages/StateSupportPage').then(m => ({ default: m.StateSupportPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -188,6 +191,7 @@ export default function App() {
               <Route path="/security" element={<SecurityPolicyPage />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/government" element={<GovernmentPage />} />
+              <Route path="/state-support" element={<StateSupportPage />} />
               <Route path="/roi" element={<RoiCalculatorPage />} />
               <Route path="/testimonials" element={<TestimonialsPage />} />
               <Route path="/reviews" element={<TestimonialsPage />} />

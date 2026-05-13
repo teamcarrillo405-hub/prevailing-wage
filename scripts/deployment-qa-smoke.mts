@@ -5,8 +5,9 @@ const checks = [
   { label: 'API health', path: '/api/health' },
   { label: 'API readiness', path: '/api/ready', allowNotReady: true },
   { label: 'Methodology center', path: '/methodology' },
+  { label: 'State support', path: '/state-support' },
   { label: 'Security policy', path: '/security' },
-  { label: 'API docs', path: '/api-docs' },
+  { label: 'API docs spec', path: '/api/docs' },
 ];
 
 let failed = false;

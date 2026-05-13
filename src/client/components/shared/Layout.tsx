@@ -128,6 +128,7 @@ export function Layout({ children }: LayoutProps) {
             </NavLink>
             <NavLink to="/wages" className={navCls}>Wage Lookup</NavLink>
             <NavLink to="/reports" className={navCls}>Reports</NavLink>
+            <NavLink to="/state-support" className={navCls}>States</NavLink>
             <NavLink to="/compliance-methodology" className={navCls}>Methodology</NavLink>
             <NavLink to="/team" className={navCls}>Team</NavLink>
             <NavLink to="/settings/integrations" className={navCls}>Integrations</NavLink>
@@ -223,6 +224,13 @@ export function Layout({ children }: LayoutProps) {
                 className={({ isActive }) => mobileNavCls(isActive)}
               >
                 Reports
+              </NavLink>
+              <NavLink
+                to="/state-support"
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) => mobileNavCls(isActive)}
+              >
+                State Support
               </NavLink>
               <NavLink
                 to="/compliance-methodology"
@@ -358,6 +366,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex flex-wrap gap-5">
             <Link to="/case-studies" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Case Studies</Link>
             <Link to="/government" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Government</Link>
+            <Link to="/state-support" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">State Support</Link>
             <Link to="/contact" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Contact</Link>
             <Link to="/reviews" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Reviews</Link>
             <Link to="/security" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Security Policy</Link>

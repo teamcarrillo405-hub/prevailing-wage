@@ -2,6 +2,8 @@
 
 Use this plan for each contractor pilot before production rollout.
 
+For state expansion, run this plan alongside `docs/STATE_EXPANSION_READINESS.md`.
+
 ## Participants
 
 - Contractor payroll owner
@@ -38,6 +40,8 @@ Use this plan for each contractor pilot before production rollout.
 - Payroll import requires no manual data cleanup outside the app after mappings are saved.
 - Export preflight identifies blockers before file generation.
 - Every blocker has a useful Fix action.
+- State-specific required fields are captured, preflighted, and represented in the generated agency package.
+- State overtime, fringe, deduction, apprentice, and non-performance handling are validated when applicable.
 - Auditor/reviewer users can review and approve/reject without editing payroll.
 - Owners and members can still complete payroll and subcontractor workflows.
 - Generated forms match the source payroll totals.
