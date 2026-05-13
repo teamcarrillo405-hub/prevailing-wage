@@ -4,6 +4,8 @@ Use this plan for each contractor pilot before production rollout.
 
 For state expansion, run this plan alongside `docs/STATE_EXPANSION_READINESS.md`.
 
+For the first California production pilot, use `docs/CA_PILOT_RUNBOOK.md` and log issues in `docs/PILOT_FINDINGS_LOG_TEMPLATE.md`.
+
 ## Participants
 
 - Contractor payroll owner

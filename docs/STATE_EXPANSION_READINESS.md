@@ -114,7 +114,7 @@ For each state, create a validation note with:
 
 | Order | State | Pilot Objective | Evidence Required |
 | --- | --- | --- | --- |
-| 1 | CA | Validate the production pilot workflow end to end. | Two payroll weeks, CA eCPR XML, A-1-131 PDF, WH-347 when federal/mixed, reviewer approval, findings log. |
+| 1 | CA | Validate the production pilot workflow end to end using `docs/CA_PILOT_RUNBOOK.md`. | Two payroll weeks, CA eCPR XML, A-1-131 PDF, WH-347 when federal/mixed, reviewer approval, findings log. |
 | 2 | WA | Validate F700 and PWIA CPR XML package. | Two payroll weeks, F700 PDF, WA CPR XML, PWIA intent fields, L&I portal upload notes. |
 | 3 | NY | Validate PW-12 and MPWR XML against current electronic CPR requirements. | Two payroll weeks, PW-12 PDF, MPWR XML, current source review date, submission notes. |
 | 4 | IL | Validate mixed public/private hour handling and IDOL package. | Two payroll weeks, IL certified transcript, non-prevailing-hour scenario, findings log. |
