@@ -39,6 +39,7 @@ export interface ComplianceViolation {
 export interface WeekViolation {
   violationType:
     | 'apprentice-ratio'
+    | 'apprentice-ratio-daily'
     | 'apprentice-trade-ratio'
     | 'apprentice-registration'
     | 'ira-iija-apprentice-pct';
@@ -263,19 +264,45 @@ export async function computeCompliance(
   // project/jurisdiction records.
   const deductionViolations = detectDeductionViolations(rows);
 
-  // 4. Apprentice ratio check (COMP-03) — aggregate over the full week
+  // 4. Apprentice ratio check (COMP-03) — per (trade, date) daily check
   const weekViolations: WeekViolation[] = [];
 
-  let apprenticeHours = 0;
-  let journeyworkerHours = 0;
+  // Registration check and daily group accumulation
+  // Group entries by (trade, workDate) to check ratio per day per trade.
+  // workDate is derived from the entry's week: Mon=weekEndingDate-6, Tue=weekEndingDate-5, etc.
+  // For simplicity, we use a synthetic key that captures per-day presence.
+  // Since entries don't store workDate directly, we iterate per day-of-week column.
+  const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+
+  // Map key: `${trade}::${dayKey}` → { journeyworker: count, apprentice: count }
+  const dayTradeGroups = new Map<string, { journeyworker: number; apprentice: number; apprenticeRate: number }>();
 
   for (const row of rows) {
     const e = row.entry;
-    const totalHours = getEntryHourTotals(e).total;
+    const trade = row.tradeDescription ?? 'unknown';
 
+    for (const day of DAY_KEYS) {
+      const stField = `${day}St` as keyof typeof e;
+      const otField = `${day}Ot` as keyof typeof e;
+      const dtField = `${day}Dt` as keyof typeof e;
+      const dayHours = ((e[stField] as number) ?? 0) + ((e[otField] as number) ?? 0) + ((e[dtField] as number) ?? 0);
+      if (dayHours === 0) continue;
+
+      const key = `${trade}::${day}`;
+      const grp = dayTradeGroups.get(key) ?? { journeyworker: 0, apprentice: 0, apprenticeRate: e.baseRateSnapshot };
+      if (row.laborType === 'journeyworker' || row.laborType === 'foreman') {
+        grp.journeyworker++;
+      } else if (row.laborType === 'apprentice') {
+        grp.apprentice++;
+        grp.apprenticeRate = e.baseRateSnapshot;
+      }
+      dayTradeGroups.set(key, grp);
+    }
+
+    // Apprentice registration check
     if (row.laborType === 'apprentice') {
-      apprenticeHours += totalHours;
       if (!row.programName?.trim()) {
+        const totalHours = getEntryHourTotals(e).total;
         weekViolations.push({
           violationType: 'apprentice-registration',
           detail: `${row.workerName} is entered as an apprentice without a registered apprenticeship program name on the payroll classification.`,
@@ -284,21 +311,24 @@ export async function computeCompliance(
           maxAllowedApprenticeHours: 0,
         });
       }
-    } else if (row.laborType === 'journeyworker' || row.laborType === 'foreman') {
-      journeyworkerHours += totalHours;
     }
   }
 
-  if (journeyworkerHours > 0 && apprenticeHours > 0) {
-    const maxAllowedApprenticeHours = journeyworkerHours / 3;
-    if (apprenticeHours > maxAllowedApprenticeHours) {
+  // COMP-03: daily per-(trade, day) apprentice ratio — 1:3 allowed
+  const allowedRatio = 1 / 3; // 1 apprentice per 3 journeyworkers
+  for (const [key, grp] of dayTradeGroups) {
+    if (grp.journeyworker === 0) continue;
+    const ratio = grp.apprentice / grp.journeyworker;
+    if (ratio > allowedRatio) {
+      const [trade, day] = key.split('::');
       weekViolations.push({
-        violationType: 'apprentice-ratio',
-        detail: `Apprentice hours (${apprenticeHours}) exceed 1:3 ratio — max allowed ${maxAllowedApprenticeHours.toFixed(1)} for ${journeyworkerHours} journeyworker hours`,
-        apprenticeHours,
-        journeyworkerHours,
-        maxAllowedApprenticeHours,
-      });
+        violationType: 'apprentice-ratio-daily',
+        detail: `Apprentice ratio exceeded on ${day} for ${trade}: ${grp.apprentice} apprentice(s) to ${grp.journeyworker} journeyworker(s)`,
+        apprenticeHours: grp.apprentice,
+        journeyworkerHours: grp.journeyworker,
+        maxAllowedApprenticeHours: grp.journeyworker * allowedRatio,
+        trade,
+      } as WeekViolation);
     }
   }
 
@@ -453,6 +483,7 @@ export interface WorkerViolationHistoryEntry {
     | 'ca-daily-ot'
     | 'ca-daily-dt'
     | 'apprentice-ratio'
+    | 'apprentice-ratio-daily'
     | 'apprentice-trade-ratio'
     | 'apprentice-registration'
     | 'ira-iija-apprentice-pct';
