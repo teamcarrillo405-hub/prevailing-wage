@@ -57,7 +57,7 @@ async function seedFixture(cookie: string): Promise<{ projectId: string; weekId:
   const wkRes = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+    .send({ projectId, weekEndingDate: '2025-04-05', payrollNumber: 1 });
   const weekId = wkRes.body.id as string;
 
   return { projectId, weekId };
@@ -99,7 +99,7 @@ async function seedProjectFixture(
   const wkRes = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+    .send({ projectId, weekEndingDate: '2025-04-05', payrollNumber: 1 });
   const weekId = wkRes.body.id as string;
 
   return { projectId, weekId };
@@ -174,7 +174,7 @@ async function seedPrivateProjectWithCleanPayroll(
   const wkRes = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+    .send({ projectId, weekEndingDate: '2025-04-05', payrollNumber: 1 });
   const weekId = wkRes.body.id as string;
 
   await supertest(app)
@@ -497,7 +497,7 @@ async function seedMultiProjectWorkerHistory(cookie: string): Promise<{
   const wkA = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId: projectIdA, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+    .send({ projectId: projectIdA, weekEndingDate: '2025-04-05', payrollNumber: 1 });
 
   const workersA = await supertest(app)
     .get(`/api/projects/${projectIdA}/workers`)
@@ -572,7 +572,7 @@ async function seedNullSsnWorkers(cookie: string): Promise<{
   const wkA = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId: projectIdA, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+    .send({ projectId: projectIdA, weekEndingDate: '2025-04-05', payrollNumber: 1 });
 
   const workersA = await supertest(app)
     .get(`/api/projects/${projectIdA}/workers`)
@@ -614,7 +614,7 @@ async function seedNullSsnWorkers(cookie: string): Promise<{
   const wkB = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId: projectIdB, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+    .send({ projectId: projectIdB, weekEndingDate: '2025-04-05', payrollNumber: 1 });
 
   const workersB = await supertest(app)
     .get(`/api/projects/${projectIdB}/workers`)

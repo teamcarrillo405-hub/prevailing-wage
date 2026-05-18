@@ -119,7 +119,7 @@ describe('GET /api/audit/:projectId', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-04-10', payrollNumber: 1 });
+      .send({ projectId, weekEndingDate: '2026-04-11', payrollNumber: 1 });
     expect(weekRes.status).toBe(201);
 
     const submitRes = await supertest(app)
@@ -145,7 +145,7 @@ describe('GET /api/audit/:projectId', () => {
       expect.objectContaining({
         weekId: weekRes.body.id,
         payrollNumber: 1,
-        weekEndingDate: '2026-04-10',
+        weekEndingDate: '2026-04-11',
         submitted: true,
         weekPhotoCount: 0,
         timePunchCount: 0,
@@ -382,7 +382,7 @@ describe('GET /api/audit/:projectId/evidence-packet', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-04-17', payrollNumber: 2 });
+      .send({ projectId, weekEndingDate: '2026-04-18', payrollNumber: 2 });
     expect(weekRes.status).toBe(201);
 
     const res = await supertest(app)

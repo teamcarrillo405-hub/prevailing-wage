@@ -80,7 +80,7 @@ async function createWorker(cookie: string, projectId: string, name: string): Pr
 async function createPayrollWeek(
   cookie: string,
   projectId: string,
-  weekEndingDate = '2025-01-12',
+  weekEndingDate = '2025-01-11',
   payrollNumber = 1
 ): Promise<string> {
   const res = await supertest(app)
@@ -95,7 +95,7 @@ async function submitWeek(cookie: string, weekId: string): Promise<void> {
   const res = await supertest(app)
     .patch(`/api/payroll/weeks/${weekId}/submit`)
     .set('Cookie', cookie)
-    .send({ submittedAt: '2025-01-12', submittedTo: 'DOL Region 9' });
+    .send({ submittedAt: '2025-01-11', submittedTo: 'DOL Region 9' });
   expect(res.status).toBe(200);
 }
 
@@ -319,7 +319,7 @@ describe('POST /api/payroll/import/commit', () => {
   it('creates payrollEntries and payrollImports audit row on success', async () => {
     const cookie = await registerAndLogin('commit-success');
     const projectId = await createProject(cookie);
-    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-09');
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-08');
     const { workerId, classificationId } = await createWorker(cookie, projectId, 'Commit Worker One');
 
     const res = await supertest(app)
@@ -391,7 +391,7 @@ describe('POST /api/payroll/import/commit', () => {
   it('returns 409 when worker already has an entry for the week', async () => {
     const cookie = await registerAndLogin('commit-conflict');
     const projectId = await createProject(cookie);
-    const weekId = await createPayrollWeek(cookie, projectId, '2025-03-09');
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-03-08');
     const { workerId, classificationId } = await createWorker(cookie, projectId, 'Conflict Worker');
 
     // First commit succeeds
@@ -447,7 +447,7 @@ describe('POST /api/payroll/import/commit', () => {
   it('commits multiple workers and returns correct committed count', async () => {
     const cookie = await registerAndLogin('commit-multi');
     const projectId = await createProject(cookie);
-    const weekId = await createPayrollWeek(cookie, projectId, '2025-04-06');
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-04-05');
     const { workerId: worker1Id, classificationId: class1Id } = await createWorker(cookie, projectId, 'Multi Worker A');
     const { workerId: worker2Id, classificationId: class2Id } = await createWorker(cookie, projectId, 'Multi Worker B');
 
@@ -621,7 +621,7 @@ describe('GET /api/payroll/import/reconciliation/:weekId', () => {
     const cookie = await registerAndLogin('reconciliation-commit');
     const projectId = await createProject(cookie);
     const { workerId, classificationId } = await createWorker(cookie, projectId, 'Reconcile Worker');
-    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-09');
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-08');
 
     const commitRes = await supertest(app)
       .post('/api/payroll/import/commit')
@@ -682,7 +682,7 @@ describe('GET /api/payroll/import/reconciliation/:weekId', () => {
   it('warns when a week has no import and no entries', async () => {
     const cookie = await registerAndLogin('reconciliation-empty');
     const projectId = await createProject(cookie);
-    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-16');
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-02-15');
 
     const res = await supertest(app)
       .get(`/api/payroll/import/reconciliation/${weekId}`)
@@ -698,8 +698,8 @@ describe('GET /api/payroll/import/reconciliation/:weekId', () => {
     const cookie = await registerAndLogin('reconciliation-delta');
     const projectId = await createProject(cookie);
     const { workerId, classificationId } = await createWorker(cookie, projectId, 'Delta Worker');
-    const weekOneId = await createPayrollWeek(cookie, projectId, '2025-02-09', 1);
-    const weekTwoId = await createPayrollWeek(cookie, projectId, '2025-02-16', 2);
+    const weekOneId = await createPayrollWeek(cookie, projectId, '2025-02-08', 1);
+    const weekTwoId = await createPayrollWeek(cookie, projectId, '2025-02-15', 2);
 
     async function commitWeek(weekId: string, grossWages: number) {
       const res = await supertest(app)

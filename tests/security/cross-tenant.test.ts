@@ -31,7 +31,7 @@ async function createPayrollWeek(cookie: string, projectId: string): Promise<str
   const res = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId, weekEndingDate: '2025-01-05', payrollNumber: 1 });
+    .send({ projectId, weekEndingDate: '2025-01-04', payrollNumber: 1 });
   return res.body.id as string;
 }
 

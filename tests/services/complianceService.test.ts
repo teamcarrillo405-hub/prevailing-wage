@@ -82,7 +82,7 @@ async function seedProjectAndWorker() {
 async function seedPayrollWeek(
   cookie: string,
   projectId: string,
-  weekEndingDate = '2025-04-06',
+  weekEndingDate = '2025-04-05',
   payrollNumber = 1,
 ): Promise<string> {
   const res = await supertest(app)
@@ -237,7 +237,7 @@ describe('computeCompliance', () => {
   it('COMP-01: under-wage entry produces 1 under-wage violation', async () => {
     // Worker paid below expected straight-time wages
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-06', 1);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-05', 1);
     // 40 ST hours at $30 base + $10 fringe = $1600 expected; grossWages=$1400 (under)
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
@@ -255,7 +255,7 @@ describe('computeCompliance', () => {
   it('COMP-01: entry with null grossWages produces no violation', async () => {
     // null grossWages = not yet entered; engine should not flag as violation
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-07', 2);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-12', 2);
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
       baseRateSnapshot: 30,
@@ -271,7 +271,7 @@ describe('computeCompliance', () => {
   it('COMP-01: correct straight-time grossWages produces no violation', async () => {
     // 40 ST hours at $30 base + $10 fringe = $1600 expected; grossWages=$1600 (compliant)
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-08', 3);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-19', 3);
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
       baseRateSnapshot: 30,
@@ -290,7 +290,7 @@ describe('computeCompliance', () => {
     // Expected: 48*30 + 8*0.5*30 + 48*10 = 1440 + 120 + 480 = 2040
     // Actual grossWages = 1800 (under)
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-09', 4);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-26', 4);
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
       monOt: 2, tueOt: 2, wedOt: 2, thuOt: 2,
@@ -310,7 +310,7 @@ describe('computeCompliance', () => {
     // Expected (CWHSSA fringe NOT multiplied): 44*30 + 4*0.5*30 + 44*10 = 1320 + 60 + 440 = 1820
     // If fringe were multiplied (wrong): 44*40*1.5 = 2640 — this must NOT be the expected value
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-10', 5);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-03', 5);
 
     // Compliant: grossWages = 1820
     await seedEntry(cookie, weekId, workerId, classificationId, {
@@ -328,7 +328,7 @@ describe('computeCompliance', () => {
     // Now test under-wage detection (grossWages = 1760, $60 short)
     const { projectId: projectId2, workerId: workerId2, classificationId: classId2, cookie: cookie2 } =
       await seedProjectAndWorker();
-    const weekId2 = await seedPayrollWeek(cookie2, projectId2, '2025-04-10', 5);
+    const weekId2 = await seedPayrollWeek(cookie2, projectId2, '2025-05-03', 5);
     await seedEntry(cookie2, weekId2, workerId2, classId2, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
       friOt: 4,
@@ -375,7 +375,7 @@ describe('computeCompliance', () => {
         laborType: 'journeyworker',
       });
     const secondClassificationId = cRes.body.data?.classification?.id as string;
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-13', 8);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-19', 8);
 
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 4,
@@ -397,7 +397,7 @@ describe('computeCompliance', () => {
 
   it('COMP-01/COMP-02: certProperPayment is false when an under-wage violation exists', async () => {
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-04-11', 6);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-10', 6);
     // Under-wage: expected $1600, paid $1000
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
@@ -536,7 +536,7 @@ describe('computeCompliance', () => {
   it('COMP-03: no violation when journeyworkerHours is 0 and apprenticeHours > 0 (edge case guard)', async () => {
     // Pure-apprentice crew — 0 JW hours, 20 apprentice hours — must NOT fire
     const { projectId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-04', 13);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-10', 13);
     const { workerId: appId, classificationId: appClassId } = await seedApprenticeWorker(cookie, projectId);
     await seedEntry(cookie, weekId, appId, appClassId, {
       monSt: 8, tueSt: 8, wedSt: 4,
@@ -553,7 +553,7 @@ describe('computeCompliance', () => {
   it('COMP-03: no violation when there are zero apprentice hours', async () => {
     // JW-only week — no apprentice entries at all
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-05', 14);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-17', 14);
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
       baseRateSnapshot: 30,
@@ -586,7 +586,7 @@ describe('computeCompliance', () => {
       });
     const foremanClassId = fcRes.body.data?.classification?.id as string;
 
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-06', 15);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-24', 15);
     // Foreman: 30 ST hours
     await seedEntry(cookie, weekId, foremanId, foremanClassId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 6,
@@ -678,7 +678,7 @@ describe('computeCompliance', () => {
           state: 'NY',
           county: 'New York',
           contractType: 'federal-davis-bacon',
-          awardDate: '2025-06-01',
+          awardDate: '2025-05-31',
           fundingType: 'federal',
         });
       const projectId = pRes.body.data?.project?.id as string;
@@ -718,7 +718,7 @@ describe('computeCompliance', () => {
           state: 'CA',
           county: 'Los Angeles',
           contractType: 'federal-davis-bacon',
-          awardDate: '2025-06-01',
+          awardDate: '2025-05-31',
           fundingType: 'federal',
         });
       const projectId = pRes.body.data?.project?.id as string;
@@ -746,7 +746,7 @@ describe('computeCompliance', () => {
       // NY daily OT rule: any day exceeding 8 total hours (ST + OT) triggers cwhssa-ot
       // Monday = 9 ST hours (> 8) → should produce a cwhssa-ot violation
       const { projectId, workerId, classificationId, cookie } = await seedNyProjectAndWorker();
-      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-08', 101);
+      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-14', 101);
 
       // 9 ST on Monday, 8 each other day — Monday exceeds 8h daily threshold
       await seedEntry(cookie, weekId, workerId, classificationId, {
@@ -768,7 +768,7 @@ describe('computeCompliance', () => {
     it('Test B: NY project with exactly 8 hours/day has NO daily OT violation', async () => {
       // Exactly 8 hours is NOT a violation — threshold is strictly > 8
       const { projectId, workerId, classificationId, cookie } = await seedNyProjectAndWorker();
-      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-15', 102);
+      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-21', 102);
 
       // 8 ST on each day — exactly at threshold, no violation
       await seedEntry(cookie, weekId, workerId, classificationId, {
@@ -789,7 +789,7 @@ describe('computeCompliance', () => {
       // 9 ST hours on Monday is a violation — that 9th hour should be OT.
       // Total week stays at 40h so there's no weekly CWHSSA issue.
       const { projectId, workerId, classificationId, cookie } = await seedCaProjectAndWorker();
-      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-22', 103);
+      const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-28', 103);
 
       await seedEntry(cookie, weekId, workerId, classificationId, {
         monSt: 9, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 7,
@@ -814,7 +814,7 @@ describe('computeCompliance', () => {
   it('COMP-03: hasViolations is true when weekViolations is non-empty even if violations[] is empty', async () => {
     // 1 JW + 1 apprentice on same day — daily ratio violation fires (no wage violations)
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-07', 16);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-31', 16);
     // JW correct wages — no under-wage violation
     const jwExpected = 30 * 30 + 30 * 10; // 900 + 300 = 1200
     await seedEntry(cookie, weekId, workerId, classificationId, {
@@ -844,7 +844,7 @@ describe('computeCompliance', () => {
 
   it('COMP-08: deduction-ratio violations contribute to hasViolations', async () => {
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-08', 17);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-07', 17);
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8,
       baseRateSnapshot: 30,
@@ -867,7 +867,7 @@ describe('computeCompliance', () => {
     await db.update(projects)
       .set({ state: 'CA' })
       .where(eq(projects.id, projectId));
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-09', 18);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-14', 18);
 
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8,
@@ -890,7 +890,7 @@ describe('computeCompliance', () => {
       await seedProjectWithApprenticeshipConfig({
         apprenticeshipRequirements: JSON.stringify({ Electrician: { maxRatio: '1:2' } }),
       });
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-01', 20);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-31', 20);
     // JW: 20 hrs (max allowed apprentice = 20 * 1/2 = 10)
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 4,
@@ -925,7 +925,7 @@ describe('computeCompliance', () => {
       await seedProjectWithApprenticeshipConfig({
         apprenticeshipRequirements: JSON.stringify({ Electrician: { maxRatio: '1:2' } }),
       });
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-02', 21);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-07', 21);
     // JW: 20 hrs
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 4,
@@ -954,7 +954,7 @@ describe('computeCompliance', () => {
       await seedProjectWithApprenticeshipConfig({
         apprenticeshipRequirements: null,
       });
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-03', 22);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-14', 22);
     // JW: 20 hrs, Apprentice: 20 hrs — would fire COMP-04 if config existed
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 4,
@@ -1016,7 +1016,7 @@ describe('computeCompliance', () => {
       await seedProjectWithApprenticeshipConfig({
         isIraIijaProject: true,
       });
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-04', 23);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-21', 23);
     // JW: 90 hrs, Apprentice: 5 hrs → 5/95 ≈ 5.26%
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,
@@ -1048,7 +1048,7 @@ describe('computeCompliance', () => {
       await seedProjectWithApprenticeshipConfig({
         isIraIijaProject: true,
       });
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-05', 24);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-28', 24);
     // JW: 50 hrs, Apprentice: 10 hrs → 10/60 ≈ 16.67% (above 15%)
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 8, sunSt: 2,
@@ -1076,7 +1076,7 @@ describe('computeCompliance', () => {
       await seedProjectWithApprenticeshipConfig({
         isIraIijaProject: false,
       });
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-06-06', 25);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-07-05', 25);
     // JW: 90 hrs, Apprentice: 5 hrs (would fire if isIraIijaProject were true)
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8,

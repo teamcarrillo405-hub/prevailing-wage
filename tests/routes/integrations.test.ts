@@ -40,7 +40,7 @@ async function createProject(cookie: string): Promise<string> {
   return res.body.data?.project?.id as string;
 }
 
-async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-01-12'): Promise<string> {
+async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-01-11'): Promise<string> {
   const res = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)

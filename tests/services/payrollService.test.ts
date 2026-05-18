@@ -64,7 +64,7 @@ describe('payrollService', () => {
 
     const result = await createPayrollWeek({
       projectId,
-      weekEndingDate: '2025-04-06',
+      weekEndingDate: '2025-04-05',
       payrollNumber: 10,
     });
 
@@ -78,7 +78,7 @@ describe('payrollService', () => {
 
     const weekResult = await createPayrollWeek({
       projectId,
-      weekEndingDate: '2025-04-13',
+      weekEndingDate: '2025-04-12',
       payrollNumber: 11,
     });
 
@@ -131,7 +131,7 @@ describe('payrollService', () => {
 
     const weekResult = await createPayrollWeek({
       projectId,
-      weekEndingDate: '2025-04-20',
+      weekEndingDate: '2025-04-19',
       payrollNumber: 12,
     });
 
@@ -180,7 +180,7 @@ describe('payrollService', () => {
 
     const weekResult = await createPayrollWeek({
       projectId,
-      weekEndingDate: '2025-04-27',
+      weekEndingDate: '2025-04-26',
       payrollNumber: 13,
     });
 

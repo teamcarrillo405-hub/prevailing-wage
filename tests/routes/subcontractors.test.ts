@@ -35,7 +35,7 @@ async function createProject(cookie: string) {
 
 // ── SUB-03: Subcontractor CRUD ─────────────────────────────────────────────
 
-async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-06-06') {
+async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-06-07') {
   const res = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
@@ -85,7 +85,7 @@ describe('GET /api/projects/:id/subcontractor-cpr-queue', () => {
     const cprRes = await supertest(app)
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', cookie)
-      .send({ weekEndingDate: '2025-06-06' });
+      .send({ weekEndingDate: '2025-06-07' });
     expect(cprRes.status).toBe(201);
 
     const res = await supertest(app)
@@ -98,7 +98,7 @@ describe('GET /api/projects/:id/subcontractor-cpr-queue', () => {
         expect.objectContaining({
           subcontractorId: subId,
           subcontractorName: 'Queue Sub',
-          weekEndingDate: '2025-06-06',
+          weekEndingDate: '2025-06-07',
           status: 'overdue',
         }),
       ]),
@@ -134,7 +134,7 @@ describe('GET /api/projects/:id/subcontractor-cpr-queue', () => {
     expect(res.body.data?.requests[0]).toEqual(
       expect.objectContaining({
         subcontractorName: 'Bulk Request Sub',
-        weekEndingDate: '2025-06-06',
+        weekEndingDate: '2025-06-07',
         uploadUrl: expect.stringContaining('/sub-upload/'),
       }),
     );
@@ -301,7 +301,7 @@ describe('POST /api/projects/:id/subcontractors/:subId/cpr-weeks (SUB-04)', () =
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', cookie)
       .send({
-        weekEndingDate: '2025-06-06',
+        weekEndingDate: '2025-06-07',
         receivedDate: '2025-06-07',
         isCompliant: 1,
         notes: 'first week',
@@ -312,7 +312,7 @@ describe('POST /api/projects/:id/subcontractors/:subId/cpr-weeks (SUB-04)', () =
     expect(week).toBeDefined();
     expect(week.id).toBeDefined();
     expect(week.subcontractorId).toBe(subId);
-    expect(week.weekEndingDate).toBe('2025-06-06');
+    expect(week.weekEndingDate).toBe('2025-06-07');
     expect(week.receivedDate).toBe('2025-06-07');
     expect(week.isCompliant).toBe(1);
     expect(week.notes).toBe('first week');
@@ -332,12 +332,12 @@ describe('POST /api/projects/:id/subcontractors/:subId/cpr-weeks (SUB-04)', () =
     await supertest(app)
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', cookie)
-      .send({ weekEndingDate: '2025-06-13' });
+      .send({ weekEndingDate: '2025-06-14' });
 
     const dupRes = await supertest(app)
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', cookie)
-      .send({ weekEndingDate: '2025-06-13' });
+      .send({ weekEndingDate: '2025-06-14' });
 
     expect(dupRes.status).toBe(409);
   });
@@ -357,7 +357,7 @@ describe('POST /api/projects/:id/subcontractors/:subId/cpr-weeks (SUB-04)', () =
     const res = await supertest(app)
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', otherCookie)
-      .send({ weekEndingDate: '2025-07-04' });
+      .send({ weekEndingDate: '2025-07-05' });
 
     expect(res.status).toBe(403);
   });
@@ -377,7 +377,7 @@ describe('PATCH /api/projects/:id/subcontractors/:subId/cpr-weeks/:weekId (SUB-0
     const postRes = await supertest(app)
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', cookie)
-      .send({ weekEndingDate: '2025-06-20' });
+      .send({ weekEndingDate: '2025-06-21' });
     const weekId = postRes.body.data?.cprWeek?.id as string;
 
     const patchRes = await supertest(app)
@@ -405,7 +405,7 @@ describe('PATCH /api/projects/:id/subcontractors/:subId/cpr-weeks/:weekId (SUB-0
     const postRes = await supertest(app)
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', cookie)
-      .send({ weekEndingDate: '2025-06-27' });
+      .send({ weekEndingDate: '2025-06-28' });
     const weekId = postRes.body.data?.cprWeek?.id as string;
 
     const otherCookie = await registerAndLogin('cpr-patch-403-nonmember');
@@ -433,12 +433,12 @@ describe('GET /api/projects/:id/subcontractors/:subId/cpr-weeks (SUB-04)', () =>
     await supertest(app)
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', cookie)
-      .send({ weekEndingDate: '2025-07-04' });
+      .send({ weekEndingDate: '2025-07-05' });
 
     await supertest(app)
       .post(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)
       .set('Cookie', cookie)
-      .send({ weekEndingDate: '2025-07-11' });
+      .send({ weekEndingDate: '2025-07-12' });
 
     const res = await supertest(app)
       .get(`/api/projects/${projectId}/subcontractors/${subId}/cpr-weeks`)

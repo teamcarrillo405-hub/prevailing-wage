@@ -54,7 +54,7 @@ async function seedFixtureWithFringes(cookie: string): Promise<{ projectId: stri
   const wkRes = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+    .send({ projectId, weekEndingDate: '2025-04-05', payrollNumber: 1 });
   const weekId = wkRes.body.id as string;
 
   // 5. GET workers to retrieve classificationId

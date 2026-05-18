@@ -42,7 +42,7 @@ async function createSub(cookie: string, projectId: string, name = 'Queue Sub'):
   return res.body.data.subcontractor.id as string;
 }
 
-async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-01-12'): Promise<string> {
+async function createPayrollWeek(cookie: string, projectId: string, weekEndingDate = '2025-01-11'): Promise<string> {
   const res = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
@@ -56,7 +56,7 @@ describe('subcontractor CPR chase board', () => {
     const cookie = await registerAndLogin('virtual-row');
     const projectId = await createProject(cookie);
     const subId = await createSub(cookie, projectId);
-    const payrollWeekId = await createPayrollWeek(cookie, projectId, '2025-01-12');
+    const payrollWeekId = await createPayrollWeek(cookie, projectId, '2025-01-11');
 
     const res = await supertest(app)
       .get(`/api/projects/${projectId}/subcontractor-cpr-queue`)
@@ -69,7 +69,7 @@ describe('subcontractor CPR chase board', () => {
           subcontractorId: subId,
           payrollWeekId,
           weekId: null,
-          weekEndingDate: '2025-01-12',
+          weekEndingDate: '2025-01-11',
           canRequestUpload: true,
           evidenceState: 'not-requested',
           nextAction: 'Send CPR upload request.',
@@ -83,12 +83,12 @@ describe('subcontractor CPR chase board', () => {
     const cookie = await registerAndLogin('request');
     const projectId = await createProject(cookie);
     const subId = await createSub(cookie, projectId, 'Request Sub');
-    await createPayrollWeek(cookie, projectId, '2025-01-19');
+    await createPayrollWeek(cookie, projectId, '2025-01-18');
 
     const requestRes = await supertest(app)
       .post(`/api/projects/${projectId}/subcontractor-cpr-queue/request`)
       .set('Cookie', cookie)
-      .send({ subcontractorId: subId, weekEndingDate: '2025-01-19' });
+      .send({ subcontractorId: subId, weekEndingDate: '2025-01-18' });
 
     expect(requestRes.status).toBe(201);
     expect(requestRes.body.data.uploadUrl).toContain('/sub-upload/');

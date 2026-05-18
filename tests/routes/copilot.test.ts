@@ -57,11 +57,18 @@ async function createWorkerWithClassification(cookie: string, projectId: string,
   return { workerId, classificationId };
 }
 
+// Base Saturday: 2026-01-31 (Saturday). Each payrollNumber N maps to the Nth Saturday from that base.
+function payrollNumberToSaturday(n: number): string {
+  const base = new Date('2026-01-31T12:00:00');
+  base.setDate(base.getDate() + (n - 1) * 7);
+  return base.toISOString().slice(0, 10);
+}
+
 async function createWeek(cookie: string, projectId: string, payrollNumber: number) {
   const res = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId, weekEndingDate: `2026-02-${String(payrollNumber).padStart(2, '0')}`, payrollNumber });
+    .send({ projectId, weekEndingDate: payrollNumberToSaturday(payrollNumber), payrollNumber });
   return res.body.id as string;
 }
 

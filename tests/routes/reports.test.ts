@@ -53,7 +53,7 @@ async function seedReportFixture(
   const wkRes = await supertest(app)
     .post('/api/payroll/weeks')
     .set('Cookie', cookie)
-    .send({ projectId, weekEndingDate: '2025-04-06', payrollNumber: 1 });
+    .send({ projectId, weekEndingDate: '2025-04-05', payrollNumber: 1 });
   const weekId = wkRes.body.id as string;
 
   // Seed one payroll entry
@@ -152,7 +152,7 @@ describe('GET /api/reports/:projectId/worker/:workerId/pay-history', () => {
     const wk2Res = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-04-13', payrollNumber: 2 });
+      .send({ projectId, weekEndingDate: '2025-04-12', payrollNumber: 2 });
     const weekId2 = wk2Res.body.id as string;
 
     await supertest(app)
