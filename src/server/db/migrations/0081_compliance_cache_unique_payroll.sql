@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS `compliance_cache` (
 --> statement-breakpoint
 ALTER TABLE `payroll_weeks` ADD COLUMN `qbo_journal_entry_id` text;
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS `uniq_project_payroll` ON `payroll_weeks`(`project_id`, `payroll_number`);
+CREATE INDEX IF NOT EXISTS `idx_project_payroll_number` ON `payroll_weeks`(`project_id`, `payroll_number`);
