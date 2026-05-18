@@ -7,6 +7,55 @@
 
 ---
 
+## 2026-05-16 Tested Competitive Update
+
+This update reflects the verified product state after the May 2026 MVP execution pass. Sources checked: LCPtracker official pages and marketplace listing, eMars official certified payroll page, PRISM labor/wage management page, Prevail official site, and WagePath official/pricing pages.
+
+### Current Contractor-Facing Scorecard
+
+Scale: 1-10. No category is scored 10 unless the product is complete, tested, and production-proven.
+
+| Category | PrevWage | LCPtracker | eMars | PRISM | Prevail | WagePath |
+|---|---:|---:|---:|---:|---:|---:|
+| Visual design | 8 | 6 | 6 | 5 | 7 | 8 |
+| Navigation clarity | 8 | 6 | 6 | 5 | 7 | 7 |
+| Ease of use | 8 | 6 | 6 | 5 | 7 | 7 |
+| Onboarding | 7 | 5 | 5 | 4 | 6 | 7 |
+| Performance feel | 8 | 6 | 6 | 5 | 7 | 7 |
+| Mobile field workflow | 6 | 8 | 5 | 5 | 8 | 6 |
+| Information density | 8 | 7 | 7 | 7 | 7 | 7 |
+| Workflow guidance | 8 | 7 | 7 | 6 | 7 | 8 |
+| Typography/interface polish | 8 | 6 | 6 | 5 | 7 | 8 |
+| Payroll automation | 7 | 8 | 7 | 6 | 8 | 8 |
+| Audit readiness | 8 | 9 | 8 | 8 | 7 | 8 |
+| Integrations | 6 | 8 | 6 | 6 | 7 | 8 |
+| Support maturity | 4 | 9 | 8 | 8 | 5 | 5 |
+| **Average** | **7.2** | **7.0** | **6.5** | **5.8** | **7.0** | **7.5** |
+
+### Updated Competitive Position
+
+PrevWage is strongest where a contractor needs guided setup, source-proven payroll review, visible correction paths, subcontractor CPR operations, field evidence labeling, and a previewable audit packet. The strongest current competitor pressure is WagePath's payroll/fringe automation positioning, Prevail's modern time-tracking story, and LCPtracker's mature agency-mandated submission ecosystem.
+
+### Remaining Competitor Advantages
+
+| Gap | Competitor Advantage | PrevWage Status | Next Investment |
+|---|---|---|---|
+| Agency adoption and mandate presence | LCPtracker is already required on many public projects. | Not agency-mandated. | Export profiles, portal handoff documentation, and agency/prime pilot references. |
+| Live payroll ecosystem | LCPtracker and WagePath emphasize payroll/time integrations; Prevail emphasizes time tracking. | QuickBooks/Procore readiness exists, but live credentials still need pilot validation. | Sandbox/live OAuth UAT and provider-specific contract tests. |
+| Native/employee mobile depth | LCPtracker/Prevail have stronger dedicated field/mobile stories. | PWA field clock and photo capture are usable, not a native employee app. | Mobile QA, supervisor approval states, and employee app only after pilot demand. |
+| Support and implementation maturity | LCPtracker/eMars/PRISM sell mature compliance operations. | Engineering foundation is strong; support process is not market-proven. | Training material, runbooks, support SLAs, and customer onboarding playbooks. |
+| Union/payroll fringe automation | WagePath is heavily positioned around fringe, union, and payroll calculation automation. | Import reconciliation and fringe/deduction visibility exist; payroll provider remains source of truth unless integrated. | Deeper fringe strategy automation and payroll provider handoff. |
+
+### Ranked Next Investments By Customer Impact
+
+1. Complete the California production pilot with two real payroll weeks, subcontractor CPR, generated forms, evidence packet, and reviewer approval.
+2. Validate QuickBooks and Procore live OAuth/imports with sandbox or real pilot credentials.
+3. Add portal export profiles and handoff checklists for LCPtracker/eMars/eComply-style contract requirements.
+4. Reduce remaining mobile density on public landing, Project Home, and Subcontractors.
+5. Build customer-facing onboarding/training assets and a support runbook.
+
+---
+
 ## 1. SCORING MATRIX
 
 **Scale:** 1–10 | **Weight:** indicates strategic importance

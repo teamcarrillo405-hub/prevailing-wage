@@ -167,8 +167,8 @@ These are the next build items because they directly affect demos and investor c
 7. Add landing page product workflow visual/proof section. **Started 2026-05-04: hero now shows the four-step contractor workflow in the first viewport.**
 8. Expand copilot page-specific suggested actions. **Started 2026-05-04: Copilot now shows page-specific helper prompts for dashboard, project, workers, payroll, wage lookup, field clock, and settings pages.**
 9. Add required forms checklist.
-10. Add evidence packet preview.
-11. Polish mobile field capture.
+10. Add evidence packet preview. **Done 2026-05-16: evidence packet preview filters, manifest, expanded packet contents, and required-vs-collected navigation are in place.**
+11. Polish mobile field capture. **Done 2026-05-16: Field Clock now separates capture, correction, source filtering, offline status, and review labels.**
 12. Run 50-scenario contractor QA and compare against score gates.
 
 ## Acceptance Test Matrix
@@ -212,6 +212,13 @@ These are the next build items because they directly affect demos and investor c
 - Confirmed the Evidence Dashboard already previews packet readiness, required vs collected evidence, weekly proof, and JSON/CSV packet exports.
 - Added page-specific Copilot prompts so the assistant guides users differently on dashboard, project, workers, payroll, wage lookup, field clock, and settings pages.
 - Verified with `npm run build`.
+
+### 2026-05-16 Competitive/MVP Readiness Pass
+
+- Updated the competitive scorecard against LCPtracker, eMars, PRISM, Prevail, and WagePath using current public/official product pages.
+- Marked the evidence packet preview as complete for MVP: required-vs-collected evidence boxes navigate to filtered details, packet exports include an audit manifest, and JSON/CSV packets include WD, workers, payroll, corrections, forms, photos, GPS/time, signatures, subcontractor evidence, certifications, and submission history.
+- Marked mobile field capture polish as complete for MVP: Field Clock now labels worker GPS, worker no-GPS, admin-entered, and admin-corrected evidence with review status and offline capture state.
+- Added integration readiness visibility for live OAuth versus CSV/import fallback so demos do not imply live QuickBooks/Procore availability without configured credentials.
 
 ## Claim We Can Make After P0
 

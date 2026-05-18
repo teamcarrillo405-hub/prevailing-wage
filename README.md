@@ -14,6 +14,8 @@ npm install
 npm run dev
 ```
 
+Environment variables for production pilots and live integrations are documented in [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md). Jurisdiction launch status is tracked in [docs/JURISDICTION_COVERAGE_MATRIX.md](./docs/JURISDICTION_COVERAGE_MATRIX.md) and [docs/STATE_EXPANSION_READINESS.md](./docs/STATE_EXPANSION_READINESS.md). QuickBooks and Procore remain explicit import-fallback workflows until live OAuth credentials are configured.
+
 ## Tech Stack
 
 - Node.js + Express + TypeScript

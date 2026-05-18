@@ -2,11 +2,13 @@
 
 Use this plan before enabling a state for customer-facing sales, onboarding, or production payroll use.
 
+Pair this plan with `docs/JURISDICTION_COVERAGE_MATRIX.md`, which is the source of truth for federal, state, and local coverage status by workflow layer.
+
 ## Bottom Line
 
 PrevWage is ready for controlled multi-state pilots, not a blanket 50-state launch.
 
-California remains the primary production proving ground. Additional states should move through a gated pilot path only after export output, required fields, rates, overtime logic, apprenticeship handling, and agency submission expectations are validated against current state requirements.
+California remains the primary production proving ground. The 2026-05-16 local pilot rehearsal generated WH-347 PDFs, CA A-1-131 PDFs, CA eCPR XML, evidence packet exports, an audit export ZIP, and a `pilot_ready` summary from five workers and two payroll weeks. Additional states should move through a gated pilot path only after export output, required fields, rates, overtime logic, apprenticeship handling, and agency submission expectations are validated against current state requirements.
 
 ## Expansion Order
 
@@ -21,6 +23,15 @@ California remains the primary production proving ground. Additional states shou
 | 7 | TX | Strong federal/Davis-Bacon use case and WD coverage; limited state-specific burden | Federal-first pilot |
 | 8 | MN | Generator exists, but route and workflow readiness need confirmation | Internal validation only |
 | 9 | VA | Generator exists, but route and workflow readiness need confirmation | Internal validation only |
+
+## Layer Coverage
+
+| Layer | Current Posture | Launch Decision |
+| --- | --- | --- |
+| Federal Davis-Bacon | Strong baseline: WH-347, wage determination pinning, source payroll traceability, statement of compliance, and audit packet support | Customer use when project facts are federal and contractor review remains final |
+| California state | Production pilot rehearsal complete; real contractor UAT still required before broad production use | Primary production proving ground |
+| Other configured states | Controlled pilots or internal validation only | Use the pilot queue below; do not market as generally available |
+| Local ordinances | Review overlay only unless a specific ordinance has been configured and tested | Keep local requirements visible as review items; never silently certify unconfigured local rules |
 
 ## State-Ready Definition
 
@@ -103,7 +114,7 @@ For each state, create a validation note with:
 
 ## Recommended Next Work
 
-1. Complete CA production pilot and fix any field findings.
+1. Run the real-contractor CA production pilot and fix any field findings from `docs/PILOT_UAT.md`.
 2. Run WA and NY pilots next because they have meaningful agency-specific workflows.
 3. Run IL, MA, and NJ pilots after WA/NY.
 4. Keep TX positioned as a federal Davis-Bacon market first unless a project has local/state-specific reporting requirements.

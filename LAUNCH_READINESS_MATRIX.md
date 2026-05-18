@@ -27,9 +27,9 @@ Initial launch/demo readiness is for construction contractors managing known pub
 | Contractor owner | Know if every active public job is compliant | Dashboard shows projects, compliance status, missing payrolls, evidence gaps, and next actions | Strong | Next-action queue now prioritizes violations, overdue payroll, setup gaps, and sub CPR follow-up |
 | Payroll clerk | Enter/import weekly payroll correctly | Worker/classification setup, daily ST/OT/DT, fringe/deduction capture, copy previous week, import mapping | Strong | Weekly page now has a readiness card; remaining polish is state-specific submit wording |
 | Project manager | See project readiness fast | Project page shows workflow progress, workers, payroll weeks, forms, audit/evidence | Strong | Project readiness panel now points to workers, payroll, violations, and evidence |
-| Field supervisor | Capture jobsite proof | GPS time punches, project/week photos, field evidence counts | Partial | Evidence is measured by week; mobile field capture still needs dedicated QA/polish |
-| Subcontractor | Submit CPRs without confusion | Token upload portal and subcontractor CPR tracking | Partial | Need subcontractor launch flow review and status messaging |
-| Auditor/agency/prime | Review proof quickly | Audit trail, CSV, evidence packet JSON/CSV, immutable records | Strong | By-week completeness exists; packet preview filters remain future polish |
+| Field supervisor | Capture jobsite proof | GPS time punches, project/week photos, field evidence counts, source/review labels | Strong | Native employee app remains future expansion; PWA field flow still needs pilot QA |
+| Subcontractor | Submit CPRs without confusion | Token upload portal, CPR tracking, operational statuses, safe reminder language | Strong | External email delivery depends on configured Resend credentials |
+| Auditor/agency/prime | Review proof quickly | Audit trail, CSV, evidence packet JSON/CSV, immutable records, manifest, packet preview filters | Strong | Agency portal handoff profiles remain future polish |
 | API/integration user | Pull project/compliance data safely | Scoped API keys, per-key rate limits, OpenAPI, violation breakdowns | Strong | Evidence packet is app-session only; public API evidence endpoints can be future enhancement |
 
 ## Contractor Workflow Matrix
@@ -44,7 +44,7 @@ Initial launch/demo readiness is for construction contractors managing known pub
 | Import payroll | Reduce duplicate data entry | Provider import and persistent mapping | Import preview should clearly show mapped/unmapped workers, rate/classification risks, and corrections | Strong |
 | Calculate compliance | Catch underpayment before submission | Wage, OT, deduction, apprenticeship, violation breakdown logic | Every violation must explain cause, fix, and estimated dollar impact where possible | Strong |
 | Submit certified payroll | Produce agency-ready documents | WH-347 and multiple state exports/submission tracking | "Submit this week" flow should list exact export needed by project state/agency | Partial |
-| Track subcontractors | Keep prime/sub compliance organized | Sub CPR tracking and public upload portal | Prime view must show missing/late sub payrolls by week | Partial |
+| Track subcontractors | Keep prime/sub compliance organized | Sub CPR tracking, public upload portal, operation statuses, and project queue | Prime view must show missing/late/rejected/corrected/approved sub payrolls by week | Strong |
 | Capture evidence | Prove jobsite/payroll facts | Photos, GPS punches, audit trail, evidence dashboard | Evidence must be measured by week and tied to payroll submissions | Strong |
 | Export audit packet | Respond to agency/prime quickly | JSON/CSV evidence packet exists | Packet should have UI preview, filters, and by-week completeness | Strong |
 | Monitor across company | Know what needs attention today | Dashboards/reports exist | Owner dashboard should rank overdue payrolls, active violations, evidence gaps, and upcoming deadlines | Strong |
@@ -58,7 +58,7 @@ Initial launch/demo readiness is for construction contractors managing known pub
 | Certified payroll forms | Contractor can generate the required federal/state output | Strong multi-state form/export foundation | B2Gnow/eComply and payroll vendors compete here | Add project-specific "required forms" checklist |
 | Evidence readiness | Contractor knows what proof is missing before an audit | Evidence dashboard, by-week completeness, and packet exports now exist | Enterprise tools emphasize audit trails and reports | Add richer packet preview if customer discovery asks for it |
 | Field workflow | Supervisor can capture time/photos from phone | GPS/photos exist, field UX still needs polish | Knowify and others emphasize jobsite time tracking | Make field capture a mobile-first flow |
-| Public API/integrations | Contractor can connect data to other systems | Strong `/v1` read API, OpenAPI, webhooks | Enterprise platforms integrate broadly | Add public evidence summary endpoint later if customers ask |
+| Public API/integrations | Contractor can connect data to other systems | Strong `/v1` read API, OpenAPI, webhooks, integration readiness endpoint | Enterprise platforms integrate broadly | Validate live QuickBooks/Procore credentials during pilot |
 | Subcontractor management | Prime can chase missing sub CPRs | Portal, tracking, and project CPR queue exist | B2Gnow/eComply is strong with vendor compliance | Add reminder/resend actions |
 | Confidence/reporting | Owner gets a clear pass/fail view | Reports, action queue, evidence packets, and readiness panels exist | B2Gnow/eComply has broad reporting | Run manual role-based QA |
 
@@ -76,8 +76,8 @@ These are the items that should be true before positioning the product as the ea
 | P0 | Evidence completeness by week | Audits happen by payroll period, not just project aggregate | Done | Audit/UI |
 | P0 | Subcontractor missing CPR queue | Primes need an operational list, not buried records | Done | Subcontractor/UI |
 | P1 | Launch QA scripts for every role | Automated tests do not replace contractor workflow QA | Drafted | QA/Product |
-| P1 | Updated competitor scorecard | Sales/roadmap should reflect current product, not baseline | Partial | Product |
-| P1 | Mobile field capture polish | Field supervisors need fast proof capture | Partial | Frontend |
+| P1 | Updated competitor scorecard | Sales/roadmap should reflect current product, not baseline | Done | Product |
+| P1 | Mobile field capture polish | Field supervisors need fast proof capture | Strong | Frontend |
 | P1 | Empty/loading/error polish on core pages | Trust depends on clean UX under real conditions | Partial | Frontend |
 | P1 | Import correction workflow | Payroll imports must be safe and understandable | Partial | Payroll/UI |
 
@@ -143,15 +143,15 @@ These are the items that should be true before positioning the product as the ea
 
 ## Launch Decision
 
-**Current readiness:** Ready for internal demo and investor walkthrough with the seeded contractor account. Not ready to call production launch complete until live third-party credentials, production hosting configuration, and a human contractor/payroll validation pass are finished.  
-**Engineering foundation:** Strong. Production build passes, the demo seed runs, targeted role/audit/wage/import/integration/subcontractor tests pass, and the main browser demo path is clean after login.  
-**Main remaining gap:** External validation and live-service setup, not core engineering logic: confirm real QuickBooks/Procore/SAM/Resend credentials, then run contractor workflow QA with a non-technical payroll user.
+**Current readiness:** Ready for internal demo, investor walkthrough, and California production-pilot rehearsal with the seeded contractor account. Not ready to call production launch complete until the California pilot is completed with realistic data, live third-party credentials are validated where used, production hosting configuration is locked, and a human contractor/payroll validation pass is finished.  
+**Engineering foundation:** Strong. Production build passes, the demo seed runs, targeted role/audit/wage/import/integration/subcontractor/field tests pass, evidence packets include a manifest, and the main browser demo path is clean after login.  
+**Main remaining gap:** Pilot validation and live-service setup, not core engineering logic: confirm real QuickBooks/Procore/SAM/Resend credentials or document import fallback, then run contractor workflow QA with a non-technical payroll user.
 
 **Recommended next build sequence:**
 
 1. Mobile-width QA for dashboard, project, payroll, field photo, and subcontractor CPR screens.
 2. Live sandbox test for QuickBooks and Procore OAuth/imports once credentials are available.
-3. Production environment setup: real `JWT_SECRET`, `ENCRYPTION_KEY_V1`, `SAMGOV_API_KEY`, `RESEND_API_KEY`, domain/CORS/APP_URL, and hosting storage paths.
+3. Production environment setup: real `JWT_SECRET`, `ENCRYPTION_KEY_V1`, `SAM_GOV_API_KEY`, `RESEND_API_KEY`, domain/CORS/APP_URL, and hosting storage paths.
 4. Human contractor/payroll test using the demo script.
 5. State-specific required-form wording pass after the first external tester feedback.
 
