@@ -8,7 +8,21 @@ import { payrollEntries, payrollWeeks, workers, projects } from '../db/schema.js
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
-import { sendSubmissionConfirmationEmail } from '../services/emailService.js';
+import { sendSubmissionConfirmationEmail, sendEmail } from '../services/emailService.js';
+import { computeCompliance } from '../services/complianceService.js';
+import { readFileSync } from 'fs';
+import path from 'path';
+
+// Load violation-alert template at module init (fail-safe: empty string if missing)
+let violationTemplate = '';
+try {
+  violationTemplate = readFileSync(
+    path.join(process.cwd(), 'src/server/email/templates/violation-alert.html'),
+    'utf8',
+  );
+} catch {
+  console.warn('[payroll] violation-alert.html template not found — violation alert emails disabled');
+}
 import { deliverWebhook, WEBHOOK_EVENT_PAYROLL_WEEK_CREATED } from '../services/webhookService.js';
 import {
   createPayrollWeek,
@@ -32,6 +46,29 @@ import {
 
 const router = Router();
 router.use(requireAuth);
+
+// ── Violation alert helper — fire-and-forget after entry save ─────────────
+// Only fires when APP_URL is set (skips in test environments).
+function maybeSendViolationAlert(weekId: string, projectId: string, ownerEmail: string, projectName: string, weekEndingDate: string) {
+  if (!violationTemplate || !process.env.APP_URL) return;
+  computeCompliance(getDb() as any, weekId).then(result => {
+    if (!result) return;
+    const total = result.violations.length + result.weekViolations.length + result.deductionViolations.length;
+    if (total === 0) return;
+    const allViolations = [
+      ...result.violations.map(v => v.workerName + ': ' + v.violationType),
+      ...result.weekViolations.map(wv => wv.detail),
+      ...result.deductionViolations.map(dv => dv.workerName + ': excessive deductions'),
+    ];
+    const weekUrl = `${process.env.APP_URL}/projects/${projectId}/payroll/${weekId}`;
+    const violationHtml = violationTemplate
+      .replace('{{projectName}}', projectName)
+      .replace('{{weekEnding}}', weekEndingDate)
+      .replace('{{violationList}}', allViolations.map(v => `<li>${v}</li>`).join(''))
+      .replace('{{weekUrl}}', weekUrl);
+    sendEmail(ownerEmail, `[${projectName}] Compliance issue detected`, violationHtml).catch(() => {});
+  }).catch(() => {});
+}
 
 // ── Zod Schemas ───────────────────────────────────────────────────────────
 
@@ -327,6 +364,15 @@ router.post('/entries', validate(UpsertEntrySchema), async (req, res) => {
     workerName,
     payrollNumber: week.payrollNumber,
   });
+
+  // Fire violation alert email (non-blocking, best-effort)
+  try {
+    const [projectRow] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, week.projectId)).limit(1);
+    if (projectRow && week.weekEndingDate) {
+      maybeSendViolationAlert(body.payrollWeekId, week.projectId, req.user!.email, projectRow.name, week.weekEndingDate);
+    }
+  } catch { /* best-effort */ }
+
   res.status(201).json({ id: entry?.id ?? null });
 });
 
@@ -376,6 +422,14 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
     workerName: workerNamePut,
     payrollNumber: week.payrollNumber,
   });
+
+  // Fire violation alert email (non-blocking, best-effort)
+  try {
+    const [projectRow] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, week.projectId)).limit(1);
+    if (projectRow && week.weekEndingDate) {
+      maybeSendViolationAlert(body.payrollWeekId, week.projectId, req.user!.email, projectRow.name, week.weekEndingDate);
+    }
+  } catch { /* best-effort */ }
 
   if (!entry) {
     // Fallback: fetch the entry via the payroll week id after upsert

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { sendSupportForward } from '../services/emailService.js';
 
 const router = Router();
 
@@ -15,8 +16,9 @@ router.post('/', async (req, res) => {
   if (!parsed.success) {
     return res.status(422).json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues });
   }
-  // Log the contact request (email delivery configured in Phase 151-03)
+  // Log the contact request and forward to support inbox (non-blocking)
   console.log('[contact]', parsed.data.email, parsed.data.subject ?? '(no subject)');
+  sendSupportForward(parsed.data.email, parsed.data.name, parsed.data.subject ?? '', parsed.data.message).catch(() => {});
   return res.json({ success: true });
 });
 
