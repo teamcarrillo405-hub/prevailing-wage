@@ -221,7 +221,23 @@ router.post('/weeks', validate(CreateWeekSchema), async (req, res) => {
     return;
   }
 
-  const result = await createPayrollWeek(body);
+  let result: Awaited<ReturnType<typeof createPayrollWeek>>;
+  try {
+    result = await createPayrollWeek(body);
+  } catch (err: any) {
+    if (
+      err?.message?.includes('UNIQUE constraint failed') ||
+      err?.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+      err?.code === 'SQLITE_CONSTRAINT'
+    ) {
+      res.status(409).json({
+        error: 'DUPLICATE_PAYROLL_NUMBER',
+        message: 'A payroll week with this payroll number already exists for this project.',
+      });
+      return;
+    }
+    throw err;
+  }
 
   // Fire webhook (non-blocking)
   void deliverWebhook(userId, WEBHOOK_EVENT_PAYROLL_WEEK_CREATED, {
