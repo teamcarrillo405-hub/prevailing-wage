@@ -11,6 +11,7 @@ import {
   workerClassifications,
   payrollWeekClassifications,
   projects,
+  complianceCache,
 } from '../db/schema.js';
 import { getCachedWd, getCachedClassifications, getPinnedWdsForProject } from './wageCache.js';
 import { lookupWageDetermination } from './wageLookup.js';
@@ -580,6 +581,23 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
       }
     } catch (err) {
       logger.error({ err: err }, '[email] NOTIF-03 payroll entry activity notification failed:');
+    }
+  }
+
+  // Invalidate compliance cache for this week — ensures next getBatchProjectCompliance
+  // call re-computes fresh results after this entry change (PERF-01).
+  if (notifWeek) {
+    try {
+      await db
+        .delete(complianceCache)
+        .where(
+          and(
+            eq(complianceCache.projectId, notifWeek.projectId),
+            eq(complianceCache.weekId, input.payrollWeekId),
+          ),
+        );
+    } catch {
+      // Cache invalidation failure is non-fatal
     }
   }
 

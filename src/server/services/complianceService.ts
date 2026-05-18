@@ -4,7 +4,7 @@
 // frozen snapshots. No live WD lookups — only snapshot columns.
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray, gt } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
 import { getDb } from '../db/index.js';
 import { getPayrollWeek, getPayrollEntries, listPayrollWeeks } from './payrollService.js';
@@ -264,22 +264,18 @@ export async function computeCompliance(
   // project/jurisdiction records.
   const deductionViolations = detectDeductionViolations(rows);
 
-  // 4. Apprentice ratio check (COMP-03) — per (trade, date) daily check
+  // 4. Apprentice ratio check (COMP-03) — per day daily check
   const weekViolations: WeekViolation[] = [];
 
-  // Registration check and daily group accumulation
-  // Group entries by (trade, workDate) to check ratio per day per trade.
-  // workDate is derived from the entry's week: Mon=weekEndingDate-6, Tue=weekEndingDate-5, etc.
-  // For simplicity, we use a synthetic key that captures per-day presence.
-  // Since entries don't store workDate directly, we iterate per day-of-week column.
+  // Group entries by day-of-week to check apprentice:journeyworker ratio per day.
+  // Since entries don't store a workDate column, we iterate per day-of-week column.
   const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
-  // Map key: `${trade}::${dayKey}` → { journeyworker: count, apprentice: count }
-  const dayTradeGroups = new Map<string, { journeyworker: number; apprentice: number; apprenticeRate: number }>();
+  // Map key: dayKey → { journeyworker: worker count, apprentice: worker count }
+  const dayGroups = new Map<string, { journeyworker: number; apprentice: number }>();
 
   for (const row of rows) {
     const e = row.entry;
-    const trade = row.tradeDescription ?? 'unknown';
 
     for (const day of DAY_KEYS) {
       const stField = `${day}St` as keyof typeof e;
@@ -288,15 +284,13 @@ export async function computeCompliance(
       const dayHours = ((e[stField] as number) ?? 0) + ((e[otField] as number) ?? 0) + ((e[dtField] as number) ?? 0);
       if (dayHours === 0) continue;
 
-      const key = `${trade}::${day}`;
-      const grp = dayTradeGroups.get(key) ?? { journeyworker: 0, apprentice: 0, apprenticeRate: e.baseRateSnapshot };
+      const grp = dayGroups.get(day) ?? { journeyworker: 0, apprentice: 0 };
       if (row.laborType === 'journeyworker' || row.laborType === 'foreman') {
         grp.journeyworker++;
       } else if (row.laborType === 'apprentice') {
         grp.apprentice++;
-        grp.apprenticeRate = e.baseRateSnapshot;
       }
-      dayTradeGroups.set(key, grp);
+      dayGroups.set(day, grp);
     }
 
     // Apprentice registration check
@@ -314,21 +308,19 @@ export async function computeCompliance(
     }
   }
 
-  // COMP-03: daily per-(trade, day) apprentice ratio — 1:3 allowed
-  const allowedRatio = 1 / 3; // 1 apprentice per 3 journeyworkers
-  for (const [key, grp] of dayTradeGroups) {
+  // COMP-03: daily apprentice ratio — 1 apprentice per 3 journeyworkers
+  const allowedRatio = 1 / 3;
+  for (const [day, grp] of dayGroups) {
     if (grp.journeyworker === 0) continue;
     const ratio = grp.apprentice / grp.journeyworker;
     if (ratio > allowedRatio) {
-      const [trade, day] = key.split('::');
       weekViolations.push({
         violationType: 'apprentice-ratio-daily',
-        detail: `Apprentice ratio exceeded on ${day} for ${trade}: ${grp.apprentice} apprentice(s) to ${grp.journeyworker} journeyworker(s)`,
+        detail: `Apprentice ratio exceeded on ${day}: ${grp.apprentice} apprentice(s) to ${grp.journeyworker} journeyworker(s)`,
         apprenticeHours: grp.apprentice,
         journeyworkerHours: grp.journeyworker,
         maxAllowedApprenticeHours: grp.journeyworker * allowedRatio,
-        trade,
-      } as WeekViolation);
+      });
     }
   }
 
@@ -388,7 +380,7 @@ export async function computeCompliance(
     deductionViolations,
   });
 
-  return {
+  const result: ComplianceResult = {
     weekId,
     projectId: week.projectId,
     violations,
@@ -401,6 +393,34 @@ export async function computeCompliance(
       ['cwhssa-ot', 'weekly-ot', 'multi-classification-ot', 'ca-daily-ot', 'ca-daily-dt'].includes(v.violationType),
     ),
   };
+
+  // Write-through cache — store compliance result for 5-min TTL reads in getBatchProjectCompliance
+  try {
+    const totalViolations = countComplianceViolations(result);
+    const hasCritical = violations.some(v =>
+      ['under-wage', 'cwhssa-ot', 'weekly-ot', 'multi-classification-ot'].includes(v.violationType),
+    ) ? 1 : 0;
+    await db.insert(schema.complianceCache).values({
+      projectId: week.projectId,
+      weekId,
+      computedAt: Date.now(),
+      violationCount: totalViolations,
+      hasCritical,
+      violationsJson: JSON.stringify({ violations, weekViolations }),
+    }).onConflictDoUpdate({
+      target: [schema.complianceCache.projectId, schema.complianceCache.weekId],
+      set: {
+        computedAt: Date.now(),
+        violationCount: totalViolations,
+        hasCritical,
+        violationsJson: JSON.stringify({ violations, weekViolations }),
+      },
+    });
+  } catch {
+    // Cache write failure is non-fatal — compliance result is still returned
+  }
+
+  return result;
 }
 
 // ── Batch Project Compliance (DASH-05) ───────────────────────────────────
@@ -412,6 +432,8 @@ export interface BatchProjectSummary {
   /** ISO 8601 week ending dates for unsubmitted weeks (for due-this-week calc) */
   unsubmittedWeekEndingDates: string[];
 }
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function getBatchProjectCompliance(
   db: BetterSQLite3Database<typeof schema>,
@@ -427,6 +449,38 @@ export async function getBatchProjectCompliance(
 
   const result = new Map<string, BatchProjectSummary>();
 
+  // Pre-load cache for all active project IDs — single query to avoid N+1
+  const activeProjectIds = allProjects
+    .filter(p => p.status !== 'closed')
+    .map(p => p.id);
+
+  const cacheHitMap = new Map<string, { violationCount: number; hasCritical: number }>();
+  if (activeProjectIds.length > 0) {
+    try {
+      const cacheRows = await db
+        .select()
+        .from(schema.complianceCache)
+        .where(
+          and(
+            inArray(schema.complianceCache.projectId, activeProjectIds),
+            gt(schema.complianceCache.computedAt, Date.now() - CACHE_TTL_MS),
+          ),
+        );
+
+      for (const row of cacheRows) {
+        const existing = cacheHitMap.get(row.projectId);
+        if (existing) {
+          existing.violationCount += row.violationCount;
+          existing.hasCritical = existing.hasCritical || row.hasCritical;
+        } else {
+          cacheHitMap.set(row.projectId, { violationCount: row.violationCount, hasCritical: row.hasCritical });
+        }
+      }
+    } catch {
+      // Cache read failure is non-fatal — fall through to live computation
+    }
+  }
+
   for (const project of allProjects) {
     if (project.status === 'closed') {
       result.set(project.id, { status: 'archived', violationCount: 0, unsubmittedWeekEndingDates: [] });
@@ -440,16 +494,54 @@ export async function getBatchProjectCompliance(
       continue;
     }
 
-    let hasViolations = false;
-    let violationCount = 0;
     const unsubmittedWeekEndingDates: string[] = [];
-
     for (const week of weeks) {
-      // Track unsubmitted week ending dates for due-this-week computation
       if (!week.submittedAt) {
         unsubmittedWeekEndingDates.push(week.weekEndingDate);
       }
+    }
 
+    // Check if all weeks for this project have fresh cache hits
+    const weekIds = weeks.map(w => w.id);
+    let freshCacheRowCount = 0;
+    let cachedViolationCount = 0;
+    let cachedHasCritical = false;
+    try {
+      const weekCacheRows = await db
+        .select()
+        .from(schema.complianceCache)
+        .where(
+          and(
+            eq(schema.complianceCache.projectId, project.id),
+            inArray(schema.complianceCache.weekId, weekIds),
+            gt(schema.complianceCache.computedAt, Date.now() - CACHE_TTL_MS),
+          ),
+        );
+
+      freshCacheRowCount = weekCacheRows.length;
+      for (const row of weekCacheRows) {
+        cachedViolationCount += row.violationCount;
+        if (row.hasCritical) cachedHasCritical = true;
+      }
+    } catch {
+      freshCacheRowCount = 0;
+    }
+
+    if (freshCacheRowCount === weekIds.length) {
+      // All weeks are cached and fresh — skip live computation
+      result.set(project.id, {
+        status: cachedViolationCount > 0 ? 'violations' : 'compliant',
+        violationCount: cachedViolationCount,
+        unsubmittedWeekEndingDates,
+      });
+      continue;
+    }
+
+    // Fall back to live computation (populates cache as a side effect)
+    let hasViolations = false;
+    let violationCount = 0;
+
+    for (const week of weeks) {
       const compliance = await computeCompliance(db, week.id);
       if (compliance?.hasViolations === true) {
         hasViolations = true;
