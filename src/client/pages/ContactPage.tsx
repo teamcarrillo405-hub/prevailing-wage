@@ -1,9 +1,10 @@
 // src/client/pages/ContactPage.tsx
 // Route: /contact — public, no auth required.
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Clock, Shield } from 'lucide-react';
+import { Mail, Clock, Shield, CheckCircle, Loader2 } from 'lucide-react';
+import { api } from '../lib/api';
 
 const US_STATES = [
   'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado',
@@ -34,6 +35,10 @@ export function ContactPage() {
     state: '',
     message: '',
   });
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -42,15 +47,28 @@ export function ContactPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const subject = encodeURIComponent(
-      `PrevWage Inquiry — ${form.company || form.name} (${form.state || 'State not specified'})`
-    );
-    const body = encodeURIComponent(
-      `Name: ${form.name}\nCompany: ${form.company}\nEmail: ${form.email}\nState: ${form.state}\n\nMessage:\n${form.message}`
-    );
-    window.location.href = `mailto:support@prevwage.com?subject=${subject}&body=${body}`;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const subject = `PrevWage Inquiry — ${form.company || form.name} (${form.state || 'State not specified'})`;
+      await api.post('/contact', {
+        name: form.name,
+        email: form.email,
+        message: form.message,
+        subject,
+      });
+      setSubmitted(true);
+    } catch {
+      setError('Something went wrong. Please try again or email support@prevwage.com directly.');
+    } finally {
+      setSubmitting(false);
+      submittingRef.current = false;
+    }
   }
 
   const inputCls =
@@ -115,103 +133,123 @@ export function ContactPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-8 font-headline">
               Send us a message
             </h2>
-            <form onSubmit={handleSubmit} noValidate className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+            {submitted ? (
+              <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-6 text-center">
+                <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-3" />
+                <p className="font-headline text-lg text-green-400">Message received</p>
+                <p className="text-sm text-surface-muted mt-1">We'll respond within 1 business day.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} noValidate className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
+                      Full name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      required
+                      autoComplete="name"
+                      placeholder="Maria Gonzalez"
+                      value={form.name}
+                      onChange={handleChange}
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="company" className="block text-sm font-semibold text-gray-700 mb-2">
+                      Company
+                    </label>
+                    <input
+                      id="company"
+                      name="company"
+                      type="text"
+                      autoComplete="organization"
+                      placeholder="Acme Construction Co."
+                      value={form.company}
+                      onChange={handleChange}
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-                    Full name <span className="text-red-500">*</span>
+                  <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Work email <span className="text-red-500">*</span>
                   </label>
                   <input
-                    id="name"
-                    name="name"
-                    type="text"
+                    id="email"
+                    name="email"
+                    type="email"
                     required
-                    autoComplete="name"
-                    placeholder="Maria Gonzalez"
-                    value={form.name}
+                    autoComplete="email"
+                    placeholder="you@company.com"
+                    value={form.email}
                     onChange={handleChange}
                     className={inputCls}
                   />
                 </div>
+
                 <div>
-                  <label htmlFor="company" className="block text-sm font-semibold text-gray-700 mb-2">
-                    Company
+                  <label htmlFor="state" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Which state(s) are you working in?
                   </label>
-                  <input
-                    id="company"
-                    name="company"
-                    type="text"
-                    autoComplete="organization"
-                    placeholder="Acme Construction Co."
-                    value={form.company}
+                  <select
+                    id="state"
+                    name="state"
+                    value={form.state}
+                    onChange={handleChange}
+                    className={inputCls}
+                  >
+                    <option value="">Select a state...</option>
+                    {US_STATES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Message <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    required
+                    rows={5}
+                    placeholder="Tell us about your project, current process, or specific compliance questions..."
+                    value={form.message}
                     onChange={handleChange}
                     className={inputCls}
                   />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Work email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="you@company.com"
-                  value={form.email}
-                  onChange={handleChange}
-                  className={inputCls}
-                />
-              </div>
+                {error && (
+                  <p className="text-sm text-red-600">{error}</p>
+                )}
 
-              <div>
-                <label htmlFor="state" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Which state(s) are you working in?
-                </label>
-                <select
-                  id="state"
-                  name="state"
-                  value={form.state}
-                  onChange={handleChange}
-                  className={inputCls}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-nav-dark text-white font-semibold py-4 rounded-xl hover:bg-nav-dark/90 transition-colors text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <option value="">Select a state...</option>
-                  {US_STATES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Message <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  required
-                  rows={5}
-                  placeholder="Tell us about your project, current process, or specific compliance questions..."
-                  value={form.message}
-                  onChange={handleChange}
-                  className={inputCls}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-nav-dark text-white font-semibold py-4 rounded-xl hover:bg-nav-dark/90 transition-colors text-sm"
-              >
-                Send message
-              </button>
-              <p className="text-xs text-gray-400 text-center">
-                This opens your email client with your message pre-filled.
-                We respond within one business day.
-              </p>
-            </form>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    'Send message'
+                  )}
+                </button>
+                <p className="text-xs text-gray-400 text-center">
+                  We respond within one business day.
+                </p>
+              </form>
+            )}
           </div>
 
           {/* Sidebar */}
