@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, TrendingUp, Download, FileText, ShieldAlert, ClipboardCheck, Grid2X2, List, ArrowRight, X } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Download, FileText, ShieldAlert, ClipboardCheck, Grid2X2, List, ArrowRight, X, CheckCircle, Search } from 'lucide-react';
+import { useAuthContext } from '../contexts/AuthContext';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -184,7 +185,20 @@ function AnalyticsActionCard({
   );
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getDisplayName(companyName: string | null | undefined, email: string): string {
+  if (companyName) return companyName.split(' ')[0] ?? companyName;
+  return email.split('@')[0] ?? 'there';
+}
+
 export function DashboardPage() {
+  const { user } = useAuthContext();
   const [showForm, setShowForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(
@@ -488,6 +502,19 @@ export function DashboardPage() {
   }
   const primaryTodayAction = urgentContractorActions[0] ?? contractorActions[0] ?? null;
   const readyProjectCount = projects.filter((project) => summaryMap.get(project.id) === 'compliant').length;
+
+  // Today lane chips — derived from contractorActions
+  const todayItems = useMemo(() => {
+    const items: Array<{ id: string; label: string; url: string; urgency: 'error' | 'warning' }> = [];
+    for (const action of contractorActions) {
+      const urgency: 'error' | 'warning' =
+        action.priority === 'critical' || action.type === 'violation' || action.type === 'subcontractor_cpr'
+          ? 'error'
+          : 'warning';
+      items.push({ id: action.id, label: action.label, url: action.to, urgency });
+    }
+    return items.slice(0, 8); // cap at 8 chips so the row stays scrollable
+  }, [contractorActions]);
   const highVarianceTradeCount = economicData?.data?.wageVarianceByTrade.filter((row) => row.deviation > 5).length ?? 0;
   const apprenticeGapCount = economicData?.data?.apprenticeshipProgress.filter((row) => row.gap > 0).length ?? 0;
   const overtimeProjectCount = economicData?.data?.overtimeExposure.length ?? 0;
@@ -527,52 +554,80 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Premium dark hero — replaces photo background strip */}
-      <div
-        className="dashboard-bg relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 -mt-8 pt-5 pb-5 mb-8 overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #09090b 0%, #18181b 55%, #111111 100%)' }}
-      >
-        {/* Dot-grid texture */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)',
-            backgroundSize: '24px 24px',
-          }}
-          aria-hidden="true"
-        />
-        {/* Gold ambient glow */}
-        <div
-          className="absolute -top-20 right-1/3 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(245,197,24,0.08) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold text-brand-gold uppercase tracking-widest mb-3">
-              HCC Prevailing Wage
-            </p>
-            <h1 className="font-headline text-3xl sm:text-4xl text-white mb-2 leading-tight">
-              Project Command Center
-            </h1>
-            <p className="hidden sm:block text-sm text-gray-400 max-w-md">
-              Start with today's blockers, then open the project that needs payroll, rates, evidence, or export work.
-            </p>
-          </div>
-          <div className="flex flex-col items-start sm:items-end gap-3">
-            {!isLoading && projects.length > 0 && (
-              <a
-                href="/api/export/compliance-summary"
-                download="compliance-summary.pdf"
-                className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-300 transition-colors hover:text-brand-gold"
-              >
-                Download Summary PDF
-              </a>
-            )}
-          </div>
+      {/* Compact greeting bar */}
+      <div className="flex items-center justify-between px-0 py-3 border-b border-border-default mb-4">
+        <div>
+          <h1 className="font-headline text-xl text-text-primary">
+            {getGreeting()}, {getDisplayName(user?.companyName, user?.email ?? '')}
+          </h1>
+          <p className="text-xs text-text-secondary">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="inline-flex min-h-10 items-center justify-center rounded-md bg-brand-gold px-4 text-sm font-semibold text-black hover:opacity-90"
+        >
+          + New Project
+        </button>
       </div>
+
+      {/* Today lane — horizontal action chips */}
+      <div className="flex gap-2 overflow-x-auto px-0 py-3 scrollbar-hide border-b border-border-default mb-6" style={{ scrollbarWidth: 'none' }}>
+        {todayItems.length === 0 ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-700 text-xs font-medium whitespace-nowrap">
+            <CheckCircle className="h-3.5 w-3.5" /> All clear — no blocking actions
+          </span>
+        ) : (
+          todayItems.map(item => (
+            <Link
+              key={item.id}
+              to={item.url}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap ${
+                item.urgency === 'error'
+                  ? 'bg-red-500/10 border-red-500/20 text-red-700'
+                  : 'bg-amber-500/10 border-amber-500/20 text-amber-700'
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))
+        )}
+        {!isLoading && projects.length > 0 && (
+          <a
+            href="/api/export/compliance-summary"
+            download="compliance-summary.pdf"
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-default text-xs font-medium whitespace-nowrap text-text-secondary hover:text-text-primary hover:border-brand-gold"
+          >
+            <Download className="h-3 w-3" /> Summary PDF
+          </a>
+        )}
+      </div>
+
+      {/* 4-metric stats cards */}
+      {!isLoading && projects.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {[
+            { label: 'Active Projects', value: activeProjectCount },
+            {
+              label: 'Compliance Rate',
+              value: (() => {
+                const total = projects.length;
+                const compliant = readyProjectCount;
+                return total > 0 ? `${Math.round((compliant / total) * 100)}%` : '—';
+              })(),
+            },
+            { label: 'Open Violations', value: totalViolations },
+            { label: 'Due This Week', value: dueSoonCount },
+          ].map(stat => (
+            <div key={stat.label} className="bg-surface-card rounded-lg border border-border-default p-3 shadow-card">
+              <p className="text-xs text-text-secondary">{stat.label}</p>
+              <p className="font-headline text-2xl text-text-primary mt-1">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className={projects.length > 0 ? 'grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]' : 'space-y-6'}>
         {projects.length > 0 && (
@@ -971,14 +1026,17 @@ export function DashboardPage() {
           </div>
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
             <label className="sr-only" htmlFor="project-search">Search projects</label>
-            <input
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
+              <input
               id="project-search"
               type="text"
               value={inputValue}
               onChange={handleSearchChange}
               placeholder="Search projects..."
-              className="text-base border border-border-default rounded-xl px-3.5 py-3 bg-white text-text-primary placeholder:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold w-full sm:w-56 shadow-card min-h-[44px]"
+              className="text-base border border-border-default rounded-xl pl-9 pr-3.5 py-3 bg-white text-text-primary placeholder:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold w-full shadow-card min-h-[44px]"
             />
+            </div>
             <label className="sr-only" htmlFor="funding-filter">Funding filter</label>
             <select
               id="funding-filter"
@@ -1165,6 +1223,11 @@ export function DashboardPage() {
           ))}
         </div>
       )}
+
+      {/* TODO: Activity feed — wire when /api/dashboard returns an `activity` array
+          Expected shape: Array<{ id: string; relativeTime: string; description: string }>
+          Render the last 10 events here once the server adds audit event aggregation.
+      */}
 
       {/* DASH-04 / TRUST-02: Economic Impact Section */}
       {economicData?.data && projects.length > 0 && (
