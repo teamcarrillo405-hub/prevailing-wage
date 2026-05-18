@@ -1,9 +1,9 @@
 // src/client/pages/ReportsPage.tsx
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect, type KeyboardEvent } from 'react';
 import { cn } from '../lib/utils';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, TrendingUp, PieChart, Download, Printer, Shield, HardHat } from 'lucide-react';
+import { ClipboardCheck, FileText, TrendingUp, PieChart, Download, Printer, Shield, HardHat } from 'lucide-react';
 import { ApprenticeshipDashboard } from '../components/ApprenticeshipDashboard';
 import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -53,12 +53,18 @@ interface Worker {
 // ---- Helpers ----
 
 function formatCurrency(value: number | null): string {
-  if (value === null || value === undefined) return '—';
+  if (value === null || value === undefined) return 'Not set';
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 }
 
 function formatDate(isoDate: string): string {
   return isoDate.slice(0, 10);
+}
+
+function toggleOnEnterOrSpace(event: KeyboardEvent<HTMLElement>, action: () => void) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  action();
 }
 
 // ---- Report card wrapper ----
@@ -76,17 +82,24 @@ function ReportCard({ icon, title, description, active, onClick }: ReportCardPro
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left rounded-card border p-5 transition-all duration-150 space-y-2',
+        'flex min-h-[96px] w-full items-stretch rounded-sm border p-3 text-left transition-all duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2',
         active
-          ? 'border-brand-gold bg-brand-gold/5 shadow-card-elevated'
-          : 'border-border-default bg-surface-card shadow-card hover:shadow-card-elevated hover:-translate-y-0.5'
+          ? 'border-brand-gold bg-brand-gold/10'
+          : 'border-border-default bg-white hover:border-brand-gold/60 hover:bg-gray-50'
       )}
     >
-      <div className="w-10 h-10 rounded-lg bg-surface-muted border border-border-subtle flex items-center justify-center text-text-secondary mb-3">
-        {icon}
+      <div className="flex items-start gap-3">
+        <div className={cn(
+          'mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border',
+          active ? 'border-brand-gold bg-brand-gold text-black' : 'border-border-subtle bg-surface-muted text-text-secondary'
+        )}>
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="font-headline text-sm text-text-primary">{title}</p>
+          <p className="mt-1 text-sm leading-relaxed text-text-secondary">{description}</p>
+        </div>
       </div>
-      <p className="font-headline text-sm text-text-primary">{title}</p>
-      <p className="text-xs text-text-secondary leading-relaxed">{description}</p>
     </button>
   );
 }
@@ -257,35 +270,44 @@ export function ReportsPage() {
   const REPORT_CARDS = [
     {
       key: 'fringe' as const,
+      group: 'Payroll review',
       icon: <FileText className="w-4 h-4" />,
       title: 'Fringe Benefit Summary',
       description: 'Total fringe credits earned per worker across all payroll weeks — ST hours, OT hours, and cumulative fringe totals.',
     },
     {
       key: 'payHistory' as const,
+      group: 'Payroll review',
       icon: <TrendingUp className="w-4 h-4" />,
       title: 'Pay History',
       description: 'Week-by-week pay detail for a selected worker: hours, base rate, fringe rate, gross wages, deductions, and net pay.',
     },
     {
       key: 'fringeBreakdown' as const,
+      group: 'Deductions & fringes',
       icon: <PieChart className="w-4 h-4" />,
       title: 'Fringe Breakdown',
       description: 'Fringe contributions pivoted by fund type (H&W, Pension, Vacation, Training) and classification level.',
     },
     {
       key: 'dbeParticipation' as const,
+      group: 'Agency reporting',
       icon: <Shield className="w-4 h-4" />,
       title: 'DBE Participation',
       description: 'DBE/MBE/WBE/SDVOSB hours as a percentage of total project hours — DOT DBE program reporting.',
     },
     {
       key: 'apprenticeship' as const,
+      group: 'Agency reporting',
       icon: <HardHat className="w-4 h-4" />,
       title: 'Apprenticeship',
       description: 'Per-trade apprenticeship ratios, IRA/IIJA 15% compliance check, and 12-week trend.',
     },
   ];
+  const totalFringeCredits = fringeRows.reduce((sum, row) => sum + row.totalFringeCredits, 0);
+  const totalPivotHours = pivotQuery.data?.pivot.reduce((sum, row) => sum + row.totalHours, 0) ?? 0;
+  const totalGrossWages = pivotQuery.data?.pivot.reduce((sum, row) => sum + row.grossWages, 0) ?? 0;
+  const activeReport = REPORT_CARDS.find((card) => card.key === activeTab) ?? REPORT_CARDS[0];
 
   return (
     <>
@@ -316,14 +338,15 @@ export function ReportsPage() {
         }
       `}</style>
       <Layout>
-      <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
+      <div className="w-full space-y-6">
 
         {/* Page header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <PageHeader
-            title="Reports & Exports"
+            title="Review & Forms"
+            subtitle="Review payroll totals, worker pay history, fringe evidence, and agency reporting before submission."
             action={
-              <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 print-hidden">
+              <Link to={`/projects/${projectId}`} className="print-hidden inline-flex min-h-11 items-center text-sm font-semibold text-gray-600 hover:text-gray-900">
                 &larr; Project
               </Link>
             }
@@ -331,7 +354,7 @@ export function ReportsPage() {
           <button
             onClick={handlePrint}
             disabled={isPrinting}
-            className="print-hidden inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-colors disabled:opacity-60 min-h-[44px]"
+            className="print-hidden inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-brand-gold bg-brand-gold px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90 disabled:opacity-60"
             aria-label="Print report"
           >
             {isPrinting ? (
@@ -343,26 +366,81 @@ export function ReportsPage() {
           </button>
         </div>
 
-        {/* Report selector cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 print-hidden">
-          {REPORT_CARDS.map(card => (
-            <ReportCard
-              key={card.key}
-              icon={card.icon}
-              title={card.title}
-              description={card.description}
-              active={activeTab === card.key}
-              onClick={() => setActiveTab(card.key)}
-            />
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-200 bg-black px-5 py-4 text-white">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Review package</p>
+              <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="font-headline text-xl text-white">{activeReport.title}</h2>
+                  <p className="mt-2 max-w-3xl text-sm text-gray-200">{activeReport.description}</p>
+                </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-brand-gold text-black">
+                  <ClipboardCheck className="h-5 w-5" aria-hidden="true" />
+                </div>
+              </div>
+            </div>
+            <div className="grid divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0">
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Project hours</p>
+                <p className="mt-2 font-headline text-lg text-gray-950">{totalPivotHours.toFixed(1)}</p>
+                <p className="mt-1 text-sm text-gray-600">Hours in the project reporting pivot.</p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Gross wages</p>
+                <p className="mt-2 font-headline text-lg text-gray-950">{formatCurrency(totalGrossWages)}</p>
+                <p className="mt-1 text-sm text-gray-600">Wages represented in report exports.</p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Fringe credits</p>
+                <p className="mt-2 font-headline text-lg text-gray-950">{formatCurrency(totalFringeCredits)}</p>
+                <p className="mt-1 text-sm text-gray-600">Credits accumulated across payroll weeks.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-brand-gold text-black">
+                <FileText className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="font-headline text-base text-gray-950">Best next action</h2>
+                <p className="mt-2 text-sm text-gray-600">
+                  Start with payroll review, then move through fringes and agency reporting only when the week totals look right.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Report selector grouped by user intent */}
+        <div className="grid grid-cols-1 gap-4 print-hidden xl:grid-cols-3">
+          {['Payroll review', 'Deductions & fringes', 'Agency reporting'].map((group) => (
+            <div key={group} className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">{group}</p>
+              <div className="space-y-2">
+                {REPORT_CARDS.filter((card) => card.group === group).map((card) => (
+                  <ReportCard
+                    key={card.key}
+                    icon={card.icon}
+                    title={card.title}
+                    description={card.description}
+                    active={activeTab === card.key}
+                    onClick={() => setActiveTab(card.key)}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 
         {/* ---- Fringe Summary tab (RPT-01) ---- */}
         {activeTab === 'fringe' && (
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm space-y-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+                <div className="flex h-11 w-11 items-center justify-center rounded-sm bg-brand-gold text-black">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
@@ -373,7 +451,7 @@ export function ReportsPage() {
               {fringeRows.length > 0 && (
                 <button
                   onClick={handlePrint}
-                  className="print-hidden inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                  className="print-hidden inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-brand-gold px-3 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Export
@@ -465,10 +543,10 @@ export function ReportsPage() {
 
         {/* ---- Pay History tab (RPT-02) ---- */}
         {activeTab === 'payHistory' && (
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+                <div className="flex h-11 w-11 items-center justify-center rounded-sm bg-brand-gold text-black">
                   <TrendingUp className="w-5 h-5" />
                 </div>
                 <div>
@@ -487,7 +565,7 @@ export function ReportsPage() {
                     id="worker-select"
                     value={selectedWorkerId}
                     onChange={(e) => setSelectedWorkerId(e.target.value)}
-                    className="border border-gray-300 rounded px-3 py-1.5 text-base bg-white text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                    className="min-h-11 rounded-sm border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                   >
                     {workers.map((w) => (
                       <option key={w.id} value={w.id}>
@@ -581,9 +659,9 @@ export function ReportsPage() {
 
         {/* ---- Fringe Breakdown tab (RPT-03) ---- */}
         {activeTab === 'fringeBreakdown' && (
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm space-y-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+              <div className="flex h-11 w-11 items-center justify-center rounded-sm bg-brand-gold text-black">
                 <PieChart className="w-5 h-5" />
               </div>
               <div>
@@ -690,22 +768,22 @@ export function ReportsPage() {
         )}
 
         {/* ── Phase 104: Hours by Trade / Classification / Week Pivot (REPT-06) ── */}
-        <div className="mt-10">
-          <div className="flex items-center justify-between mb-4">
+        <div className="mt-10 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <h2 className="text-lg font-bold text-nav-dark font-headline">
               Hours by Trade / Classification / Week
             </h2>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <a
                 href={`/api/reports/${projectId}/hours-pivot?format=csv`}
-                className="border border-nav-dark text-nav-dark text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
                 download
               >
                 Download CSV
               </a>
               <a
                 href={`/api/reports/${projectId}/hours-pivot?format=pdf`}
-                className="bg-nav-dark text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-nav-dark/90 transition-colors"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-gold px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -729,7 +807,7 @@ export function ReportsPage() {
                   No payroll data found for this project.
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="bg-nav-dark text-white">
@@ -746,25 +824,26 @@ export function ReportsPage() {
                     </thead>
                     <tbody>
                       {pivotQuery.data.pivot.map((row, i) => {
-                        const rowKey = `${row.weekEndingDate}-${row.tradeCode}`;
+                        const rowKey = `${row.weekEndingDate}-${row.tradeCode}-${row.tradeDescription}-${row.laborType}-${i}`;
                         const isExpanded = expandedKey === rowKey;
                         return (
-                          <>
+                          <Fragment key={rowKey}>
                             <tr
-                              key={`${rowKey}-${row.laborType}`}
-                              className={`cursor-pointer hover:bg-gray-50 transition-colors ${
+                              role="button"
+                              tabIndex={0}
+                              aria-expanded={isExpanded}
+                              className={`cursor-pointer hover:bg-gray-50 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-gold ${
                                 i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                               } ${isExpanded ? 'ring-1 ring-inset ring-brand-gold' : ''}`}
-                              onClick={() =>
-                                setExpandedKey((prev) => (prev === rowKey ? null : rowKey))
-                              }
+                              onClick={() => setExpandedKey((prev) => (prev === rowKey ? null : rowKey))}
+                              onKeyDown={(event) => toggleOnEnterOrSpace(event, () => setExpandedKey((prev) => (prev === rowKey ? null : rowKey)))}
                             >
                               <td className="px-4 py-3 text-gray-700 font-medium">{row.weekEndingDate}</td>
                               <td className="px-4 py-3">
                                 <span className="bg-nav-dark text-brand-gold font-bold text-xs px-2 py-0.5 rounded font-headline">
                                   {row.tradeCode}
                                 </span>
-                                <span className="ml-2 text-gray-600 text-xs">{row.tradeDescription}</span>
+                                <span className="ml-2 text-gray-600 text-xs">- {row.tradeDescription}</span>
                               </td>
                               <td className="px-4 py-3 text-gray-500 text-xs capitalize">{row.laborType}</td>
                               <td className="px-4 py-3 text-right text-gray-700">{row.totalStraightHours.toFixed(1)}</td>
@@ -777,7 +856,7 @@ export function ReportsPage() {
                               </td>
                             </tr>
                             {isExpanded && (
-                              <tr key={`${rowKey}-drill`} className="bg-amber-50">
+                              <tr className="bg-amber-50">
                                 <td colSpan={9} className="px-6 py-3 text-xs text-gray-600">
                                   <strong>Drill-down:</strong> {row.workerCount} workers logged hours as{' '}
                                   {row.tradeDescription} ({row.laborType}) during week ending {row.weekEndingDate}.
@@ -785,7 +864,7 @@ export function ReportsPage() {
                                 </td>
                               </tr>
                             )}
-                          </>
+                          </Fragment>
                         );
                       })}
                     </tbody>
@@ -798,10 +877,10 @@ export function ReportsPage() {
 
         {/* ---- DBE Participation tab (DBE-09) ---- */}
         {activeTab === 'dbeParticipation' && (
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm space-y-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+                <div className="flex h-11 w-11 items-center justify-center rounded-sm bg-brand-gold text-black">
                   <Shield className="w-5 h-5" />
                 </div>
                 <div>
@@ -811,7 +890,7 @@ export function ReportsPage() {
               </div>
               <button
                 onClick={() => window.print()}
-                className="print-hidden inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="print-hidden inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-brand-gold px-3 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
               >
                 <Download className="w-3.5 h-3.5" />
                 Download PDF
@@ -896,9 +975,9 @@ export function ReportsPage() {
 
         {/* ---- Apprenticeship tab (Phase 117 APP-01) ---- */}
         {activeTab === 'apprenticeship' && projectId && (
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm space-y-4">
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-brand-gold/10 text-brand-navy">
+              <div className="flex h-11 w-11 items-center justify-center rounded-sm bg-brand-gold text-black">
                 <HardHat className="w-5 h-5" />
               </div>
               <div>

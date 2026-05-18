@@ -26,3 +26,4 @@ uploads/
 output/playwright/
 .dev-*.log
 dev-server*.log
+output/

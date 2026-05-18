@@ -64,8 +64,8 @@ export function SsoConfigPage() {
             SAML Single Sign-On is available on the Enterprise plan. Upgrade to connect Okta, Azure AD,
             or any SAML 2.0 identity provider for your team.
           </p>
-          <a href="/pricing">
-            <Button variant="secondary">View Pricing</Button>
+          <a href="/pricing" className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold bg-transparent px-4 text-sm font-semibold text-black transition-all duration-150 hover:bg-brand-gold/10">
+            View Pricing
           </a>
         </Card>
       </Layout>

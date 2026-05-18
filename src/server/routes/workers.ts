@@ -131,6 +131,10 @@ function getProjectWageRateContext(projectId: string, state: string, county: str
   };
 }
 
+function wageRateKey(tradeCode: string, tradeDescription: string): string {
+  return `${tradeCode.trim().toUpperCase()}::${tradeDescription.trim().toUpperCase()}`;
+}
+
 router.get('/:projectId/wage-classifications', async (req, res) => {
   const projectId = req.params.projectId as string;
   const userId = req.user!.userId;
@@ -188,7 +192,7 @@ router.get('/:projectId/workers', async (req, res) => {
   const rateContext = getProjectWageRateContext(projectId, project.state, project.county);
   const rateMap = new Map<string, { baseRate: number; fringeRate: number }>();
   for (const wc of rateContext.classifications) {
-    rateMap.set(wc.tradeCode, { baseRate: wc.baseRate, fringeRate: wc.fringeRate });
+    rateMap.set(wageRateKey(wc.tradeCode, wc.tradeDescription), { baseRate: wc.baseRate, fringeRate: wc.fringeRate });
   }
 
   const workerRows = await db
@@ -214,7 +218,7 @@ router.get('/:projectId/workers', async (req, res) => {
         ...safeW,
         hasFullSsn,
         classifications: classifications.map((c: ClassificationRow) => {
-          const journeyRates = rateMap.get(c.tradeCode);
+          const journeyRates = rateMap.get(wageRateKey(c.tradeCode, c.tradeDescription));
           const effectiveRates = journeyRates
             ? resolveEffectiveClassificationRates(journeyRates, c)
             : null;

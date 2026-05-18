@@ -3,13 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileCheck, FileText, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronRight, FileCheck, FileText, Plus } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PayrollListSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
-import { HelpCallout } from '../components/ui/HelpCallout';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PayrollEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { TermTooltip } from '../components/ui/TermTooltip';
@@ -120,6 +119,10 @@ export function PayrollListPage() {
   });
 
   const weeks = data?.weeks ?? [];
+  const latestWeek = weeks[0];
+  const readyWeeks = weeks.filter((week) => Number(week.workerCount ?? 0) > 0 && week.totalGross != null).length;
+  const draftWeeks = weeks.filter((week) => !week.submittedAt && !week.isFinal).length;
+  const submittedWeeks = weeks.filter((week) => Boolean(week.submittedAt)).length;
 
   // Escape key listener for modal
   useEffect(() => {
@@ -184,7 +187,7 @@ export function PayrollListPage() {
     } catch (err: unknown) {
       const message = err instanceof Error && err.message
         ? err.message
-        : 'Could not copy that payroll week — the source week may have been modified. Try refreshing and copying again.';
+        : 'Could not copy that payroll week - the source week may have been modified. Try refreshing and copying again.';
       setCopyError(message);
     } finally {
       setIsCopying(false);
@@ -209,7 +212,7 @@ export function PayrollListPage() {
     } catch (err: unknown) {
       const message = err instanceof Error && err.message
         ? err.message
-        : 'Could not copy that payroll week — the source week may have been modified. Try refreshing and copying again.';
+        : 'Could not copy that payroll week - the source week may have been modified. Try refreshing and copying again.';
       setCopyError(message);
     } finally {
       setIsCopying(false);
@@ -219,23 +222,78 @@ export function PayrollListPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full space-y-6">
         <button
           onClick={() => navigate(`/projects/${projectId}`)}
-          className="text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4 inline-block"
+          className="mb-4 inline-flex min-h-11 items-center text-sm font-semibold text-gray-600 transition-colors hover:text-gray-900"
         >
           &larr; Back to Project
         </button>
 
         <PageHeader
           title="Payroll"
+          subtitle="Create weekly payroll, verify readiness, and download certified payroll forms."
         />
 
-        <HelpCallout
-          icon={FileCheck}
-          title="Work one week at a time"
-          body={<>Fastest path: copy the prior week when the crew is similar, or start fresh when the roster changed. After hours and deductions are entered, clear blockers, then download the <TermTooltip term="WH-347" definition={WH347_DEF} /> and any state forms.</>}
-        />
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+          <Card padding="none" className="overflow-hidden border border-gray-200">
+            <div className="border-b border-gray-200 bg-black px-5 py-4 text-white">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Weekly payroll workflow</p>
+                  <h2 className="mt-1 font-headline text-xl text-white">Build the next certified payroll week</h2>
+                  <p className="mt-2 max-w-3xl text-sm text-gray-200">
+                    Copy the prior week when the crew is similar, start fresh when the roster changed, then clear blockers before exporting the <TermTooltip term="WH-347" definition={WH347_DEF} />.
+                  </p>
+                </div>
+                <button
+                  onClick={handleNewWeekClick}
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-sm border border-brand-gold bg-brand-gold px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  New Week
+                </button>
+              </div>
+            </div>
+            <div className="grid gap-0 divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0">
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Latest week</p>
+                <p className="mt-2 font-headline text-lg text-text-primary">
+                  {latestWeek ? `#${latestWeek.payrollNumber}` : 'Not started'}
+                </p>
+                <p className="mt-1 text-sm text-text-secondary">
+                  {latestWeek ? `Week ending ${latestWeek.weekEndingDate}` : 'Create week 1 to begin payroll.'}
+                </p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Ready to export</p>
+                <p className="mt-2 font-headline text-lg text-text-primary">{readyWeeks} of {weeks.length}</p>
+                <p className="mt-1 text-sm text-text-secondary">Weeks with entries and gross pay.</p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Open drafts</p>
+                <p className="mt-2 font-headline text-lg text-text-primary">{draftWeeks}</p>
+                <p className="mt-1 text-sm text-text-secondary">{submittedWeeks} submitted week{submittedWeeks === 1 ? '' : 's'} on record.</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card padding="lg" className="border border-gray-200">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-brand-gold text-black">
+                <FileCheck className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="font-headline text-base text-text-primary">Best next action</h2>
+                <p className="mt-2 text-sm text-text-secondary">
+                  {weeks.length === 0
+                    ? 'Start the first payroll week and add worker entries.'
+                    : 'Open the latest draft, confirm hours and deductions, then export forms when the week is ready.'}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </section>
 
         {isLoading && <PayrollListSkeleton />}
 
@@ -244,7 +302,7 @@ export function PayrollListPage() {
             <p className="text-red-600 text-sm mb-4">Failed to load payroll weeks.</p>
             <button
               onClick={() => refetch()}
-              className="inline-flex items-center justify-center font-semibold rounded-sm text-sm px-4 py-2.5 bg-transparent text-black border border-brand-gold hover:bg-brand-gold/10 transition-all duration-150"
+              className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold bg-transparent px-4 py-2.5 text-sm font-semibold text-black transition-all duration-150 hover:bg-brand-gold/10"
             >
               Try Again
             </button>
@@ -265,30 +323,34 @@ export function PayrollListPage() {
         )}
 
         {weeks.length > 0 && (
-          <Card padding="none" className="shadow-card-elevated overflow-hidden">
-            <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
-              <h2 className="font-headline text-base text-text-primary">Payroll Weeks</h2>
+          <Card padding="none" className="overflow-hidden border border-gray-200 shadow-card-elevated">
+            <div className="flex flex-col gap-3 border-b border-border-subtle px-5 py-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Week history</p>
+                <h2 className="font-headline text-base text-text-primary">Payroll Weeks</h2>
+              </div>
               <button
                 onClick={handleNewWeekClick}
-                className="bg-brand-gold text-black font-semibold hover:bg-brand-gold/90 border border-transparent inline-flex items-center justify-center font-semibold rounded-sm transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 text-sm px-4 py-2"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-transparent bg-brand-gold px-4 py-2 text-sm font-semibold text-black transition-colors duration-150 hover:bg-brand-gold/90 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
               >
-                + New Week
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New Week
               </button>
             </div>
-            <div className="p-4 space-y-2">
+            <div className="space-y-3 p-4">
               {weeks.map((week) => (
-                <Card key={week.id} padding="sm" className="shadow-card-elevated hover:shadow-card-hover cursor-pointer transition-shadow duration-150">
+                <Card key={week.id} padding="sm" className="cursor-pointer border border-gray-200 shadow-card-elevated transition-shadow duration-150 hover:shadow-card-hover">
                   <div
                     role="link"
                     tabIndex={0}
                     onClick={() => navigate(`/projects/${projectId}/payroll/${week.id}`)}
                     onKeyDown={(event) => openOnEnterOrSpace(event, () => navigate(`/projects/${projectId}/payroll/${week.id}`))}
-                    className="block min-h-[44px] flex items-center focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 rounded-sm"
+                    className="flex min-h-[72px] items-center rounded-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
                   >
-                    <div className="flex items-center justify-between gap-4 w-full">
-                      <div className="min-w-0">
+                    <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0 flex-1">
                         <p className="font-headline text-sm text-text-primary">
-                          Week Ending {week.weekEndingDate} — Payroll #{week.payrollNumber}
+                          Week Ending {week.weekEndingDate} - Payroll #{week.payrollNumber}
                           {week.amendmentNumber != null ? (
                             <span className="text-text-secondary ml-1">
                               (Amendment {week.amendmentNumber})
@@ -300,27 +362,29 @@ export function PayrollListPage() {
                             </span>
                           ) : null}
                         </p>
-                        <p className="text-xs text-text-secondary mt-0.5">
+                        <p className="mt-1 text-sm text-text-secondary">
                           {week.workerCount} worker{week.workerCount !== 1 ? 's' : ''}
-                          {week.totalGross != null ? ` · $${Number(week.totalGross).toLocaleString()} gross` : ' · No payroll entered'}
+                          {week.totalGross != null ? ` - $${Number(week.totalGross).toLocaleString()} gross` : ' - No payroll entered'}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
                         {getWeekBadge(week)}
                         {Number(week.workerCount ?? 0) > 0 && week.totalGross != null ? (
                           <a
                             href={`/api/export/wh347/${week.id}`}
-                            className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 border border-transparent transition-all duration-150"
+                            aria-label={`Download WH-347 for payroll ${week.payrollNumber}`}
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-transparent bg-brand-gold px-3 py-2 text-sm font-semibold text-black transition-all duration-150 hover:bg-brand-gold/90"
                             onClick={(e) => {
                               e.stopPropagation();
                               toast.success('WH-347 downloading - submit to your contracting officer within 7 days of the week ending date.');
                             }}
                           >
+                            <FileText className="h-4 w-4" aria-hidden="true" />
                             WH-347
                           </a>
                         ) : (
                           <span
-                            className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm bg-gray-100 text-gray-400 border border-gray-200"
+                            className="inline-flex min-h-11 items-center justify-center rounded-sm border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-500"
                             title="Add payroll entries before downloading WH-347."
                           >
                             WH-347
@@ -349,7 +413,7 @@ export function PayrollListPage() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="copy-modal-title"
-              className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6"
+              className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl sm:mx-4 sm:p-6"
             >
 
               {/* Step indicator */}
@@ -378,23 +442,33 @@ export function PayrollListPage() {
                         setShowModal(false);
                         navigate(`/projects/${projectId}/payroll/new`);
                       }}
-                      className="w-full text-left border border-gray-200 rounded px-4 py-3 hover:border-gray-400 transition-colors"
+                      className="flex min-h-[76px] w-full items-start gap-3 rounded-sm border border-gray-200 px-4 py-3 text-left transition-colors hover:border-gray-500 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
                     >
-                      <span className="text-sm font-medium text-gray-900 block">Start Fresh</span>
-                      <span className="text-xs text-gray-500">Use this when the crew, rates, or classifications changed materially</span>
+                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-gray-100 text-gray-700">
+                        <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                      <span>
+                        <span className="block text-sm font-medium text-gray-900">Start Fresh</span>
+                        <span className="mt-1 block text-sm text-gray-500">Use this when the crew, rates, or classifications changed materially.</span>
+                      </span>
                     </button>
                     <button
                       onClick={handleChooseCopy}
-                      className="w-full text-left border border-gray-200 rounded px-4 py-3 hover:border-gray-400 transition-colors"
+                      className="flex min-h-[76px] w-full items-start gap-3 rounded-sm border border-brand-gold bg-brand-gold/10 px-4 py-3 text-left transition-colors hover:bg-brand-gold/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
                     >
-                      <span className="text-sm font-medium text-gray-900 block">Copy Previous Week <span className="text-brand-gold">(recommended)</span></span>
-                      <span className="text-xs text-gray-500">Pre-fill the roster and hours, then adjust only what changed</span>
+                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-brand-gold text-black">
+                        <FileCheck className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                      <span>
+                        <span className="block text-sm font-medium text-gray-900">Copy Previous Week <span className="text-black">(recommended)</span></span>
+                        <span className="mt-1 block text-sm text-gray-600">Pre-fill the roster and hours, then adjust only what changed.</span>
+                      </span>
                     </button>
                   </div>
                   <div className="mt-4 flex justify-end">
                     <button
                       onClick={() => setShowModal(false)}
-                      className="text-sm text-gray-500 hover:text-gray-700"
+                      className="inline-flex min-h-11 items-center justify-center rounded-sm px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
                     >
                       Cancel
                     </button>
@@ -411,8 +485,9 @@ export function PayrollListPage() {
                   </p>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Source Week</label>
+                      <label htmlFor="source-week-select" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Source Week</label>
                       <select
+                        id="source-week-select"
                         value={sourceWeekId}
                         onChange={(e) => handleSourceWeekChange(e.target.value)}
                         className="border border-gray-300 rounded px-3 py-2 text-base min-h-[44px] w-full focus:border-brand-gold focus:outline-none"
@@ -425,10 +500,11 @@ export function PayrollListPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label htmlFor="copy-payroll-number" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                         Payroll Number <TermTooltip term="Payroll Number" definition="A sequential number assigned to each certified payroll submission for a project. The first submission is #1; each subsequent week increments by 1. Must match the number on your WH-347 form." />
                       </label>
                       <input
+                        id="copy-payroll-number"
                         type="number"
                         min={1}
                         value={payrollNumber}
@@ -437,8 +513,9 @@ export function PayrollListPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Week Ending Date</label>
+                      <label htmlFor="copy-week-ending-date" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Week Ending Date</label>
                       <input
+                        id="copy-week-ending-date"
                         type="date"
                         value={weekEndingDate}
                         onChange={(e) => setWeekEndingDate(e.target.value)}
@@ -452,7 +529,7 @@ export function PayrollListPage() {
                   <div className="mt-5 flex gap-3 justify-end">
                     <button
                       onClick={() => setShowModal(false)}
-                      className="text-sm text-gray-500 hover:text-gray-700"
+                      className="inline-flex min-h-11 items-center justify-center rounded-sm px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
                     >
                       Cancel
                     </button>
@@ -480,7 +557,7 @@ export function PayrollListPage() {
                         {previewResult.skipped.map((s) => (
                           <li key={s.workerId} className="text-xs text-amber-700">
                             <span className="font-medium">{s.workerName}</span>
-                            {' — '}{s.tradeDescription}
+                            {' - '}{s.tradeDescription}
                             {': '}
                             <span className="text-amber-700">{formatSkipReason(s.reason)}</span>
                           </li>
@@ -509,7 +586,7 @@ export function PayrollListPage() {
                   <div className="flex gap-3 justify-end">
                     <button
                       onClick={() => setShowModal(false)}
-                      className="text-sm text-gray-500 hover:text-gray-700"
+                      className="inline-flex min-h-11 items-center justify-center rounded-sm px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
                     >
                       Cancel
                     </button>

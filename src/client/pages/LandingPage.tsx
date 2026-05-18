@@ -72,14 +72,14 @@ function LandingNav() {
   return (
     <header className="absolute left-0 right-0 top-0 z-20">
       <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
-        <Link to="/" className="text-sm font-semibold tracking-wide text-white">
+        <Link to="/" className="inline-flex min-h-11 items-center text-sm font-semibold tracking-wide text-white">
           HCC Prevailing Wage
         </Link>
         <div className="hidden items-center gap-8 text-sm font-medium text-white/70 sm:flex">
-          <a href="#workflow" className="hover:text-white">Workflow</a>
-          <a href="#proof" className="hover:text-white">Proof</a>
-          <a href="#compare" className="hover:text-white">Compare</a>
-          <Link to="/methodology" className="hover:text-white">Methodology</Link>
+          <a href="#workflow" className="inline-flex min-h-11 items-center hover:text-white">Workflow</a>
+          <a href="#proof" className="inline-flex min-h-11 min-w-11 items-center hover:text-white">Proof</a>
+          <a href="#compare" className="inline-flex min-h-11 items-center hover:text-white">Compare</a>
+          <Link to="/methodology" className="inline-flex min-h-11 items-center hover:text-white">Methodology</Link>
         </div>
         <Link
           to="/login"
@@ -329,10 +329,10 @@ function LandingFooter() {
       <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p>© 2026 PrevWage. Davis-Bacon payroll workflows for construction contractors.</p>
         <div className="flex flex-wrap gap-5">
-          <Link to="/contact" className="hover:text-white">Contact</Link>
-          <Link to="/security" className="hover:text-white">Security</Link>
-          <Link to="/api-docs" className="hover:text-white">API Docs</Link>
-          <Link to="/login" className="hover:text-white">Log in</Link>
+          <Link to="/contact" className="inline-flex min-h-11 items-center hover:text-white">Contact</Link>
+          <Link to="/security" className="inline-flex min-h-11 items-center hover:text-white">Security</Link>
+          <Link to="/api-docs" className="inline-flex min-h-11 items-center hover:text-white">API Docs</Link>
+          <Link to="/login" className="inline-flex min-h-11 min-w-11 items-center hover:text-white">Log in</Link>
         </div>
       </div>
     </footer>

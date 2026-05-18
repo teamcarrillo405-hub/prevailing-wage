@@ -96,7 +96,7 @@ export function ApiKeysPage() {
       />
 
       <div className="flex items-center justify-between mb-6">
-        <Link to="/api-docs" className="text-sm text-blue-600 hover:underline">
+        <Link to="/api-docs" className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
           View API Documentation &rarr;
         </Link>
         <Button onClick={() => setShowModal(true)}>

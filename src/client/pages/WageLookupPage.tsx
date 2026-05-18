@@ -8,6 +8,7 @@ import type { WageDetermination, WageClassification } from '../../shared/types.j
 import { PageHeader } from '../components/ui/PageHeader';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Layout } from '../components/shared/Layout';
 
 const CONSTRUCTION_TYPES = ['Building', 'Heavy', 'Highway', 'Residential'] as const;
 type ConstructionType = typeof CONSTRUCTION_TYPES[number];
@@ -226,7 +227,8 @@ export function WageLookupPage() {
   const is404 = (error as any)?.status === 404;
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <Layout>
+    <div className="w-full space-y-6">
       <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
         <button
           type="button"
@@ -253,49 +255,56 @@ export function WageLookupPage() {
         )}
       </div>
 
-      <PageHeader title="Prevailing Wage Lookup" />
+      <PageHeader
+        title="Wage Determination Lookup"
+        subtitle="Find the federal WD, confirm revision and construction type, then lock the rate source to the project."
+        className="mb-0"
+      />
 
-      <section className="mb-6 rounded-sm border border-blue-200 bg-blue-50 p-4">
-        <h2 className="text-sm font-semibold text-blue-950">What you are looking for</h2>
-        <p className="mt-1 text-sm text-blue-900">
+      <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Rate source workflow</p>
+        <h2 className="mt-1 text-xl font-semibold text-gray-950">Confirm the WD before workers or payroll use rates.</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
           The main number is the federal WD number, plus its revision/modification. Match it to the award location, construction type, and contract date. Then click Lock to project.
         </p>
         <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-          <div className="rounded-sm border border-blue-100 bg-white/70 p-3">
+          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
             <p className="font-semibold text-gray-900">1. WD number</p>
             <p className="text-gray-600">Example: CA20260001. This locks the source document.</p>
           </div>
-          <div className="rounded-sm border border-blue-100 bg-white/70 p-3">
+          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
             <p className="font-semibold text-gray-900">2. Revision</p>
             <p className="text-gray-600">Use the modification required by the contract award documents.</p>
           </div>
-          <div className="rounded-sm border border-blue-100 bg-white/70 p-3">
+          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
             <p className="font-semibold text-gray-900">3. Trade row</p>
             <p className="text-gray-600">Worker classification pulls base, fringe, and total rate from the locked WD.</p>
           </div>
         </div>
       </section>
 
-      <form onSubmit={handleSearch} className="flex items-end gap-3 mb-8 flex-wrap">
+      <form onSubmit={handleSearch} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-[120px_minmax(220px,1fr)_220px_auto] md:items-end">
         <Input
           label="State"
           value={stateInput}
           onChange={(e) => setStateInput(e.target.value.toUpperCase())}
           placeholder="CA"
           maxLength={2}
-          className="w-20 uppercase"
+          className="w-full uppercase"
         />
         <Input
           label="County"
           value={countyInput}
           onChange={(e) => setCountyInput(e.target.value)}
           placeholder="Los Angeles"
-          className="w-56"
+          className="w-full"
         />
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-700">Construction Type</label>
+          <label htmlFor="wage-lookup-construction-type" className="text-xs font-medium text-gray-700">Construction Type</label>
           <select
-            className="text-sm border border-gray-300 rounded px-2 py-2 bg-white"
+            id="wage-lookup-construction-type"
+            className="min-h-11 rounded border border-gray-300 bg-white px-3 text-base"
             value={constructionType}
             onChange={(e) => setConstructionType(e.target.value as ConstructionType | '')}
           >
@@ -304,12 +313,13 @@ export function WageLookupPage() {
           </select>
         </div>
         <Button type="submit">Search</Button>
+        </div>
       </form>
 
       {isLoading && <p className="text-sm text-gray-500">Searching...</p>}
 
       {data && !manualResult && (
-        <div className="mb-8">
+        <div className="space-y-3">
           {data.wds.map((wd, i) => (
             <WdCard
               key={wd.id}
@@ -322,14 +332,14 @@ export function WageLookupPage() {
       )}
 
       {manualResult && (
-        <div className="mb-8">
+        <div className="space-y-3">
           <p className="text-sm text-green-700 mb-3">Manual entry saved successfully.</p>
           <WageClassificationsTable classifications={manualResult.classifications ?? []} />
         </div>
       )}
 
       {submitted && is404 && !manualResult && (
-        <div className="mb-8">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <p className="text-sm text-gray-600 mb-2">
             No federal wage determination found for {submitted.county}, {submitted.state}.
           </p>
@@ -342,18 +352,19 @@ export function WageLookupPage() {
       )}
 
       {error && !is404 && (
-        <p className="text-sm text-red-700 mb-8">Error: {error.message}</p>
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">Error: {error.message}</p>
       )}
 
-      <div className="border-t pt-6">
-        <h2 className="text-sm font-semibold text-gray-800 mb-3">Fetch by WD Number</h2>
-        <form onSubmit={handleWdFetch} className="flex items-end gap-3 mb-4">
+      <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-gray-900">Fetch by WD Number</h2>
+        <p className="mt-1 text-sm text-gray-600">Use this when the award package already lists the exact federal wage determination.</p>
+        <form onSubmit={handleWdFetch} className="mt-4 grid gap-3 sm:grid-cols-[minmax(220px,320px)_auto] sm:items-end">
           <Input
             label="WD Number"
             value={wdNumberInput}
             onChange={(e) => setWdNumberInput(e.target.value.toUpperCase())}
             placeholder="CA20260001"
-            className="w-48 uppercase"
+            className="w-full uppercase"
           />
           <Button type="submit">Fetch</Button>
         </form>
@@ -375,7 +386,8 @@ export function WageLookupPage() {
               : wdFetchError.message}
           </p>
         )}
-      </div>
+      </section>
     </div>
+    </Layout>
   );
 }

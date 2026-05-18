@@ -631,6 +631,7 @@ importRouter.get('/reconciliation/:weekId', async (req, res) => {
         sourceDetailCompleteCount: sourceReconciliation.completeSourceRows,
         sourceDetailMissingCount: sourceReconciliation.missingSourceDetailCount,
         sourceCoverage: sourceReconciliation.coverage,
+        sourceFieldGaps: sourceReconciliation.fieldGaps,
         itemizedDeductionMismatchCount: sourceReconciliation.itemizedDeductionMismatchCount,
         netPayMismatchCount: sourceReconciliation.netPayMismatchCount,
         fringeMismatchCount: sourceReconciliation.fringeMismatchCount,

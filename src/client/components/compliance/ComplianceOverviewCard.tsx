@@ -37,14 +37,14 @@ export function ComplianceOverviewCard({
 
   if (isLoading) {
     return (
-      <div className={cn('rounded-2xl p-6 mb-6 animate-pulse', className)}
-        style={{ background: 'linear-gradient(135deg, #111827 0%, #1a2235 100%)' }}>
+      <div className={cn('mb-6 rounded-lg p-6 animate-pulse', className)}
+        style={{ background: 'linear-gradient(135deg, #09090b 0%, #18181b 100%)' }}>
         <div className="flex items-baseline justify-between mb-6">
           <div className="h-5 w-44 bg-white/10 rounded" />
           <div className="h-3.5 w-28 bg-white/10 rounded" />
         </div>
         <div className="grid grid-cols-3 gap-4 mb-5">
-          {[0, 1, 2].map(i => <div key={i} className="h-[88px] bg-white/5 rounded-xl" />)}
+          {[0, 1, 2].map(i => <div key={i} className="h-[88px] rounded-lg bg-white/5" />)}
         </div>
         <div className="h-1.5 w-full bg-white/10 rounded-full" />
       </div>
@@ -55,8 +55,8 @@ export function ComplianceOverviewCard({
 
   return (
     <div
-      className={cn('rounded-2xl p-6 mb-6 relative overflow-hidden', className)}
-      style={{ background: 'linear-gradient(135deg, #111827 0%, #1a2235 60%, #0f1923 100%)' }}
+      className={cn('relative mb-6 overflow-hidden rounded-lg p-6', className)}
+      style={{ background: 'linear-gradient(135deg, #09090b 0%, #18181b 60%, #111111 100%)' }}
     >
       {/* Subtle dot-grid texture */}
       <div
@@ -164,6 +164,7 @@ interface StatTileProps {
 }
 
 function StatTile({ label, value, pct, color, to }: StatTileProps) {
+  const accessibleLabel = `${label}: ${value} project${value === 1 ? '' : 's'}${pct > 0 ? `, ${pct}%` : ''}`;
   const valueColor =
     color === 'emerald' ? 'text-emerald-400'
     : color === 'red' && value > 0 ? 'text-red-400'
@@ -188,14 +189,19 @@ function StatTile({ label, value, pct, color, to }: StatTileProps) {
 
   if (to) {
     return (
-      <Link className={cn('block rounded-xl border px-4 py-3.5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold', bgColor)} to={to}>
+      <Link
+        className={cn('block min-h-[88px] rounded-lg border px-4 py-3.5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold', bgColor)}
+        to={to}
+        aria-label={accessibleLabel}
+        title={accessibleLabel}
+      >
         {content}
       </Link>
     );
   }
 
   return (
-    <div className={cn('rounded-xl border px-4 py-3.5', bgColor)}>
+    <div className={cn('min-h-[88px] rounded-lg border px-4 py-3.5', bgColor)}>
       {content}
     </div>
   );

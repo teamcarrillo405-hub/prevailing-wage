@@ -85,12 +85,12 @@ export function RoiCalculatorPage() {
 
         {/* Floating nav */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-5 z-10">
-          <Link to="/" className="text-brand-gold font-headline text-xl font-bold tracking-wide">
+          <Link to="/" className="inline-flex min-h-11 items-center text-brand-gold font-headline text-xl font-bold tracking-wide">
             HCC Prevailing Wage
           </Link>
           <Link
             to="/login"
-            className="text-white/80 hover:text-white text-sm font-medium transition-colors"
+            className="inline-flex min-h-11 min-w-11 items-center text-white/80 hover:text-white text-sm font-medium transition-colors"
           >
             Log In
           </Link>
@@ -134,7 +134,8 @@ export function RoiCalculatorPage() {
               max={PROJECTS_MAX}
               value={projects}
               onChange={e => setProjects(Number(e.target.value))}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[theme(colors.brand.gold)]"
+              aria-label="Projects per year"
+              className="h-11 w-full cursor-pointer rounded-lg accent-[theme(colors.brand.gold)]"
               style={{ accentColor: '#F5C518' }}
             />
             <div className="flex justify-between text-xs text-gray-400 mt-1">
@@ -160,7 +161,8 @@ export function RoiCalculatorPage() {
               max={WORKERS_MAX}
               value={workers}
               onChange={e => setWorkers(Number(e.target.value))}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+              aria-label="Workers per project"
+              className="h-11 w-full cursor-pointer rounded-lg"
               style={{ accentColor: '#F5C518' }}
             />
             <div className="flex justify-between text-xs text-gray-400 mt-1">

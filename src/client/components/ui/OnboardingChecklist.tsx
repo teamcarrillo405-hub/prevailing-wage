@@ -101,7 +101,8 @@ export function OnboardingChecklist({
         <h3 className="text-sm font-semibold text-gray-900">Getting started</h3>
         <button
           onClick={onDismiss}
-          className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-600 transition-colors hover:text-gray-900"
+          aria-label="Dismiss getting started checklist"
         >
           Dismiss
         </button>
@@ -172,7 +173,8 @@ function StepRow({ step }: { step: Step }) {
   return (
     <Link
       to={step.href}
-      className="block rounded-lg hover:bg-brand-gold/10 -mx-2 px-2 py-1.5 transition-colors"
+      aria-label={`${step.title}. ${step.description}`}
+      className="-mx-2 block rounded-lg px-2 py-3 transition-colors hover:bg-brand-gold/10"
     >
       {content}
     </Link>

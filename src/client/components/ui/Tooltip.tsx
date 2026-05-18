@@ -59,9 +59,9 @@ export function Tooltip({ content, label = 'Help', className, placement = 'top' 
         onClick={() => setOpen(v => !v)}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full text-gray-400 hover:text-brand-gold transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-1 ml-1"
+        className="ml-1 inline-flex h-11 w-11 items-center justify-center rounded-full text-gray-400 transition-colors duration-150 hover:text-brand-gold focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-1"
       >
-        <HelpCircle className="w-3.5 h-3.5" />
+        <HelpCircle className="h-4 w-4" />
       </button>
       {open && (
         <span

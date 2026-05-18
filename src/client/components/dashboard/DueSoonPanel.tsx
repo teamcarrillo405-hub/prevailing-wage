@@ -34,10 +34,10 @@ export function DueSoonPanel() {
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-amber-200/60 bg-white p-5 mb-6 animate-pulse shadow-card">
+      <div className="mb-6 rounded-lg border border-amber-200/60 bg-white p-5 shadow-card animate-pulse">
         <div className="h-4 w-40 bg-gray-100 rounded mb-3" />
         <div className="space-y-2">
-          {[0, 1, 2].map((i) => <div key={i} className="h-10 bg-gray-50 rounded-xl" />)}
+          {[0, 1, 2].map((i) => <div key={i} className="h-10 rounded-lg bg-gray-50" />)}
         </div>
       </div>
     );
@@ -49,7 +49,7 @@ export function DueSoonPanel() {
   const upcoming = data.filter((d) => d.status !== 'overdue');
 
   return (
-    <div className="rounded-2xl border border-amber-200/80 bg-white p-5 mb-6 shadow-card">
+    <div className="mb-6 rounded-lg border border-amber-200/80 bg-white p-5 shadow-card">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
@@ -95,8 +95,10 @@ function DueSoonRow({ item }: { item: DueSoonItem }) {
   return (
     <Link
       to={`/projects/${item.projectId}/payroll/${item.weekId}`}
+      aria-label={`Open payroll week ${item.payrollNumber} for ${item.projectName}, ${daysLabel(item.daysUntil)}`}
+      title={`Open payroll week ${item.payrollNumber} for ${item.projectName}`}
       className={cn(
-        'group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm transition-all duration-150',
+        'group flex min-h-11 items-center justify-between rounded-lg px-3.5 py-2.5 text-sm transition-all duration-150',
         'hover:shadow-sm',
         isOverdue
           ? 'bg-red-50 border border-red-100 hover:border-red-200'

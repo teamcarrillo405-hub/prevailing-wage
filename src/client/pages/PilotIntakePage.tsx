@@ -230,12 +230,12 @@ export function PilotIntakePage() {
                   {items.map((item) => {
                     const checked = Boolean(intake.checked[item.id]);
                     return (
-                      <label key={item.id} className="grid cursor-pointer grid-cols-[24px_minmax(0,1fr)] gap-3 px-5 py-4 hover:bg-gray-50">
+                      <label key={item.id} className="grid min-h-11 cursor-pointer grid-cols-[44px_minmax(0,1fr)] gap-3 px-5 py-4 hover:bg-gray-50">
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={(event) => updateChecked(item.id, event.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+                          className="h-11 w-11 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
                         />
                         <span>
                           <span className="flex flex-wrap items-center gap-2">

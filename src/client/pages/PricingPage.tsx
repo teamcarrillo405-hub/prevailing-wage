@@ -67,7 +67,7 @@ const PLANS: Plan[] = [
       'Priority support + SLA',
       'SSO / SAML',
       'Dedicated onboarding + CSM',
-      'SOC 2 Type II reports',
+      'SOC 2 readiness evidence and future audit reports',
     ],
   },
 ];
@@ -130,16 +130,16 @@ const FAQ_ITEMS: FaqItem[] = [
 function PricingNav() {
   return (
     <nav className="bg-nav-dark px-6 py-4 flex items-center justify-between">
-      <Link to="/" className="text-brand-gold font-headline text-xl font-bold">
+      <Link to="/" className="inline-flex min-h-11 items-center text-brand-gold font-headline text-xl font-bold">
         HCC Prevailing Wage
       </Link>
       <div className="flex items-center gap-6">
-        <Link to="/" className="text-gray-400 hover:text-white transition-colors text-sm">
+        <Link to="/" className="inline-flex min-h-11 min-w-11 items-center text-gray-400 hover:text-white transition-colors text-sm">
           Home
         </Link>
         <Link
           to="/login"
-          className="text-white hover:text-brand-gold transition-colors text-sm font-medium"
+          className="inline-flex min-h-11 min-w-11 items-center text-white hover:text-brand-gold transition-colors text-sm font-medium"
         >
           Log In
         </Link>
@@ -217,21 +217,22 @@ function PricingCards() {
           <div className="inline-flex items-center gap-4 bg-white border border-gray-200 rounded-xl px-5 py-3 shadow-sm">
             <button
               onClick={() => setAnnual(false)}
-              className={`text-sm font-medium transition-colors ${!annual ? 'text-nav-dark' : 'text-gray-400'}`}
+              className={`inline-flex min-h-11 items-center text-sm font-medium transition-colors ${!annual ? 'text-nav-dark' : 'text-gray-400'}`}
             >
               Monthly
             </button>
             <button
               role="switch"
+              aria-label="Toggle annual billing"
               aria-checked={annual}
               onClick={() => setAnnual((v) => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+              className={`relative inline-flex h-11 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold ${
                 annual ? 'bg-nav-dark' : 'bg-gray-300'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  annual ? 'translate-x-6' : 'translate-x-1'
+                className={`inline-block h-7 w-7 transform rounded-full bg-white shadow transition-transform ${
+                  annual ? 'translate-x-8' : 'translate-x-1.5'
                 }`}
               />
             </button>
@@ -415,7 +416,7 @@ function PricingFaq() {
         </h2>
         <p className="text-gray-600 text-center mb-12">
           Still have questions?{' '}
-          <Link to="/contact" className="text-nav-dark font-semibold underline underline-offset-2 hover:text-brand-gold transition-colors">
+          <Link to="/contact" className="inline-flex min-h-11 items-center text-nav-dark font-semibold underline underline-offset-2 hover:text-brand-gold transition-colors">
             Contact us.
           </Link>
         </p>
@@ -488,30 +489,34 @@ function RoiCalculator() {
         <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="pricing-workers-per-project" className="block text-sm font-medium text-gray-700 mb-2">
                 Workers per project
               </label>
               <input
+                id="pricing-workers-per-project"
                 type="range"
+                aria-label="Workers per project"
                 min="1"
                 max="100"
                 value={workersPerProject}
                 onChange={(e) => setWorkersPerProject(Number(e.target.value))}
-                className="w-full accent-brand-gold"
+                className="h-11 w-full accent-brand-gold"
               />
               <p className="text-2xl font-bold text-nav-dark mt-1 font-headline">{workersPerProject}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="pricing-active-projects" className="block text-sm font-medium text-gray-700 mb-2">
                 Active projects per month
               </label>
               <input
+                id="pricing-active-projects"
                 type="range"
+                aria-label="Active projects per month"
                 min="1"
                 max="20"
                 value={projectsPerMonth}
                 onChange={(e) => setProjectsPerMonth(Number(e.target.value))}
-                className="w-full accent-brand-gold"
+                className="h-11 w-full accent-brand-gold"
               />
               <p className="text-2xl font-bold text-nav-dark mt-1 font-headline">{projectsPerMonth}</p>
             </div>
@@ -598,7 +603,7 @@ function PricingFooter() {
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             {links.map(({ label, to }) => (
-              <Link key={label} to={to} className="text-gray-400 hover:text-brand-gold transition-colors">
+              <Link key={label} to={to} className="inline-flex min-h-11 min-w-11 items-center text-gray-400 hover:text-brand-gold transition-colors">
                 {label}
               </Link>
             ))}

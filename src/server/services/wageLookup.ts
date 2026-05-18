@@ -19,7 +19,10 @@ import type { WageDetermination, WageClassification } from '../../shared/types.j
 export type { WageDetermination, WageClassification };
 
 export interface WageAdapter {
-  source: 'federal-dol' | 'ca-dir' | 'wa-li' | 'ny-dol' | 'manual';
+  source: 'federal-dol' | 'ca-dir' | 'wa-li' | 'ny-dol' | 'pa-dli' | 'oh-com' |
+          'co-cowc' | 'md-dllr' | 'or-boli' | 'ct-dol' | 'hi-dlir' | 'ky-labor' |
+          'nm-dol' | 'nv-dir' | 'ri-dlt' | 'wv-labor' | 'me-dol' | 'vt-dfr' |
+          'mt-dli' | 'nd-dlt' | 'de-dol' | 'nh-dol' | 'ak-dol' | 'local' | 'sca-dol' | 'manual';
   supportsLookup(state: string): boolean;
   fetchDetermination(state: string, county: string): Promise<WageDetermination | null>;
 }

@@ -96,13 +96,13 @@ router.get('/:projectId/signature', async (req, res) => {
 
   const [sig] = await db.select().from(contractorSignatures).where(eq(contractorSignatures.projectId, projectId)).limit(1);
   if (!sig) {
-    res.status(404).json({ error: 'No signature on file' });
+    res.json({ data: { signature: null } });
     return;
   }
 
   const absPath = path.join(SIGNATURES_DIR, sig.filePath);
   if (!fs.existsSync(absPath)) {
-    res.status(404).json({ error: 'Signature file not found' });
+    res.json({ data: { signature: null } });
     return;
   }
 

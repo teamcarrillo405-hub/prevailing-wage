@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Input } from '../ui/Input';
+import { PasswordInput } from '../ui/PasswordInput';
 import { Button } from '../ui/Button';
 import { MfaChallenge } from './MfaChallenge';
 
@@ -64,9 +65,8 @@ export function LoginForm() {
         {...register('email')}
       />
 
-      <Input
+      <PasswordInput
         id="login-password"
-        type="password"
         autoComplete="current-password"
         label="Password"
         error={errors.password?.message}
@@ -74,7 +74,7 @@ export function LoginForm() {
       />
 
       {apiError && (
-        <div className="bg-red-50 border border-red-200 rounded-sm px-3 py-2 text-sm text-red-700">
+        <div role="alert" className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {apiError}
         </div>
       )}

@@ -394,13 +394,24 @@ describe('GET /api/audit/:projectId/evidence-packet', () => {
     expect(res.headers['content-disposition']).toContain('evidence-packet');
     expect(res.body.projectId).toBe(projectId);
     expect(res.body.summary.payrollWeekCount).toBe(1);
+    expect(res.body.manifest.readyForPacket).toBe(false);
+    expect(res.body.manifest.sections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'workers', included: false }),
+        expect.objectContaining({ id: 'payroll-entries', included: false }),
+        expect.objectContaining({ id: 'forms', included: true }),
+      ]),
+    );
     expect(res.body.methodology.version).toMatch(/prevailing-wage/);
     expect(res.body.summary.requirements).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: 'payroll_submissions', status: 'missing' }),
       ]),
     );
+    expect(Array.isArray(res.body.wageDeterminations)).toBe(true);
+    expect(Array.isArray(res.body.workers)).toBe(true);
     expect(res.body.payrollWeeks).toHaveLength(1);
+    expect(Array.isArray(res.body.payrollEntries)).toBe(true);
     expect(res.body.submitReadyWeeks).toHaveLength(1);
     expect(res.body.complianceEvidenceWeeks).toEqual([
       expect.objectContaining({
@@ -409,7 +420,10 @@ describe('GET /api/audit/:projectId/evidence-packet', () => {
       }),
     ]);
     expect(Array.isArray(res.body.payrollImports)).toBe(true);
+    expect(Array.isArray(res.body.subcontractors)).toBe(true);
+    expect(Array.isArray(res.body.subcontractorCertifications)).toBe(true);
     expect(Array.isArray(res.body.subcontractorCprWeeks)).toBe(true);
+    expect(Array.isArray(res.body.contractorSignatures)).toBe(true);
     expect(res.body.auditEvents.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -425,10 +439,17 @@ describe('GET /api/audit/:projectId/evidence-packet', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
     expect(res.text).toContain('Requirements');
+    expect(res.text).toContain('Manifest');
+    expect(res.text).toContain('Wage Determinations');
+    expect(res.text).toContain('Workers');
+    expect(res.text).toContain('Payroll Entries');
     expect(res.text).toContain('Submit-Ready Reviews');
     expect(res.text).toContain('Compliance Evidence');
     expect(res.text).toContain('Payroll Imports');
+    expect(res.text).toContain('Subcontractors');
+    expect(res.text).toContain('Subcontractor Certifications');
     expect(res.text).toContain('Subcontractor CPR');
+    expect(res.text).toContain('Contractor Signatures');
     expect(res.text).toContain('Audit Events');
     expect(res.text).toContain('Project audit trail');
   });

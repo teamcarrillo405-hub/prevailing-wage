@@ -321,14 +321,14 @@ export function PhotoCapture({ projectId, weekId, onUploaded }: PhotoCaptureProp
           {'mediaDevices' in navigator && (
             <button
               onClick={startCamera}
-              className="inline-flex items-center gap-2 rounded-sm bg-brand-navy text-white text-sm font-semibold px-4 py-2 hover:bg-brand-navy/90 transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-sm bg-brand-navy text-white text-sm font-semibold px-4 py-2 hover:bg-brand-navy/90 transition-colors"
             >
               Take Photo
             </button>
           )}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-sm border border-gray-300 bg-white text-gray-700 text-sm font-semibold px-4 py-2 hover:bg-gray-50 transition-colors"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-gray-300 bg-white text-gray-700 text-sm font-semibold px-4 py-2 hover:bg-gray-50 transition-colors"
           >
             Choose File
           </button>
@@ -357,13 +357,13 @@ export function PhotoCapture({ projectId, weekId, onUploaded }: PhotoCaptureProp
           <div className="flex gap-2">
             <button
               onClick={captureFrame}
-              className="flex-1 rounded-sm bg-brand-gold text-black text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90 transition-colors"
+              className="min-h-[44px] flex-1 rounded-sm bg-brand-gold text-black text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90 transition-colors"
             >
               Capture
             </button>
             <button
               onClick={() => { stopCamera(); setMode('idle'); }}
-              className="rounded-sm border border-gray-300 text-gray-700 text-sm px-4 py-2 hover:bg-gray-50"
+              className="min-h-[44px] rounded-sm border border-gray-300 text-gray-700 text-sm px-4 py-2 hover:bg-gray-50"
             >
               Cancel
             </button>
@@ -414,14 +414,14 @@ export function PhotoCapture({ projectId, weekId, onUploaded }: PhotoCaptureProp
             <button
               onClick={handleUpload}
               disabled={uploading}
-              className="flex-1 rounded-sm bg-brand-gold text-black text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
+              className="min-h-[44px] flex-1 rounded-sm bg-brand-gold text-black text-sm font-semibold px-4 py-2 hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
             >
               {uploading ? 'Uploading...' : 'Upload Photo'}
             </button>
             <button
               onClick={cancelPreview}
               disabled={uploading}
-              className="rounded-sm border border-gray-300 text-gray-700 text-sm px-4 py-2 hover:bg-gray-50"
+              className="min-h-[44px] rounded-sm border border-gray-300 text-gray-700 text-sm px-4 py-2 hover:bg-gray-50"
             >
               Retake
             </button>
@@ -452,8 +452,9 @@ export function PhotoCapture({ projectId, weekId, onUploaded }: PhotoCaptureProp
                 <button
                   onClick={() => handleDelete(photo.id)}
                   disabled={deletingId === photo.id}
-                  className="absolute top-1 right-1 rounded bg-black/70 text-white text-xs px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                  className="absolute right-2 top-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm bg-black/80 px-2 py-2 text-sm font-semibold text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100 focus:opacity-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
                   title="Delete photo"
+                  aria-label="Delete photo"
                 >
                   {deletingId === photo.id ? '...' : 'X'}
                 </button>

@@ -35,7 +35,7 @@ const caseStudies: CaseStudyCard[] = [
     company: 'Pacific Northwest Infrastructure (name changed)',
     headline: 'Zero WA L&I XML rejections across 3 simultaneous projects',
     description:
-      'Six XML rejections in two months from WA L&I were delaying projects and triggering compliance inquiries. PrevWage\'s WA-native CPR export, built to the exact L&I schema, eliminated rejections from day one.',
+      'Six XML rejections in two months from WA L&I were delaying projects and triggering compliance inquiries. PrevWage\'s WA-native CPR export helped the team review schema issues before resubmission.',
     stats: [
       { value: '0', label: 'Rejections' },
       { value: '40%', label: 'Admin reduction' },
@@ -86,7 +86,7 @@ function CaseStudyCardBlock({ card }: { card: CaseStudyCard }) {
 
         <Link
           to={card.href}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-nav-dark hover:text-brand-gold transition-colors"
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-nav-dark hover:text-brand-gold transition-colors"
         >
           Read full case study
           <ArrowRight className="w-4 h-4" />
@@ -103,12 +103,12 @@ export function CaseStudiesPage() {
       {/* Header */}
       <header className="bg-gray-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-sm text-gray-300 hover:text-white transition-colors">
+          <Link to="/" className="inline-flex min-h-11 items-center text-sm text-gray-300 hover:text-white transition-colors">
             <span className="font-semibold text-white">PrevWage</span>
           </Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex min-h-11 items-center rounded-lg bg-brand-gold px-4 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90"
           >
             Start Free
           </Link>
@@ -125,8 +125,8 @@ export function CaseStudiesPage() {
             Real Results from Real Contractors
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            See how contractors across 8 states use PrevWage to eliminate certified payroll
-            errors, pass DOL audits, and reclaim hours of admin time every week.
+            See how contractors across 8 states use PrevWage to reduce certified payroll
+            errors, prepare for audits, and reclaim hours of admin time every week.
           </p>
         </div>
       </div>
@@ -196,12 +196,12 @@ export function CaseStudiesPage() {
       {/* Footer */}
       <footer className="bg-gray-950 text-gray-500 text-xs py-8 text-center">
         <div className="max-w-5xl mx-auto px-6 flex flex-wrap justify-center gap-6">
-          <Link to="/case-studies/hcc" className="hover:text-gray-300 transition-colors">HCC Case Study</Link>
-          <Link to="/case-studies/wa-dot" className="hover:text-gray-300 transition-colors">WA DOT Case Study</Link>
-          <Link to="/contact" className="hover:text-gray-300 transition-colors">Contact</Link>
-          <Link to="/api-docs" className="hover:text-gray-300 transition-colors">API Docs</Link>
-          <Link to="/security" className="hover:text-gray-300 transition-colors">Security Policy</Link>
-          <Link to="/register" className="hover:text-gray-300 transition-colors">Register</Link>
+          <Link to="/case-studies/hcc" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">HCC Case Study</Link>
+          <Link to="/case-studies/wa-dot" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">WA DOT Case Study</Link>
+          <Link to="/contact" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Contact</Link>
+          <Link to="/api-docs" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">API Docs</Link>
+          <Link to="/security" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Security Policy</Link>
+          <Link to="/register" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Register</Link>
         </div>
         <p className="mt-6 text-gray-600">2026 PrevWage. All rights reserved.</p>
       </footer>

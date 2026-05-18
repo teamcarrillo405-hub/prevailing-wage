@@ -2,7 +2,7 @@
 // Route: /projects/:projectId/payroll/:weekId
 import React, { useRef, useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileCheck, ExternalLink, Info } from 'lucide-react';
 import { api } from '../lib/api';
@@ -14,6 +14,11 @@ import { TermTooltip } from '../components/ui/TermTooltip';
 import { Tooltip } from '../components/ui/Tooltip';
 import { PageHeader } from '../components/ui/PageHeader';
 import type { SubmitReadyFixTarget } from '../../shared/submitReadyFixTargets';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { RateProvenance } from '../components/ui/RateProvenance';
+import { PhotoCapture } from '../components/field/PhotoCapture';
 
 const WH347_DEF = "The U.S. Department of Labor's official certified payroll form. Required weekly for federal prevailing wage projects. Submit to your contracting officer within 7 days of the week ending date.";
 const ECPR_XML_DEF = "Electronic Certified Payroll Report — Washington State's digital submission format. Required for public works projects in WA. Exported as an XML file and uploaded to L&I's online system.";
@@ -29,11 +34,53 @@ const PROVIDER_LABELS: Record<string, string> = {
   sage_300: 'Sage 300 CRE',
   sage_100: 'Sage 100',
 };
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
-import { Button } from '../components/ui/Button';
-import { RateProvenance } from '../components/ui/RateProvenance';
-import { PhotoCapture } from '../components/field/PhotoCapture';
+
+function PayrollWorkZone({
+  id,
+  eyebrow,
+  title,
+  description,
+  children,
+  className = '',
+  collapsed = false,
+  onToggle,
+  meta,
+  sectionRef,
+}: {
+  id?: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+  className?: string;
+  collapsed?: boolean;
+  onToggle?: () => void;
+  meta?: React.ReactNode;
+  sectionRef?: React.RefObject<HTMLElement | null>;
+}) {
+  return (
+    <section id={id} ref={sectionRef} className={`mb-6 scroll-mt-24 ${className}`}>
+      <div className="mb-3 flex flex-col gap-3 rounded-md border border-transparent sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">{eyebrow}</p>
+          <h2 className="mt-1 font-headline text-xl text-gray-950">{title}</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-600">{description}</p>
+        </div>
+        {(meta || onToggle) && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {meta}
+            {onToggle && (
+              <Button type="button" variant="ghost" size="sm" onClick={onToggle}>
+                {collapsed ? 'Open section' : 'Collapse'}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+      {!collapsed && <div className="space-y-4">{children}</div>}
+    </section>
+  );
+}
 
 interface PayrollWeek {
   id: string;
@@ -315,6 +362,13 @@ interface ImportReconciliationResult {
       fringeBreakdown: number;
       checkNumber: number;
     };
+    sourceFieldGaps?: Array<{
+      field: string;
+      label: string;
+      missingCount: number;
+      reason: string;
+      nextAction: string;
+    }>;
     itemizedDeductionMismatchCount?: number;
     netPayMismatchCount?: number;
     fringeMismatchCount?: number;
@@ -526,6 +580,7 @@ function getDeductionFix(): string {
 export function PayrollWeekDetailPage() {
   const { projectId, weekId } = useParams<{ projectId: string; weekId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [generating, setGenerating] = useState(false);
   const [showPreflight, setShowPreflight] = useState(false);
@@ -541,9 +596,22 @@ export function PayrollWeekDetailPage() {
   const submitReadySectionRef = useRef<HTMLDivElement>(null);
   const importReconciliationSectionRef = useRef<HTMLDivElement>(null);
   const requiredFormsSectionRef = useRef<HTMLDivElement>(null);
+  const formsSectionRef = useRef<HTMLDivElement>(null);
   const submissionStatusSectionRef = useRef<HTMLDivElement>(null);
+  const workflowZoneRef = useRef<HTMLElement>(null);
+  const payrollZoneRef = useRef<HTMLElement>(null);
+  const formsZoneRef = useRef<HTMLElement>(null);
+  const preflightZoneRef = useRef<HTMLElement>(null);
+  const suppressWorkZoneObserverUntilRef = useRef(0);
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
   const [activeFixIssue, setActiveFixIssue] = useState<SubmitReadyIssue | null>(null);
+  const [showAutomationDetails, setShowAutomationDetails] = useState(false);
+  const [openWorkZones, setOpenWorkZones] = useState({
+    workflow: true,
+    payroll: true,
+    forms: false,
+    preflight: false,
+  });
 
   // isDirty: true when local changes (classification overrides, or any unsaved state) exist
   // and the user is offline — drives the 30-second auto-save indicator
@@ -1318,6 +1386,52 @@ export function PayrollWeekDetailPage() {
     return () => clearInterval(intervalId);
   }, [weekId, weekData, isDirty, autoSaving]);
 
+  useEffect(() => {
+    const zone = workZoneFromHash(location.hash);
+    if (!zone) return;
+    suppressWorkZoneObserverUntilRef.current = Date.now() + 1400;
+    setWorkZoneOpen(zone);
+    window.requestAnimationFrame(() => {
+      scrollToElement(getWorkZoneElement(zone));
+      setPayrollWorkZoneHash(zone);
+    });
+  }, [location.hash]);
+
+  useEffect(() => {
+    if (!weekData) return;
+    const zoneEntries: Array<[keyof typeof openWorkZones, HTMLElement | null]> = [
+      ['workflow', workflowZoneRef.current],
+      ['payroll', payrollZoneRef.current],
+      ['forms', formsZoneRef.current],
+      ['preflight', preflightZoneRef.current],
+    ];
+    let scrollFrame = 0;
+    const syncNearestZone = () => {
+      if (Date.now() < suppressWorkZoneObserverUntilRef.current) return;
+      const visible = zoneEntries
+        .map(([zone, element]) => {
+          if (!element) return null;
+          const rect = element.getBoundingClientRect();
+          if (rect.bottom < 120 || rect.top > window.innerHeight * 0.78) return null;
+          return { zone, distance: Math.abs(rect.top - 160) };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a!.distance - b!.distance)[0];
+      if (visible) setPayrollWorkZoneHash(visible.zone);
+    };
+    const handleScroll = () => {
+      if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+      scrollFrame = window.requestAnimationFrame(syncNearestZone);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    const initialTimer = window.setTimeout(syncNearestZone, 1500);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.clearTimeout(initialTimer);
+      if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+    };
+  }, [weekData, openWorkZones.workflow, openWorkZones.payroll, openWorkZones.forms, openWorkZones.preflight, location.pathname, location.search]);
+
   const isLoading = weekLoading || complianceLoading || submitReadyLoading;
   const isError = weekError || complianceError || submitReadyError;
 
@@ -1357,6 +1471,61 @@ export function PayrollWeekDetailPage() {
   const hasSubmitReadyBlockers = (submitReadyData?.blockers ?? 0) > 0;
   const canGenerateCertifiedPayroll = hasPayrollEntries && payRowsComplete && !hasBlockingCompliance && !hasSubmitReadyBlockers;
   const canMarkSubmitted = canGenerateCertifiedPayroll && Boolean(week && !week.submittedAt);
+  const payrollTotals = entries.reduce(
+    (totals, row) => {
+      const entry = row.entry;
+      totals.hours +=
+        entry.monSt + entry.tueSt + entry.wedSt + entry.thuSt + entry.friSt + entry.satSt + entry.sunSt +
+        entry.monOt + entry.tueOt + entry.wedOt + entry.thuOt + entry.friOt + entry.satOt + entry.sunOt +
+        entry.monDt + entry.tueDt + entry.wedDt + entry.thuDt + entry.friDt + entry.satDt + entry.sunDt;
+      totals.gross += entry.grossWages ?? 0;
+      totals.deductions += entry.deductions ?? 0;
+      totals.net += entry.netPay ?? 0;
+      return totals;
+    },
+    { hours: 0, gross: 0, deductions: 0, net: 0 },
+  );
+  const weekRiskLabel = week?.submittedAt
+    ? 'Submitted'
+    : hasBlockingCompliance || hasSubmitReadyBlockers
+    ? 'Blocked'
+    : canGenerateCertifiedPayroll
+    ? 'Ready to export'
+    : hasPayrollEntries
+    ? 'Needs review'
+    : 'Needs payroll source';
+  const weekRiskVariant = week?.submittedAt || canGenerateCertifiedPayroll
+    ? 'compliant'
+    : hasBlockingCompliance || hasSubmitReadyBlockers
+    ? 'violation'
+    : 'warning';
+  const primaryWeekAction = week?.submittedAt
+    ? { label: 'Review submission', onClick: () => openWorkZoneAndScroll('preflight', () => submissionStatusSectionRef.current) }
+    : hasBlockingCompliance || hasSubmitReadyBlockers
+    ? { label: 'Clear blockers', onClick: () => openWorkZoneAndScroll('preflight', () => submitReadySectionRef.current ?? complianceSectionRef.current) }
+    : canGenerateCertifiedPayroll
+    ? { label: 'Open forms', onClick: () => openWorkZoneAndScroll('forms', () => formsSectionRef.current) }
+    : hasPayrollEntries
+    ? { label: 'Review entries', onClick: () => openWorkZoneAndScroll('payroll', () => entriesSectionRef.current) }
+    : { label: 'Import payroll', onClick: () => { setImportStep(1); setShowImportModal(true); } };
+  const commandCenterTitle = week?.submittedAt
+    ? 'Submission recorded'
+    : hasBlockingCompliance || hasSubmitReadyBlockers
+    ? 'Clear blockers before export'
+    : canGenerateCertifiedPayroll
+    ? 'Download forms and record submission'
+    : hasPayrollEntries
+    ? 'Review payroll rows'
+    : 'Import payroll source';
+  const commandCenterDetail = week?.submittedAt
+    ? `This payroll week was submitted to ${week.submittedTo ?? 'the recipient'}.`
+    : hasBlockingCompliance || hasSubmitReadyBlockers
+    ? 'The payroll rows exist, but warnings or blockers need review before final certification.'
+    : canGenerateCertifiedPayroll
+    ? 'WH-347 and required state forms are available. Download, submit to the agency or portal, then record submission.'
+    : hasPayrollEntries
+    ? 'Payroll rows are loaded. Review worker rows, deductions, gross pay, net pay, and any source differences.'
+    : 'Import a payroll register or fill from field clock before making manual corrections.';
   const requiredFormRows = [
     {
       label: 'Federal WH-347',
@@ -1392,34 +1561,34 @@ export function PayrollWeekDetailPage() {
   const payrollAutomation = importReconciliationData?.data.automation;
   const submissionSteps = [
     {
-      label: 'Automate source',
+      label: 'Payroll source',
       detail: payrollAutomation
-        ? `${payrollAutomation.confidenceScore}/100 automation confidence. ${payrollAutomation.nextBestAction.label}.`
+        ? `${entries.length} row${entries.length === 1 ? '' : 's'} loaded. Automation confidence: ${payrollAutomation.confidenceScore}/100.`
         : hasPayrollEntries ? `${entries.length} payroll entr${entries.length === 1 ? 'y' : 'ies'} ready for review.` : 'Import payroll or enter worker hours and pay.',
-      complete: Boolean(payrollAutomation && payrollAutomation.confidenceScore >= 85 && payrollAutomation.exceptionCount === 0),
-      action: payrollAutomation ? payrollAutomation.nextBestAction.label : 'Open entries',
-      onClick: () => payrollAutomation ? scrollToAutomationTarget(payrollAutomation.nextBestAction.target) : scrollToElement(entriesSectionRef.current),
+      complete: hasPayrollEntries,
+      action: payrollAutomation ? 'Review source' : 'Open entries',
+      onClick: () => payrollAutomation ? scrollToAutomationTarget(payrollAutomation.nextBestAction.target) : openWorkZoneAndScroll('payroll', () => entriesSectionRef.current),
     },
     {
       label: 'Clear blockers',
       detail: hasBlockingCompliance || hasSubmitReadyBlockers ? 'Resolve listed blockers before exporting forms.' : 'No blocking payroll issues detected.',
       complete: !hasBlockingCompliance && !hasSubmitReadyBlockers,
       action: 'Open checks',
-      onClick: () => scrollToElement(submitReadySectionRef.current ?? complianceSectionRef.current),
+      onClick: () => openWorkZoneAndScroll('preflight', () => submitReadySectionRef.current ?? complianceSectionRef.current),
     },
     {
       label: 'Download forms',
       detail: canGenerateCertifiedPayroll ? 'WH-347 and required state forms are available.' : 'Forms unlock after payroll and checks are complete.',
       complete: canGenerateCertifiedPayroll,
       action: 'Open forms',
-      onClick: () => scrollToElement(requiredFormsSectionRef.current),
+      onClick: () => openWorkZoneAndScroll('forms', () => formsSectionRef.current),
     },
     {
       label: 'Mark submitted',
       detail: week?.submittedAt ? `Submitted to ${week.submittedTo ?? 'agency'}.` : 'Record where and when the certified payroll was submitted.',
       complete: Boolean(week?.submittedAt),
       action: 'Open submission',
-      onClick: () => scrollToElement(submissionStatusSectionRef.current),
+      onClick: () => openWorkZoneAndScroll('preflight', () => submissionStatusSectionRef.current),
     },
   ];
   const nextSubmissionStep = submissionSteps.find((step) => !step.complete) ?? submissionSteps[submissionSteps.length - 1];
@@ -1438,20 +1607,63 @@ export function PayrollWeekDetailPage() {
     target.focus({ preventScroll: true });
   }
 
+  function isWorkZoneHash(value: string): value is `#${keyof typeof openWorkZones}` {
+    return value === '#workflow' || value === '#payroll' || value === '#forms' || value === '#preflight';
+  }
+
+  function workZoneFromHash(value: string): keyof typeof openWorkZones | null {
+    return isWorkZoneHash(value) ? value.slice(1) as keyof typeof openWorkZones : null;
+  }
+
+  function getWorkZoneElement(zone: keyof typeof openWorkZones) {
+    if (zone === 'workflow') return workflowZoneRef.current;
+    if (zone === 'payroll') return payrollZoneRef.current;
+    if (zone === 'forms') return formsZoneRef.current;
+    return preflightZoneRef.current;
+  }
+
+  function setPayrollWorkZoneHash(zone: keyof typeof openWorkZones) {
+    const nextHash = `#${zone}`;
+    if (window.location.hash === nextHash) return;
+    window.history.replaceState(null, '', `${location.pathname}${location.search}${nextHash}`);
+    window.dispatchEvent(new CustomEvent('payroll-work-zone-change'));
+  }
+
+  function setWorkZoneOpen(zone: keyof typeof openWorkZones, open = true) {
+    setOpenWorkZones((current) => ({ ...current, [zone]: open }));
+  }
+
+  function toggleWorkZone(zone: keyof typeof openWorkZones) {
+    setOpenWorkZones((current) => ({ ...current, [zone]: !current[zone] }));
+  }
+
+  function openWorkZoneAndScroll(
+    zone: keyof typeof openWorkZones,
+    target: HTMLElement | null | undefined | (() => HTMLElement | null | undefined),
+  ) {
+    suppressWorkZoneObserverUntilRef.current = Date.now() + 1400;
+    setWorkZoneOpen(zone);
+    window.requestAnimationFrame(() => {
+      scrollToElement(typeof target === 'function' ? target() : target);
+      setPayrollWorkZoneHash(zone);
+    });
+  }
+
   function scrollToAutomationTarget(target: PayrollAutomationTask['target']) {
     if (target === 'entries' || target === 'deductions' || target === 'fringes') {
-      scrollToElement(entriesSectionRef.current);
+      openWorkZoneAndScroll('payroll', () => entriesSectionRef.current);
       return;
     }
     if (target === 'import' || target === 'mapping' || target === 'exceptions') {
+      setWorkZoneOpen('workflow');
       scrollToElement(importReconciliationSectionRef.current);
       return;
     }
     if (target === 'signature') {
-      scrollToElement(complianceSectionRef.current ?? submitReadySectionRef.current);
+      openWorkZoneAndScroll('preflight', () => complianceSectionRef.current ?? submitReadySectionRef.current);
       return;
     }
-    scrollToElement(submissionStatusSectionRef.current);
+    openWorkZoneAndScroll('preflight', () => submissionStatusSectionRef.current);
   }
 
   function automationStatusClasses(status: PayrollAutomationTask['status']) {
@@ -1542,7 +1754,7 @@ export function PayrollWeekDetailPage() {
   function scrollToSubmitReadyIssue(issue: SubmitReadyIssue) {
     setActiveFixIssue(issue);
     if (issue.id === 'human-certification-review') {
-      scrollToElement(complianceSectionRef.current ?? submitReadySectionRef.current);
+      openWorkZoneAndScroll('preflight', () => complianceSectionRef.current ?? submitReadySectionRef.current);
       window.setTimeout(() => setActiveFixIssue(null), 10_000);
       return;
     }
@@ -1569,13 +1781,18 @@ export function PayrollWeekDetailPage() {
         openPayrollEntryEditor(target.entryId, target.field);
         return;
       }
-      scrollToElement(complianceSectionRef.current);
+      openWorkZoneAndScroll('preflight', () => complianceSectionRef.current);
       window.setTimeout(() => setActiveFixIssue(null), 10_000);
       return;
     }
 
     if (issue.actionId === 'prepare-import-review' || issue.id === 'payroll-entries') {
-      scrollToElement(entries.length > 0 ? entriesSectionRef.current : importReconciliationSectionRef.current ?? entriesSectionRef.current);
+      if (entries.length > 0) {
+        openWorkZoneAndScroll('payroll', () => entriesSectionRef.current);
+      } else {
+        setWorkZoneOpen('workflow');
+        scrollToElement(importReconciliationSectionRef.current ?? entriesSectionRef.current);
+      }
       queryClient.invalidateQueries({ queryKey: ['submit-ready', weekId] });
       queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
       window.setTimeout(() => setActiveFixIssue(null), 10_000);
@@ -1597,7 +1814,7 @@ export function PayrollWeekDetailPage() {
       return;
     }
 
-    scrollToElement(complianceSectionRef.current ?? entriesSectionRef.current ?? submitReadySectionRef.current);
+    openWorkZoneAndScroll('preflight', () => complianceSectionRef.current ?? entriesSectionRef.current ?? submitReadySectionRef.current);
     window.setTimeout(() => setActiveFixIssue(null), 10_000);
   }
 
@@ -1667,7 +1884,7 @@ export function PayrollWeekDetailPage() {
       return;
     }
 
-    scrollToElement(complianceSectionRef.current ?? submitReadySectionRef.current ?? entriesSectionRef.current);
+    openWorkZoneAndScroll('preflight', () => complianceSectionRef.current ?? submitReadySectionRef.current ?? entriesSectionRef.current);
   }
 
   function handleDownloadClick() {
@@ -2063,7 +2280,7 @@ export function PayrollWeekDetailPage() {
           <div className="flex items-center gap-4 flex-wrap">
             <button
               onClick={() => navigate(`/projects/${projectId}/payroll`)}
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+              className="inline-flex min-h-11 items-center rounded-sm px-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-brand-gold/10 hover:text-gray-900"
             >
               &larr; Back to Payroll
             </button>
@@ -2082,48 +2299,87 @@ export function PayrollWeekDetailPage() {
           )}
         </div>
         {!isLoading && !isError && !week?.submittedAt && (
-          <Card padding="sm" className="mb-4 border border-brand-gold/40 bg-brand-gold/10">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Start here</p>
-                <h2 className="mt-1 text-base font-semibold text-gray-950">
-                  {hasPayrollEntries ? 'Review the payroll source before export' : 'Bring in payroll data before manual cleanup'}
+          <PayrollWorkZone
+          eyebrow="Command Center"
+          title="Finish this payroll week"
+          description="Start with source payroll, clear the warnings, then generate forms and record submission."
+        >
+          <Card padding="none" className="overflow-hidden border border-gray-200 bg-white shadow-card-elevated">
+            <div className="grid gap-0 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+              <div className="p-5 sm:p-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={weekRiskVariant}>{weekRiskLabel}</Badge>
+                  <Badge variant="neutral">{entries.length} worker row{entries.length === 1 ? '' : 's'}</Badge>
+                  {submitReadyData && <Badge variant="neutral">{submitReadyData.score}/100 submit score</Badge>}
+                </div>
+                <h2 className="mt-3 font-headline text-2xl text-gray-950">
+                  {commandCenterTitle}
                 </h2>
-                <p className="mt-1 text-sm text-gray-700">
-                  Import a payroll file or fill from field clock first. Use manual entry only for corrections and exceptions.
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
+                  {commandCenterDetail}
                 </p>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                {weekId && (
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => { setImportStep(1); setShowImportModal(true); }}
+                    onClick={primaryWeekAction.onClick}
                   >
-                    Import payroll file
+                    {primaryWeekAction.label}
                   </Button>
-                )}
-                {weekId && (
+                  {weekId && !hasPayrollEntries && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={fillFetching}
+                      onClick={handleFillFromPunches}
+                    >
+                      {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
+                    </Button>
+                  )}
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
-                    disabled={fillFetching}
-                    onClick={handleFillFromPunches}
+                    onClick={() => openWorkZoneAndScroll('payroll', () => entriesSectionRef.current)}
                   >
-                    {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
+                    Review entries
                   </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => scrollToElement(entriesSectionRef.current)}
-                >
-                  Review entries
-                </Button>
+                </div>
+              </div>
+              <div className="border-t border-gray-200 bg-gray-50 p-5 lg:border-l lg:border-t-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Week totals</p>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="rounded-md border border-gray-200 bg-white p-3">
+                    <p className="text-xs text-gray-500">Hours</p>
+                    <p className="mt-1 text-xl font-semibold text-gray-950">{payrollTotals.hours.toFixed(2)}</p>
+                  </div>
+                  <div className="rounded-md border border-gray-200 bg-white p-3">
+                    <p className="text-xs text-gray-500">Gross</p>
+                    <p className="mt-1 text-xl font-semibold text-gray-950">${payrollTotals.gross.toFixed(2)}</p>
+                  </div>
+                  <div className="rounded-md border border-gray-200 bg-white p-3">
+                    <p className="text-xs text-gray-500">Deductions</p>
+                    <p className="mt-1 text-xl font-semibold text-gray-950">${payrollTotals.deductions.toFixed(2)}</p>
+                  </div>
+                  <div className="rounded-md border border-gray-200 bg-white p-3">
+                    <p className="text-xs text-gray-500">Net</p>
+                    <p className="mt-1 text-xl font-semibold text-gray-950">${payrollTotals.net.toFixed(2)}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
+          </PayrollWorkZone>
         )}
+        <PayrollWorkZone
+          id="workflow"
+          sectionRef={workflowZoneRef}
+          eyebrow="Workflow"
+          title="Weekly work zones"
+          description="Use the steps in order: source payroll, review rows, clear blockers, generate forms, then submit."
+          collapsed={!openWorkZones.workflow}
+          onToggle={() => toggleWorkZone('workflow')}
+          meta={<Badge variant="neutral">{nextSubmissionStep.label}</Badge>}
+        >
         <Card padding="sm" className="mb-4 border border-gray-200 bg-white">
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -2139,7 +2395,7 @@ export function PayrollWeekDetailPage() {
               <button
                 type="button"
                 onClick={nextSubmissionStep.onClick}
-                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-black hover:bg-brand-gold/90"
+                className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-black hover:bg-brand-gold/90"
               >
                 Next: {nextSubmissionStep.label}
               </button>
@@ -2171,7 +2427,7 @@ export function PayrollWeekDetailPage() {
             </div>
           </div>
         </Card>
-        <section className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <section className="mb-4 grid gap-4">
         {payrollAutomation && (
           <div className="xl:col-span-2">
             <Card padding="default" className="border border-gray-200 bg-white">
@@ -2241,7 +2497,20 @@ export function PayrollWeekDetailPage() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <div className="mt-4 flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAutomationDetails((current) => !current)}
+                >
+                  {showAutomationDetails ? 'Hide automation detail' : 'Show automation detail'}
+                </Button>
+              </div>
+
+              {showAutomationDetails && (
+              <>
+              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                 <div className="rounded-md border border-gray-200 bg-white p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -2370,6 +2639,8 @@ export function PayrollWeekDetailPage() {
                   </button>
                 ))}
               </div>
+              </>
+              )}
             </Card>
           </div>
         )}
@@ -2509,6 +2780,9 @@ export function PayrollWeekDetailPage() {
                       Payroll-source detail complete on {importReconciliationData.data.summary.sourceDetailCompleteCount ?? 0} of {importReconciliationData.data.summary.entryCount} rows.
                     </p>
                   )}
+                  <p className="mt-2 max-w-2xl text-xs leading-5 text-gray-500">
+                    Payroll systems remain the source of truth for taxes, deductions, checks, and benefit detail unless a connected provider supplies verified values.
+                  </p>
                 </div>
               <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[260px]">
                 <div>
@@ -2561,6 +2835,23 @@ export function PayrollWeekDetailPage() {
                 ))}
               </div>
             )}
+            {(importReconciliationData.data.summary.sourceFieldGaps?.length ?? 0) > 0 && (
+              <div className="mt-4 rounded-sm border border-amber-200 bg-amber-50 px-3 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Payroll-source fields to reconcile</p>
+                <div className="mt-3 grid gap-2">
+                  {importReconciliationData.data.summary.sourceFieldGaps!.slice(0, 4).map((gap) => (
+                    <div key={gap.field} className="rounded-sm border border-amber-200 bg-white px-3 py-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">{gap.label}</p>
+                        <Badge variant="warning">{gap.missingCount} missing</Badge>
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-gray-600">{gap.reason}</p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-gray-700">{gap.nextAction}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {importReconciliationData.data.providerGuide && (
               <div className="mt-4 rounded-sm border border-brand-gold/30 bg-brand-gold/5 px-3 py-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -2605,7 +2896,7 @@ export function PayrollWeekDetailPage() {
                       ?? stateReadinessData.data.invalidFields?.[0]?.key
                       ?? '',
                   )}`}
-                  className="inline-flex items-center justify-center rounded-sm border border-border-default px-3 py-2 text-xs font-semibold text-gray-800 hover:border-brand-gold hover:bg-brand-gold/5"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-sm border border-border-default px-3 py-2 text-xs font-semibold text-gray-800 hover:border-brand-gold hover:bg-brand-gold/5"
                 >
                   Complete Fields
                 </Link>
@@ -2618,7 +2909,7 @@ export function PayrollWeekDetailPage() {
                 <Link
                   key={field.key}
                   to={`/projects/${projectId}/settings?field=${encodeURIComponent(field.key)}`}
-                  className={`flex items-center justify-between rounded-sm border px-3 py-2 text-sm transition-colors ${
+                  className={`flex min-h-[44px] items-center justify-between rounded-sm border px-3 py-2 text-sm transition-colors ${
                     !hasError
                       ? 'border-border-default hover:border-brand-gold hover:bg-brand-gold/5'
                       : 'border-amber-200 bg-amber-50 hover:border-amber-400'
@@ -2639,153 +2930,41 @@ export function PayrollWeekDetailPage() {
           </Card>
         )}
         </section>
-        {/* MOB-13: sticky download bar with iOS safe-area padding */}
-        <div
-          className="sticky bottom-0 z-10 bg-white border-t border-brand-navy/10 px-4 sm:px-6 pt-3 -mx-4 sm:-mx-6 mt-8"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0.75rem)' }}
+        </PayrollWorkZone>
+        <PayrollWorkZone
+          id="payroll"
+          sectionRef={payrollZoneRef}
+          eyebrow="Payroll Review"
+          title="Review entries and totals"
+          description="Check each worker row, wage source, deductions, net pay, and row-level compliance status."
+          collapsed={!openWorkZones.payroll}
+          onToggle={() => toggleWorkZone('payroll')}
+          meta={<Badge variant={hasPayrollEntries ? 'compliant' : 'warning'}>{entries.length} row{entries.length === 1 ? '' : 's'}</Badge>}
         >
-          {/* MOB-13: "Fill from Field Clock" — full-width on mobile, inline on sm+ */}
-          {weekId && !week?.submittedAt && (
-            <div className="mb-2 sm:hidden">
-              <Button
-                variant="secondary"
-                disabled={fillFetching}
-                onClick={handleFillFromPunches}
-                className="w-full min-h-[44px]"
-              >
-                {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
-              </Button>
-            </div>
-          )}
-          <div className="flex gap-2 flex-wrap items-center">
-            {weekId && week && !week.isFinal && !week.submittedAt && (
-              <Link
-                to={`/projects/${projectId}/payroll/${weekId}/edit`}
-                className="inline-flex items-center justify-center text-xs px-3 py-2.5 min-h-[44px] font-semibold rounded-sm bg-brand-gold text-black hover:bg-brand-gold/90 transition-colors"
-              >
-                Edit hours
-              </Link>
-            )}
-            {weekId && (
-              <span className="inline-flex items-center gap-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={generating || !canGenerateCertifiedPayroll}
-                  onClick={handleDownloadClick}
-                >
-                  {generating ? 'Generating...' : 'Download WH-347'}
-                </Button>
-                <Tooltip content={canGenerateCertifiedPayroll
-                  ? 'Federal Certified Payroll Report required for Davis-Bacon Act projects. The January 2025 revision is the only version accepted by the Department of Labor.'
-                  : 'Complete payroll entries and clear blocking compliance issues before generating WH-347.'} />
-              </span>
-            )}
-            {/* STATE_FORMS registry-driven primary download button (STATE-12, NFR-06) */}
-            {stateFormConfig && weekId && (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={generating || !canGenerateCertifiedPayroll}
-                onClick={() =>
-                  stateFormConfig.route === 'a1131'
-                    ? handleCaDownloadClick()
-                    : handleStateFormDownload(stateFormConfig.route, weekId)
-                }
-              >
-                {stateFormConfig.downloadLabel}
-              </Button>
-            )}
-            {isCA && weekId && (
-              <span className="inline-flex items-center gap-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => { setEcprStep(1); setShowEcprModal(true); }}
-                >
-                  Download CA eCPR XML
-                </Button>
-                <Tooltip content="California's electronic certified payroll submission format required for public works projects. Export as XML and upload to DIR's eCPR portal at efiling.dir.ca.gov/eCPR." />
-              </span>
-            )}
-            {isWA && weekId && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleWaCprDownloadClick}
-              >
-                Download WA CPR XML
-              </Button>
-            )}
-            {isNY && weekId && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => { setNyMpwrStep(1); setShowNyMpwrModal(true); }}
-              >
-                NY MPWR Submission
-              </Button>
-            )}
-            {isIL && weekId && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => { setIlIdolStep(1); setShowIlIdolModal(true); }}
-              >
-                IL IDOL Submission
-              </Button>
-            )}
-            {weekId && (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={!!week?.submittedAt}
-                title={week?.submittedAt ? 'This payroll week has been submitted and cannot be modified.' : undefined}
-                onClick={() => { setImportStep(1); setShowImportModal(true); }}
-              >
-                Import payroll file
-              </Button>
-            )}
-            {/* Hidden on mobile — shown full-width above this row instead */}
-            {weekId && !week?.submittedAt && (
-              <span className="hidden sm:contents">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={fillFetching}
-                  onClick={handleFillFromPunches}
-                >
-                  {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
-                </Button>
-              </span>
-            )}
-            {weekId && qboConnected && !week?.submittedAt && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowQboImportModal(true)}
-              >
-                Import from QuickBooks
-              </Button>
-            )}
-            {weekId && qboConnected && !week?.submittedAt && (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={qboSyncFetching}
-                onClick={handleQboSync}
-              >
-                {qboSyncFetching ? 'Syncing...' : 'Sync from QB'}
-              </Button>
-            )}
-          </div>
-        </div>
-
         <HelpCallout
           icon={FileCheck}
           title="Review Before You Submit"
           body={<>Verify all hours and rates are correct. Once you download the <TermTooltip term="WH-347" definition={WH347_DEF} />, it becomes your certified payroll record. Violations shown here must be corrected or documented.</>}
         />
+
+        {!isLoading && !isError && entries.length > 0 && (
+          <Card padding="sm" className="border border-gray-200 bg-white">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {[
+                ['Workers', entries.length.toString()],
+                ['Total hours', payrollTotals.hours.toFixed(2)],
+                ['Gross wages', `$${payrollTotals.gross.toFixed(2)}`],
+                ['Deductions', `$${payrollTotals.deductions.toFixed(2)}`],
+                ['Net pay', `$${payrollTotals.net.toFixed(2)}`],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-950">{value}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {importSuccessBanner && (
           <div className="mb-4 rounded-sm border border-status-compliant/30 bg-status-compliant/10 px-4 py-2 text-sm text-status-compliant">
@@ -2839,9 +3018,9 @@ export function PayrollWeekDetailPage() {
           </div>
         )}
 
-        {/* lg: two-column layout — entries (left) + compliance/submission sidebar (right) */}
-        <div className="lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
-        <div className="lg:col-span-2">
+        {/* Single-column review layout: checklist panels stay full-width instead of a narrow right rail. */}
+        <div className="space-y-6">
+        <div>
 
         {/* Entries — MOB-13: card view on mobile, table on sm+ */}
         <div ref={entriesSectionRef} tabIndex={-1}>
@@ -2987,6 +3166,7 @@ export function PayrollWeekDetailPage() {
                             if (classifications.length <= 1) return <span className="text-xs text-gray-400">—</span>;
                             return (
                               <select
+                                aria-label={`Override classification for ${e.workerName}`}
                                 value={row.overrideClassificationId ?? ''}
                                 onChange={ev => {
                                   const val = ev.target.value;
@@ -3001,7 +3181,7 @@ export function PayrollWeekDetailPage() {
                                     removeOverrideMutation.mutate(row.overrideId);
                                   }
                                 }}
-                                className="text-base border border-gray-200 rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                                className="min-h-11 rounded-sm border border-gray-200 px-2 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                                 disabled={!!week?.submittedAt}
                               >
                                 <option value="">Default</option>
@@ -3047,6 +3227,7 @@ export function PayrollWeekDetailPage() {
                         {subs.length > 0 && (
                           <td className="px-5 py-3">
                             <select
+                              aria-label={`Subcontractor attribution for ${e.workerName}`}
                               value={e.subcontractorId ?? ''}
                               onChange={ev => {
                                 subAttributionMutation.mutate({
@@ -3054,7 +3235,7 @@ export function PayrollWeekDetailPage() {
                                   subcontractorId: ev.target.value || null,
                                 });
                               }}
-                              className="text-sm border border-gray-200 rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                              className="min-h-11 rounded-sm border border-gray-200 px-2 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                               disabled={!!week?.submittedAt}
                             >
                               <option value="">— GC Direct —</option>
@@ -3122,44 +3303,222 @@ export function PayrollWeekDetailPage() {
         )}
         </div>
 
-        </div>{/* end lg:col-span-2 */}
-        <div className="lg:col-span-1 space-y-6">
+        </div>{/* end entries block */}
+        </div>{/* end single-column review layout */}
+        </PayrollWorkZone>
+        <PayrollWorkZone
+          id="forms"
+          sectionRef={formsZoneRef}
+          eyebrow="Forms"
+          title="Forms & submission"
+          description="Generate the required certified payroll forms, then record where the package was submitted."
+          collapsed={!openWorkZones.forms}
+          onToggle={() => toggleWorkZone('forms')}
+          meta={<Badge variant={canGenerateCertifiedPayroll ? 'compliant' : 'warning'}>{canGenerateCertifiedPayroll ? 'Ready' : 'Locked'}</Badge>}
+        >
+        <div
+          ref={formsSectionRef}
+          tabIndex={-1}
+          className="rounded-lg border border-border-default bg-white px-4 py-3 shadow-sm"
+        >
+          {/* MOB-13: "Fill from Field Clock" — full-width on mobile, inline on sm+ */}
+          {weekId && !week?.submittedAt && (
+            <div className="mb-2 sm:hidden">
+              <Button
+                variant="secondary"
+                disabled={fillFetching}
+                onClick={handleFillFromPunches}
+                className="w-full min-h-[44px]"
+              >
+                {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
+              </Button>
+            </div>
+          )}
+          <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+            {weekId && week && !week.isFinal && !week.submittedAt && (
+              <Link
+                to={`/projects/${projectId}/payroll/${weekId}/edit`}
+                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-sm bg-brand-gold px-3 py-2.5 text-xs font-semibold text-black transition-colors hover:bg-brand-gold/90 sm:w-auto"
+              >
+                Edit hours
+              </Link>
+            )}
+            {weekId && (
+              <span className="inline-flex w-full items-center gap-1 sm:w-auto">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  disabled={generating || !canGenerateCertifiedPayroll}
+                  onClick={handleDownloadClick}
+                >
+                  {generating ? 'Generating...' : 'Download WH-347'}
+                </Button>
+                <Tooltip content={canGenerateCertifiedPayroll
+                  ? 'Federal Certified Payroll Report required for Davis-Bacon Act projects. Confirm the agency-required WH-347 revision before submission.'
+                  : 'Complete payroll entries and clear blocking compliance issues before generating WH-347.'} />
+              </span>
+            )}
+            {/* STATE_FORMS registry-driven primary download button (STATE-12, NFR-06) */}
+            {stateFormConfig && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={generating || !canGenerateCertifiedPayroll}
+                onClick={() =>
+                  stateFormConfig.route === 'a1131'
+                    ? handleCaDownloadClick()
+                    : handleStateFormDownload(stateFormConfig.route, weekId)
+                }
+              >
+                {stateFormConfig.downloadLabel}
+              </Button>
+            )}
+            {isCA && weekId && (
+              <span className="inline-flex w-full items-center gap-1 sm:w-auto">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={() => { setEcprStep(1); setShowEcprModal(true); }}
+                >
+                  Download CA eCPR XML
+                </Button>
+                <Tooltip content="California's electronic certified payroll submission format required for public works projects. Export as XML and upload to DIR's eCPR portal at efiling.dir.ca.gov/eCPR." />
+              </span>
+            )}
+            {isWA && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={handleWaCprDownloadClick}
+              >
+                Download WA CPR XML
+              </Button>
+            )}
+            {isNY && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => { setNyMpwrStep(1); setShowNyMpwrModal(true); }}
+              >
+                NY MPWR Submission
+              </Button>
+            )}
+            {isIL && weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => { setIlIdolStep(1); setShowIlIdolModal(true); }}
+              >
+                IL IDOL Submission
+              </Button>
+            )}
+            {weekId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={!!week?.submittedAt}
+                title={week?.submittedAt ? 'This payroll week has been submitted and cannot be modified.' : undefined}
+                onClick={() => { setImportStep(1); setShowImportModal(true); }}
+              >
+                Import payroll file
+              </Button>
+            )}
+            {/* Hidden on mobile — shown full-width above this row instead */}
+            {weekId && !week?.submittedAt && (
+              <span className="hidden sm:contents">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={fillFetching}
+                  onClick={handleFillFromPunches}
+                >
+                  {fillFetching ? 'Loading...' : 'Fill from Field Clock'}
+                </Button>
+              </span>
+            )}
+            {weekId && qboConnected && !week?.submittedAt && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowQboImportModal(true)}
+              >
+                Import from QuickBooks
+              </Button>
+            )}
+            {weekId && qboConnected && !week?.submittedAt && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={qboSyncFetching}
+                onClick={handleQboSync}
+              >
+                {qboSyncFetching ? 'Syncing...' : 'Sync from QB'}
+              </Button>
+            )}
+          </div>
+        </div>
+        </PayrollWorkZone>
+        <PayrollWorkZone
+          id="preflight"
+          sectionRef={preflightZoneRef}
+          eyebrow="Preflight"
+          title="Final checks and filing record"
+          description="Confirm readiness, compliance, forms, and submission evidence in one finish-line review."
+          collapsed={!openWorkZones.preflight}
+          onToggle={() => toggleWorkZone('preflight')}
+          meta={<Badge variant={hasBlockingCompliance || hasSubmitReadyBlockers ? 'warning' : 'compliant'}>{hasBlockingCompliance || hasSubmitReadyBlockers ? 'Needs review' : 'Clean'}</Badge>}
+        >
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
 
         {!isLoading && !isError && (
           <div ref={requiredFormsSectionRef} tabIndex={-1} className="scroll-mt-24">
-          <Card padding="none">
-            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-gray-900">Week Readiness</h2>
+          <Card padding="none" className="h-full">
+            <div className="px-5 py-4 border-b border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Final Preflight</h2>
+                <p className="mt-1 text-xs text-gray-500">Readiness and form availability before filing.</p>
+              </div>
               <Badge variant={readinessCompleteCount === readinessChecks.length ? 'compliant' : 'warning'}>
                 {readinessCompleteCount}/{readinessChecks.length}
               </Badge>
             </div>
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 py-4">
+              <div className="grid gap-3 sm:grid-cols-2">
               {readinessChecks.map((check) => (
-                <div key={check.label} className="flex items-start gap-3">
-                  <span className={`mt-0.5 h-5 w-5 rounded-full flex items-center justify-center text-xs font-semibold ${
-                    check.complete ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {check.complete ? '\u2713' : '!'}
-                  </span>
+                <div
+                  key={check.label}
+                  className={`rounded-md border px-3 py-3 ${
+                    check.complete ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{check.label}</p>
-                    <p className="text-xs text-gray-500">{check.detail}</p>
+                    <p className="mt-1 text-xs leading-5 text-gray-600">{check.detail}</p>
+                  </div>
+                    <Badge variant={check.complete ? 'compliant' : 'warning'}>{check.complete ? 'Ready' : 'Needs work'}</Badge>
                   </div>
                 </div>
               ))}
-            </div>
-          </Card>
-          </div>
-        )}
-
-        {!isLoading && !isError && (
-          <Card padding="none">
-            <div className="px-5 py-3 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">Required Forms</h2>
-              <p className="mt-1 text-xs text-gray-500">The filing checklist for this payroll week.</p>
-            </div>
-            <div className="px-5 py-4 space-y-3">
+              </div>
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">Required forms</h3>
+                    <p className="text-xs text-gray-500">Status only. Use the Forms section above to download.</p>
+                  </div>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => openWorkZoneAndScroll('forms', () => formsSectionRef.current)}>
+                    Open forms
+                  </Button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
               {requiredFormRows.map((form) => (
                 <div key={form.label} className="rounded border border-gray-200 p-3">
                   <div className="flex items-start justify-between gap-3">
@@ -3174,19 +3533,23 @@ export function PayrollWeekDetailPage() {
                   <p className="mt-2 text-xs text-gray-600">{form.nextAction}</p>
                 </div>
               ))}
-              <div className="rounded border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                </div>
+              <div className="mt-3 rounded border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
                 PrevWage prepares the certified payroll package and keeps the evidence trail. If your contract requires eComply, LCPtracker, DIR, L&I, or another portal, download the matching export here and upload it in that portal unless a live integration is configured.
               </div>
             </div>
+            </div>
           </Card>
+          </div>
         )}
 
         {/* Compliance violations panel */}
         {!isLoading && !isError && (
           <div ref={complianceSectionRef} tabIndex={-1}>
-          <Card padding="none">
-            <div className="px-5 py-3 border-b border-gray-100">
+          <Card padding="none" className="h-full">
+            <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Compliance Check</h2>
+              <p className="mt-1 text-xs text-gray-500">Blocking wage, overtime, ratio, and deduction findings.</p>
             </div>
             {complianceData?.hasViolations ? (
               <div className="px-5 py-4">
@@ -3296,20 +3659,21 @@ export function PayrollWeekDetailPage() {
 
         {/* Submission status panel */}
         {!isLoading && !isError && week && (
-          <div ref={submissionStatusSectionRef} tabIndex={-1} className="scroll-mt-24">
-          <Card id="submission-status" padding="none" className="mt-6">
-            <div className="px-5 py-3 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">Submission Status</h2>
+          <div ref={submissionStatusSectionRef} tabIndex={-1} className="scroll-mt-24 lg:col-span-2">
+          <Card id="submission-status" padding="none">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Filing Record</h2>
+              <p className="mt-1 text-xs text-gray-500">Record the agency or portal submission after forms are delivered.</p>
             </div>
             {week.submittedAt ? (
-              <div className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-                <div className="flex items-center gap-3">
+              <div className="grid gap-3 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <Badge variant="compliant">Submitted</Badge>
                   <span className="text-sm text-gray-700">
                     {week.submittedAt} — {week.submittedTo}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -3374,12 +3738,12 @@ export function PayrollWeekDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-                <div className="flex items-center gap-2">
+              <div className="grid gap-3 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Badge variant="neutral">Not Submitted</Badge>
                   <span className="text-sm text-gray-500 inline-flex items-baseline gap-1"><TermTooltip term="WH-347" definition={WH347_DEF} /> not yet submitted to agency.</span>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => setShowSubmitForm(true)}>
+                <Button variant="secondary" size="sm" className="justify-self-start lg:justify-self-end" onClick={() => setShowSubmitForm(true)}>
                   Mark as Submitted
                 </Button>
               </div>
@@ -3493,8 +3857,8 @@ export function PayrollWeekDetailPage() {
           </div>
         )}
 
-        </div>{/* end lg:col-span-1 sidebar */}
-        </div>{/* end lg:grid */}
+        </div>{/* end review panels grid */}
+        </PayrollWorkZone>
 
         {/* WAL-04 WA PWIA Submission Guide panel */}
         {!isLoading && !isError && isWA && (

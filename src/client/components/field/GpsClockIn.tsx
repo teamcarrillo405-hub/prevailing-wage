@@ -235,7 +235,7 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
       {/* MOB-14: Worker selector — large tap-target, text-base prevents iOS zoom */}
       {workers.length > 1 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Worker</label>
+          <label htmlFor="gps-clock-worker" className="block text-sm font-medium text-gray-700 mb-1">Worker</label>
           {/* Segmented control for ≤ 5 workers, select for more */}
           {workers.length <= 5 ? (
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(workers.length, 2)}, 1fr)` }}>
@@ -256,6 +256,7 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
             </div>
           ) : (
             <select
+              id="gps-clock-worker"
               className="w-full border border-gray-300 rounded-lg px-3 py-3 text-base min-h-[52px] bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
               value={selectedWorkerId}
               onChange={(e) => {

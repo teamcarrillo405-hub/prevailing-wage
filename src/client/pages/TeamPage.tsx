@@ -287,7 +287,11 @@ export function TeamPage() {
             }}
             className="space-y-3"
           >
+            <label className="block text-xs font-medium text-gray-700" htmlFor="team-invite-email">
+              Email
+            </label>
             <input
+              id="team-invite-email"
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
@@ -296,8 +300,9 @@ export function TeamPage() {
               disabled={atCapacity || !!data?.pendingInvite}
             />
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1" htmlFor="team-invite-role">Role</label>
               <select
+                id="team-invite-role"
                 value={inviteRole}
                 onChange={e => setInviteRole(e.target.value as 'member' | 'auditor')}
                 disabled={atCapacity || !!data?.pendingInvite}

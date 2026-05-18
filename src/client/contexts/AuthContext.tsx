@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { api } from '../lib/api';
 
 interface User {
@@ -17,6 +17,7 @@ interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  hasCheckedSession: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
   completeMfaLogin: (userId: string, token: string) => Promise<User>;
   refreshUser: () => Promise<User | null>;
@@ -27,9 +28,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
   async function refreshUser(): Promise<User | null> {
+    setIsLoading(true);
     try {
       const res = await api.get<{ data: { user: User } }>('/auth/me');
       setUser(res.data.user);
@@ -37,12 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setUser(null);
       return null;
+    } finally {
+      setHasCheckedSession(true);
+      setIsLoading(false);
     }
   }
-
-  useEffect(() => {
-    refreshUser().finally(() => setIsLoading(false));
-  }, []);
 
   async function login(email: string, password: string): Promise<LoginResult> {
     type LoginResponse = {
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (res.data.user) {
       setUser(res.data.user);
+      setHasCheckedSession(true);
       return { status: 'ok', user: res.data.user };
     }
     throw new Error('Unexpected login response');
@@ -66,18 +69,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
     });
     setUser(res.data.user);
+    setHasCheckedSession(true);
     return res.data.user;
   }
 
   async function logout() {
     await api.post('/auth/logout', {});
     setUser(null);
+    setHasCheckedSession(true);
   }
 
   const value: AuthContextValue = {
     user,
     isAuthenticated: !!user,
     isLoading,
+    hasCheckedSession,
     login,
     completeMfaLogin,
     refreshUser,

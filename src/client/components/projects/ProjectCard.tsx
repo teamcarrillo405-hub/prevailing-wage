@@ -67,7 +67,7 @@ export function ProjectCard({ project, className, violationCount, unsubmittedWee
     <button
       onClick={() => navigate(`/projects/${project.id}`)}
       className={cn(
-        'group w-full text-left bg-white rounded-2xl p-5 transition-all duration-200 relative overflow-hidden',
+        'group w-full text-left bg-white rounded-lg p-5 transition-all duration-200 relative overflow-hidden',
         'border border-border-default hover:border-brand-gold/40',
         'shadow-card hover:shadow-card-hover',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2',
@@ -77,7 +77,7 @@ export function ProjectCard({ project, className, violationCount, unsubmittedWee
     >
       {/* Gold top-bar reveal on hover */}
       <div
-        className="absolute inset-x-0 top-0 h-0.5 bg-brand-gold origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out rounded-t-2xl"
+        className="absolute inset-x-0 top-0 h-0.5 bg-brand-gold origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out rounded-t-lg"
         aria-hidden="true"
       />
 
@@ -88,7 +88,7 @@ export function ProjectCard({ project, className, violationCount, unsubmittedWee
       )}
 
       {/* Project name */}
-      <h3 className="font-headline text-lg text-text-primary mb-1.5 truncate group-hover:text-brand-gold/90 transition-colors duration-200">
+      <h3 className="font-headline text-lg text-text-primary mb-1.5 truncate group-hover:text-gray-950 transition-colors duration-200">
         {project.name}
       </h3>
 

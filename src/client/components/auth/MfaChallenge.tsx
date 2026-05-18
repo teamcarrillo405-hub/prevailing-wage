@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
 
@@ -107,8 +108,11 @@ export function MfaChallenge({ userId, onSuccess, onCancel }: MfaChallengeProps)
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-base font-semibold text-gray-900">Two-factor authentication</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <div className="inline-flex h-10 w-10 items-center justify-center rounded-sm bg-gray-950 text-brand-gold">
+          <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <h2 className="mt-3 text-base font-semibold text-gray-900">Two-factor authentication</h2>
+        <p className="mt-1 text-sm leading-6 text-gray-500">
           {mode === 'totp'
             ? 'Open your authenticator app and enter the 6-digit code.'
             : 'Enter one of the one-time backup codes you saved during setup.'}
@@ -129,7 +133,7 @@ export function MfaChallenge({ userId, onSuccess, onCancel }: MfaChallengeProps)
               onChange={(e) => handleDigitChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
               aria-label={`Digit ${i + 1}`}
-              className="w-10 h-12 text-center text-lg font-mono rounded-sm border border-gray-300 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
+              className="h-12 min-w-11 flex-1 rounded-sm border border-gray-300 text-center font-mono text-lg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
               disabled={submitting}
             />
           ))}
@@ -143,13 +147,13 @@ export function MfaChallenge({ userId, onSuccess, onCancel }: MfaChallengeProps)
           onChange={(e) => { setBackupCode(e.target.value); setError(null); }}
           aria-label="Backup code"
           placeholder="abcd1234"
-          className="w-full px-3 py-2 text-sm font-mono rounded-sm border border-gray-300 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
+          className="min-h-11 w-full rounded-sm border border-gray-300 px-3 py-2 font-mono text-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold"
           disabled={submitting}
         />
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-sm px-3 py-2 text-sm text-red-700">
+        <div role="alert" className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -171,7 +175,7 @@ export function MfaChallenge({ userId, onSuccess, onCancel }: MfaChallengeProps)
           setMode((m) => (m === 'totp' ? 'backup' : 'totp'));
           setError(null);
         }}
-        className="text-xs text-gray-500 hover:text-gray-800 underline"
+        className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-600 underline underline-offset-4 hover:text-gray-950"
       >
         {mode === 'totp' ? 'Use a backup code instead' : 'Use authenticator app instead'}
       </button>

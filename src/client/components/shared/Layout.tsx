@@ -13,12 +13,14 @@ import { PwaInstallBanner } from '../ui/PwaInstallBanner';
 import { ProjectWorkspaceNav } from '../projects/ProjectWorkspaceNav';
 
 function navCls({ isActive }: { isActive: boolean }) {
-  return `text-sm font-medium transition-colors ${
+  return `inline-flex min-h-11 min-w-11 items-center justify-center text-sm font-medium transition-colors ${
     isActive
       ? 'text-brand-gold'
       : 'text-gray-400 hover:text-white'
   }`;
 }
+
+const dropdownLinkCls = 'flex min-h-11 items-center rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50';
 
 function mobileNavCls(isActive: boolean) {
   return `flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
@@ -84,6 +86,11 @@ export function Layout({ children }: LayoutProps) {
     if (segments[0] !== 'projects') return null;
     return segments[1] ?? null;
   })();
+  const showCopilot = ![
+    '/classification-assist',
+    '/compliance-methodology',
+    '/competitive-readiness',
+  ].includes(pathname);
 
   async function handleLogout() {
     await logout();
@@ -104,7 +111,7 @@ export function Layout({ children }: LayoutProps) {
       <nav className="bg-nav-dark sticky top-0 z-40" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 flex items-center justify-between h-[68px]">
           {/* Logo + wordmark */}
-          <Link to="/dashboard" className="flex items-center gap-3 group" aria-label="HCC Prevailing Wage — home">
+          <Link to="/dashboard" className="group flex min-h-11 min-w-11 items-center gap-3" aria-label="HCC Prevailing Wage home">
             <img
               src="/images/hcc-logo.svg"
               alt="HCC"
@@ -118,10 +125,10 @@ export function Layout({ children }: LayoutProps) {
           </Link>
 
           {/* Desktop nav links */}
-          <div className="hidden sm:flex items-center gap-6">
+          <div className="hidden sm:flex items-center gap-5">
             <NavLink to="/dashboard" className={navCls}>Dashboard</NavLink>
             <NavLink to="/field" className={({ isActive }) =>
-              `flex items-center gap-1.5 text-sm font-medium transition-colors ${isActive ? 'text-brand-gold' : 'text-gray-400 hover:text-white'}`
+              `inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 text-sm font-medium transition-colors ${isActive ? 'text-brand-gold' : 'text-gray-400 hover:text-white'}`
             }>
               <Clock className="w-3.5 h-3.5" />
               Field
@@ -129,34 +136,34 @@ export function Layout({ children }: LayoutProps) {
             <NavLink to="/reports" className={navCls}>Reports</NavLink>
             <NavLink to="/team" className={navCls}>Team</NavLink>
             <details className="relative group">
-              <summary className="list-none cursor-pointer text-sm font-medium text-gray-400 transition-colors hover:text-white">
+              <summary className="inline-flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center text-sm font-medium text-gray-400 transition-colors hover:text-white" aria-label="Open tools menu">
                 Tools
               </summary>
               <div className="absolute right-0 mt-3 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
-                <Link to="/wages" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Wage Lookup</Link>
-                <Link to="/state-support" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">State Coverage</Link>
-                <Link to="/compliance-methodology" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Methodology</Link>
-                <Link to="/competitive-readiness" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Readiness Plan</Link>
-                <Link to="/pilot-intake" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Pilot Intake</Link>
+                <Link to="/wages" aria-label="Open wage lookup" className={dropdownLinkCls}>Wage Lookup</Link>
+                <Link to="/state-support" aria-label="Open state coverage" className={dropdownLinkCls}>State Coverage</Link>
+                <Link to="/compliance-methodology" aria-label="Open compliance methodology" className={dropdownLinkCls}>Methodology</Link>
+                <Link to="/competitive-readiness" aria-label="Open readiness plan" className={dropdownLinkCls}>Readiness Plan</Link>
+                <Link to="/pilot-intake" aria-label="Open pilot intake" className={dropdownLinkCls}>Pilot Intake</Link>
               </div>
             </details>
             <details className="relative group">
-              <summary className="list-none cursor-pointer text-sm font-medium text-gray-400 transition-colors hover:text-white">
+              <summary className="inline-flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center text-sm font-medium text-gray-400 transition-colors hover:text-white" aria-label="Open settings menu">
                 Settings
               </summary>
               <div className="absolute right-0 mt-3 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
-                <Link to="/settings/integrations" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Integrations</Link>
-                <Link to="/settings/security" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Security</Link>
-                <Link to="/settings/api-keys" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">API Keys</Link>
-                <Link to="/settings/webhooks" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Webhooks</Link>
-                <Link to="/settings/sso" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">SSO</Link>
-                <Link to="/settings/mfa" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">MFA</Link>
+                <Link to="/settings/integrations" aria-label="Open integrations settings" className={dropdownLinkCls}>Integrations</Link>
+                <Link to="/settings/security" aria-label="Open security settings" className={dropdownLinkCls}>Security</Link>
+                <Link to="/settings/api-keys" aria-label="Open API keys settings" className={dropdownLinkCls}>API Keys</Link>
+                <Link to="/settings/webhooks" aria-label="Open webhooks settings" className={dropdownLinkCls}>Webhooks</Link>
+                <Link to="/settings/sso" aria-label="Open SSO settings" className={dropdownLinkCls}>SSO</Link>
+                <Link to="/settings/mfa" aria-label="Open MFA settings" className={dropdownLinkCls}>MFA</Link>
                 {isOwner && (
                   <>
                     <div className="my-2 border-t border-gray-100" />
-                    <Link to="/billing" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Billing</Link>
-                    <Link to="/admin/coverage" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Coverage Admin</Link>
-                    <Link to="/admin/copilot" className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Copilot Audit</Link>
+                    <Link to="/billing" aria-label="Open billing" className={dropdownLinkCls}>Billing</Link>
+                    <Link to="/admin/coverage" aria-label="Open coverage admin" className={dropdownLinkCls}>Coverage Admin</Link>
+                    <Link to="/admin/copilot" aria-label="Open copilot audit" className={dropdownLinkCls}>Copilot Audit</Link>
                   </>
                 )}
               </div>
@@ -166,7 +173,7 @@ export function Layout({ children }: LayoutProps) {
             <SyncStatusIndicator status={syncStatus} />
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-400 hover:text-white transition-colors"
+              className="inline-flex min-h-11 items-center text-sm text-gray-400 transition-colors hover:text-white"
             >
               Log out
             </button>
@@ -341,12 +348,12 @@ export function Layout({ children }: LayoutProps) {
 
       <main
         id="main-content"
-        className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 py-8 page-enter pb-14 md:pb-8"
+        className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 py-8 page-enter pb-20 md:pb-8"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {projectId ? (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
             <div className="hidden lg:block">
               <ProjectWorkspaceNav projectId={projectId} />
             </div>
@@ -357,7 +364,7 @@ export function Layout({ children }: LayoutProps) {
         )}
       </main>
 
-      <CopilotWidget />
+      {showCopilot && <CopilotWidget />}
 
       {/* Phase 97: Mobile bottom tab bar */}
       <BottomTabBar />
@@ -372,15 +379,15 @@ export function Layout({ children }: LayoutProps) {
               and agency submission remain the responsibility of the authorized reviewer.
             </p>
           </div>
-          <div className="flex flex-wrap gap-5">
-            <Link to="/case-studies" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Case Studies</Link>
-            <Link to="/government" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Government</Link>
-            <Link to="/state-support" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">State Support</Link>
-            <Link to="/contact" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Contact</Link>
-            <Link to="/reviews" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Reviews</Link>
-            <Link to="/security" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Security Policy</Link>
-            <Link to="/pricing" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Pricing</Link>
-            <Link to="/api-docs" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">API Docs</Link>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Link to="/case-studies" className="inline-flex min-h-11 items-center px-1 text-xs text-gray-500 transition-colors hover:text-gray-800">Case Studies</Link>
+            <Link to="/government" className="inline-flex min-h-11 items-center px-1 text-xs text-gray-500 transition-colors hover:text-gray-800">Government</Link>
+            <Link to="/state-support" className="inline-flex min-h-11 items-center px-1 text-xs text-gray-500 transition-colors hover:text-gray-800">State Support</Link>
+            <Link to="/contact" className="inline-flex min-h-11 items-center px-1 text-xs text-gray-500 transition-colors hover:text-gray-800">Contact</Link>
+            <Link to="/reviews" className="inline-flex min-h-11 items-center px-1 text-xs text-gray-500 transition-colors hover:text-gray-800">Reviews</Link>
+            <Link to="/security" className="inline-flex min-h-11 items-center px-1 text-xs text-gray-500 transition-colors hover:text-gray-800">Security Policy</Link>
+            <Link to="/pricing" className="inline-flex min-h-11 items-center px-1 text-xs text-gray-500 transition-colors hover:text-gray-800">Pricing</Link>
+            <Link to="/api-docs" className="inline-flex min-h-11 items-center px-1 text-xs text-gray-500 transition-colors hover:text-gray-800">API Docs</Link>
           </div>
         </div>
       </footer>

@@ -82,7 +82,7 @@ function loadWidgetMap(): Map<string, Wh347Widget> {
 
 function fitTextSize(text: string, width: number, baseSize: number, font: PDFFont): number {
   let size = baseSize;
-  while (size > 4.5 && font.widthOfTextAtSize(text, size) > width) size -= 0.25;
+  while (size > 3.25 && font.widthOfTextAtSize(text, size) > width) size -= 0.25;
   return size;
 }
 
@@ -90,10 +90,10 @@ function adjustedWidget(widget: Wh347Widget): Wh347Widget {
   // The flat DOL source and the calibration widgets share a page size, but a few
   // widget rectangles sit on label/table borders. Nudge only those overlays.
   if (/^w\d+_totalDeduct$/.test(widget.name)) {
-    return { ...widget, x: widget.x - 24, w: 24 };
+    return { ...widget, x: widget.x - 7, w: Math.max(26, widget.w - 2) };
   }
   if (/^w\d+_netPay$/.test(widget.name)) {
-    return { ...widget, x: widget.x - 36, w: 31 };
+    return { ...widget, x: widget.x - 28, w: 32 };
   }
   if (
     /^p2_(projectName|projectContractNo|payrollNo|contractorName|projectLocation|weekEndingDate|certifyingOfficial)$/.test(widget.name)
@@ -176,7 +176,7 @@ async function fillSingleSet(
         ? widget.x + (widget.w - textWidth) / 2
         : widget.x + padding;
     const y = widget.y + Math.max(1, (widget.h - size) / 2) - 0.5;
-    page.drawText(value, { x, y, size, font, color: black, maxWidth });
+    page.drawText(value, { x, y, size, font, color: black });
   };
 
   const drawCheck = (name: string, checked: boolean) => {
@@ -243,22 +243,25 @@ async function fillSingleSet(
     drawText(`${wk}_totalHoursSt`, fmtHours(worker.totalSt), { align: 'center' });
     drawText(`${wk}_totalHoursOt`, fmtHours(worker.totalOt), { align: 'center' });
 
-    drawText(`${wk}_baseRate`, fmtDollar(worker.baseRate), { align: 'right' });
-    drawText(`${wk}_baseRateSt`, fmtDollar(worker.baseRate), { align: 'right' });
-    drawText(`${wk}_baseRateOt`, fmtDollar(worker.baseRate), { align: 'right' });
-    drawText(`${wk}_fringe`, fmtDollar(worker.fringeCredit), { align: 'right' });
-    drawText(`${wk}_fringeSt`, fmtDollar(worker.fringeCredit), { align: 'right' });
-    drawText(`${wk}_fringeOt`, fmtDollar(worker.fringeCredit), { align: 'right' });
-    drawText(`${wk}_inLieu`, fmtDollar(worker.paymentInLieu), { align: 'right' });
-    drawText(`${wk}_inLieuSt`, fmtDollar(worker.paymentInLieu), { align: 'right' });
-    drawText(`${wk}_inLieuOt`, fmtDollar(worker.paymentInLieu), { align: 'right' });
+    drawText(`${wk}_baseRateSt`, fmtDollar(worker.baseRate), { align: 'right', size: 5.25 });
+    if ((worker.totalOt ?? 0) > 0) {
+      drawText(`${wk}_baseRateOt`, fmtDollar(worker.baseRate), { align: 'right', size: 5.25 });
+    }
+    drawText(`${wk}_fringeSt`, fmtDollar(worker.fringeCredit), { align: 'right', size: 5.25 });
+    if ((worker.totalOt ?? 0) > 0) {
+      drawText(`${wk}_fringeOt`, fmtDollar(worker.fringeCredit), { align: 'right', size: 5.25 });
+    }
+    drawText(`${wk}_inLieuSt`, fmtDollar(worker.paymentInLieu), { align: 'right', size: 5.25 });
+    if ((worker.totalOt ?? 0) > 0) {
+      drawText(`${wk}_inLieuOt`, fmtDollar(worker.paymentInLieu), { align: 'right', size: 5.25 });
+    }
     drawText(`${wk}_grossProject`, fmtDollar(worker.grossWagesProject), { align: 'right', size: 5.5 });
     drawText(`${wk}_grossAll`, fmtDollar(worker.grossWagesAll), { align: 'right', size: 5.5 });
     drawText(`${wk}_taxWithheld`, fmtDollar(worker.taxWithheld), { align: 'right' });
     drawText(`${wk}_fica`, fmtDollar(worker.fica), { align: 'right' });
     drawText(`${wk}_otherDeduct`, fmtDollar(worker.otherDeductions), { align: 'right' });
-    drawText(`${wk}_totalDeduct`, fmtDollar(worker.deductions), { align: 'right', size: 5.5 });
-    drawText(`${wk}_netPay`, fmtDollar(worker.netPay), { align: 'right', size: 5.5 });
+    drawText(`${wk}_totalDeduct`, fmtDollar(worker.deductions), { align: 'right', size: 4 });
+    drawText(`${wk}_netPay`, fmtDollar(worker.netPay), { align: 'right', size: 4 });
   }
 
   drawText('p2_projectName', data.projectName, { size: 5 });

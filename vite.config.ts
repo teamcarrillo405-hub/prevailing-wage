@@ -32,6 +32,6 @@ export default defineConfig({
   build: { outDir: '../../dist/client', emptyOutDir: true },
   server: {
     port: 4200,
-    proxy: { '/api': { target: 'http://localhost:4099', changeOrigin: true } },
+    proxy: { '^/api(/|$)': { target: 'http://localhost:4099', changeOrigin: true } },
   },
 });

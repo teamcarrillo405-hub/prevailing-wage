@@ -449,6 +449,55 @@
       "when": 1778653000000,
       "tag": "0072_ca_a1131_deduction_items",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1778785000000,
+      "tag": "0073_project_budgets_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1747500000000,
+      "tag": "0074_jurisdiction_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1747500001000,
+      "tag": "0075_local_wage_ordinances",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1747500002000,
+      "tag": "0076_pa_oh_co_project_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1747500003000,
+      "tag": "0077_md_or_ct_hi_project_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1747500004000,
+      "tag": "0078_ky_nm_nv_ri_wv_project_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1747500005000,
+      "tag": "0079_me_vt_mt_nd_de_nh_ak_fields",
+      "breakpoints": true
     }
   ]
 }

@@ -3,15 +3,21 @@ import { eq, and, gte, lte, desc, count } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import {
   auditLogs,
+  contractorSignatures,
   payrollImports,
   payrollEntries,
   payrollWeeks,
+  projectWageDeterminations,
   projectPhotos,
   securityEvents,
+  subcontractorCertifications,
   subcontractorCprWeeks,
   subcontractors,
   timePunches,
   weekPhotos,
+  wageDeterminations,
+  workerClassifications,
+  workers,
 } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { assertProjectAccess } from '../utils/assertProjectAccess.js';
@@ -56,6 +62,24 @@ type EvidenceSummaryData = {
     missingEvidence: string[];
   }>;
 };
+
+type EvidenceManifestSection = {
+  id: string;
+  label: string;
+  included: boolean;
+  count: number;
+  missingReason: string | null;
+};
+
+function manifestSection(id: string, label: string, count: number, missingReason: string): EvidenceManifestSection {
+  return {
+    id,
+    label,
+    included: count > 0,
+    count,
+    missingReason: count > 0 ? null : missingReason,
+  };
+}
 
 function buildRequirement(
   key: EvidenceRequirement['key'],
@@ -542,9 +566,92 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
   }
 
   const summary = await getEvidenceSummaryData(projectId);
-  const [auditRows, payrollRows, projectPhotoRows, weekPhotoRows, punchRows, importRows, subCprRows] = await Promise.all([
+  const [auditRows, payrollRows, payrollEntryRows, workerRows, wageDeterminationRows, projectPhotoRows, weekPhotoRows, punchRows, importRows, subRows, subCertRows, subCprRows, signatureRows] = await Promise.all([
     db.select().from(auditLogs).where(eq(auditLogs.projectId, projectId)).orderBy(desc(auditLogs.createdAt)),
     db.select().from(payrollWeeks).where(eq(payrollWeeks.projectId, projectId)).orderBy(desc(payrollWeeks.weekEndingDate)),
+    db
+      .select({
+        id: payrollEntries.id,
+        payrollWeekId: payrollEntries.payrollWeekId,
+        payrollNumber: payrollWeeks.payrollNumber,
+        weekEndingDate: payrollWeeks.weekEndingDate,
+        workerId: payrollEntries.workerId,
+        workerName: workers.name,
+        classificationId: payrollEntries.classificationId,
+        tradeCode: workerClassifications.tradeCode,
+        tradeDescription: workerClassifications.tradeDescription,
+        subcontractorId: payrollEntries.subcontractorId,
+        monSt: payrollEntries.monSt,
+        tueSt: payrollEntries.tueSt,
+        wedSt: payrollEntries.wedSt,
+        thuSt: payrollEntries.thuSt,
+        friSt: payrollEntries.friSt,
+        satSt: payrollEntries.satSt,
+        sunSt: payrollEntries.sunSt,
+        monOt: payrollEntries.monOt,
+        tueOt: payrollEntries.tueOt,
+        wedOt: payrollEntries.wedOt,
+        thuOt: payrollEntries.thuOt,
+        friOt: payrollEntries.friOt,
+        satOt: payrollEntries.satOt,
+        sunOt: payrollEntries.sunOt,
+        monDt: payrollEntries.monDt,
+        tueDt: payrollEntries.tueDt,
+        wedDt: payrollEntries.wedDt,
+        thuDt: payrollEntries.thuDt,
+        friDt: payrollEntries.friDt,
+        satDt: payrollEntries.satDt,
+        sunDt: payrollEntries.sunDt,
+        baseRateSnapshot: payrollEntries.baseRateSnapshot,
+        fringeRateSnapshot: payrollEntries.fringeRateSnapshot,
+        grossWages: payrollEntries.grossWages,
+        deductions: payrollEntries.deductions,
+        netPay: payrollEntries.netPay,
+        checkNumber: payrollEntries.checkNumber,
+        createdAt: payrollEntries.createdAt,
+        updatedAt: payrollEntries.updatedAt,
+      })
+      .from(payrollEntries)
+      .innerJoin(payrollWeeks, eq(payrollWeeks.id, payrollEntries.payrollWeekId))
+      .innerJoin(workers, eq(workers.id, payrollEntries.workerId))
+      .innerJoin(workerClassifications, eq(workerClassifications.id, payrollEntries.classificationId))
+      .where(eq(payrollWeeks.projectId, projectId))
+      .orderBy(desc(payrollWeeks.weekEndingDate)),
+    db
+      .select({
+        id: workers.id,
+        name: workers.name,
+        ssnLast4: workers.ssnLast4,
+        classificationId: workerClassifications.id,
+        tradeCode: workerClassifications.tradeCode,
+        tradeDescription: workerClassifications.tradeDescription,
+        laborType: workerClassifications.laborType,
+        apprenticePercent: workerClassifications.apprenticePercent,
+        programName: workerClassifications.programName,
+        isActive: workerClassifications.isActive,
+        createdAt: workers.createdAt,
+      })
+      .from(workers)
+      .leftJoin(workerClassifications, eq(workerClassifications.workerId, workers.id))
+      .where(eq(workers.projectId, projectId)),
+    db
+      .select({
+        wageDeterminationId: projectWageDeterminations.wageDeterminationId,
+        constructionType: projectWageDeterminations.constructionType,
+        isPrimary: projectWageDeterminations.isPrimary,
+        pinnedAt: projectWageDeterminations.pinnedAt,
+        wdNumber: wageDeterminations.wdNumber,
+        revisionNumber: wageDeterminations.revisionNumber,
+        source: wageDeterminations.source,
+        state: wageDeterminations.state,
+        county: wageDeterminations.county,
+        publishDate: wageDeterminations.publishDate,
+        cachedAt: wageDeterminations.cachedAt,
+        cacheExpiresAt: wageDeterminations.cacheExpiresAt,
+      })
+      .from(projectWageDeterminations)
+      .innerJoin(wageDeterminations, eq(projectWageDeterminations.wageDeterminationId, wageDeterminations.id))
+      .where(eq(projectWageDeterminations.projectId, projectId)),
     db.select().from(projectPhotos).where(eq(projectPhotos.projectId, projectId)).orderBy(desc(projectPhotos.createdAt)),
     db.select().from(weekPhotos).where(eq(weekPhotos.projectId, projectId)).orderBy(desc(weekPhotos.createdAt)),
     db.select().from(timePunches).where(eq(timePunches.projectId, projectId)).orderBy(desc(timePunches.punchedAt)),
@@ -562,6 +669,25 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
       .innerJoin(payrollWeeks, eq(payrollWeeks.id, payrollImports.payrollWeekId))
       .where(eq(payrollWeeks.projectId, projectId))
       .orderBy(desc(payrollImports.createdAt)),
+    db.select().from(subcontractors).where(eq(subcontractors.projectId, projectId)),
+    db
+      .select({
+        id: subcontractorCertifications.id,
+        subcontractorId: subcontractorCertifications.subcontractorId,
+        subcontractorName: subcontractors.name,
+        certTypes: subcontractorCertifications.certTypes,
+        certifyingAgency: subcontractorCertifications.certifyingAgency,
+        certNumber: subcontractorCertifications.certNumber,
+        expiresDate: subcontractorCertifications.expiresDate,
+        reevaluationStatus: subcontractorCertifications.reevaluationStatus,
+        selfCertified: subcontractorCertifications.selfCertified,
+        documentPath: subcontractorCertifications.documentPath,
+        samRegistrationStatus: subcontractorCertifications.samRegistrationStatus,
+        samLastVerifiedAt: subcontractorCertifications.samLastVerifiedAt,
+      })
+      .from(subcontractorCertifications)
+      .innerJoin(subcontractors, eq(subcontractors.id, subcontractorCertifications.subcontractorId))
+      .where(eq(subcontractors.projectId, projectId)),
     db
       .select({
         id: subcontractorCprWeeks.id,
@@ -578,9 +704,53 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
       .innerJoin(subcontractors, eq(subcontractors.id, subcontractorCprWeeks.subcontractorId))
       .where(eq(subcontractors.projectId, projectId))
       .orderBy(desc(subcontractorCprWeeks.weekEndingDate)),
+    db.select().from(contractorSignatures).where(eq(contractorSignatures.projectId, projectId)),
   ]);
   const typedAuditRows = auditRows as (typeof auditLogs.$inferSelect)[];
   const typedPayrollRows = payrollRows as (typeof payrollWeeks.$inferSelect)[];
+  type PayrollEntryEvidenceRow = typeof payrollEntries.$inferSelect & {
+    payrollNumber: number;
+    weekEndingDate: string;
+    workerName: string;
+    tradeCode: string;
+    tradeDescription: string;
+  };
+  const typedPayrollEntryRows = payrollEntryRows as PayrollEntryEvidenceRow[];
+  const sumHours = (row: typeof typedPayrollEntryRows[number], suffix: 'St' | 'Ot' | 'Dt') =>
+    (row[`mon${suffix}`] ?? 0) +
+    (row[`tue${suffix}`] ?? 0) +
+    (row[`wed${suffix}`] ?? 0) +
+    (row[`thu${suffix}`] ?? 0) +
+    (row[`fri${suffix}`] ?? 0) +
+    (row[`sat${suffix}`] ?? 0) +
+    (row[`sun${suffix}`] ?? 0);
+  const typedWorkerRows = workerRows as Array<{
+    id: string;
+    name: string;
+    ssnLast4: string | null;
+    classificationId: string | null;
+    tradeCode: string | null;
+    tradeDescription: string | null;
+    laborType: string | null;
+    apprenticePercent: number | null;
+    programName: string | null;
+    isActive: boolean | null;
+    createdAt: string;
+  }>;
+  const typedWageDeterminationRows = wageDeterminationRows as Array<{
+    wageDeterminationId: string;
+    constructionType: string | null;
+    isPrimary: boolean;
+    pinnedAt: string;
+    wdNumber: string;
+    revisionNumber: number;
+    source: string;
+    state: string;
+    county: string | null;
+    publishDate: string | null;
+    cachedAt: string;
+    cacheExpiresAt: string;
+  }>;
   const typedProjectPhotoRows = projectPhotoRows as (typeof projectPhotos.$inferSelect)[];
   const typedWeekPhotoRows = weekPhotoRows as (typeof weekPhotos.$inferSelect)[];
   const typedPunchRows = punchRows as (typeof timePunches.$inferSelect)[];
@@ -593,6 +763,21 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
     unmatchedCount: number;
     createdAt: string;
   }>;
+  const typedSubRows = subRows as (typeof subcontractors.$inferSelect)[];
+  const typedSubCertRows = subCertRows as Array<{
+    id: string;
+    subcontractorId: string;
+    subcontractorName: string;
+    certTypes: string;
+    certifyingAgency: string | null;
+    certNumber: string | null;
+    expiresDate: string | null;
+    reevaluationStatus: string | null;
+    selfCertified: boolean | null;
+    documentPath: string | null;
+    samRegistrationStatus: string | null;
+    samLastVerifiedAt: string | null;
+  }>;
   const typedSubCprRows = subCprRows as Array<{
     id: string;
     subcontractorId: string;
@@ -604,6 +789,15 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
     uploadedAt: string | null;
     createdAt: string;
   }>;
+  const typedSignatureRows = signatureRows as (typeof contractorSignatures.$inferSelect)[];
+  const signatureEvidence = typedSignatureRows.map((row) => ({
+    id: row.id,
+    projectId: row.projectId,
+    uploadedBy: row.uploadedBy,
+    filePath: row.filePath,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }));
   const submitReadyResults = await Promise.all(
     typedPayrollRows.map(async (row) => computeSubmitReady(db, row.id)),
   );
@@ -617,6 +811,24 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
     (row): row is NonNullable<(typeof complianceEvidenceResults)[number]> => row !== null,
   );
   const methodology = getComplianceMethodology();
+  const manifest = {
+    generatedAt: new Date().toISOString(),
+    projectId,
+    readyForPacket: summary.readyForPacket,
+    missingEvidence: summary.missingEvidence,
+    sections: [
+      manifestSection('wage-determinations', 'Wage determinations', typedWageDeterminationRows.length, 'No wage determination is pinned to this project.'),
+      manifestSection('workers', 'Worker records and classifications', typedWorkerRows.length, 'No worker records exist for this project.'),
+      manifestSection('payroll-entries', 'Payroll entries and rate snapshots', typedPayrollEntryRows.length, 'No payroll entries have been entered or imported.'),
+      manifestSection('correction-history', 'Correction and audit history', typedAuditRows.length, 'No audit events have been recorded for this project.'),
+      manifestSection('forms', 'Form readiness and compliance evidence', submitReadyWeeks.length + complianceEvidenceWeeks.length, 'No payroll weeks exist to produce form readiness evidence.'),
+      manifestSection('photos', 'Project and week photos', typedProjectPhotoRows.length + typedWeekPhotoRows.length, 'No project or week photos are attached.'),
+      manifestSection('field-evidence', 'GPS/time field evidence', typedPunchRows.length, 'No GPS/time punches are attached.'),
+      manifestSection('signatures', 'Contractor signatures', typedSignatureRows.length, 'No contractor signature is saved for this project.'),
+      manifestSection('subcontractors', 'Subcontractor records and CPR evidence', typedSubRows.length + typedSubCprRows.length + typedSubCertRows.length, 'No subcontractor records or CPR evidence are attached.'),
+      manifestSection('submission-history', 'Submission history', typedPayrollRows.filter((row) => row.submittedAt).length, 'No payroll weeks have submission metadata.'),
+    ],
+  };
 
   if (format === 'csv') {
     const sections: string[] = [
@@ -632,6 +844,70 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
         item.collectedCount,
         item.missingCount,
         item.status,
+      ])),
+      '',
+      csvRow(['Manifest']),
+      csvRow(['Section ID', 'Section', 'Included', 'Count', 'Missing Reason']),
+      ...manifest.sections.map((section) => csvRow([
+        section.id,
+        section.label,
+        section.included ? 'yes' : 'no',
+        section.count,
+        section.missingReason,
+      ])),
+      '',
+      csvRow(['Wage Determinations']),
+      csvRow(['Wage Determination ID', 'WD Number', 'Revision', 'Source', 'State', 'County', 'Construction Type', 'Primary', 'Pinned At', 'Published At']),
+      ...typedWageDeterminationRows.map((row) => csvRow([
+        row.wageDeterminationId,
+        row.wdNumber,
+        row.revisionNumber,
+        row.source,
+        row.state,
+        row.county,
+        row.constructionType,
+        row.isPrimary ? 'yes' : 'no',
+        row.pinnedAt,
+        row.publishDate,
+      ])),
+      '',
+      csvRow(['Workers']),
+      csvRow(['Worker ID', 'Name', 'SSN Last 4', 'Classification ID', 'Trade Code', 'Trade Description', 'Labor Type', 'Apprentice Percent', 'Program Name', 'Active', 'Created At']),
+      ...typedWorkerRows.map((row) => csvRow([
+        row.id,
+        row.name,
+        row.ssnLast4,
+        row.classificationId,
+        row.tradeCode,
+        row.tradeDescription,
+        row.laborType,
+        row.apprenticePercent,
+        row.programName,
+        row.isActive === null ? null : row.isActive ? 'yes' : 'no',
+        row.createdAt,
+      ])),
+      '',
+      csvRow(['Payroll Entries']),
+      csvRow(['Entry ID', 'Week ID', 'Payroll Number', 'Week Ending', 'Worker ID', 'Worker', 'Classification ID', 'Trade Code', 'Trade Description', 'Regular Hours', 'Overtime Hours', 'Double Time Hours', 'Base Rate Snapshot', 'Fringe Rate Snapshot', 'Gross Wages', 'Deductions', 'Net Pay', 'Check Number']),
+      ...typedPayrollEntryRows.map((row) => csvRow([
+        row.id,
+        row.payrollWeekId,
+        row.payrollNumber,
+        row.weekEndingDate,
+        row.workerId,
+        row.workerName,
+        row.classificationId,
+        row.tradeCode,
+        row.tradeDescription,
+        sumHours(row, 'St'),
+        sumHours(row, 'Ot'),
+        sumHours(row, 'Dt'),
+        row.baseRateSnapshot,
+        row.fringeRateSnapshot,
+        row.grossWages,
+        row.deductions,
+        row.netPay,
+        row.checkNumber,
       ])),
       '',
       csvRow(['Payroll Weeks']),
@@ -693,6 +969,34 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
         row.notes,
       ])),
       '',
+      csvRow(['Subcontractors']),
+      csvRow(['Subcontractor ID', 'Name', 'License Number', 'Contact Name', 'Contact Email', 'DBE Classification', 'Created At']),
+      ...typedSubRows.map((row) => csvRow([
+        row.id,
+        row.name,
+        row.licenseNumber,
+        row.contactName,
+        row.contactEmail,
+        row.dbeClassification,
+        row.createdAt,
+      ])),
+      '',
+      csvRow(['Subcontractor Certifications']),
+      csvRow(['Certification ID', 'Subcontractor', 'Cert Types', 'Agency', 'Cert Number', 'Expires', 'Reevaluation Status', 'Self Certified', 'Document Path', 'SAM Status', 'SAM Verified At']),
+      ...typedSubCertRows.map((row) => csvRow([
+        row.id,
+        row.subcontractorName,
+        row.certTypes,
+        row.certifyingAgency,
+        row.certNumber,
+        row.expiresDate,
+        row.reevaluationStatus,
+        row.selfCertified ? 'yes' : 'no',
+        row.documentPath,
+        row.samRegistrationStatus,
+        row.samLastVerifiedAt,
+      ])),
+      '',
       csvRow(['Photos']),
       csvRow(['Photo Type', 'Photo ID', 'Week ID', 'Caption', 'Taken At', 'Latitude', 'Longitude']),
       ...typedProjectPhotoRows.map((row) => csvRow(['project', row.id, '', row.caption, row.takenAt, row.latitude, row.longitude])),
@@ -708,6 +1012,16 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
         row.latitude,
         row.longitude,
         row.accuracyMeters,
+      ])),
+      '',
+      csvRow(['Contractor Signatures']),
+      csvRow(['Signature ID', 'Uploaded By', 'File Path', 'Created At', 'Updated At']),
+      ...signatureEvidence.map((row) => csvRow([
+        row.id,
+        row.uploadedBy,
+        row.filePath,
+        row.createdAt,
+        row.updatedAt,
       ])),
       '',
       csvRow(['Audit Events']),
@@ -736,12 +1050,19 @@ router.get('/:projectId/evidence-packet', async (req, res) => {
     exportedAt: new Date().toISOString(),
     projectId,
     summary,
+    manifest,
     methodology,
+    wageDeterminations: typedWageDeterminationRows,
+    workers: typedWorkerRows,
     payrollWeeks: typedPayrollRows,
+    payrollEntries: typedPayrollEntryRows,
     submitReadyWeeks,
     complianceEvidenceWeeks,
     payrollImports: typedImportRows,
+    subcontractors: typedSubRows,
+    subcontractorCertifications: typedSubCertRows,
     subcontractorCprWeeks: typedSubCprRows,
+    contractorSignatures: signatureEvidence,
     photos: {
       project: typedProjectPhotoRows,
       week: typedWeekPhotoRows,
@@ -765,10 +1086,12 @@ router.get('/:projectId/csv', async (req, res) => {
 
   const from = req.query.from as string | undefined;
   const to = req.query.to as string | undefined;
+  const entityType = req.query.entityType as string | undefined;
 
   const conditions: ReturnType<typeof eq>[] = [eq(auditLogs.projectId, projectId)];
   if (from) conditions.push(gte(auditLogs.createdAt, from));
   if (to) conditions.push(lte(auditLogs.createdAt, to + 'T23:59:59.999Z'));
+  if (entityType) conditions.push(eq(auditLogs.entityType, entityType));
 
   const rows = await db.select()
     .from(auditLogs)

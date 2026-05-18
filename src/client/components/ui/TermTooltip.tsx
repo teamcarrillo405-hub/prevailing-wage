@@ -39,9 +39,9 @@ export function TermTooltip({ term, definition, className }: TermTooltipProps) {
         onClick={() => setOpen(v => !v)}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="inline-flex items-center justify-center p-1 text-text-secondary hover:text-brand-gold transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-1"
+        className="-my-2 inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors duration-150 hover:text-brand-gold focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-1"
       >
-        <HelpCircle className="w-3.5 h-3.5" />
+        <HelpCircle className="h-4 w-4" />
       </button>
       {open && (
         <span

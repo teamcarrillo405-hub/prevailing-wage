@@ -1,12 +1,19 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { LoadingSpinner } from './LoadingSpinner';
 
 export function ProtectedRoute() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, hasCheckedSession, refreshUser } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!hasCheckedSession && !isLoading) {
+      void refreshUser();
+    }
+  }, [hasCheckedSession, isLoading, refreshUser]);
+
+  if (isLoading || !hasCheckedSession) {
     return <LoadingSpinner />;
   }
 

@@ -5,7 +5,7 @@ import { cn } from '../lib/utils';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '../hooks/useDebounce';
-import { Users } from 'lucide-react';
+import { ArrowRight, Search, X } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
@@ -14,7 +14,6 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
-import { HelpCallout } from '../components/ui/HelpCallout';
 import { EmptyState } from '../components/ui/EmptyState';
 import { WorkersEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { TermTooltip } from '../components/ui/TermTooltip';
@@ -188,6 +187,7 @@ function blankWorkerForm() {
     skillLevel: '',
     apprenticeshipProgramName: '',
     rapidsNumber: '',
+    classificationId: '',
     tradeCode: '',
     tradeDescription: '',
     laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman',
@@ -263,7 +263,7 @@ export function WorkersPage() {
 
   // Add-extra-classification state
   const [addingClassFor, setAddingClassFor] = useState<string | null>(null);
-  const [extraClass, setExtraClass] = useState({ tradeCode: '', tradeDescription: '', laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' });
+  const [extraClass, setExtraClass] = useState({ classificationId: '', tradeCode: '', tradeDescription: '', laborType: 'journeyworker' as 'journeyworker' | 'apprentice' | 'foreman', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' });
   const [extraError, setExtraError] = useState('');
 
   // Delete confirmation
@@ -357,8 +357,11 @@ export function WorkersPage() {
         } as Worker;
       })
     : fullWorkers;
-  const selectedTrade = wageClassifications.find(wc => wc.tradeCode === form.tradeCode);
-  const selectedExtraTrade = wageClassifications.find(wc => wc.tradeCode === extraClass.tradeCode);
+  const missingPayrollDataCount = allWorkers.filter((w) => ![w.addressStreet, w.addressCity, w.addressState, w.addressZip].some(Boolean) || !w.ssnLast4).length;
+  const classifiedWorkerCount = allWorkers.filter((w) => w.classifications.length > 0).length;
+  const apprenticeWorkerCount = allWorkers.filter((w) => w.classifications.some((c) => c.laborType === 'apprentice')).length;
+  const selectedTrade = wageClassifications.find(wc => wc.id === form.classificationId);
+  const selectedExtraTrade = wageClassifications.find(wc => wc.id === extraClass.classificationId);
   const isWA = projectData?.data?.project?.state?.toUpperCase() === 'WA';
   const isIL = projectData?.data?.project?.state?.toUpperCase() === 'IL';
   const isMA = projectData?.data?.project?.state?.toUpperCase() === 'MA';
@@ -393,7 +396,7 @@ export function WorkersPage() {
       const workerId = workerRes.data.worker.id;
       const canAddClass = isWA
         ? f.tradeCode.trim() && f.tradeDescription.trim()
-        : f.tradeCode && selectedTrade;
+        : f.classificationId && selectedTrade;
       if (canAddClass) {
         const waRate = parseFloat(f.waManualRate);
         await api.post(`/projects/${projectId}/workers/${workerId}/classifications`, {
@@ -490,7 +493,7 @@ export function WorkersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workers', projectId] });
       setAddingClassFor(null);
-      setExtraClass({ tradeCode: '', tradeDescription: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' });
+      setExtraClass({ classificationId: '', tradeCode: '', tradeDescription: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' });
       setExtraError('');
     },
     onError: () => setExtraError('Could not update classification — try refreshing the page.'),
@@ -502,7 +505,8 @@ export function WorkersPage() {
     if (!form.name.trim()) { setFormError('Worker name is required'); return; }
     if (form.ssn && !/^\d+$/.test(form.ssn)) { setFormError('SSN must contain only digits.'); return; }
     if (form.ssn && form.ssn.length !== 9) { setFormError('SSN must be exactly 9 digits.'); return; }
-    if (!isWA && form.tradeCode && !selectedTrade) { setFormError('Select a valid trade from the list'); return; }
+    if (!isWA && hasWd && !form.classificationId) { setFormError('Select a trade classification before saving this worker.'); return; }
+    if (!isWA && form.classificationId && !selectedTrade) { setFormError('Select a valid trade from the list'); return; }
     if (form.laborType === 'apprentice' && !form.apprenticePercent) { setFormError('Apprentice % is required'); return; }
     if (form.laborType === 'apprentice' && !form.programName.trim()) { setFormError('Registered apprenticeship program is required'); return; }
     addWorker.mutate(form);
@@ -527,7 +531,8 @@ export function WorkersPage() {
 
   function handleAddExtraClass(workerId: string) {
     setExtraError('');
-    if (!extraClass.tradeCode) { setExtraError('Trade code is required'); return; }
+    if (isWA && !extraClass.tradeCode.trim()) { setExtraError('Trade code is required'); return; }
+    if (!isWA && !extraClass.classificationId) { setExtraError('Trade classification is required'); return; }
     if (isWA && !extraClass.tradeDescription.trim()) { setExtraError('Trade description is required'); return; }
     if (!isWA && !selectedExtraTrade) { setExtraError('Trade not found'); return; }
     if (extraClass.laborType === 'apprentice' && !extraClass.apprenticePercent) { setExtraError('Apprentice % required'); return; }
@@ -544,22 +549,67 @@ export function WorkersPage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full space-y-6">
 
         {/* Header */}
-        <button onClick={() => navigate(`/projects/${projectId}`)} className="text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4 inline-flex items-center min-h-[44px] px-1">
+        <button onClick={() => navigate(`/projects/${projectId}`)} className="inline-flex min-h-11 items-center px-1 text-sm text-gray-500 transition-colors hover:text-gray-900">
           &larr; Back to Project
         </button>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <PageHeader title="Workers" />
-          <Button onClick={focusAddWorkerForm}>Add Worker</Button>
-        </div>
-
-        <HelpCallout
-          icon={Users}
-          title="Register Your Workers"
-          body={<>Federal law requires every worker on a <TermTooltip term="Davis-Bacon" definition={DB_DEF} /> project to be logged with their classification and pay rate. This page supports manual worker entry; bulk roster import is not available yet.</>}
+        <PageHeader
+          title="Worker Roster"
+          subtitle="Add workers once, keep WH-347 identity fields clean, and assign the trade classifications payroll will use."
+          action={<Button onClick={focusAddWorkerForm}>Add Worker</Button>}
+          className="mb-0"
         />
+
+        <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="p-5 sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Roster readiness</p>
+              <h2 className="mt-1 text-xl font-semibold text-gray-950">Confirm people, required fields, and rates before payroll.</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
+                Every worker on a <TermTooltip term="Davis-Bacon" definition={DB_DEF} /> project needs an identity record, export-ready address, and at least one classification before payroll entry.
+              </p>
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                {[
+                  { label: 'Workers', value: allWorkers.length, tone: 'text-gray-950' },
+                  { label: 'Classified', value: classifiedWorkerCount, tone: classifiedWorkerCount === allWorkers.length ? 'text-emerald-700' : 'text-amber-700' },
+                  { label: 'Apprentices', value: apprenticeWorkerCount, tone: 'text-gray-950' },
+                  { label: 'WH-347 gaps', value: missingPayrollDataCount, tone: missingPayrollDataCount > 0 ? 'text-red-700' : 'text-emerald-700' },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                    <div className={`text-2xl font-bold tabular-nums ${item.tone}`}>{item.value}</div>
+                    <div className="mt-1 text-xs font-medium text-gray-500">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <aside className="border-t border-gray-200 bg-gray-50 p-5 lg:border-l lg:border-t-0">
+              <p className="text-sm font-semibold text-gray-950">Next best action</p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                {missingPayrollDataCount > 0
+                  ? `${missingPayrollDataCount} worker${missingPayrollDataCount === 1 ? '' : 's'} need address or SSN data before WH-347 export.`
+                  : classifiedWorkerCount < allWorkers.length
+                    ? 'Assign classifications to every worker before payroll.'
+                    : 'Roster is ready for payroll entry.'}
+              </p>
+              <div className="mt-4 flex flex-col gap-2">
+                <Button onClick={focusAddWorkerForm} variant={missingPayrollDataCount > 0 || classifiedWorkerCount < allWorkers.length ? 'primary' : 'secondary'}>
+                  Add or update worker
+                </Button>
+                {allWorkers.length > 0 && (
+                  <Link
+                    to={`/projects/${projectId}/payroll`}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-brand-gold px-4 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
+                  >
+                    Enter Payroll
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+            </aside>
+          </div>
+        </section>
 
         {/* WD status */}
         {wdLoading && (
@@ -575,7 +625,7 @@ export function WorkersPage() {
         {!wdLoading && !hasWd && wdData && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             No federal wage determination found for this project's state and county.
-            Use the <button onClick={() => navigate('/wages')} className="underline font-medium">Wage Lookup</button> page to search or enter rates manually.
+            Use the <button onClick={() => navigate('/wages')} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">Wage Lookup</button> page to search or enter rates manually.
           </div>
         )}
 
@@ -605,54 +655,53 @@ export function WorkersPage() {
           />
         )}
 
-        {/* Ready-for-payroll nudge */}
         {allWorkers.length > 0 && (
-          <div className="mb-4 rounded-lg border border-brand-gold/40 bg-brand-gold/5 px-4 py-3 flex items-center justify-between">
-            <p className="text-sm text-gray-700"><span className="font-semibold">{allWorkers.length} worker{allWorkers.length !== 1 ? 's' : ''} registered.</span> Ready to enter payroll for the current week.</p>
-            <Link to={`/projects/${projectId}/payroll`} className="text-sm font-semibold text-brand-gold hover:underline whitespace-nowrap ml-4">Enter Payroll →</Link>
-          </div>
-        )}
-
-        {/* Filter chips */}
-        {allWorkers.length > 0 && (
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            {FILTER_CHIPS.map(chip => (
-              <button
-                key={chip.key}
-                onClick={() => setLaborFilter(chip.key as typeof laborFilter)}
-                className={cn(
-                  'px-3 py-1 rounded-full text-xs font-medium transition-colors min-h-[44px] sm:min-h-0',
-                  laborFilter === chip.key
-                    ? 'bg-brand-navy text-white'
-                    : 'bg-surface-muted text-text-secondary hover:bg-gray-200'
+          <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <label htmlFor="worker-search" className="block text-xs font-semibold uppercase tracking-wide text-gray-500">Find worker</label>
+                <div className="relative mt-2">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+                  <input
+                    id="worker-search"
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by name or union"
+                    className="min-h-11 w-full rounded-md border border-border-default bg-surface-card py-2 pl-10 pr-3 text-base text-foreground placeholder:text-text-muted focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                    autoComplete="off"
+                  />
+                </div>
+                {isSearching && searchFetching && (
+                  <p className="mt-2 text-xs text-text-muted">Searching...</p>
                 )}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Search input */}
-        {allWorkers.length > 0 && (
-          <div className="mb-4">
-            <label htmlFor="worker-search" className="sr-only">Search workers</label>
-            <input
-              id="worker-search"
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search workers by name or trade union..."
-              className="w-full px-3 py-2 rounded-md border border-border-default bg-surface-card text-foreground text-base placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-gold focus:border-brand-gold"
-              autoComplete="off"
-            />
-            {isSearching && searchFetching && (
-              <p className="mt-1 text-xs text-text-muted">Searching...</p>
-            )}
-            {isSearching && !searchFetching && searchHits.length === 0 && (
-              <p className="mt-1 text-xs text-text-muted">No workers match "{debouncedQuery}".</p>
-            )}
-          </div>
+                {isSearching && !searchFetching && searchHits.length === 0 && (
+                  <p className="mt-2 text-xs text-text-muted">No workers match "{debouncedQuery}".</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Roster view</p>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Filter workers by labor type">
+                  {FILTER_CHIPS.map(chip => (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => setLaborFilter(chip.key as typeof laborFilter)}
+                      aria-pressed={laborFilter === chip.key}
+                      className={cn(
+                        'inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-semibold transition-colors',
+                        laborFilter === chip.key
+                          ? 'border-gray-950 bg-gray-950 text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-brand-gold hover:text-gray-950'
+                      )}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Worker list */}
@@ -660,7 +709,7 @@ export function WorkersPage() {
           <p className="text-sm text-gray-500 mb-4">No workers match the selected filter.</p>
         )}
         {displayedWorkers.length > 0 && (
-          <div className="mb-8 space-y-3">
+          <div className="space-y-3">
             {displayedWorkers.map((w) => (
               <Card key={w.id} padding="sm" className="shadow-card-elevated hover:shadow-card-hover transition-shadow duration-150">
 
@@ -669,7 +718,7 @@ export function WorkersPage() {
                   <div>
                     <p className="text-sm font-semibold text-gray-900 mb-3">Edit Worker</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                      <div className="col-span-1 sm:col-span-2">
+                      <div className="md:col-span-2">
                         <label htmlFor={`edit-name-${w.id}`} className="block text-xs text-gray-600 mb-1">Full Name *</label>
                         <input
                           id={`edit-name-${w.id}`}
@@ -761,7 +810,7 @@ export function WorkersPage() {
                       </div>
                     </div>
                     <details className="mt-4 border-t border-gray-100 pt-4 group">
-                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1 list-none">
+                      <summary className="mb-2 flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-semibold text-gray-700">
                         Union Information
                         <span className="text-xs font-normal text-gray-400 ml-1">(optional — click to expand)</span>
                       </summary>
@@ -851,7 +900,7 @@ export function WorkersPage() {
                       </div>
                     )}
                     <details className="mt-4 border-t border-gray-100 pt-4">
-                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 list-none flex items-center gap-2">
+                      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-semibold text-gray-700">
                         Apprenticeship
                         <span className="text-xs font-normal text-gray-400">(optional)</span>
                       </summary>
@@ -861,16 +910,16 @@ export function WorkersPage() {
                           id={`nysRegisteredApprentice-edit-${w.id}`}
                           checked={editForm.nysRegisteredApprentice ?? false}
                           onChange={(e) => setEditForm(p => ({ ...p, nysRegisteredApprentice: e.target.checked }))}
-                          className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+                          className="h-11 w-11 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
                         />
-                        <label htmlFor={`nysRegisteredApprentice-edit-${w.id}`} className="text-sm font-medium text-gray-700">
+                          <label htmlFor={`nysRegisteredApprentice-edit-${w.id}`} className="text-sm font-medium text-gray-700">
                           NYS Registered Apprentice
                         </label>
                       </div>
                     </details>
                     {isIL && (
-                      <details className="rounded-lg border border-purple-200 bg-purple-50 p-3" open>
-                        <summary className="cursor-pointer text-sm font-medium text-purple-800">IL Compliance Demographics</summary>
+                      <details className="rounded-lg border border-gray-200 bg-gray-50 p-3" open>
+                        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-gray-900">IL Compliance Demographics</summary>
                         <div className="mt-3 space-y-3">
                           <div className="grid grid-cols-2 gap-3">
                             <ComplianceSelect
@@ -913,8 +962,8 @@ export function WorkersPage() {
                       </details>
                     )}
                     {(isMA || isNJ) && (
-                      <details className="rounded-lg border border-teal-200 bg-teal-50 p-3" open>
-                        <summary className="cursor-pointer text-sm font-medium text-teal-800">
+                      <details className="rounded-lg border border-gray-200 bg-gray-50 p-3" open>
+                        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-gray-900">
                           MA/NJ Workforce Participation
                         </summary>
                         <div className="mt-3 space-y-3">
@@ -968,7 +1017,7 @@ export function WorkersPage() {
                       </div>
                     )}
                     {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
-                    <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                       <Button onClick={() => handleEditSave(w.id)} disabled={updateWorker.isPending}>
                         {updateWorker.isPending ? 'Saving...' : 'Save Changes'}
                       </Button>
@@ -977,20 +1026,20 @@ export function WorkersPage() {
                   </div>
                 ) : confirmDeleteId === w.id ? (
                   /* ── Delete confirmation ── */
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm text-gray-700">Remove <span className="font-medium">{w.name}</span> and all their trade assignments?</p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => deleteWorker.mutate(w.id)}
                         disabled={deleteWorker.isPending}
-                        className="px-4 py-3 min-h-[44px] bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        className="inline-flex min-h-11 items-center rounded-md bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                         aria-label={`Confirm remove ${w.name}`}
                       >
                         {deleteWorker.isPending ? 'Removing...' : 'Yes, Remove'}
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="px-4 py-3 min-h-[44px] text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                        className="inline-flex min-h-11 items-center px-4 text-sm font-semibold text-gray-600 transition-colors hover:text-gray-950"
                       >
                         Cancel
                       </button>
@@ -999,10 +1048,10 @@ export function WorkersPage() {
                 ) : (
                   /* ── Normal worker card view ── */
                   <>
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="flex items-start gap-3">
                         {/* Avatar circle */}
-                        <div className="w-10 h-10 rounded-full bg-brand-navy text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gray-950 text-sm font-bold text-brand-gold">
                           {workerInitials(w.name)}
                         </div>
                         <div className="min-w-0">
@@ -1048,32 +1097,36 @@ export function WorkersPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 xl:justify-end">
                         <Link
                           to={`/projects/${projectId}/workers/${w.id}/compliance-history`}
-                          className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 hover:bg-gray-50 transition-colors flex items-center"
+                          aria-label={`Open compliance history for ${w.name}`}
+                          className="inline-flex min-h-11 items-center rounded-md border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
                         >
                           Compliance History
                         </Link>
                         <button
+                          type="button"
                           onClick={() => { setEditingId(w.id); setEditForm(workerToEditForm(w)); setAddingClassFor(null); }}
-                          className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 hover:bg-gray-50 transition-colors"
+                          className="inline-flex min-h-11 items-center rounded-md border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
                           aria-label={`Edit ${w.name}`}
                         >
                           Edit
                         </button>
                         {(hasWd || isWA) && (
                           <button
-                            onClick={() => { setAddingClassFor(addingClassFor === w.id ? null : w.id); setExtraError(''); setExtraClass({ tradeCode: '', tradeDescription: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' }); setEditingId(null); }}
-                            className="text-xs text-gray-500 border border-gray-300 rounded px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 hover:bg-gray-50 transition-colors"
+                            type="button"
+                            onClick={() => { setAddingClassFor(addingClassFor === w.id ? null : w.id); setExtraError(''); setExtraClass({ classificationId: '', tradeCode: '', tradeDescription: '', laborType: 'journeyworker', apprenticePercent: '', programName: '', waManualRate: '', waTradeCode: '' }); setEditingId(null); }}
+                            className="inline-flex min-h-11 items-center rounded-md border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
                             aria-label={`Add trade for ${w.name}`}
                           >
-                            + Trade
+                            Add Trade
                           </button>
                         )}
                         <button
+                          type="button"
                           onClick={() => { setConfirmDeleteId(w.id); setEditingId(null); setAddingClassFor(null); }}
-                          className="text-xs text-red-400 border border-red-200 rounded px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 hover:bg-red-50 transition-colors"
+                          className="inline-flex min-h-11 items-center rounded-md border border-red-200 px-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50"
                           aria-label={`Remove ${w.name}`}
                         >
                           Remove
@@ -1083,12 +1136,12 @@ export function WorkersPage() {
 
                     {/* Classifications */}
                     {w.classifications.length > 0 && (
-                      <div className="mt-3 divide-y divide-gray-100 border border-gray-100 rounded">
+                      <div className="mt-4 divide-y divide-gray-100 rounded-lg border border-gray-100">
                         {deleteClassError && (
                           <p className="px-3 py-2 text-xs text-red-600">{deleteClassError}</p>
                         )}
                         {w.classifications.map((c) => (
-                          <div key={c.id} className="flex items-center justify-between px-3 py-2">
+                          <div key={c.id} className="flex flex-col gap-3 px-3 py-3 md:flex-row md:items-center md:justify-between">
                             <div>
                               <span className="text-sm text-gray-900">{c.tradeDescription}</span>
                               <span className="ml-2 text-xs text-gray-400 capitalize">· {c.laborType}</span>
@@ -1106,12 +1159,13 @@ export function WorkersPage() {
                                 compact
                               />
                               <button
+                                type="button"
                                 onClick={() => deleteClassification.mutate({ workerId: w.id, classificationId: c.id })}
-                                className="p-2 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600"
                                 aria-label={`Remove ${c.tradeDescription} classification for ${w.name}`}
                                 title="Remove trade"
                               >
-                                ×
+                                <X className="h-4 w-4" aria-hidden="true" />
                               </button>
                             </div>
                           </div>
@@ -1123,7 +1177,7 @@ export function WorkersPage() {
                     {addingClassFor === w.id && (
                       <div className="mt-4 border-t border-gray-100 pt-4">
                         <p className="text-sm font-semibold text-gray-900 mb-3">Add Labor Type and Trade</p>
-                        <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                           <div>
                             <label htmlFor={`extra-labor-type-${w.id}`} className="block text-xs text-gray-600 mb-1">Labor Type</label>
                             <select
@@ -1151,7 +1205,7 @@ export function WorkersPage() {
                             </div>
                           )}
                           {extraClass.laborType === 'apprentice' && (
-                            <div className="col-span-2">
+                            <div className="md:col-span-2">
                               <label htmlFor={`extra-program-name-${w.id}`} className="block text-xs text-gray-600 mb-1">Registered Apprenticeship Program</label>
                               <input
                                 id={`extra-program-name-${w.id}`}
@@ -1189,17 +1243,17 @@ export function WorkersPage() {
                               </div>
                             </>
                           ) : (
-                            <div className="col-span-2">
+                            <div className="md:col-span-2">
                               <label htmlFor={`extra-trade-select-${w.id}`} className="block text-xs text-gray-600 mb-1">Trade Classification</label>
                               <select
                                 id={`extra-trade-select-${w.id}`}
-                                value={extraClass.tradeCode}
-                                onChange={(e) => setExtraClass(p => ({ ...p, tradeCode: e.target.value }))}
+                                value={extraClass.classificationId}
+                                onChange={(e) => setExtraClass(p => ({ ...p, classificationId: e.target.value }))}
                                 className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                               >
                                 <option value="">— Select a trade —</option>
                                 {wageClassifications.map(wc => (
-                                  <option key={wc.id} value={wc.tradeCode}>
+                                  <option key={wc.id} value={wc.id}>
                                     {wc.tradeDescription} — {fmt(wc.baseRate)} + {fmt(wc.fringeRate)} fringe/hr
                                   </option>
                                 ))}
@@ -1207,7 +1261,7 @@ export function WorkersPage() {
                             </div>
                           )}
                           {isWA && (
-                            <div className="col-span-2 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                            <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 md:col-span-2">
                               <p className="text-xs font-medium text-blue-800">Washington Prevailing Wage</p>
                               <div>
                                 <label htmlFor={`extra-wa-rate-${w.id}`} className="block text-xs font-medium text-gray-700 mb-1">
@@ -1261,7 +1315,7 @@ export function WorkersPage() {
                           <Button onClick={() => handleAddExtraClass(w.id)} disabled={addClassification.isPending}>
                             {addClassification.isPending ? 'Saving...' : 'Save'}
                           </Button>
-                          <button onClick={() => setAddingClassFor(null)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
+                          <button type="button" onClick={() => setAddingClassFor(null)} className="inline-flex min-h-11 items-center px-4 text-sm font-semibold text-gray-600 transition-colors hover:text-gray-950">Cancel</button>
                         </div>
                       </div>
                     )}
@@ -1292,7 +1346,7 @@ export function WorkersPage() {
 
           <div className="space-y-4">
             {/* Name + SSN */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label htmlFor="add-worker-name" className="block text-xs text-gray-600 mb-1">Full Name *</label>
                 <input
@@ -1337,7 +1391,7 @@ export function WorkersPage() {
                   onChange={e => setForm(p => ({ ...p, addressStreet: e.target.value }))}
                   className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                 />
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <div>
                     <label htmlFor="add-worker-city" className="sr-only">City</label>
                     <input
@@ -1375,12 +1429,12 @@ export function WorkersPage() {
               </div>
             </div>
             <details className="mt-2 border-t border-gray-100 pt-4 group">
-              <summary className="cursor-pointer text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1 list-none">
+              <summary className="mb-2 flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-semibold text-gray-700">
                 Union Information
                 <span className="text-xs font-normal text-gray-400 ml-1">(optional — click to expand)</span>
               </summary>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="col-span-2">
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="sm:col-span-2">
                   <label htmlFor="add-worker-union" className="block text-xs text-gray-600 mb-1">Trade Union</label>
                   <input
                     id="add-worker-union"
@@ -1417,7 +1471,7 @@ export function WorkersPage() {
             </details>
 
             <details className="mt-2 border-t border-gray-100 pt-4">
-              <summary className="cursor-pointer text-sm font-semibold text-gray-700 list-none flex items-center gap-2">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-semibold text-gray-700">
                 Apprenticeship
                 <span className="text-xs font-normal text-gray-400">(optional)</span>
               </summary>
@@ -1427,7 +1481,7 @@ export function WorkersPage() {
                   id="nysRegisteredApprentice"
                   checked={form.nysRegisteredApprentice ?? false}
                   onChange={(e) => setForm(p => ({ ...p, nysRegisteredApprentice: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
+                  className="h-11 w-11 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
                 />
                 <label htmlFor="nysRegisteredApprentice" className="text-sm font-medium text-gray-700">
                   NYS Registered Apprentice
@@ -1436,10 +1490,10 @@ export function WorkersPage() {
             </details>
 
             {isIL && (
-              <details className="rounded-lg border border-purple-200 bg-purple-50 p-3" open>
-                <summary className="cursor-pointer text-sm font-medium text-purple-800">IL Compliance Demographics</summary>
+              <details className="rounded-lg border border-gray-200 bg-gray-50 p-3" open>
+                <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-gray-900">IL Compliance Demographics</summary>
                 <div className="mt-3 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <ComplianceSelect
                       id="add-il-race"
                       label="Race"
@@ -1488,7 +1542,7 @@ export function WorkersPage() {
                 <p className="text-sm text-gray-400">Loading available trades...</p>
               ) : isWA ? (
                 /* WA projects: manual trade entry + WA rate section */
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <label htmlFor="add-wa-labor-type" className="block text-xs text-gray-600 mb-1">Labor Type</label>
                     <select
@@ -1519,7 +1573,7 @@ export function WorkersPage() {
                     </div>
                   )}
                   {form.laborType === 'apprentice' && (
-                    <div className="col-span-2">
+                    <div className="md:col-span-2">
                       <label htmlFor="add-wa-apprenticeship-program-name" className="block text-xs text-gray-600 mb-1">
                         Registered Apprenticeship Program
                       </label>
@@ -1573,9 +1627,9 @@ export function WorkersPage() {
                       className="w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
                     />
                   </div>
-                  <div className="col-span-2 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 md:col-span-2">
                     <p className="text-xs font-medium text-blue-800">Washington Prevailing Wage</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div>
                         <label htmlFor="add-wa-manual-rate" className="block text-xs font-medium text-gray-700 mb-1">Prevailing Rate ($/hr)</label>
                         <input
@@ -1620,7 +1674,7 @@ export function WorkersPage() {
                   </div>
                 </div>
               ) : hasWd ? (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <label htmlFor="add-labor-type" className="block text-xs text-gray-600 mb-1">Labor Type</label>
                     <select
@@ -1651,7 +1705,7 @@ export function WorkersPage() {
                     </div>
                   )}
                   {form.laborType === 'apprentice' && (
-                    <div className="col-span-2">
+                    <div className="md:col-span-2">
                       <label htmlFor="add-program-name" className="block text-xs text-gray-600 mb-1">Registered Apprenticeship Program</label>
                       <input
                         id="add-program-name"
@@ -1696,12 +1750,12 @@ export function WorkersPage() {
                       />
                     </div>
                   )}
-                  <div className="col-span-2">
+                  <div className="md:col-span-2">
                     <label htmlFor="add-trade-select" className="block text-xs text-gray-600 mb-1">Trade</label>
                     <select
                       id="add-trade-select"
-                      value={form.tradeCode}
-                      onChange={e => setForm(p => ({ ...p, tradeCode: e.target.value }))}
+                      value={form.classificationId}
+                      onChange={e => setForm(p => ({ ...p, classificationId: e.target.value }))}
                       aria-invalid={formError.includes('trade') ? 'true' : undefined}
                       className={`w-full rounded border px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold ${
                         formError.includes('trade') ? 'border-red-400 bg-red-50' : 'border-gray-300'
@@ -1709,7 +1763,7 @@ export function WorkersPage() {
                     >
                       <option value="">— Select a trade —</option>
                       {wageClassifications.map(wc => (
-                        <option key={wc.id} value={wc.tradeCode}>
+                        <option key={wc.id} value={wc.id}>
                           {wc.tradeDescription} — {fmt(wc.baseRate)} + {fmt(wc.fringeRate)} fringe/hr
                         </option>
                       ))}
@@ -1720,7 +1774,7 @@ export function WorkersPage() {
                 <p className="text-xs text-amber-700">
                   Wage rates not available for this project's location — worker will be saved without a trade classification.
                   You can add trades after loading rates via the{' '}
-                  <button onClick={() => navigate('/wages')} className="underline">Wage Lookup</button> page.
+                  <button type="button" onClick={() => navigate('/wages')} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">Wage Lookup</button> page.
                 </p>
               )}
             </div>

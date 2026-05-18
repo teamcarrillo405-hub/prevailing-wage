@@ -67,12 +67,12 @@ export function GovernmentPage() {
       {/* Minimal public header */}
       <header className="bg-gray-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-sm font-semibold text-white hover:text-brand-gold transition-colors">
+          <Link to="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-white hover:text-brand-gold transition-colors">
             PrevWage
           </Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex min-h-11 items-center rounded-lg bg-brand-gold px-4 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90"
           >
             Start Free
           </Link>
@@ -199,7 +199,7 @@ export function GovernmentPage() {
 
       {/* CTA */}
       <div className="bg-gray-900 py-16 text-center text-white">
-        <h2 className="text-3xl font-bold mb-3">Ready to eliminate prevailing wage audit risk?</h2>
+        <h2 className="text-3xl font-bold mb-3">Ready to reduce prevailing wage audit risk?</h2>
         <p className="text-gray-400 mb-8 max-w-md mx-auto">
           Set up your first federal project in under 10 minutes. Wage determinations pulled
           automatically from SAM.gov.
@@ -212,7 +212,7 @@ export function GovernmentPage() {
         </Link>
         <p className="text-xs text-gray-500 mt-4">
           Questions?{' '}
-          <Link to="/contact" className="text-gray-400 hover:text-white transition-colors underline">
+          <Link to="/contact" className="inline-flex min-h-11 items-center text-gray-300 underline transition-colors hover:text-white">
             Contact our compliance team
           </Link>
         </p>
@@ -221,11 +221,11 @@ export function GovernmentPage() {
       {/* Footer */}
       <footer className="bg-gray-950 text-gray-500 text-xs py-8 text-center">
         <div className="max-w-5xl mx-auto px-6 flex flex-wrap justify-center gap-6">
-          <Link to="/case-studies" className="hover:text-gray-300 transition-colors">Case Studies</Link>
-          <Link to="/government" className="hover:text-gray-300 transition-colors">Government</Link>
-          <Link to="/api-docs" className="hover:text-gray-300 transition-colors">API Docs</Link>
-          <Link to="/security" className="hover:text-gray-300 transition-colors">Security Policy</Link>
-          <Link to="/register" className="hover:text-gray-300 transition-colors">Register</Link>
+          <Link to="/case-studies" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Case Studies</Link>
+          <Link to="/government" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Government</Link>
+          <Link to="/api-docs" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">API Docs</Link>
+          <Link to="/security" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Security Policy</Link>
+          <Link to="/register" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Register</Link>
         </div>
         <p className="mt-6 text-gray-600">2026 PrevWage. All rights reserved.</p>
       </footer>

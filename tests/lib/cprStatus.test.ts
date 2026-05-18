@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getCprStatus, STATUS_BADGE } from '../../src/client/lib/cprStatus';
+import { getCprStatus, getSubcontractorOperationState, STATUS_BADGE } from '../../src/client/lib/cprStatus';
 import type { CprWeek } from '../../src/client/lib/cprStatus';
 
 // Helper: format a Date to YYYY-MM-DD
@@ -16,6 +16,8 @@ function makeWeek(overrides: Partial<CprWeek>): CprWeek {
     receivedDate: null,
     isCompliant: null,
     notes: null,
+    uploadToken: null,
+    uploadedAt: null,
     createdAt: new Date().toISOString(),
     ...overrides,
   };
@@ -147,5 +149,91 @@ describe('STATUS_BADGE', () => {
       variant: 'warning',
       label: 'Overdue',
     });
+  });
+});
+
+describe('getSubcontractorOperationState', () => {
+  const NOW = new Date('2026-03-15T12:00:00');
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('marks missing CPR without a request as not invited', () => {
+    const state = getSubcontractorOperationState(makeWeek({ weekEndingDate: '2026-03-14' }));
+    expect(state.status).toBe('not_invited');
+    expect(state.blocksSubmission).toBe(true);
+  });
+
+  it('marks a current upload token as invited', () => {
+    const state = getSubcontractorOperationState(makeWeek({
+      weekEndingDate: '2026-03-14',
+      uploadToken: 'token',
+      uploadTokenExpiresAt: '2026-03-20T00:00:00.000Z',
+    }));
+    expect(state.status).toBe('invited');
+  });
+
+  it('marks an expired upload token as pending', () => {
+    const state = getSubcontractorOperationState(makeWeek({
+      weekEndingDate: '2026-03-14',
+      uploadToken: 'token',
+      uploadTokenExpiresAt: '2026-03-10T00:00:00.000Z',
+    }));
+    expect(state.status).toBe('pending');
+    expect(state.nextAction).toMatch(/fresh request/i);
+  });
+
+  it('marks an uploaded but unreviewed CPR as submitted', () => {
+    const state = getSubcontractorOperationState(makeWeek({
+      weekEndingDate: '2026-03-14',
+      uploadedAt: '2026-03-15T00:00:00.000Z',
+    }));
+    expect(state.status).toBe('submitted');
+  });
+
+  it('marks compliant received CPR as approved', () => {
+    const state = getSubcontractorOperationState(makeWeek({
+      receivedDate: '2026-03-15',
+      isCompliant: 1,
+    }));
+    expect(state.status).toBe('approved');
+    expect(state.blocksSubmission).toBe(false);
+  });
+
+  it('marks non-compliant received CPR as rejected', () => {
+    const state = getSubcontractorOperationState(makeWeek({
+      receivedDate: '2026-03-15',
+      isCompliant: 0,
+    }));
+    expect(state.status).toBe('rejected');
+  });
+
+  it('marks corrected notes as corrected until approved', () => {
+    const state = getSubcontractorOperationState(makeWeek({
+      receivedDate: '2026-03-15',
+      isCompliant: 0,
+      notes: 'Corrected CPR resubmitted for review',
+    }));
+    expect(state.status).toBe('corrected');
+  });
+
+  it('marks old missing CPR as late', () => {
+    const state = getSubcontractorOperationState(makeWeek({ weekEndingDate: '2026-03-01' }));
+    expect(state.status).toBe('late');
+  });
+
+  it('marks no-work notes as non-performance and non-blocking', () => {
+    const state = getSubcontractorOperationState(makeWeek({
+      weekEndingDate: '2026-03-01',
+      notes: 'No work performed this week',
+    }));
+    expect(state.status).toBe('non_performance');
+    expect(state.blocksSubmission).toBe(false);
   });
 });

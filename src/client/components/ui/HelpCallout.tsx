@@ -13,15 +13,16 @@ export function HelpCallout({ icon: Icon, title, body, className }: HelpCalloutP
   return (
     <div
       className={cn(
-        'bg-surface-card rounded-card shadow-card-elevated border border-border-default border-l-4 border-l-brand-gold',
-        'p-4 flex gap-3 items-start mb-4',
+        'mb-5 flex items-start gap-3 rounded-lg border border-brand-gold/40 bg-brand-gold/10 p-4',
         className
       )}
     >
-      <Icon className="w-4 h-4 text-brand-gold flex-shrink-0 mt-0.5" />
-      <div>
-        <p className="font-body text-sm font-bold text-text-primary">{title}</p>
-        <p className="font-body text-sm text-text-secondary leading-relaxed">{body}</p>
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white text-black ring-1 ring-brand-gold/50">
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 pt-0.5">
+        <p className="font-body text-sm font-bold text-gray-950">{title}</p>
+        <p className="mt-1 font-body text-sm leading-6 text-gray-700">{body}</p>
       </div>
     </div>
   );

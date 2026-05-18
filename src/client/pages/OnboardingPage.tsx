@@ -88,6 +88,12 @@ export function OnboardingPage() {
   }, [user?.companyName, user?.hccMembershipNumber]);
 
   const setupRecommendations = useMemo(() => providerSummary(form), [form]);
+  const completedSections = [
+    Boolean(form.companyName.trim() && form.hccMembershipNumber.trim() && form.averageWeeklyWorkers >= 0),
+    form.primaryStates.length > 0 && form.workTypes.length > 0,
+    Boolean(form.payrollProvider && form.accountingProvider && form.projectManagementProvider),
+  ].filter(Boolean).length;
+  const completionPercent = Math.round((completedSections / 3) * 100);
 
   async function saveOnboarding() {
     setError(null);
@@ -137,10 +143,10 @@ export function OnboardingPage() {
     <main className="min-h-[100dvh] bg-[#f6f4ef] text-gray-950">
       <header className="border-b border-gray-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <Link to="/" className="font-headline text-lg font-bold text-gray-950">
+          <Link to="/" className="inline-flex min-h-11 items-center font-headline text-lg font-bold text-gray-950">
             HCC Prevailing Wage
           </Link>
-          <span className="text-sm text-gray-600">Member onboarding</span>
+          <span className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-600">Member onboarding</span>
         </div>
       </header>
 
@@ -159,7 +165,30 @@ export function OnboardingPage() {
             </p>
           </div>
 
-          <div className="grid gap-5 rounded-lg border border-gray-200 bg-white p-5 shadow-sm md:grid-cols-2">
+          <div className="grid gap-3 rounded-sm border border-gray-200 bg-white p-3 shadow-sm md:grid-cols-3">
+            {[
+              ['1', 'Business profile', 'Company, role, worker volume', completedSections >= 1],
+              ['2', 'Work coverage', 'States and public work types', completedSections >= 2],
+              ['3', 'Systems path', 'Payroll, accounting, field proof', completedSections >= 3],
+            ].map(([step, title, detail, complete]) => (
+              <div key={step as string} className="flex items-start gap-3 rounded-sm border border-gray-100 bg-gray-50 px-3 py-3">
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-xs font-bold ${complete ? 'bg-brand-gold text-black' : 'bg-gray-950 text-brand-gold'}`}>
+                  {complete ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : step}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-950">{title}</p>
+                  <p className="mt-0.5 text-xs leading-5 text-gray-600">{detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-5 rounded-sm border border-gray-200 bg-white p-5 shadow-sm md:grid-cols-2">
+            <div className="md:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Step 1</p>
+              <h2 className="mt-1 font-headline text-2xl font-semibold text-gray-950">Business profile</h2>
+              <p className="mt-1 text-sm leading-6 text-gray-600">Used to personalize forms, role-specific reminders, and setup defaults.</p>
+            </div>
             <Input
               id="companyName"
               label="Company name"
@@ -206,9 +235,10 @@ export function OnboardingPage() {
             />
           </div>
 
-          <div className="grid gap-5 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="grid gap-5 rounded-sm border border-gray-200 bg-white p-5 shadow-sm">
             <div>
-              <h2 className="font-headline text-xl font-semibold text-gray-950">Where and what you build</h2>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Step 2</p>
+              <h2 className="mt-1 font-headline text-2xl font-semibold text-gray-950">Where and what you build</h2>
               <p className="mt-1 text-sm text-gray-600">This drives wage coverage, state forms, and compliance warnings.</p>
             </div>
             <div>
@@ -219,7 +249,7 @@ export function OnboardingPage() {
                     key={state}
                     type="button"
                     onClick={() => setForm({ ...form, primaryStates: toggleValue(form.primaryStates, state) })}
-                    className={`rounded-sm border px-3 py-2 text-sm font-semibold transition active:scale-95 ${
+                    className={`min-h-11 min-w-11 rounded-sm border px-3 py-2 text-sm font-semibold transition active:scale-95 ${
                       form.primaryStates.includes(state)
                         ? 'border-gray-950 bg-gray-950 text-white'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
@@ -234,21 +264,36 @@ export function OnboardingPage() {
               <label className="mb-2 block text-xs font-medium text-gray-700">Public work types</label>
               <div className="grid gap-2 sm:grid-cols-2">
                 {WORK_TYPES.map((workType) => (
-                  <label key={workType.value} className="flex items-center gap-3 rounded-sm border border-gray-200 px-3 py-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={form.workTypes.includes(workType.value)}
-                      onChange={() => setForm({ ...form, workTypes: toggleValue(form.workTypes, workType.value) })}
-                      className="accent-brand-gold"
-                    />
+                  <button
+                    key={workType.value}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={form.workTypes.includes(workType.value)}
+                    onClick={() => setForm({ ...form, workTypes: toggleValue(form.workTypes, workType.value) })}
+                    className={`flex min-h-12 items-center gap-3 rounded-sm border px-3 py-2 text-left text-sm font-medium transition active:scale-[0.98] ${
+                      form.workTypes.includes(workType.value)
+                        ? 'border-gray-950 bg-gray-950 text-white'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${
+                      form.workTypes.includes(workType.value) ? 'border-brand-gold bg-brand-gold text-black' : 'border-gray-300 bg-white'
+                    }`}>
+                      {form.workTypes.includes(workType.value) && <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                    </span>
                     {workType.label}
-                  </label>
+                  </button>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="grid gap-5 rounded-lg border border-gray-200 bg-white p-5 shadow-sm md:grid-cols-3">
+          <div className="grid gap-5 rounded-sm border border-gray-200 bg-white p-5 shadow-sm md:grid-cols-3">
+            <div className="md:col-span-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Step 3</p>
+              <h2 className="mt-1 font-headline text-2xl font-semibold text-gray-950">Systems path</h2>
+              <p className="mt-1 text-sm leading-6 text-gray-600">These choices shape imports, mappings, and integration prompts.</p>
+            </div>
             <Select
               id="payrollProvider"
               label="Payroll system"
@@ -290,37 +335,58 @@ export function OnboardingPage() {
             />
           </div>
 
-          <div className="grid gap-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm md:grid-cols-3">
+          <div className="grid gap-3 rounded-sm border border-gray-200 bg-white p-5 shadow-sm md:grid-cols-3">
             {[
               ['usesSubcontractors', 'We manage subcontractor CPRs'],
               ['usesApprentices', 'We use apprentices'],
               ['fieldTrackingNeeded', 'We need field proof capture'],
             ].map(([key, label]) => (
-              <label key={key} className="flex items-center gap-3 rounded-sm border border-gray-200 px-3 py-3 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={Boolean(form[key as keyof OnboardingAnswers])}
-                  onChange={(event) => setForm({ ...form, [key]: event.target.checked })}
-                  className="accent-brand-gold"
-                />
+              <button
+                key={key}
+                type="button"
+                role="switch"
+                aria-checked={Boolean(form[key as keyof OnboardingAnswers])}
+                onClick={() => setForm({ ...form, [key]: !form[key as keyof OnboardingAnswers] })}
+                className={`flex min-h-12 items-center gap-3 rounded-sm border px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] ${
+                  Boolean(form[key as keyof OnboardingAnswers])
+                    ? 'border-gray-950 bg-gray-950 text-white'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${
+                  Boolean(form[key as keyof OnboardingAnswers]) ? 'border-brand-gold bg-brand-gold text-black' : 'border-gray-300 bg-white'
+                }`}>
+                  {Boolean(form[key as keyof OnboardingAnswers]) && <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                </span>
                 {label}
-              </label>
+              </button>
             ))}
           </div>
 
-          {error && <div className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+          {error && <div role="alert" className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button type="button" onClick={saveOnboarding} loading={saving} className="min-h-11 px-5">
-              Finish onboarding
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button type="button" variant="secondary" onClick={createSampleProject} loading={creatingSample} className="min-h-11 px-5">
-              Open sample project
-            </Button>
-            <Link to="/settings/integrations" className="inline-flex min-h-11 items-center justify-center rounded-sm border border-gray-300 px-5 text-sm font-semibold text-gray-700 hover:bg-white">
-              Review integrations
-            </Link>
+          <div className="sticky bottom-0 z-10 -mx-5 border-t border-gray-200 bg-[#f6f4ef]/95 px-5 py-4 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-0">
+            <div className="mb-3 rounded-sm border border-gray-200 bg-white p-3 sm:hidden">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <span>Setup readiness</span>
+                <span>{completionPercent}%</span>
+              </div>
+              <div className="mt-2 h-2 rounded-full bg-gray-100">
+                <div className="h-2 rounded-full bg-brand-gold" style={{ width: `${completionPercent}%` }} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button type="button" onClick={saveOnboarding} loading={saving} className="min-h-11 px-5">
+                Finish onboarding
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button type="button" variant="secondary" onClick={createSampleProject} loading={creatingSample} className="min-h-11 px-5">
+                Open sample project
+              </Button>
+              <Link to="/settings/integrations" className="inline-flex min-h-11 items-center justify-center rounded-sm border border-gray-300 px-5 text-sm font-semibold text-gray-700 hover:bg-white">
+                Review integrations
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -329,6 +395,15 @@ export function OnboardingPage() {
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-brand-gold">
               <ClipboardList className="h-4 w-4" />
               Setup logic
+            </div>
+            <div className="mb-5 rounded-sm border border-white/10 bg-white/5 p-3">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-white/60">
+                <span>Setup readiness</span>
+                <span className="text-brand-gold">{completionPercent}%</span>
+              </div>
+              <div className="mt-2 h-2 rounded-full bg-white/10">
+                <div className="h-2 rounded-full bg-brand-gold" style={{ width: `${completionPercent}%` }} />
+              </div>
             </div>
             <div className="space-y-4">
               {[

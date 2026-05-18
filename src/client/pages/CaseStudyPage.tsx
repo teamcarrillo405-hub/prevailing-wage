@@ -12,12 +12,12 @@ export function CaseStudyPage() {
       {/* Minimal public header */}
       <header className="bg-gray-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors">
+          <Link to="/" className="flex min-h-11 items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors">
             <span className="font-semibold text-white">PrevWage</span>
           </Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex min-h-11 items-center rounded-lg bg-brand-gold px-4 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90"
           >
             Start Free
           </Link>
@@ -111,7 +111,7 @@ export function CaseStudyPage() {
               { title: 'Automated WH-347 Generation', desc: 'Fills all 25+ fields from structured data — no manual entry on forms.' },
               { title: 'State-Specific Form Packages', desc: 'CA eCPR, WA F700-065, NY MPWR, IL IDOL, TX CPR, and more — generated in one click.' },
               { title: 'Real-Time Compliance Engine', desc: 'Flags under-wage entries, apprentice ratio violations, and overtime errors before submission.' },
-              { title: 'QuickBooks & ADP Import', desc: 'Pulls weekly hours directly from payroll providers — eliminates double-entry.' },
+              { title: 'QuickBooks & ADP Import', desc: 'Supports provider import workflows so teams can reduce duplicate entry after review.' },
               { title: 'Encrypted SSN Storage', desc: 'AES-256-GCM encryption for all sensitive worker data — exceeds federal contractor data standards.' },
               { title: 'Audit-Ready Export', desc: 'Full audit trail with timestamps, user attribution, and one-click PDF packaging.' },
             ].map(({ title, desc }) => (
@@ -197,7 +197,7 @@ export function CaseStudyPage() {
               { week: 'Week 2', event: 'Workers imported from ADP payroll export, classifications verified' },
               { week: 'Week 3', event: 'First certified payroll week entered and WH-347 generated' },
               { week: 'Week 4', event: 'CA eCPR submission flow tested and validated with DIR' },
-              { week: 'Month 2', event: 'QuickBooks Online integration configured — manual entry eliminated' },
+              { week: 'Month 2', event: 'QuickBooks Online workflow configured — manual entry reduced after reconciliation' },
               { week: 'Month 3', event: 'IL and TX projects onboarded; state-specific forms generated immediately' },
             ].map(({ week, event }) => (
               <div key={week} className="flex gap-4">
@@ -294,10 +294,10 @@ export function CaseStudyPage() {
       {/* Footer */}
       <footer className="bg-gray-950 text-gray-500 text-xs py-8 text-center">
         <div className="max-w-5xl mx-auto px-6 flex flex-wrap justify-center gap-6">
-          <Link to="/case-studies/hcc" className="hover:text-gray-300 transition-colors">Case Studies</Link>
-          <Link to="/api-docs" className="hover:text-gray-300 transition-colors">API Docs</Link>
-          <Link to="/security" className="hover:text-gray-300 transition-colors">Security Policy</Link>
-          <Link to="/register" className="hover:text-gray-300 transition-colors">Register</Link>
+          <Link to="/case-studies/hcc" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Case Studies</Link>
+          <Link to="/api-docs" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">API Docs</Link>
+          <Link to="/security" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Security Policy</Link>
+          <Link to="/register" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Register</Link>
         </div>
         <p className="mt-6 text-gray-600">2026 PrevWage. All rights reserved.</p>
       </footer>

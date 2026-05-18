@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from './ui/Badge';
-import { Card } from './ui/Card';
 import { Tooltip } from './ui/Tooltip';
 import { useToast } from '../contexts/ToastContext';
 
@@ -131,7 +130,8 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
   const primary = pins.find((pin) => pin.isPrimary);
 
   return (
-    <Card className="mt-4" padding="default">
+    <div className="mt-4 min-w-0">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 border-b border-gray-100 pb-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h3 className="text-sm font-semibold text-gray-900 inline-flex items-center">
@@ -142,23 +142,26 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
             {projectCounty}, {projectState}. Pin one primary WD before validating payroll rates.
           </p>
         </div>
-        <a href={wageLookupUrl} className="text-xs font-medium text-brand-gold hover:underline">
+        <a
+          href={wageLookupUrl}
+          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold px-3 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
+        >
           Open lookup
         </a>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div>
+      <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0">
           {primary ? (
-            <div className="rounded-sm border border-green-200 bg-green-50 p-4">
+             <div className="min-w-0 rounded-lg border border-green-200 bg-green-50 p-4">
               <div className="mb-3 rounded border border-green-200 bg-white/70 px-3 py-2 text-sm text-green-900">
                 This WD is the project wage source. Worker trade selections and payroll rate checks can use it automatically.
               </div>
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="compliant">Locked primary</Badge>
-                    <span className="font-mono text-sm font-semibold text-gray-900">{primary.wdNumber}</span>
+                    <span className="min-w-0 break-all font-mono text-sm font-semibold text-gray-900">{primary.wdNumber}</span>
                     <span className="text-xs text-gray-600">Rev {primary.revisionNumber}</span>
                   </div>
                   <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
@@ -171,7 +174,9 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
                   </dl>
                 </div>
                 <button
-                  className="text-xs font-medium text-red-600 hover:underline disabled:opacity-60"
+                  type="button"
+                  aria-label={`Unpin primary wage determination ${primary.wdNumber}`}
+                  className="self-start inline-flex min-h-11 items-center justify-center rounded-sm border border-red-200 px-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-60 sm:self-auto"
                   onClick={() => unpin.mutate(primary.wageDeterminationId)}
                   disabled={unpin.isPending}
                 >
@@ -180,7 +185,7 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
               </div>
             </div>
           ) : (
-            <div className="rounded-sm border border-amber-200 bg-amber-50 p-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
               <h4 className="text-sm font-semibold text-gray-900">No primary WD locked</h4>
               <p className="mt-1 text-sm text-gray-700">
                 Select the WD from the award documents. After it is pinned, the system uses it for worker trade rates and certified payroll readiness.
@@ -189,21 +194,23 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
           )}
 
           {pins.length > 0 && (
-            <div className="mt-4 overflow-hidden rounded-sm border border-gray-200">
-              <table className="w-full text-sm">
+            <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200">
+              <table className="min-w-[520px] text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50 text-left text-xs text-gray-500">
                     <th className="px-3 py-2 font-medium">WD</th>
                     <th className="px-3 py-2 font-medium">Type</th>
                     <th className="px-3 py-2 font-medium">Pinned</th>
                     <th className="px-3 py-2 font-medium">Primary</th>
-                    <th className="px-3 py-2 font-medium"></th>
+                    <th className="px-3 py-2 text-right font-medium">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pins.map((pin) => (
                     <tr key={pin.wageDeterminationId} className="border-b last:border-0">
-                      <td className="px-3 py-2 font-mono text-xs text-gray-800">{pin.wdNumber}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-gray-800">
+                        <span className="break-all">{pin.wdNumber}</span>
+                      </td>
                       <td className="px-3 py-2 text-gray-700">{pin.wdConstructionType ?? pin.constructionType ?? '-'}</td>
                       <td className="px-3 py-2 text-gray-700">{formatDate(pin.pinnedAt)}</td>
                       <td className="px-3 py-2">
@@ -211,7 +218,8 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
                           <Badge variant="compliant">Primary</Badge>
                         ) : (
                           <button
-                            className="text-xs font-medium text-brand-gold hover:underline disabled:opacity-60"
+                            aria-label={`Set ${pin.wdNumber} as primary wage determination`}
+                            className="inline-flex min-h-11 items-center rounded-sm border border-brand-gold px-3 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10 disabled:opacity-60"
                             onClick={() => setPrimary.mutate(pin.wageDeterminationId)}
                             disabled={setPrimary.isPending}
                           >
@@ -222,7 +230,8 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
                       <td className="px-3 py-2 text-right">
                         {!pin.isPrimary && (
                           <button
-                            className="text-xs text-red-600 hover:underline disabled:opacity-60"
+                            aria-label={`Unpin wage determination ${pin.wdNumber}`}
+                            className="inline-flex min-h-11 items-center rounded-sm border border-red-200 px-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-60"
                             onClick={() => unpin.mutate(pin.wageDeterminationId)}
                             disabled={unpin.isPending}
                           >
@@ -239,7 +248,7 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
         </div>
 
         <form
-          className="rounded-sm border border-gray-200 bg-gray-50 p-4"
+          className="rounded-lg border border-gray-200 bg-gray-50 p-4"
           onSubmit={(event) => {
             event.preventDefault();
             fetchAndPin.mutate();
@@ -253,7 +262,7 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
             value={wdNumber}
             onChange={(event) => setWdNumber(event.target.value)}
             placeholder="CA20260001"
-            className="mt-2 w-full rounded-sm border border-gray-300 px-3 py-2 font-mono text-sm focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
+            className="mt-2 min-h-11 w-full rounded-sm border border-gray-300 px-3 py-2 font-mono text-base focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold"
           />
           <p className="mt-2 text-xs text-gray-500">
             Use this when the award documents list a WD number. The system fetches from SAM.gov, caches classifications, pins it, and locks the project if this is the first WD.
@@ -261,7 +270,7 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
           <button
             type="submit"
             disabled={fetchAndPin.isPending}
-            className="mt-3 w-full rounded-sm bg-gray-900 px-3 py-2 text-sm font-semibold text-white transition active:translate-y-px disabled:opacity-60"
+            className="mt-3 flex min-h-11 w-full items-center justify-center rounded-sm bg-gray-900 px-3 py-2 text-sm font-semibold text-white transition active:translate-y-px disabled:opacity-60"
           >
             {fetchAndPin.isPending ? 'Fetching...' : 'Fetch and lock'}
           </button>
@@ -272,14 +281,15 @@ export function ProjectWageDeterminationsPanel({ projectId, projectState, projec
             </p>
             <a
               href={`/classification-assist?projectId=${encodeURIComponent(projectId)}`}
-              className="mt-2 inline-flex text-xs font-medium text-brand-gold hover:underline"
+              className="mt-2 inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold px-3 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
             >
               Open classification assist
             </a>
           </div>
         </form>
       </div>
-    </Card>
+      </div>
+    </div>
   );
 }
 

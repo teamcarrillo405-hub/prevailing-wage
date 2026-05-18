@@ -66,7 +66,7 @@ interface A1131Widget {
   h: number;
 }
 
-const ROWS_PER_PAGE = 5;
+const ROWS_PER_PAGE = 4;
 const WIDGET_LAYOUT_PATH = path.join(process.cwd(), 'scripts', 'calibrate', 'a1131', 'widgets.json');
 
 const fmtDollar = (n: number | undefined) => (n != null && n > 0 ? n.toFixed(2) : '');
@@ -79,7 +79,7 @@ function loadWidgetMap(): Map<string, A1131Widget> {
 
 function fitTextSize(text: string, width: number, baseSize: number, font: PDFFont): number {
   let size = baseSize;
-  while (size > 4.25 && font.widthOfTextAtSize(text, size) > width) size -= 0.25;
+  while (size > 2.5 && font.widthOfTextAtSize(text, size) > width) size -= 0.25;
   return size;
 }
 
@@ -89,7 +89,14 @@ function displayWorkerName(workerName: string): string {
   return `${(last ?? '').trim()}, ${(rest ?? '').trim()}`;
 }
 
+function fitClassificationLabel(classification: string): string {
+  return classification.length > 13 ? `${classification.slice(0, 10)}...` : classification;
+}
+
 function adjustedWidget(widget: A1131Widget): A1131Widget {
+  if (/^header_/.test(widget.name)) {
+    return { ...widget, y: widget.y + 11, h: Math.max(8, widget.h - 2) };
+  }
   if (/^w\d+_(federalTax|stateTax|sdi|otherDeductions|totalDeductions)$/.test(widget.name)) {
     return { ...widget, y: widget.y - 4, h: Math.max(8, widget.h - 2) };
   }
@@ -177,7 +184,7 @@ async function fillSingleSet(
         ? widget.x + (widget.w - textWidth) / 2
         : widget.x + padding;
     const y = widget.y + Math.max(1, (widget.h - size) / 2) - 0.5;
-    page.drawText(value, { x, y, size, font, color: black, maxWidth });
+    page.drawText(value, { x, y, size, font, color: black });
   };
 
   const drawAt = (
@@ -199,7 +206,7 @@ async function fillSingleSet(
         ? widget.x + (widget.w - textWidth) / 2
         : widget.x + padding;
     const y = widget.y + Math.max(1, (widget.h - size) / 2) - 0.5;
-    page.drawText(value, { x, y, size, font, color: black, maxWidth });
+    page.drawText(value, { x, y, size, font, color: black });
   };
 
   const drawDeduction = (
@@ -237,7 +244,7 @@ async function fillSingleSet(
     drawText(`${wk}_workerName`, displayWorkerName(worker.workerName));
     drawText(`${wk}_identifyingNo`, worker.identifyingNo, { align: 'center' });
     drawText(`${wk}_laborType`, worker.laborType === 'journeyworker' ? 'J' : 'RA', { align: 'center' });
-    drawText(`${wk}_classification`, worker.classification);
+    drawText(`${wk}_classification`, fitClassificationLabel(worker.classification));
 
     drawText(`${wk}_monSt`, fmtHours(worker.monSt), { align: 'center' });
     drawText(`${wk}_tueSt`, fmtHours(worker.tueSt), { align: 'center' });
@@ -259,7 +266,9 @@ async function fillSingleSet(
     drawText(`${wk}_satOt`, fmtHours(worker.satOt), { align: 'center' });
     drawText(`${wk}_sunOt`, fmtHours(worker.sunOt), { align: 'center' });
     drawText(`${wk}_totalOt`, fmtHours(worker.totalOt), { align: 'center' });
-    drawText(`${wk}_otRate`, fmtDollar(worker.otRate), { align: 'right' });
+    if ((worker.totalOt ?? 0) > 0) {
+      drawText(`${wk}_otRate`, fmtDollar(worker.otRate), { align: 'right' });
+    }
 
     drawText(`${wk}_monDt`, fmtHours(worker.monDt), { align: 'center' });
     drawText(`${wk}_tueDt`, fmtHours(worker.tueDt), { align: 'center' });
@@ -269,7 +278,9 @@ async function fillSingleSet(
     drawText(`${wk}_satDt`, fmtHours(worker.satDt), { align: 'center' });
     drawText(`${wk}_sunDt`, fmtHours(worker.sunDt), { align: 'center' });
     drawText(`${wk}_totalDt`, fmtHours(worker.totalDt), { align: 'center' });
-    drawText(`${wk}_dtRate`, fmtDollar(worker.dtRate), { align: 'right' });
+    if ((worker.totalDt ?? 0) > 0) {
+      drawText(`${wk}_dtRate`, fmtDollar(worker.dtRate), { align: 'right' });
+    }
     drawDeduction(i + 1, 'federalTax', fmtDollar(worker.federalTax));
     drawDeduction(i + 1, 'ficaTax', fmtDollar(worker.ficaTax));
     drawDeduction(i + 1, 'stateTax', fmtDollar(worker.stateTax));

@@ -822,7 +822,7 @@ reportsRouter.get('/:projectId/hours-pivot', requireAuth, async (req, res) => {
         row.totalDoubleHours.toFixed(1),
         row.totalHours.toFixed(1),
         String(row.workerCount),
-        `$${row.grossWages.toFixed(0)}`,
+        `$${row.grossWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       ];
       vals.forEach((v, i) => {
         page.drawText(v, { x: COL_X[i], y, size: 7, font: bodyFont, color: rgb(0.15, 0.15, 0.15) });

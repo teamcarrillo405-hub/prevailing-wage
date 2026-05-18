@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { Bot, CheckCircle2, Loader2, MessageSquare, Send, ShieldCheck, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -69,10 +69,6 @@ type CopilotPreparedAction = {
 
 type CopilotPreparedActionResponse = {
   data: CopilotPreparedAction;
-};
-
-type CopilotStateResponse = {
-  data: CopilotStateSnapshot;
 };
 
 type CopilotApplyResponse = {
@@ -226,21 +222,24 @@ function collectPageContext(pathname: string, hash: string): PageContext {
     return el.offsetParent !== null && style.visibility !== 'hidden';
   };
   const textOf = (el: HTMLElement) => el.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, Math.max(0, max - 3))}...` : text);
   const headings = Array.from(document.querySelectorAll<HTMLElement>('h1, h2, h3'))
     .filter(isVisible)
     .map(textOf)
     .filter(Boolean)
+    .map((text) => clip(text, 140))
     .slice(0, 10);
   const actions = Array.from(document.querySelectorAll<HTMLElement>('button, a[href]'))
     .filter(isVisible)
     .map((el) => el.getAttribute('aria-label') || textOf(el))
     .filter(Boolean)
-    .filter((text) => text.length <= 120)
+    .map((text) => clip(text, 120))
     .slice(0, 10);
   const alerts = Array.from(document.querySelectorAll<HTMLElement>('[role="alert"], .bg-red-50, .bg-amber-50, .bg-yellow-50, .bg-blue-50'))
     .filter(isVisible)
     .map(textOf)
     .filter(Boolean)
+    .map((text) => clip(text, 240))
     .slice(0, 8);
 
   return {
@@ -285,7 +284,6 @@ export function CopilotWidget() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [readiness, setReadiness] = useState<CopilotStateSnapshot | null>(null);
-  const [stateLoading, setStateLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
@@ -300,34 +298,6 @@ export function CopilotWidget() {
     [location.pathname, location.hash],
   );
   const readinessLabel = readiness?.projectId ? 'Project readiness' : 'Page guidance';
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-
-    async function loadState() {
-      setStateLoading(true);
-      try {
-        const response = await api.post<CopilotStateResponse>('/copilot/state', {
-          pagePath: `${location.pathname}${location.search}`,
-          projectId: routeIds.projectId,
-          payrollWeekId: routeIds.payrollWeekId,
-          visibleFields: collectVisibleFields(),
-          pageContext: collectPageContext(location.pathname, location.hash),
-        });
-        if (!cancelled) setReadiness(response.data);
-      } catch {
-        if (!cancelled) setReadiness(null);
-      } finally {
-        if (!cancelled) setStateLoading(false);
-      }
-    }
-
-    loadState();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, location.pathname, location.search, location.hash, routeIds.projectId, routeIds.payrollWeekId]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -527,7 +497,7 @@ export function CopilotWidget() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="flex h-9 w-9 items-center justify-center rounded-md text-gray-300 hover:bg-white/10 hover:text-white"
+              className="flex h-11 w-11 items-center justify-center rounded-md text-gray-300 hover:bg-white/10 hover:text-white"
               aria-label="Close Copilot"
             >
               <X className="h-5 w-5" />
@@ -535,56 +505,50 @@ export function CopilotWidget() {
           </header>
 
           <div className="flex-1 space-y-3 overflow-y-auto bg-gray-50 px-3 py-3">
-            {(readiness || stateLoading) && (
+            {readiness && (
               <div className="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-800">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{readinessLabel}</p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">
-                      {stateLoading && !readiness ? 'Loading readiness...' : readiness?.headline}
+                      {readiness.headline}
                     </p>
                   </div>
-                  {readiness && (
-                    <div className="shrink-0 text-right">
-                      <p className="text-lg font-bold leading-none text-nav-dark">{readiness.readinessScore}</p>
-                      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-500">score</p>
-                    </div>
-                  )}
+                  <div className="shrink-0 text-right">
+                    <p className="text-lg font-bold leading-none text-nav-dark">{readiness.readinessScore}</p>
+                    <p className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-500">score</p>
+                  </div>
                 </div>
 
-                {readiness && (
-                  <>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      <span className="rounded-md border border-gray-200 bg-gray-100 px-2 py-1 text-xs text-gray-700">
-                        {READINESS_LABELS[readiness.readinessStatus]}
-                      </span>
-                      {readiness.items.slice(0, 4).map((item) => (
-                        <span
-                          key={item.id}
-                          className={`rounded-md border px-2 py-1 text-xs ${STATUS_CLASS[item.status]}`}
-                          title={item.detail}
-                        >
-                          {item.label}
-                        </span>
-                      ))}
-                    </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className="rounded-md border border-gray-200 bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                    {READINESS_LABELS[readiness.readinessStatus]}
+                  </span>
+                  {readiness.items.slice(0, 4).map((item) => (
+                    <span
+                      key={item.id}
+                      className={`rounded-md border px-2 py-1 text-xs ${STATUS_CLASS[item.status]}`}
+                      title={item.detail}
+                    >
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
 
-                    {readiness.suggestedActions.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {readiness.suggestedActions.slice(0, 3).map((suggestion) => (
-                          <button
-                            type="button"
-                            key={suggestion.id}
-                            onClick={() => handleSuggestion(suggestion)}
-                            disabled={loading || stateLoading}
-                            className="rounded-md border border-gray-200 bg-white px-2 py-1 text-left text-xs text-gray-700 transition-colors hover:border-brand-gold hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {suggestion.title}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
+                {readiness.suggestedActions.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {readiness.suggestedActions.slice(0, 3).map((suggestion) => (
+                      <button
+                        type="button"
+                        key={suggestion.id}
+                        onClick={() => handleSuggestion(suggestion)}
+                        disabled={loading}
+                        className="rounded-md border border-gray-200 bg-white px-2 py-1 text-left text-xs text-gray-700 transition-colors hover:border-brand-gold hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {suggestion.title}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

@@ -14,6 +14,10 @@ interface Project {
   id: string;
   name: string;
   state: string;
+  county: string;
+  contractType: string;
+  fundingType: string;
+  awardDate: string;
   gpsClockInEnabled: boolean;
   gpsLatitude: number | null;
   gpsLongitude: number | null;
@@ -168,6 +172,180 @@ export function parseReportSettings(raw: string | null | undefined): ReportSetti
   }
 }
 
+const CONTRACT_TYPE_LABELS: Record<string, string> = {
+  'federal-davis-bacon': 'Federal Davis-Bacon',
+  'state-prevailing': 'State Prevailing',
+  'gsa-schedule': 'GSA Schedule',
+  private: 'Private',
+};
+
+const FUNDING_TYPE_LABELS: Record<string, string> = {
+  federal: 'Federal',
+  state: 'State',
+  mixed: 'Mixed',
+};
+
+function ProjectFactsSection({
+  project,
+  projectId,
+  focusField,
+}: {
+  project: Project;
+  projectId: string;
+  focusField: string | null;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [awardingAgency, setAwardingAgency] = useState(project.awardingAgency ?? '');
+  const [contractNumber, setContractNumber] = useState(project.contractNumber ?? '');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const projectState = (project.state ?? '').toUpperCase();
+  const contractType = project.contractType ?? 'private';
+  const requiresPublicAgency = contractType !== 'private';
+  const requiresContractNumber = requiresPublicAgency && projectState === 'CA';
+
+  useEffect(() => {
+    setAwardingAgency(project.awardingAgency ?? '');
+    setContractNumber(project.contractNumber ?? '');
+  }, [project.awardingAgency, project.contractNumber]);
+
+  useEffect(() => {
+    if (!focusField || !['awardingAgency', 'contractNumber'].includes(focusField)) return;
+    const input = document.getElementById(`project-fact-${focusField}`) as HTMLInputElement | null;
+    if (!input) return;
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => input.focus(), 250);
+  }, [focusField]);
+
+  const errors: Record<string, string> = {
+    awardingAgency: requiresPublicAgency && !awardingAgency.trim()
+      ? 'Awarding agency is required because public works exports and evidence packets must identify the agency controlling the project. Enter the agency named in the award or contract.'
+      : '',
+    contractNumber: requiresContractNumber && !contractNumber.trim()
+      ? 'Contract number is required for California public works forms so generated packages match the award record. Enter the contract or project number from the award document.'
+      : '',
+  };
+
+  const saveFactsMutation = useMutation({
+    mutationFn: () =>
+      api.patch<{ data: { project: Project } }>(`/projects/${projectId}`, {
+        awardingAgency: awardingAgency.trim(),
+        contractNumber: contractNumber.trim(),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Project facts saved');
+    },
+    onError: () => {
+      toast.error('Failed to save project facts');
+    },
+  });
+
+  function handleSaveFacts() {
+    setTouched({ awardingAgency: true, contractNumber: true });
+    const firstError = (['awardingAgency', 'contractNumber'] as const).find((field) => errors[field]);
+    if (firstError) {
+      const input = document.getElementById(`project-fact-${firstError}`) as HTMLInputElement | null;
+      toast.error(errors[firstError]);
+      input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      window.setTimeout(() => input?.focus(), 250);
+      return;
+    }
+    saveFactsMutation.mutate();
+  }
+
+  return (
+    <div id="project-facts" className="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
+      <div>
+        <h2 className="font-headline text-base font-semibold text-gray-900">Project Facts</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          Confirm the controlling agency and identifiers used by payroll forms, evidence packets, and reviewer language.
+        </p>
+      </div>
+
+      <dl className="grid grid-cols-1 gap-3 rounded border border-gray-100 bg-gray-50 px-3 py-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Jurisdiction inputs</dt>
+          <dd className="mt-1 text-gray-900">{CONTRACT_TYPE_LABELS[contractType] ?? contractType}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Funding</dt>
+          <dd className="mt-1 text-gray-900">{FUNDING_TYPE_LABELS[project.fundingType] ?? project.fundingType ?? 'Not set'}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Location</dt>
+          <dd className="mt-1 text-gray-900">{[project.county, project.state].filter(Boolean).join(', ') || 'Not set'}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Award date</dt>
+          <dd className="mt-1 text-gray-900">{project.awardDate ?? 'Not set'}</dd>
+        </div>
+      </dl>
+
+      <div className="grid gap-3">
+        <div>
+          <label htmlFor="project-fact-awardingAgency" className="block text-xs font-medium text-gray-700 mb-1">
+            Awarding agency
+          </label>
+          <input
+            id="project-fact-awardingAgency"
+            type="text"
+            value={awardingAgency}
+            onChange={(event) => setAwardingAgency(event.target.value)}
+            onBlur={() => setTouched((current) => ({ ...current, awardingAgency: true }))}
+            aria-invalid={Boolean(touched.awardingAgency && errors.awardingAgency)}
+            aria-describedby={errors.awardingAgency ? 'project-fact-awardingAgency-error' : undefined}
+            className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+              touched.awardingAgency && errors.awardingAgency
+                ? 'border-red-300 bg-red-50 focus:ring-red-200'
+                : 'border-gray-300 focus:ring-brand-gold'
+            }`}
+          />
+          {touched.awardingAgency && errors.awardingAgency && (
+            <p id="project-fact-awardingAgency-error" className="mt-1 text-xs font-medium leading-5 text-red-700">
+              {errors.awardingAgency}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="project-fact-contractNumber" className="block text-xs font-medium text-gray-700 mb-1">
+            Contract number
+          </label>
+          <input
+            id="project-fact-contractNumber"
+            type="text"
+            value={contractNumber}
+            onChange={(event) => setContractNumber(event.target.value)}
+            onBlur={() => setTouched((current) => ({ ...current, contractNumber: true }))}
+            aria-invalid={Boolean(touched.contractNumber && errors.contractNumber)}
+            aria-describedby={errors.contractNumber ? 'project-fact-contractNumber-error' : undefined}
+            className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+              touched.contractNumber && errors.contractNumber
+                ? 'border-red-300 bg-red-50 focus:ring-red-200'
+                : 'border-gray-300 focus:ring-brand-gold'
+            }`}
+          />
+          {touched.contractNumber && errors.contractNumber && (
+            <p id="project-fact-contractNumber-error" className="mt-1 text-xs font-medium leading-5 text-red-700">
+              {errors.contractNumber}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSaveFacts}
+        disabled={saveFactsMutation.isPending}
+        className="px-5 py-2 rounded font-semibold text-sm text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+      >
+        {saveFactsMutation.isPending ? 'Saving...' : 'Save Project Facts'}
+      </button>
+    </div>
+  );
+}
+
 function ReportScheduleSection({ projectId, projectSettings }: { projectId: string; projectSettings: string | null }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -269,7 +447,10 @@ function StateProjectFieldsSection({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const support = useMemo(() => getStateSupport(project.state), [project.state]);
-  const fields = support.requiredProjectFields;
+  const fields = useMemo(
+    () => support.requiredProjectFields.filter((field) => !['awardingAgency', 'contractNumber'].includes(field.key)),
+    [support.requiredProjectFields],
+  );
   const [values, setValues] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -333,7 +514,7 @@ function StateProjectFieldsSection({
   });
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
+    <div id="state-fields" className="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="font-headline text-base font-semibold text-gray-900">
@@ -343,7 +524,7 @@ function StateProjectFieldsSection({
             {support.name}: {support.statusLabel}. {support.launchDecision}
           </p>
         </div>
-        <Link to="/state-support" className="text-sm font-semibold text-brand-gold hover:underline">
+        <Link to="/state-support" className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
           View support
         </Link>
       </div>
@@ -848,7 +1029,7 @@ export function ProjectSettingsPage() {
         <div>
           <Link
             to={`/projects/${projectId}`}
-            className="text-xs text-gray-500 hover:text-brand-gold transition-colors"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-600 transition-colors hover:text-brand-gold"
           >
             &larr; Back to project
           </Link>
@@ -871,7 +1052,7 @@ export function ProjectSettingsPage() {
                   {' '}{onboardingSetup.averageWeeklyWorkers ?? 0} average weekly workers.
                 </p>
               </div>
-              <Link to="/onboarding" className="shrink-0 text-sm font-semibold text-brand-gold hover:underline">
+              <Link to="/onboarding" className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-sm font-semibold text-black hover:underline">
                 Edit
               </Link>
             </div>
@@ -911,7 +1092,7 @@ export function ProjectSettingsPage() {
                   type="button"
                   onClick={() => applyRecommendedMutation.mutate()}
                   disabled={applyRecommendedMutation.isPending || allRecommendedSetupApplied || !onboardingSetup.fieldTrackingNeeded || fieldProofApplied}
-                  className="inline-flex min-h-10 items-center justify-center rounded bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center justify-center rounded bg-black px-4 text-sm font-semibold text-white hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {applyRecommendedMutation.isPending
                     ? 'Applying...'
@@ -927,6 +1108,8 @@ export function ProjectSettingsPage() {
             )}
           </div>
         )}
+
+        <ProjectFactsSection project={project} projectId={projectId!} focusField={focusField} />
 
         <StateProjectFieldsSection project={project} projectId={projectId!} focusField={focusField} />
 
@@ -948,15 +1131,16 @@ export function ProjectSettingsPage() {
             </div>
             <button
               role="switch"
+              aria-label="Enable GPS clock-in for this project"
               aria-checked={gpsEnabled}
               onClick={() => setGpsEnabled((v) => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-1 ${
+              className={`relative inline-flex h-11 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-1 ${
                 gpsEnabled ? 'bg-brand-navy' : 'bg-gray-300'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  gpsEnabled ? 'translate-x-6' : 'translate-x-1'
+                className={`inline-block h-7 w-7 transform rounded-full bg-white shadow transition-transform ${
+                  gpsEnabled ? 'translate-x-8' : 'translate-x-1.5'
                 }`}
               />
             </button>
@@ -982,10 +1166,11 @@ export function ProjectSettingsPage() {
               </p>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label htmlFor="jobsite-address" className="block text-xs font-medium text-gray-700 mb-1">
                   Jobsite address
                 </label>
                 <input
+                  id="jobsite-address"
                   type="text"
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
                   placeholder="123 Main St, Los Angeles, CA"
@@ -997,7 +1182,7 @@ export function ProjectSettingsPage() {
                     type="button"
                     onClick={findJobsiteFromAddress}
                     disabled={locationBusy}
-                    className="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center rounded-sm border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     Find location from address
                   </button>
@@ -1005,7 +1190,7 @@ export function ProjectSettingsPage() {
                     type="button"
                     onClick={useCurrentJobsiteLocation}
                     disabled={locationBusy}
-                    className="rounded border border-brand-gold bg-brand-gold/10 px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-gold/20 disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold bg-brand-gold/10 px-3 py-2 text-sm font-semibold text-black hover:bg-brand-gold/20 disabled:opacity-50"
                   >
                     Use my current location
                   </button>
@@ -1030,9 +1215,9 @@ export function ProjectSettingsPage() {
                       key={preset.label}
                       type="button"
                       onClick={() => setRadiusMeters(preset.meters)}
-                      className={`rounded border px-3 py-2 text-xs font-semibold transition-colors ${
+                      className={`inline-flex min-h-11 items-center justify-center rounded-sm border px-3 py-2 text-sm font-semibold transition-colors ${
                         radiusMeters === preset.meters
-                          ? 'border-brand-gold bg-brand-gold/15 text-brand-navy'
+                          ? 'border-brand-gold bg-brand-gold/15 text-black'
                           : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >
@@ -1055,10 +1240,11 @@ export function ProjectSettingsPage() {
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                  <label htmlFor="jobsite-latitude" className="block text-xs font-medium text-gray-700 mb-1">
                     Latitude
                   </label>
                   <input
+                    id="jobsite-latitude"
                     type="number"
                     step="any"
                     min="-90"
@@ -1070,10 +1256,11 @@ export function ProjectSettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                  <label htmlFor="jobsite-longitude" className="block text-xs font-medium text-gray-700 mb-1">
                     Longitude
                   </label>
                   <input
+                    id="jobsite-longitude"
                     type="number"
                     step="any"
                     min="-180"
@@ -1088,18 +1275,20 @@ export function ProjectSettingsPage() {
               </details>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label htmlFor="gps-radius-slider" className="block text-xs font-medium text-gray-700 mb-2">
                   Custom geofence radius: <span className="font-semibold">{radiusMeters}m</span>
                   <span className="text-gray-400 ml-1">({metersToFeet(radiusMeters)}ft)</span>
                 </label>
                 <input
+                  id="gps-radius-slider"
+                  aria-label="Custom geofence radius"
                   type="range"
                   min="50"
                   max="2000"
                   step="50"
                   value={radiusMeters}
                   onChange={(e) => setRadiusMeters(Number(e.target.value))}
-                  className="w-full accent-brand-gold"
+                  className="min-h-11 w-full accent-brand-gold"
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-0.5">
                   <span>50m</span>
@@ -1129,7 +1318,7 @@ export function ProjectSettingsPage() {
         <div className="text-center">
           <Link
             to={`/projects/${projectId}/field`}
-            className="text-sm text-brand-gold hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline"
           >
             Open Field Clock for this project
           </Link>

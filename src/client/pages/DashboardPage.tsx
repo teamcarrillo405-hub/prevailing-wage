@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard, AlertTriangle, TrendingUp, Download, FileText, ShieldAlert, ClipboardCheck, Grid2X2, List, ArrowRight } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Download, FileText, ShieldAlert, ClipboardCheck, Grid2X2, List, ArrowRight, X } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -16,7 +16,6 @@ import { ProjectForm } from '../components/projects/ProjectForm';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { HelpCallout } from '../components/ui/HelpCallout';
 import { ComplianceOverviewCard } from '../components/compliance/ComplianceOverviewCard';
 import { DueSoonPanel } from '../components/dashboard/DueSoonPanel';
 import { OnboardingChecklist } from '../components/ui/OnboardingChecklist';
@@ -164,10 +163,13 @@ function AnalyticsActionCard({
       : tone === 'emerald'
         ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
         : 'border-gray-200 bg-gray-50 text-gray-700';
+  const accessibleLabel = `${label}: ${detail}`;
 
   return (
     <Link
       to={to}
+      aria-label={accessibleLabel}
+      title={accessibleLabel}
       className={`group flex min-h-[104px] flex-col justify-between rounded-xl border p-4 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${toneClass}`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -549,15 +551,15 @@ export function DashboardPage() {
 
       {/* MFA enrollment nag banner — owners only, dismissible, advisory only */}
       {isOwner && mfaStatus?.data?.enabled === false && !bannerDismissed && (
-        <div className="bg-amber-50 border border-amber-200 rounded-md px-4 py-3 mb-4 flex items-center justify-between text-sm text-amber-800">
+        <div className="mb-4 flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-4 h-4" />
             <span>Protect your account — enable two-factor authentication for owner operations.</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/settings/mfa" className="font-medium underline">Enable MFA</Link>
-            <button onClick={() => setBannerDismissed(true)} aria-label="Dismiss" className="text-amber-700 hover:text-amber-900">
-              ×
+            <Link to="/settings/mfa" className="inline-flex min-h-11 items-center font-medium underline underline-offset-4">Enable MFA</Link>
+            <button onClick={() => setBannerDismissed(true)} aria-label="Dismiss MFA reminder" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-amber-700 hover:bg-amber-100 hover:text-amber-900">
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -566,7 +568,7 @@ export function DashboardPage() {
       {/* Premium dark hero — replaces photo background strip */}
       <div
         className="dashboard-bg relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 -mt-8 pt-10 pb-10 mb-8 overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1a2235 55%, #111827 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #09090b 0%, #18181b 55%, #111111 100%)' }}
       >
         {/* Dot-grid texture */}
         <div
@@ -590,10 +592,10 @@ export function DashboardPage() {
               HCC Prevailing Wage
             </p>
             <h1 className="font-headline text-4xl sm:text-5xl text-white mb-2 leading-tight">
-              Dashboard
+              Project Command Center
             </h1>
-            <p className="text-sm text-gray-400 max-w-xs">
-              Certified payroll tracking &amp; DOL compliance
+            <p className="text-sm text-gray-400 max-w-md">
+              Start with today's blockers, then open the project that needs payroll, rates, evidence, or export work.
             </p>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-3">
@@ -601,7 +603,7 @@ export function DashboardPage() {
               <a
                 href="/api/export/compliance-summary"
                 download="compliance-summary.pdf"
-                className="text-xs text-gray-400 hover:text-brand-gold transition-colors"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-300 transition-colors hover:text-brand-gold"
               >
                 Download Summary PDF
               </a>
@@ -674,17 +676,9 @@ export function DashboardPage() {
       )}
 
 
-      {projects.length > 0 && (
-        <HelpCallout
-          icon={LayoutDashboard}
-          title="Your Project Dashboard"
-          body="Each project tracks a separate federal job. Add workers and enter payroll weekly to keep your certified payroll current and DOL-ready."
-        />
-      )}
-
       {onboardingAnswers && (
         <details className="mb-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+          <summary className="min-h-11 cursor-pointer text-sm font-semibold text-gray-900">
             Setup profile
             <span className="ml-2 text-xs font-normal text-gray-500">
               Payroll, project system, states, and onboarding checklist
@@ -715,6 +709,7 @@ export function DashboardPage() {
               </div>
               <Link
                 to="/onboarding"
+                aria-label="Edit onboarding setup"
                 className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
                 Edit onboarding
@@ -785,7 +780,11 @@ export function DashboardPage() {
                   <p className="mt-1 text-gray-700">{recommendedNextSteps[0] ?? 'Create one federal Davis-Bacon project.'}</p>
                 </div>
               </div>
-              <Link to="/onboarding" className="mt-5 inline-flex text-sm font-semibold text-brand-gold hover:underline">
+              <Link
+                to="/onboarding"
+                aria-label="Edit onboarding setup"
+                className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline"
+              >
                 Edit onboarding
               </Link>
             </aside>
@@ -794,7 +793,7 @@ export function DashboardPage() {
       )}
 
       <details id="management-reports" hidden={projects.length === 0} className="mb-8 scroll-mt-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+          <summary className="min-h-11 cursor-pointer text-sm font-semibold text-gray-900">
           Management reports and analytics
           <span className="ml-2 text-xs font-normal text-gray-500">
             Compliance trend, due weeks, economic impact, and reporting detail
@@ -851,7 +850,8 @@ export function DashboardPage() {
                   </div>
                   <Link
                     to={action.to}
-                    className="inline-flex items-center justify-center text-xs font-semibold text-brand-gold hover:underline shrink-0"
+                    aria-label={`Open ${action.label} for ${action.projectName}`}
+                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-sm font-semibold text-black hover:underline"
                   >
                     Open
                   </Link>
@@ -875,7 +875,8 @@ export function DashboardPage() {
           </div>
           <Link
             to="/dashboard?display=list&view=needs-action#project-list"
-            className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:border-brand-gold hover:text-gray-950"
+            aria-label="Open source projects for compliance trend"
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:border-brand-gold hover:text-gray-950"
           >
             Open source projects
           </Link>
@@ -915,7 +916,11 @@ export function DashboardPage() {
                   <span className="text-sm text-red-600 font-medium">
                     {project.openViolationCount} violation{project.openViolationCount !== 1 ? 's' : ''}
                   </span>
-                  <Link to={`/projects/${project.id}`} className="text-xs text-brand-gold hover:underline">
+                  <Link
+                    to={`/projects/${project.id}`}
+                    aria-label={`Resolve ${project.name}`}
+                    className="inline-flex min-h-11 items-center text-xs font-semibold text-black hover:underline"
+                  >
                     Resolve &rarr;
                   </Link>
                 </div>
@@ -958,7 +963,7 @@ export function DashboardPage() {
                   type="button"
                   onClick={() => handleDisplayModeChange('cards')}
                   aria-pressed={displayMode === 'cards'}
-                  className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold sm:flex-none ${
+                  className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold sm:flex-none ${
                     displayMode === 'cards' ? 'bg-white text-gray-950 shadow-sm' : 'text-gray-600 hover:text-gray-950'
                   }`}
                 >
@@ -969,7 +974,7 @@ export function DashboardPage() {
                   type="button"
                   onClick={() => handleDisplayModeChange('list')}
                   aria-pressed={displayMode === 'list'}
-                  className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold sm:flex-none ${
+                  className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold sm:flex-none ${
                     displayMode === 'list' ? 'bg-white text-gray-950 shadow-sm' : 'text-gray-600 hover:text-gray-950'
                   }`}
                 >
@@ -1003,14 +1008,18 @@ export function DashboardPage() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+            <label className="sr-only" htmlFor="project-search">Search projects</label>
             <input
+              id="project-search"
               type="text"
               value={inputValue}
               onChange={handleSearchChange}
               placeholder="Search projects..."
               className="text-base border border-border-default rounded-xl px-3.5 py-3 bg-white text-text-primary placeholder:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold w-full sm:w-56 shadow-card min-h-[44px]"
             />
+            <label className="sr-only" htmlFor="funding-filter">Funding filter</label>
             <select
+              id="funding-filter"
               value={fundingFilter}
               onChange={handleFundingChange}
               className="text-base border border-border-default rounded-xl px-3.5 py-3 bg-white text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold shadow-card min-h-[44px] w-full sm:w-auto"
@@ -1019,15 +1028,18 @@ export function DashboardPage() {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none ml-auto min-h-[44px]">
-              <input
-                type="checkbox"
-                checked={showArchived}
-                onChange={(e) => setShowArchived(e.target.checked)}
-                className="h-5 w-5 rounded border-gray-300 text-brand-gold focus:ring-brand-gold"
-              />
-              Show Archived
-            </label>
+            <button
+              type="button"
+              onClick={() => setShowArchived((current) => !current)}
+              aria-pressed={showArchived}
+              className={`inline-flex min-h-11 w-full items-center justify-center rounded-xl border px-3.5 text-sm font-semibold transition-all duration-150 active:scale-95 sm:ml-auto sm:w-auto ${
+                showArchived
+                  ? 'border-brand-gold bg-brand-gold text-black'
+                  : 'border-border-default bg-white text-text-secondary shadow-card hover:border-brand-gold hover:text-text-primary'
+              }`}
+            >
+              {showArchived ? 'Showing archived' : 'Show archived'}
+            </button>
           </div>
 
           {/* Compliance filter chips */}
@@ -1131,7 +1143,8 @@ export function DashboardPage() {
                 <Link
                   key={project.id}
                   to={`/projects/${project.id}`}
-                  className="grid gap-3 px-4 py-4 transition-colors hover:bg-gray-50 lg:grid-cols-[minmax(220px,1.5fr)_120px_120px_120px_minmax(180px,1fr)_96px] lg:items-center lg:gap-4"
+                  aria-label={`Open project ${project.name}`}
+                  className="grid min-h-[72px] gap-3 px-4 py-4 transition-colors hover:bg-gray-50 lg:grid-cols-[minmax(220px,1.5fr)_120px_120px_120px_minmax(180px,1fr)_96px] lg:items-center lg:gap-4"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-950">{project.name}</p>
@@ -1166,7 +1179,7 @@ export function DashboardPage() {
                       <p className="text-sm text-gray-500">No known blocker</p>
                     )}
                   </div>
-                  <div className="flex items-center justify-end gap-1 text-sm font-semibold text-brand-gold">
+                  <div className="flex min-h-11 items-center justify-end gap-1 text-sm font-semibold text-black">
                     Open
                     <ArrowRight className="h-4 w-4" />
                   </div>
@@ -1194,7 +1207,7 @@ export function DashboardPage() {
       {/* DASH-04 / TRUST-02: Economic Impact Section */}
       {economicData?.data && projects.length > 0 && (
         <details className="mt-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+          <summary className="min-h-11 cursor-pointer text-sm font-semibold text-gray-900">
             Economic impact reports
             <span className="ml-2 text-xs font-normal text-gray-500">
               wages, apprenticeships, punctuality, and trade analytics
@@ -1209,9 +1222,10 @@ export function DashboardPage() {
             <a
               href="/api/reports/export-csv?report=economic-impact"
               download="economic-impact.csv"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-2 bg-white hover:bg-gray-50 transition-colors"
+              aria-label="Download economic impact report CSV"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="h-4 w-4" aria-hidden="true" />
               Download Economic Impact Report
             </a>
           </div>
@@ -1350,7 +1364,11 @@ export function DashboardPage() {
                         <span className="text-gray-700 truncate max-w-[180px]">{p.projectName}</span>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-red-600 font-semibold">{p.violations} wks</span>
-                          <Link to={`/projects/${p.projectId}`} className="text-xs text-brand-gold hover:underline">
+                          <Link
+                            to={`/projects/${p.projectId}`}
+                            aria-label={`Fix past-due weeks for ${p.projectName}`}
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm font-semibold text-black hover:underline"
+                          >
                             Fix &rarr;
                           </Link>
                         </div>
@@ -1370,7 +1388,7 @@ export function DashboardPage() {
                   <h3 className="text-sm font-semibold text-gray-700">Wages by Craft</h3>
                   <p className="mt-1 text-xs text-gray-500">Hover for wage, worker, and project count. Use reports for export-ready source rows.</p>
                 </div>
-                <Link to="/reports" className="text-xs font-semibold text-brand-gold hover:underline">
+                <Link to="/reports" aria-label="Open reports for wages by craft" className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
                   Open reports
                 </Link>
               </div>
@@ -1413,7 +1431,7 @@ export function DashboardPage() {
                   <h3 className="text-sm font-semibold text-gray-700">Weekly Wage Burn - Last 12 Weeks</h3>
                   <p className="mt-1 text-xs text-gray-500">Open the project ranking table below to trace wage movement back to jobs.</p>
                 </div>
-                <a href="#project-rankings" className="text-xs font-semibold text-brand-gold hover:underline">
+                <a href="#project-rankings" aria-label="View source projects for weekly wage burn" className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
                   View source projects
                 </a>
               </div>
@@ -1447,7 +1465,7 @@ export function DashboardPage() {
                   <h3 className="text-sm font-semibold text-gray-700">Wage Rate Variance by Trade</h3>
                   <p className="text-xs text-gray-400 mt-0.5">Per-trade spread between min and max base rates across all payroll entries</p>
                 </div>
-                <Link to="/reports" className="text-xs font-semibold text-brand-gold hover:underline">
+                <Link to="/reports" aria-label="Investigate wage rate variance by trade" className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
                   Investigate rates
                 </Link>
               </div>
@@ -1487,7 +1505,11 @@ export function DashboardPage() {
                   <p className="text-xs text-amber-600 mt-0.5">Estimated premium labor cost from OT and DT hours per project</p>
                 </div>
                 {topOvertimeProject && (
-                  <Link to={`/projects/${topOvertimeProject.projectId}/payroll`} className="text-xs font-semibold text-amber-800 hover:underline">
+                  <Link
+                    to={`/projects/${topOvertimeProject.projectId}/payroll`}
+                    aria-label={`Open overtime exposure payroll for ${topOvertimeProject.projectName}`}
+                    className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline"
+                  >
                     Open top project
                   </Link>
                 )}
@@ -1505,7 +1527,11 @@ export function DashboardPage() {
                   {economicData.data.overtimeExposure.map(row => (
                     <tr key={row.projectId} className="hover:bg-gray-50">
                       <td className="px-5 py-3 font-medium text-gray-900">
-                        <Link to={`/projects/${row.projectId}`} className="hover:text-brand-gold transition-colors">
+                        <Link
+                          to={`/projects/${row.projectId}`}
+                          aria-label={`Open overtime exposure project ${row.projectName}`}
+                          className="inline-flex min-h-11 items-center text-black transition-colors hover:underline"
+                        >
                           {row.projectName}
                         </Link>
                       </td>
@@ -1529,7 +1555,7 @@ export function DashboardPage() {
                   <h3 className="text-sm font-semibold text-gray-700">Apprenticeship Ratio Progress</h3>
                   <p className="text-xs text-gray-400 mt-0.5">Actual apprentice hour % vs required threshold per trade (IRA/IIJA default: 25%)</p>
                 </div>
-                <Link to="/reports" className="text-xs font-semibold text-brand-gold hover:underline">
+                <Link to="/reports" aria-label="Open apprenticeship ratio report" className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
                   Open apprenticeship report
                 </Link>
               </div>
@@ -1571,9 +1597,10 @@ export function DashboardPage() {
                 <a
                   href="/api/reports/export-csv?report=compliance"
                   download="compliance-summary.csv"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 bg-white hover:bg-gray-50 transition-colors"
+                  aria-label="Export project rankings CSV"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
                 >
-                  <Download className="w-3 h-3" />
+                  <Download className="h-4 w-4" aria-hidden="true" />
                   Export CSV
                 </a>
               </div>
@@ -1606,7 +1633,11 @@ export function DashboardPage() {
                     {sortedRankings.map(row => (
                       <tr key={row.projectId} className="hover:bg-gray-50">
                         <td className="px-4 py-3 font-medium text-gray-900">
-                          <Link to={`/projects/${row.projectId}`} className="hover:text-brand-gold transition-colors">
+                          <Link
+                            to={`/projects/${row.projectId}`}
+                            aria-label={`Open ranked project ${row.projectName}`}
+                            className="inline-flex min-h-11 items-center text-black transition-colors hover:underline"
+                          >
                             {row.projectName}
                           </Link>
                         </td>
@@ -1662,9 +1693,10 @@ export function DashboardPage() {
           <div className="mt-6 text-center">
             <Link
               to="/reports"
-              className="inline-flex items-center gap-2 text-sm font-medium text-brand-gold hover:text-brand-gold/80 transition-colors"
+              aria-label="View all reports"
+              className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-black transition-colors hover:text-brand-gold"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="h-4 w-4" aria-hidden="true" />
               View All Reports &rarr;
             </Link>
           </div>

@@ -16,6 +16,13 @@ export interface PayrollSourceReconciliation {
   entryCount: number;
   completeSourceRows: number;
   coverage: PayrollSourceCoverage;
+  fieldGaps: Array<{
+    field: keyof PayrollSourceCoverage;
+    label: string;
+    missingCount: number;
+    reason: string;
+    nextAction: string;
+  }>;
   itemizedDeductionMismatchCount: number;
   netPayMismatchCount: number;
   fringeMismatchCount: number;
@@ -55,6 +62,44 @@ function hasAny(entry: PayrollEntry, fields: readonly (keyof PayrollEntry)[]) {
 function pct(count: number, total: number) {
   return total === 0 ? 0 : Math.round((count / total) * 100);
 }
+
+const FIELD_GAP_COPY: Record<keyof PayrollSourceCoverage, { label: string; reason: string; nextAction: string }> = {
+  grossPay: {
+    label: 'Gross pay',
+    reason: 'Gross pay should come from the payroll register so certified payroll totals reconcile to the payroll system of record.',
+    nextAction: 'Import or enter gross wages from the provider payroll register for each payroll row.',
+  },
+  netPay: {
+    label: 'Net pay',
+    reason: 'Net pay is required to prove the worker paycheck amount after deductions.',
+    nextAction: 'Import or enter net pay from the payroll register, not an estimated certified payroll calculation.',
+  },
+  totalDeductions: {
+    label: 'Total deductions',
+    reason: 'Total deductions connect gross pay to net pay and should be traceable to payroll source data.',
+    nextAction: 'Map total deductions from the provider export or enter the payroll-register total before export.',
+  },
+  taxBreakdown: {
+    label: 'Tax breakdown',
+    reason: 'Tax fields help separate employee deductions from taxes and prevent opaque deduction totals.',
+    nextAction: 'Include FICA, federal income tax, state income tax, and SDI columns when the payroll provider export supports them.',
+  },
+  deductionBreakdown: {
+    label: 'Deduction breakdown',
+    reason: 'Itemized deductions distinguish union dues, benefit deductions, savings, travel, and other worker deductions.',
+    nextAction: 'Map itemized deduction columns or enter the breakdown from the payroll register before signing.',
+  },
+  fringeBreakdown: {
+    label: 'Fringe/contribution breakdown',
+    reason: 'Fringe and employer contribution detail supports cash-fringe and benefit-credit review.',
+    nextAction: 'Import or enter health/welfare, pension, vacation, and training fringe or contribution fields.',
+  },
+  checkNumber: {
+    label: 'Check number',
+    reason: 'Check numbers tie certified payroll rows back to payroll-source payment evidence.',
+    nextAction: 'Import or enter check number or payment reference from the payroll register.',
+  },
+};
 
 export function reconcilePayrollSourceDetails(entries: PayrollEntry[]): PayrollSourceReconciliation {
   const entryCount = entries.length;
@@ -111,18 +156,33 @@ export function reconcilePayrollSourceDetails(entries: PayrollEntry[]): PayrollS
     if (!sourceComplete) missingSourceDetailCount += 1;
   }
 
+  const coverage: PayrollSourceCoverage = {
+    grossPay: pct(counts.grossPay, entryCount),
+    netPay: pct(counts.netPay, entryCount),
+    totalDeductions: pct(counts.totalDeductions, entryCount),
+    taxBreakdown: pct(counts.taxBreakdown, entryCount),
+    deductionBreakdown: pct(counts.deductionBreakdown, entryCount),
+    fringeBreakdown: pct(counts.fringeBreakdown, entryCount),
+    checkNumber: pct(counts.checkNumber, entryCount),
+  };
+
+  const fieldGaps = (Object.keys(coverage) as Array<keyof PayrollSourceCoverage>)
+    .map((field) => {
+      const presentCount = counts[field];
+      const missingCount = entryCount - presentCount;
+      return {
+        field,
+        ...FIELD_GAP_COPY[field],
+        missingCount,
+      };
+    })
+    .filter((gap) => gap.missingCount > 0);
+
   return {
     entryCount,
     completeSourceRows,
-    coverage: {
-      grossPay: pct(counts.grossPay, entryCount),
-      netPay: pct(counts.netPay, entryCount),
-      totalDeductions: pct(counts.totalDeductions, entryCount),
-      taxBreakdown: pct(counts.taxBreakdown, entryCount),
-      deductionBreakdown: pct(counts.deductionBreakdown, entryCount),
-      fringeBreakdown: pct(counts.fringeBreakdown, entryCount),
-      checkNumber: pct(counts.checkNumber, entryCount),
-    },
+    coverage,
+    fieldGaps,
     itemizedDeductionMismatchCount,
     netPayMismatchCount,
     fringeMismatchCount,

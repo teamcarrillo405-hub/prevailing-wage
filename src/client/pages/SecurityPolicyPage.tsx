@@ -15,10 +15,10 @@ export function SecurityPolicyPage() {
       {/* Minimal public header */}
       <header className="bg-gray-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-semibold text-white">PrevWage</Link>
+          <Link to="/" className="inline-flex min-h-11 items-center font-semibold text-white">PrevWage</Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex min-h-11 items-center rounded-lg bg-brand-gold px-4 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90"
           >
             Start Free
           </Link>
@@ -35,8 +35,8 @@ export function SecurityPolicyPage() {
             Security Policy
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl">
-            Your workers' data is protected with the same encryption standards
-            used by financial institutions. Here's exactly how.
+            Your workers' data is protected with modern encryption and access controls.
+            Here's exactly how.
           </p>
         </div>
       </div>
@@ -104,7 +104,7 @@ export function SecurityPolicyPage() {
           </div>
           <div className="space-y-4 text-gray-600">
             <p>
-              PrevWage is hosted on <strong>Render</strong>, a SOC 2 Type II certified cloud platform. Application
+              PrevWage is hosted on <strong>Render</strong>, which publishes its own security and compliance posture. Application
               servers run in isolated containers with no shared state between tenants. Database files
               are stored on persistent, encrypted block storage volumes.
             </p>
@@ -184,7 +184,7 @@ export function SecurityPolicyPage() {
               </div>
             ))}
           </div>
-          <Link to="/methodology" className="mt-5 inline-flex text-sm font-semibold text-blue-600 hover:underline">
+          <Link to="/methodology" className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
             View compliance methodology
           </Link>
         </section>
@@ -196,13 +196,13 @@ export function SecurityPolicyPage() {
                 <Shield className="w-6 h-6 text-brand-gold" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">SOC 2 Type II — In Progress</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">SOC 2 Type II - Planned</h3>
                 <p className="text-gray-600 text-sm mb-3">
-                  PrevWage is currently undergoing a SOC 2 Type II audit. Enterprise customers
-                  can request a copy of the in-progress security controls summary under NDA.
+                  PrevWage is preparing SOC 2 Type II evidence after production pilot controls are proven.
+                  Enterprise customers can request a security controls summary under NDA.
                 </p>
                 <p className="text-sm text-gray-500">
-                  Target completion: Q4 2026. Auditor: independent AICPA-accredited firm.
+                  Target audit window: after pilot evidence, restore checks, and access reviews are complete.
                 </p>
               </div>
             </div>
@@ -227,7 +227,7 @@ export function SecurityPolicyPage() {
             </p>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <p className="text-sm font-semibold text-gray-900 mb-1">Security Contact</p>
-              <a href="mailto:security@prevailingwage.app" className="text-blue-600 hover:underline text-sm">
+              <a href="mailto:security@prevailingwage.app" className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
                 security@prevailingwage.app
               </a>
             </div>
@@ -253,7 +253,7 @@ export function SecurityPolicyPage() {
         {/* Last updated */}
         <p className="text-xs text-gray-400 border-t border-gray-100 pt-8">
           Last updated: April 2026. To request a copy of our full security documentation, contact{' '}
-          <a href="mailto:security@prevailingwage.app" className="underline">security@prevailingwage.app</a>.
+          <a href="mailto:security@prevailingwage.app" className="inline-flex min-h-11 items-center underline">security@prevailingwage.app</a>.
         </p>
 
       </div>
@@ -261,11 +261,11 @@ export function SecurityPolicyPage() {
       {/* Footer */}
       <footer className="bg-gray-950 text-gray-500 text-xs py-8 text-center">
         <div className="max-w-5xl mx-auto px-6 flex flex-wrap justify-center gap-6">
-          <Link to="/case-studies/hcc" className="hover:text-gray-300 transition-colors">Case Studies</Link>
-          <Link to="/api-docs" className="hover:text-gray-300 transition-colors">API Docs</Link>
-          <Link to="/methodology" className="hover:text-gray-300 transition-colors">Methodology</Link>
-          <Link to="/security" className="hover:text-gray-300 transition-colors">Security Policy</Link>
-          <Link to="/register" className="hover:text-gray-300 transition-colors">Register</Link>
+          <Link to="/case-studies/hcc" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Case Studies</Link>
+          <Link to="/api-docs" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">API Docs</Link>
+          <Link to="/methodology" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Methodology</Link>
+          <Link to="/security" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Security Policy</Link>
+          <Link to="/register" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Register</Link>
         </div>
         <p className="mt-6 text-gray-600">2026 PrevWage. All rights reserved.</p>
       </footer>
@@ -298,3 +298,4 @@ function statusClass(status: TrustControlStatus): string {
       return 'bg-gray-100 text-gray-700';
   }
 }
+

@@ -34,7 +34,7 @@ export function SignaturePad({ projectId }: SignaturePadProps) {
       const res = await fetch(`/api/projects/${projectId}/signature`, { credentials: 'include' });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('Failed to load signature');
-      const json = await res.json() as { data: { signature: SigRecord } };
+      const json = await res.json() as { data: { signature: SigRecord | null } };
       return json.data.signature;
     },
     retry: false,
@@ -204,7 +204,7 @@ export function SignaturePad({ projectId }: SignaturePadProps) {
           onClick={saveSignature}
           disabled={isEmpty || isSaving}
         >
-          {isSaving ? 'Saving...' : 'Save Signature'}
+          {isSaving ? 'Saving...' : isEmpty ? 'Draw signature first' : 'Save Signature'}
         </Button>
       </div>
 

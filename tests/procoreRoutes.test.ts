@@ -53,7 +53,8 @@ vi.mock('../src/server/middleware/auth.js', () => ({
 // ── Imports after mocks ───────────────────────────────────────────────────────
 import express from 'express';
 import request from 'supertest';
-import { getValidProcoreToken } from '../src/server/services/procoreService.js';
+import { getProcoreConnection, getValidProcoreToken } from '../src/server/services/procoreService.js';
+import { getQboConnection } from '../src/server/services/qboService.js';
 import { getDb } from '../src/server/db/index.js';
 import { upsertPayrollEntry } from '../src/server/services/payrollService.js';
 import { integrationsRouter } from '../src/server/routes/integrations.js';
@@ -77,6 +78,65 @@ function makePayrollWeekDb(week: unknown) {
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
+
+describe('GET /api/integrations/readiness', () => {
+  it('reports missing OAuth credentials and import fallback mode', async () => {
+    delete process.env.QBO_CLIENT_ID;
+    delete process.env.QBO_CLIENT_SECRET;
+    delete process.env.QBO_REDIRECT_URI;
+    delete process.env.PROCORE_CLIENT_ID;
+    delete process.env.PROCORE_CLIENT_SECRET;
+    delete process.env.PROCORE_REDIRECT_URI;
+    vi.mocked(getQboConnection).mockResolvedValue({ connected: false });
+    vi.mocked(getProcoreConnection).mockResolvedValue({ connected: false });
+
+    const resp = await request(app).get('/api/integrations/readiness');
+
+    expect(resp.status).toBe(200);
+    expect(resp.body.data.liveCredentialsReady).toBe(false);
+    expect(resp.body.data.configuredCount).toBe(0);
+    expect(resp.body.data.providers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'quickbooks',
+          configured: false,
+          mode: 'csv_fallback',
+          missingConfig: expect.arrayContaining(['QBO_CLIENT_ID', 'QBO_CLIENT_SECRET', 'QBO_REDIRECT_URI']),
+        }),
+        expect.objectContaining({
+          id: 'procore',
+          configured: false,
+          mode: 'import_fallback',
+          missingConfig: expect.arrayContaining(['PROCORE_CLIENT_ID', 'PROCORE_CLIENT_SECRET', 'PROCORE_REDIRECT_URI']),
+        }),
+      ]),
+    );
+  });
+
+  it('reports live OAuth readiness when provider credentials exist', async () => {
+    process.env.QBO_CLIENT_ID = 'qbo-client';
+    process.env.QBO_CLIENT_SECRET = 'qbo-secret';
+    process.env.QBO_REDIRECT_URI = 'http://localhost/qbo/callback';
+    process.env.PROCORE_CLIENT_ID = 'procore-client';
+    process.env.PROCORE_CLIENT_SECRET = 'procore-secret';
+    process.env.PROCORE_REDIRECT_URI = 'http://localhost/procore/callback';
+    vi.mocked(getQboConnection).mockResolvedValue({ connected: true, nearExpiry: false, realmId: 'realm-1' });
+    vi.mocked(getProcoreConnection).mockResolvedValue({ connected: false, nearExpiry: false });
+
+    const resp = await request(app).get('/api/integrations/readiness');
+
+    expect(resp.status).toBe(200);
+    expect(resp.body.data.liveCredentialsReady).toBe(true);
+    expect(resp.body.data.configuredCount).toBe(2);
+    expect(resp.body.data.connectedCount).toBe(1);
+    expect(resp.body.data.providers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'quickbooks', configured: true, connected: true, mode: 'live_oauth' }),
+        expect.objectContaining({ id: 'procore', configured: true, connected: false, mode: 'live_oauth' }),
+      ]),
+    );
+  });
+});
 
 describe('GET /api/integrations/procore/timesheet-entries', () => {
   it('returns 400 when projectId is missing', async () => {

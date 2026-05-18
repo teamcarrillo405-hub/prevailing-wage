@@ -1,7 +1,7 @@
 // Phase 75 - Field Clock Page (MOB-08)
 // Route: /projects/:projectId/field
 // Mobile-optimized clock-in/clock-out page for field workers.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Camera, Clock3, MapPin, PencilLine } from 'lucide-react';
@@ -11,6 +11,7 @@ import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { GpsClockIn } from '../components/field/GpsClockIn';
 import type { TimePunch } from '../components/field/GpsClockIn';
 import { PhotoCapture } from '../components/field/PhotoCapture';
+import { getTimeEvidenceState, type TimeEvidenceSource } from '../lib/timeEvidence';
 
 interface Project {
   id: string;
@@ -55,8 +56,25 @@ export function FieldClockPage() {
   const [manualWorkerId, setManualWorkerId] = useState('');
   const [manualPunchType, setManualPunchType] = useState<'in' | 'out'>('in');
   const [manualTime, setManualTime] = useState('08:00');
+  const [sourceFilter, setSourceFilter] = useState<TimeEvidenceSource | 'all'>('all');
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [correctionError, setCorrectionError] = useState<string | null>(null);
   const [correctionBusy, setCorrectionBusy] = useState(false);
+
+  useEffect(() => {
+    function handleOnline() {
+      setIsOnline(true);
+    }
+    function handleOffline() {
+      setIsOnline(false);
+    }
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const { data: weekListData } = useQuery({
     queryKey: ['payroll-weeks', projectId],
@@ -99,10 +117,16 @@ export function FieldClockPage() {
   const project = projectData?.data?.project;
   const workers = (workersData?.data?.workers ?? []).filter((w) => w.isActive);
   const punches = punchesData?.data?.punches ?? [];
-  const sortedPunches = [...punches].sort((a, b) => new Date(b.punchedAt).getTime() - new Date(a.punchedAt).getTime());
-  const latestPunch = sortedPunches[0] ?? null;
+  const punchRows = [...punches]
+    .sort((a, b) => new Date(b.punchedAt).getTime() - new Date(a.punchedAt).getTime())
+    .map((punch) => ({ punch, evidence: getTimeEvidenceState(punch) }));
+  const sortedPunches = sourceFilter === 'all' ? punchRows : punchRows.filter((row) => row.evidence.source === sourceFilter);
+  const latestPunch = punchRows[0]?.punch ?? null;
   const inPunches = punches.filter((punch) => punch.punchType === 'in').length;
   const outPunches = punches.filter((punch) => punch.punchType === 'out').length;
+  const gpsEvidenceCount = punchRows.filter((row) => row.evidence.source === 'field_gps').length;
+  const adminEvidenceCount = punchRows.filter((row) => row.evidence.source === 'admin_entered' || row.evidence.source === 'admin_corrected').length;
+  const reviewCount = punchRows.filter((row) => row.evidence.reviewStatus === 'needs_review').length;
 
   const isLoading = projectLoading || workersLoading;
 
@@ -183,7 +207,7 @@ export function FieldClockPage() {
           </div>
           <Link
             to={`/projects/${projectId}`}
-            className="inline-flex min-h-10 items-center text-xs font-semibold text-gray-500 transition-colors hover:text-brand-gold"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-600 transition-colors hover:text-brand-gold"
           >
             Back to project
           </Link>
@@ -206,7 +230,7 @@ export function FieldClockPage() {
                   <p>No active workers on this project.</p>
                   <Link
                     to={`/projects/${projectId}/workers`}
-                    className="mt-2 inline-block font-semibold text-brand-gold hover:underline"
+                    className="mt-2 inline-flex min-h-11 items-center font-semibold text-black hover:underline"
                   >
                     Add workers
                   </Link>
@@ -234,8 +258,20 @@ export function FieldClockPage() {
                   setEditingPunchId(null);
                   setCorrectionError(null);
                 }}
-                className="mt-3 w-full rounded border border-gray-300 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                aria-label="Work date"
+                className="mt-3 min-h-11 w-full rounded border border-gray-300 px-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
+            </section>
+
+            <section className={`rounded-lg border p-4 shadow-sm ${isOnline ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+              <p className={`text-sm font-semibold ${isOnline ? 'text-green-900' : 'text-amber-950'}`}>
+                {isOnline ? 'Online' : 'Offline capture'}
+              </p>
+              <p className={`mt-1 text-xs leading-5 ${isOnline ? 'text-green-800' : 'text-amber-800'}`}>
+                {isOnline
+                  ? 'Punches and photos sync immediately.'
+                  : 'Punches and photos are queued locally and will sync when connectivity returns.'}
+              </p>
             </section>
 
             <details className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
@@ -247,10 +283,12 @@ export function FieldClockPage() {
                 <PencilLine className="h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
               </summary>
               <div className="mt-4 grid grid-cols-1 gap-2">
+                <label className="sr-only" htmlFor="manual-punch-worker">Worker</label>
                 <select
+                  id="manual-punch-worker"
                   value={manualWorkerId}
                   onChange={(e) => setManualWorkerId(e.target.value)}
-                  className="w-full rounded border border-amber-200 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  className="min-h-11 w-full rounded border border-amber-200 px-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 >
                   <option value="">Select worker</option>
                   {workers.map((worker) => (
@@ -258,26 +296,32 @@ export function FieldClockPage() {
                   ))}
                 </select>
                 <div className="grid grid-cols-2 gap-2">
+                  <label className="sr-only" htmlFor="manual-punch-type">Punch type</label>
                   <select
+                    id="manual-punch-type"
                     value={manualPunchType}
                     onChange={(e) => setManualPunchType(e.target.value as 'in' | 'out')}
-                    className="w-full rounded border border-amber-200 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                    className="min-h-11 w-full rounded border border-amber-200 px-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
                   >
                     <option value="in">Clock in</option>
                     <option value="out">Clock out</option>
                   </select>
+                  <label className="sr-only" htmlFor="manual-punch-time">Punch time</label>
                   <input
+                    id="manual-punch-time"
                     type="time"
                     value={manualTime}
                     onChange={(e) => setManualTime(e.target.value)}
-                    className="w-full rounded border border-amber-200 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                    className="min-h-11 w-full rounded border border-amber-200 px-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={addManualPunch}
                   disabled={correctionBusy}
-                  className="rounded bg-brand-navy px-3 py-2 text-sm font-semibold text-white hover:bg-brand-navy/90 disabled:opacity-50"
+                  aria-label="Add missed punch"
+                  title="Add missed punch"
+                  className="inline-flex min-h-11 items-center justify-center rounded bg-black px-3 text-sm font-semibold text-white hover:bg-black/90 disabled:opacity-50"
                 >
                   Add missed punch
                 </button>
@@ -316,6 +360,37 @@ export function FieldClockPage() {
                 </div>
               </div>
 
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500">GPS</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-950">{gpsEvidenceCount}</p>
+                </div>
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500">Admin</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-950">{adminEvidenceCount}</p>
+                </div>
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500">Review</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-950">{reviewCount}</p>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label htmlFor="field-evidence-source" className="sr-only">Evidence source</label>
+                <select
+                  id="field-evidence-source"
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value as TimeEvidenceSource | 'all')}
+                  className="min-h-11 w-full rounded border border-gray-300 bg-white px-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                >
+                  <option value="all">All evidence sources</option>
+                  <option value="field_gps">Worker GPS</option>
+                  <option value="field_no_gps">Worker no GPS</option>
+                  <option value="admin_entered">Admin-entered</option>
+                  <option value="admin_corrected">Admin-corrected</option>
+                </select>
+              </div>
+
               <div className="mt-4">
                 {punchesLoading ? (
                   <p className="rounded border border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-400">Loading punches...</p>
@@ -323,7 +398,7 @@ export function FieldClockPage() {
                   <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-3 py-8 text-center text-sm text-gray-400">No punches recorded for this date.</p>
                 ) : (
                   <ul className="divide-y divide-gray-100 rounded border border-gray-200">
-                    {sortedPunches.map((punch) => {
+                    {sortedPunches.map(({ punch, evidence }) => {
                       const worker = workers.find((w) => w.id === punch.workerId);
                       const acc = punch.accuracyMeters;
                       const ringColor = acc == null
@@ -356,6 +431,19 @@ export function FieldClockPage() {
                               {acc != null && (
                                 <p className="mt-1 pl-4 text-xs text-gray-400">GPS accuracy {Math.round(acc)}m</p>
                               )}
+                              <div className="mt-2 flex flex-wrap gap-2 pl-4">
+                                <span className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
+                                  {evidence.sourceLabel}
+                                </span>
+                                <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${
+                                  evidence.reviewStatus === 'captured'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {evidence.reviewLabel}
+                                </span>
+                              </div>
+                              <p className="mt-1 pl-4 text-xs leading-5 text-gray-500">{evidence.detail}</p>
                             </div>
                             <div className="shrink-0 text-right">
                               <p className="text-sm font-semibold text-gray-950">{formatTime(punch.punchedAt)}</p>
@@ -434,7 +522,7 @@ export function FieldClockPage() {
             <div className="text-center">
               <Link
                 to={`/projects/${projectId}/settings`}
-                className="text-xs text-gray-400 transition-colors hover:text-brand-gold"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-600 transition-colors hover:text-brand-gold"
               >
                 GPS Settings
               </Link>

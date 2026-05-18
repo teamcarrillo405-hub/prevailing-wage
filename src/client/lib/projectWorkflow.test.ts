@@ -37,7 +37,11 @@ describe('project workflow state', () => {
       to: '/projects/p1/payroll/w1',
     }));
     expect(state.steps.find((step) => step.key === 'payroll')).toEqual(expect.objectContaining({
-      to: '/projects/p1/payroll/w1',
+      to: '/projects/p1/payroll/w1#payroll',
+      status: 'warning',
+    }));
+    expect(state.steps.find((step) => step.key === 'review')).toEqual(expect.objectContaining({
+      to: '/projects/p1/payroll/w1#forms',
       status: 'warning',
     }));
   });

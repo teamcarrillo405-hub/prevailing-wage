@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId } from 'react';
 import { cn } from '../../lib/utils';
 
 // ── Shared field wrapper ──────────────────────────────────────────────────
@@ -14,6 +14,9 @@ interface FieldWrapperProps {
 }
 
 function FieldWrapper({ label, error, help, required, id, className, children }: FieldWrapperProps) {
+  const errorId = id ? `${id}-error` : undefined;
+  const helpId = id ? `${id}-help` : undefined;
+
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {label && (
@@ -23,8 +26,8 @@ function FieldWrapper({ label, error, help, required, id, className, children }:
         </label>
       )}
       {children}
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      {help && !error && <p className="text-xs text-gray-500">{help}</p>}
+      {error && <p id={errorId} className="text-xs text-red-600">{error}</p>}
+      {help && !error && <p id={helpId} className="text-xs text-gray-500">{help}</p>}
     </div>
   );
 }
@@ -42,23 +45,26 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { label, error, help, required, id, className, fieldClassName, ...props },
   ref,
 ) {
+  const generatedId = useId();
+  const inputId = id ?? (label ? generatedId : undefined);
+
   return (
     <FieldWrapper
       label={label}
       error={error}
       help={help}
       required={required}
-      id={id}
+      id={inputId}
       className={fieldClassName}
     >
       <input
         ref={ref}
-        id={id}
+        id={inputId}
         required={required}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : help ? `${id}-help` : undefined}
+        aria-describedby={error && inputId ? `${inputId}-error` : help && inputId ? `${inputId}-help` : undefined}
         className={cn(
-          'px-3 py-2 text-sm rounded-sm border bg-white',
+          'min-h-11 px-3 py-2 text-sm rounded-sm border bg-white',
           'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-1',
           'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50',
           error
@@ -85,22 +91,26 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   { label, error, help, required, id, className, fieldClassName, ...props },
   ref,
 ) {
+  const generatedId = useId();
+  const textareaId = id ?? (label ? generatedId : undefined);
+
   return (
     <FieldWrapper
       label={label}
       error={error}
       help={help}
       required={required}
-      id={id}
+      id={textareaId}
       className={fieldClassName}
     >
       <textarea
         ref={ref}
-        id={id}
+        id={textareaId}
         required={required}
         aria-invalid={error ? true : undefined}
+        aria-describedby={error && textareaId ? `${textareaId}-error` : help && textareaId ? `${textareaId}-help` : undefined}
         className={cn(
-          'px-3 py-2 text-sm rounded-sm border bg-white',
+          'min-h-28 px-3 py-2 text-sm rounded-sm border bg-white',
           'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-1',
           'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50',
           error
@@ -129,22 +139,26 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   { label, error, help, required, id, className, fieldClassName, options, placeholder, children, ...props },
   ref,
 ) {
+  const generatedId = useId();
+  const selectId = id ?? (label ? generatedId : undefined);
+
   return (
     <FieldWrapper
       label={label}
       error={error}
       help={help}
       required={required}
-      id={id}
+      id={selectId}
       className={fieldClassName}
     >
       <select
         ref={ref}
-        id={id}
+        id={selectId}
         required={required}
         aria-invalid={error ? true : undefined}
+        aria-describedby={error && selectId ? `${selectId}-error` : help && selectId ? `${selectId}-help` : undefined}
         className={cn(
-          'px-3 py-2 text-sm rounded-sm border bg-white',
+          'min-h-11 px-3 py-2 text-sm rounded-sm border bg-white',
           'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-1',
           'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50',
           error

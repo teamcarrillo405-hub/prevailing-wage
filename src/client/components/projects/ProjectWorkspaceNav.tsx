@@ -1,4 +1,5 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
@@ -6,6 +7,7 @@ import {
   Clock,
   Database,
   FileCheck,
+  FileText,
   LayoutDashboard,
   ShieldCheck,
   Users,
@@ -69,6 +71,7 @@ function compactName(name: string | undefined) {
 
 export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
   const { pathname, hash } = useLocation();
+  const [payrollWorkZoneHash, setPayrollWorkZoneHash] = useState('');
   const base = `/projects/${projectId}`;
 
   const { data: projectData } = useQuery({
@@ -145,7 +148,9 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
             ? Users
             : step.key === 'payroll'
               ? FileCheck
-              : step.key === 'audit-packet'
+              : step.key === 'review'
+                ? FileText
+                : step.key === 'audit-packet'
                 ? Activity
                 : FileCheck,
       hash: step.to.includes('#') ? `#${step.to.split('#')[1]}` : undefined,
@@ -155,10 +160,34 @@ export function ProjectWorkspaceNav({ projectId }: { projectId: string }) {
   const supportItems = [
     { label: 'Subcontractors', to: `${base}#subcontractors`, icon: ShieldCheck, hash: '#subcontractors', status: openCprItems > 0 ? 'warning' : 'clean' },
     { label: 'Field Clock', to: `${base}/field`, icon: Clock, status: 'in_progress' },
+    { label: 'Reports', to: `${base}/reports`, icon: FileText, status: weeks.some((week) => week.submittedAt) ? 'complete' : 'warning' },
   ];
 
+  useEffect(() => {
+    const sync = () => setPayrollWorkZoneHash(window.location.hash);
+    sync();
+    window.addEventListener('hashchange', sync);
+    window.addEventListener('payroll-work-zone-change', sync);
+    return () => {
+      window.removeEventListener('hashchange', sync);
+      window.removeEventListener('payroll-work-zone-change', sync);
+    };
+  }, [pathname, hash]);
+
+  function splitHashTarget(to: string) {
+    const [path, rawHash] = to.split('#');
+    return { path, hash: rawHash ? `#${rawHash}` : undefined };
+  }
+
   function isHashActive(item: { hash?: string; to: string }) {
-    return Boolean(item.hash && pathname === base && hash === item.hash);
+    if (!item.hash) return false;
+    const target = splitHashTarget(item.to);
+    const activeHash = pathname.includes('/payroll/') ? payrollWorkZoneHash || hash : hash;
+    if (pathname.includes('/payroll/')) {
+      if (item.hash === '#payroll' && (activeHash === '#workflow' || activeHash === '#payroll')) return pathname === target.path;
+      if (item.hash === '#forms' && (activeHash === '#forms' || activeHash === '#preflight')) return pathname === target.path;
+    }
+    return pathname === target.path && activeHash === item.hash;
   }
 
   function isRouteActive(item: { to: string; exact?: boolean; hash?: string }) {

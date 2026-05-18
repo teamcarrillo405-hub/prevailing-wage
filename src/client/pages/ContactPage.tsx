@@ -62,12 +62,12 @@ export function ContactPage() {
       {/* Header */}
       <header className="bg-gray-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-sm text-gray-300 hover:text-white transition-colors">
+          <Link to="/" className="inline-flex min-h-11 items-center text-sm text-gray-300 hover:text-white transition-colors">
             <span className="font-semibold text-white">PrevWage</span>
           </Link>
           <Link
             to="/register"
-            className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex min-h-11 items-center rounded-lg bg-brand-gold px-4 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90"
           >
             Start Free
           </Link>
@@ -241,7 +241,7 @@ export function ContactPage() {
               <h3 className="text-sm font-bold text-gray-900 mb-2">Direct email</h3>
               <a
                 href="mailto:support@prevwage.com"
-                className="text-sm text-nav-dark font-medium hover:text-brand-gold transition-colors break-all"
+                className="inline-flex min-h-11 items-center break-all text-sm font-semibold text-black transition-colors hover:text-brand-gold"
               >
                 support@prevwage.com
               </a>
@@ -269,10 +269,10 @@ export function ContactPage() {
       {/* Footer */}
       <footer className="bg-gray-950 text-gray-500 text-xs py-8 text-center">
         <div className="max-w-5xl mx-auto px-6 flex flex-wrap justify-center gap-6">
-          <Link to="/case-studies" className="hover:text-gray-300 transition-colors">Case Studies</Link>
-          <Link to="/api-docs" className="hover:text-gray-300 transition-colors">API Docs</Link>
-          <Link to="/security" className="hover:text-gray-300 transition-colors">Security Policy</Link>
-          <Link to="/register" className="hover:text-gray-300 transition-colors">Register</Link>
+          <Link to="/case-studies" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Case Studies</Link>
+          <Link to="/api-docs" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">API Docs</Link>
+          <Link to="/security" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Security Policy</Link>
+          <Link to="/register" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Register</Link>
         </div>
         <p className="mt-6 text-gray-600">2026 PrevWage. All rights reserved.</p>
       </footer>

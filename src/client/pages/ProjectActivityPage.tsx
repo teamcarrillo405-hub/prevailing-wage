@@ -150,6 +150,24 @@ function requirementWeekLink(projectId: string | undefined, requirement: Evidenc
   return requirement.key === 'payroll_submissions' ? `${base}#submission-status` : base;
 }
 
+function requirementEntityType(requirement: EvidenceRequirement): string {
+  if (requirement.key === 'payroll_submissions') return 'payroll_week';
+  if (requirement.key === 'audit_trail') return '';
+  if (requirement.key === 'photo_evidence') return 'project_photo';
+  return 'time_punch';
+}
+
+const AUDIT_SOURCE_OPTIONS = [
+  { value: '', label: 'All sources' },
+  { value: 'worker', label: 'Workers' },
+  { value: 'payroll_entry', label: 'Payroll entries' },
+  { value: 'payroll_week', label: 'Payroll weeks and forms' },
+  { value: 'payroll_import', label: 'Payroll imports' },
+  { value: 'subcontractor', label: 'Subcontractors' },
+  { value: 'project_photo', label: 'Photos' },
+  { value: 'time_punch', label: 'GPS and time' },
+];
+
 export function ProjectActivityPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -158,14 +176,17 @@ export function ProjectActivityPage() {
 
   const from = searchParams.get('from') ?? '';
   const to = searchParams.get('to') ?? '';
+  const entityType = searchParams.get('entityType') ?? '';
+  const evidenceKey = (searchParams.get('evidence') as EvidenceRequirement['key'] | null) ?? selectedEvidenceKey;
   const page = parseInt(searchParams.get('page') ?? '1', 10);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['auditLogs', projectId, { from, to, page }],
+    queryKey: ['auditLogs', projectId, { from, to, entityType, page }],
     queryFn: () => {
       const params = new URLSearchParams();
       if (from) params.set('from', from);
       if (to) params.set('to', to);
+      if (entityType) params.set('entityType', entityType);
       params.set('page', String(page));
       return api.get<AuditLogResponse>(`/audit/${projectId}?${params.toString()}`);
     },
@@ -192,6 +213,7 @@ export function ProjectActivityPage() {
 
   function handleClearFilters() {
     const next = new URLSearchParams();
+    setSelectedEvidenceKey(null);
     setSearchParams(next);
   }
 
@@ -199,6 +221,7 @@ export function ProjectActivityPage() {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
+    if (entityType) params.set('entityType', entityType);
     const url = `/api/audit/${projectId}/csv${params.size > 0 ? '?' + params.toString() : ''}`;
     window.location.href = url;
   }
@@ -215,7 +238,7 @@ export function ProjectActivityPage() {
 
   const items = data?.items ?? [];
   const selectedRequirement =
-    evidenceSummary?.requirements.find((item) => item.key === selectedEvidenceKey) ??
+    evidenceSummary?.requirements.find((item) => item.key === evidenceKey) ??
     evidenceSummary?.requirements.find((item) => item.status === 'missing') ??
     evidenceSummary?.requirements[0] ??
     null;
@@ -230,6 +253,17 @@ export function ProjectActivityPage() {
 
   function selectEvidenceRequirement(key: EvidenceRequirement['key']) {
     setSelectedEvidenceKey(key);
+    const requirement = evidenceSummary?.requirements.find((item) => item.key === key);
+    const next = new URLSearchParams(searchParams);
+    next.set('evidence', key);
+    const source = requirement ? requirementEntityType(requirement) : '';
+    if (source) {
+      next.set('entityType', source);
+    } else {
+      next.delete('entityType');
+    }
+    next.set('page', '1');
+    setSearchParams(next);
     window.setTimeout(() => {
       evidenceDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 0);
@@ -253,10 +287,10 @@ export function ProjectActivityPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full space-y-6">
         <Link
           to={`/projects/${projectId}`}
-          className="text-sm text-brand-gold hover:underline transition-colors mb-4 inline-block"
+          className="mb-4 inline-flex min-h-11 items-center text-sm font-semibold text-black transition-colors hover:underline"
         >
           &larr; Back to Project
         </Link>
@@ -266,12 +300,13 @@ export function ProjectActivityPage() {
           subtitle="Submission proof, payroll records, photos, GPS activity, and audit trail"
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-[1.15fr_0.85fr] gap-4 mb-4">
-          <Card padding="sm">
-            <div className="flex items-start justify-between gap-4">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.65fr]">
+          <Card padding="none" className="overflow-hidden border border-gray-200">
+            <div className="border-b border-gray-200 bg-black px-5 py-4 text-white">
+              <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Audit packet status</p>
-                <p className="mt-2 text-2xl font-semibold text-gray-900">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Audit packet status</p>
+                <p className="mt-2 font-headline text-xl text-white">
                   {evidenceSummary && evidenceSummary.payrollWeekCount === 0
                     ? 'No payroll weeks yet'
                     : evidenceSummary?.readyForPacket
@@ -280,20 +315,38 @@ export function ProjectActivityPage() {
                     ? `${evidenceSummary.missingEvidence.length} evidence gaps`
                     : 'Loading evidence'}
                 </p>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-2 max-w-3xl text-sm text-gray-200">
                   {evidenceSummary?.payrollWeekCount
                     ? `${evidenceSummary.submittedWeekCount}/${evidenceSummary.payrollWeekCount} payroll weeks submitted.`
                     : 'No payroll weeks recorded yet.'}
                   {' '}Latest audit event {evidenceSummary?.latestAuditAt ? formatTimestamp(evidenceSummary.latestAuditAt) : 'not recorded yet'}.
                 </p>
               </div>
-              <div className="h-10 w-10 rounded bg-brand-gold/15 flex items-center justify-center text-brand-gold shrink-0">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-brand-gold text-black">
                 <ShieldCheck className="h-5 w-5" />
+              </div>
+              </div>
+            </div>
+            <div className="grid divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0">
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Payroll weeks</p>
+                <p className="mt-2 font-headline text-lg text-gray-950">{evidenceSummary?.payrollWeekCount ?? 0}</p>
+                <p className="mt-1 text-sm text-gray-600">Weeks represented in the packet.</p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Submitted</p>
+                <p className="mt-2 font-headline text-lg text-gray-950">{evidenceSummary?.submittedWeekCount ?? 0}</p>
+                <p className="mt-1 text-sm text-gray-600">Weeks with recorded agency submission.</p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Open gaps</p>
+                <p className="mt-2 font-headline text-lg text-gray-950">{evidenceSummary?.missingEvidence.length ?? 0}</p>
+                <p className="mt-1 text-sm text-gray-600">Items to clear before export.</p>
               </div>
             </div>
           </Card>
 
-          <Card padding="sm">
+          <Card padding="lg" className="border border-gray-200">
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: 'Audit events', value: evidenceSummary?.auditEventCount ?? 0, Icon: FileClock },
@@ -301,7 +354,7 @@ export function ProjectActivityPage() {
                 { label: 'GPS punches', value: evidenceSummary?.timePunchCount ?? 0, Icon: Clock3 },
                 { label: 'Open weeks', value: evidenceSummary?.unsubmittedWeekCount ?? 0, Icon: ClipboardCheck },
               ].map(({ label, value, Icon }) => (
-                <div key={label} className="border border-gray-200 rounded p-3 min-h-[76px]">
+                <div key={label} className="min-h-[88px] rounded-sm border border-gray-200 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs text-gray-500">{label}</p>
                     <Icon className="h-4 w-4 text-gray-400" />
@@ -313,7 +366,7 @@ export function ProjectActivityPage() {
           </Card>
         </div>
 
-        <Card padding="sm" className="mb-4">
+        <Card padding="sm" className="border border-gray-200">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -325,14 +378,14 @@ export function ProjectActivityPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handleExportEvidencePacket('json')}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-brand-gold text-black rounded hover:bg-brand-gold/10 transition-colors"
+                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-brand-gold px-3 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
                 >
                   <Download className="h-4 w-4" />
                   JSON packet
                 </button>
                 <button
                   onClick={() => handleExportEvidencePacket('csv')}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
                 >
                   <Download className="h-4 w-4" />
                   CSV packet
@@ -350,7 +403,7 @@ export function ProjectActivityPage() {
                     key={item.key}
                     type="button"
                     onClick={() => selectEvidenceRequirement(item.key)}
-                    className={`border rounded p-3 min-h-[88px] text-left transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                    className={`min-h-[96px] rounded-sm border p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold ${
                       selectedRequirement?.key === item.key
                         ? 'border-brand-gold bg-brand-gold/10'
                         : 'border-gray-200 hover:border-brand-gold hover:bg-brand-gold/5'
@@ -378,7 +431,7 @@ export function ProjectActivityPage() {
             </div>
 
             {selectedRequirement && (
-              <div ref={evidenceDetailRef} tabIndex={-1} className="rounded border border-brand-gold/40 bg-brand-gold/10 p-3 focus:outline-none focus:ring-2 focus:ring-brand-gold">
+              <div ref={evidenceDetailRef} tabIndex={-1} className="rounded-sm border border-brand-gold/40 bg-brand-gold/10 p-4 focus:outline-none focus:ring-2 focus:ring-brand-gold">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Action area</p>
@@ -404,7 +457,7 @@ export function ProjectActivityPage() {
                       <Link
                         key={`${selectedRequirement.key}-${week.weekId}`}
                         to={requirementWeekLink(projectId, selectedRequirement, week.weekId)}
-                        className="flex items-center justify-between gap-3 rounded border border-gray-200 bg-white px-3 py-2 text-sm hover:border-brand-gold hover:bg-brand-gold/5"
+                         className="flex min-h-11 items-center justify-between gap-3 rounded-sm border border-gray-200 bg-white px-3 py-2 text-sm hover:border-brand-gold hover:bg-brand-gold/5"
                       >
                         <span>
                           <span className="font-medium text-gray-900">Open Week {week.payrollNumber}</span>
@@ -429,7 +482,7 @@ export function ProjectActivityPage() {
         </Card>
 
         {(evidenceSummary?.weeks?.length ?? 0) > 0 && (
-          <Card padding="sm" className="mb-4">
+          <Card padding="sm" className="border border-gray-200">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Weekly evidence</p>
@@ -479,30 +532,45 @@ export function ProjectActivityPage() {
         )}
 
         {/* Date range filter */}
-        <Card padding="sm" className="mb-4">
+          <Card padding="sm" className="border border-gray-200">
           <div className="flex flex-wrap items-end gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">From</label>
+              <label htmlFor="activity-from-date" className="block text-xs text-gray-500 mb-1">From</label>
               <input
+                id="activity-from-date"
                 type="date"
                 value={from}
                 onChange={(e) => handleFilterChange('from', e.target.value)}
-                className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:border-brand-gold focus:outline-none"
+                className="min-h-11 rounded border border-gray-300 bg-white px-3 text-base text-gray-900 focus:border-brand-gold focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">To</label>
+              <label htmlFor="activity-to-date" className="block text-xs text-gray-500 mb-1">To</label>
               <input
+                id="activity-to-date"
                 type="date"
                 value={to}
                 onChange={(e) => handleFilterChange('to', e.target.value)}
-                className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-gray-900 focus:border-brand-gold focus:outline-none"
+                className="min-h-11 rounded border border-gray-300 bg-white px-3 text-base text-gray-900 focus:border-brand-gold focus:outline-none"
               />
             </div>
-            {(from || to) && (
+            <div>
+              <label htmlFor="activity-source-filter" className="block text-xs text-gray-500 mb-1">Source</label>
+              <select
+                id="activity-source-filter"
+                value={entityType}
+                onChange={(e) => handleFilterChange('entityType', e.target.value)}
+                className="min-h-11 rounded border border-gray-300 bg-white px-3 text-base text-gray-900 focus:border-brand-gold focus:outline-none"
+              >
+                {AUDIT_SOURCE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            {(from || to || entityType || evidenceKey) && (
               <button
                 onClick={handleClearFilters}
-                className="text-xs text-brand-gold hover:text-brand-gold/80 transition-colors pb-1.5"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm px-3 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
               >
                 Clear filters
               </button>
@@ -510,7 +578,7 @@ export function ProjectActivityPage() {
             <button
               onClick={handleExportCsv}
               title="Export all project activity as CSV — includes timestamps, user, action type, and details for every recorded event."
-              className="px-3 py-1.5 text-sm border border-brand-gold text-black rounded hover:bg-brand-gold/10 transition-colors"
+              className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold px-3 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/10"
             >
               Export CSV
             </button>
@@ -534,7 +602,7 @@ export function ProjectActivityPage() {
         )}
 
         {!isLoading && !isError && items.length > 0 && (
-          <Card padding="none">
+          <Card padding="none" className="overflow-hidden border border-gray-200">
             <ul className="divide-y divide-gray-200">
               {rows.map((row) => {
                 if (row.kind === 'header') {
@@ -550,8 +618,8 @@ export function ProjectActivityPage() {
                 return (
                   <li key={item.id} className="px-5 py-3 flex items-start gap-3">
                     {/* Actor initial avatar */}
-                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-gold/20 flex items-center justify-center mt-0.5">
-                      <span className="text-xs font-semibold text-brand-gold">
+                    <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-gold text-black">
+                      <span className="text-sm font-semibold text-black">
                         {getInitial(item.userEmail)}
                       </span>
                     </div>
@@ -580,14 +648,14 @@ export function ProjectActivityPage() {
               <button
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page <= 1}
-                className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-black hover:bg-brand-gold/10 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold px-3 py-2 text-sm font-semibold text-black transition-colors duration-150 hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= data.totalPages}
-                className="inline-flex items-center justify-center text-xs px-3 py-1.5 font-semibold rounded-sm border border-brand-gold text-black hover:bg-brand-gold/10 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold px-3 py-2 text-sm font-semibold text-black transition-colors duration-150 hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>

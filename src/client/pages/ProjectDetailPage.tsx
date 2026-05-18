@@ -1,20 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Workflow, Settings, ChevronRight, Building2, Shield, AlertTriangle, Pencil } from 'lucide-react';
+import { Settings, ChevronRight, Building2, Shield, AlertTriangle, Pencil, MapPin, CalendarDays } from 'lucide-react';
 import { api } from '../lib/api';
 import { Layout } from '../components/shared/Layout';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { ProjectDetailSkeleton } from '../components/ui/Skeleton';
-import { PageHeader } from '../components/ui/PageHeader';
-import { HelpCallout } from '../components/ui/HelpCallout';
 import { TermTooltip } from '../components/ui/TermTooltip';
 import { Tooltip } from '../components/ui/Tooltip';
 import { EmptyState } from '../components/ui/EmptyState';
-import { getCprStatus, STATUS_BADGE } from '../lib/cprStatus';
+import { getCprStatus, getSubcontractorOperationState, STATUS_BADGE } from '../lib/cprStatus';
 import type { Subcontractor, CprWeek, SubcontractorCertification, SamGovEntity } from '../lib/cprStatus';
 
-const WH347_DEF = "The Department of Labor's official certified payroll form. Contractors must submit it weekly to the contracting officer as proof that workers were paid the correct prevailing wage.";
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -24,6 +21,14 @@ import { SignaturePad } from '../components/ui/SignaturePad';
 import { PhotoGallery } from '../components/ui/PhotoGallery';
 import { ApprenticeshipDashboard } from '../components/ApprenticeshipDashboard';
 import { buildProjectWorkflowState } from '../lib/projectWorkflow';
+import {
+  assessProjectJurisdiction,
+  deriveJurisdictionKind,
+  jurisdictionExplanation,
+  requiredFormsForProject,
+  setupBlockersForProject,
+} from '../lib/projectRequirements';
+import type { RequiredFormItem, SetupBlocker } from '../lib/projectRequirements';
 
 interface Project {
   id: string;
@@ -35,6 +40,10 @@ interface Project {
   awardDate: string;
   status: string;
   createdAt: string;
+  awardingAgency?: string | null;
+  contractNumber?: string | null;
+  dirProjectId?: string | null;
+  wdIdentifier?: string | null;
   projectSettings: string | null;
   gpsClockInEnabled?: boolean;
   apprenticeshipRequirements: string | null;
@@ -200,41 +209,33 @@ const FUNDING_TYPE_LABELS: Record<string, string> = {
 /** Maximum DOL civil penalty per violation — 29 CFR Part 5.14 (2024 inflation adjustment). */
 const CIVIL_PENALTY_PER_VIOLATION = 13_508;
 
-function WorkflowProgress({ steps }: { steps: { label: string; complete: boolean; to: string }[] }) {
+function WorkZone({
+  eyebrow,
+  title,
+  description,
+  children,
+  actions,
+  className = '',
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+  actions?: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="flex items-center gap-0 mb-6 flex-wrap">
-      {steps.map((step, i) => (
-        <div key={step.label} className="flex items-center">
-          <Link
-            to={step.to}
-            className="flex items-center gap-2 group"
-            aria-label={`${step.label}${step.complete ? ' (complete)' : ''}`}
-          >
-            <div className={
-              step.complete
-                ? 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold bg-status-compliant text-white'
-                : 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold border-2 border-brand-navy/30 text-gray-400 bg-white group-hover:border-brand-gold group-hover:text-black transition-colors'
-            }>
-              {step.complete ? '\u2713' : i + 1}
-            </div>
-            <span className={
-              step.complete
-                ? 'text-sm font-medium text-status-compliant'
-                : 'text-sm font-medium text-gray-400 group-hover:text-brand-gold transition-colors'
-            }>
-              {step.label}
-            </span>
-          </Link>
-          {i < steps.length - 1 && (
-            <div className={
-              step.complete
-                ? 'mx-3 h-0.5 w-10 bg-status-compliant shrink-0'
-                : 'mx-3 h-0.5 w-10 bg-gray-200 shrink-0'
-            } />
-          )}
+    <section className={`mt-8 scroll-mt-24 ${className}`}>
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">{eyebrow}</p>
+          <h2 className="mt-1 font-headline text-xl text-text-primary">{title}</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-600">{description}</p>
         </div>
-      ))}
-    </div>
+        {actions}
+      </div>
+      <div className="space-y-6">{children}</div>
+    </section>
   );
 }
 
@@ -252,6 +253,7 @@ interface SubcontractorCprQueueItem {
   daysLate: number;
   notes: string | null;
   uploadTokenExpiresAt: string | null;
+  uploadToken?: string | null;
   uploadedAt: string | null;
   nextAction: string;
 }
@@ -264,23 +266,27 @@ interface SubcontractorCprQueueSummary {
   readyToRequest: number;
 }
 
-function ProjectReadinessPanel({
-  projectId,
+function ProjectCommandCenter({
+  project,
   workersCount,
   weeks,
   violationCount,
-  hasPrimaryWageDetermination,
   openCprItems,
+  hasPrimaryWageDetermination,
+  primaryPin,
+  controls,
 }: {
-  projectId: string;
+  project: Project;
   workersCount: number;
   weeks: { id: string; submittedAt: string | null; weekEndingDate?: string; payrollNumber?: number }[];
   violationCount: number;
-  hasPrimaryWageDetermination: boolean;
   openCprItems: number;
+  hasPrimaryWageDetermination: boolean;
+  primaryPin: PinRow | null;
+  controls: React.ReactNode;
 }) {
   const workflow = buildProjectWorkflowState({
-    projectId,
+    projectId: project.id,
     hasProject: true,
     hasPrimaryWageDetermination,
     workerCount: workersCount,
@@ -288,72 +294,244 @@ function ProjectReadinessPanel({
     violationCount,
     openCprItems,
   });
-  const actions = workflow.actions;
+  const openPayrollWeeks = workflow.openPayrollWeeks;
+  const totalFixes = violationCount + openCprItems;
   const primaryAction = workflow.primaryAction;
 
   return (
-    <Card className="mb-6 shadow-card-elevated">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <h2 className="font-headline text-base text-text-primary mb-1">Project Readiness</h2>
-          <p className="text-sm text-gray-500">
-            Contractor-focused next steps for getting this job CPR-ready.
-          </p>
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center shrink-0">
-          <div className="rounded border border-gray-200 px-3 py-2">
-            <p className="text-lg font-semibold text-gray-900">{workersCount}</p>
-            <p className="text-[11px] text-gray-500">Workers</p>
-          </div>
-          <div className="rounded border border-gray-200 px-3 py-2">
-            <p className="text-lg font-semibold text-gray-900">{workflow.openPayrollWeeks}</p>
-            <p className="text-[11px] text-gray-500">Open weeks</p>
-          </div>
-          <div className="rounded border border-gray-200 px-3 py-2">
-            <p className={`text-lg font-semibold ${violationCount + openCprItems > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{violationCount + openCprItems}</p>
-            <p className="text-[11px] text-gray-500">Fixes</p>
-          </div>
-        </div>
-      </div>
-      {primaryAction && (
-        <Link
-          to={primaryAction.to}
-          className="mt-4 flex flex-col gap-3 rounded-lg border border-brand-gold/50 bg-brand-gold/10 p-4 transition-colors hover:border-brand-gold sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Next best action</p>
-            <p className="mt-1 text-base font-semibold text-gray-950">{primaryAction.label}</p>
-            <p className="mt-1 text-sm text-gray-700">{primaryAction.detail}</p>
-          </div>
-          <span className="inline-flex min-h-10 items-center justify-center rounded-sm bg-brand-gold px-4 text-sm font-semibold text-black">
-            Start
-          </span>
-        </Link>
-      )}
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-        {actions.map((action) => (
-          <Link
-            key={`${action.priority}-${action.label}`}
-            to={action.to}
-            className="block rounded-lg border border-gray-200 bg-white hover:border-brand-gold hover:shadow-sm transition-colors p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{action.label}</p>
-                <p className="text-xs text-gray-500 mt-1">{action.detail}</p>
+    <section className="mb-8 rounded-lg border border-gray-200 bg-white shadow-card-elevated">
+      <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0 p-5 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={project.status === 'active' ? 'compliant' : project.status === 'archived' ? 'neutral' : 'warning'}>
+                  {project.status}
+                </Badge>
+                <Badge variant={hasPrimaryWageDetermination ? 'compliant' : 'warning'}>
+                  {hasPrimaryWageDetermination ? 'WD locked' : 'WD needed'}
+                </Badge>
+                {totalFixes > 0 ? <Badge variant="violation">{totalFixes} open fix{totalFixes === 1 ? '' : 'es'}</Badge> : <Badge variant="compliant">No open fixes</Badge>}
               </div>
-              <span className="text-[11px] font-semibold uppercase text-brand-gold shrink-0">{action.priority}</span>
+              <h2 className="mt-3 font-headline text-2xl leading-tight text-gray-950">{project.name}</h2>
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  {project.county}, {project.state}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  Award {project.awardDate}
+                </span>
+                <span>{CONTRACT_TYPE_LABELS[project.contractType] ?? project.contractType}</span>
+                <span>{FUNDING_TYPE_LABELS[project.fundingType] ?? project.fundingType} funding</span>
+              </div>
             </div>
-          </Link>
-        ))}
+            <div className="flex flex-wrap gap-2 lg:justify-end">
+              {controls}
+            </div>
+          </div>
+
+          {primaryAction && (
+            <Link
+              to={primaryAction.to}
+              className="mt-5 flex flex-col gap-3 rounded-md border border-brand-gold/60 bg-brand-gold/10 p-4 transition-colors hover:border-brand-gold sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Next best action</p>
+                <p className="mt-1 text-base font-semibold text-gray-950">{primaryAction.label}</p>
+                <p className="mt-1 text-sm leading-6 text-gray-700">{primaryAction.detail}</p>
+              </div>
+              <span className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm bg-brand-gold px-5 text-sm font-semibold text-black">
+                Start
+              </span>
+            </Link>
+          )}
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <ProjectMetric label="Workers" value={workersCount.toString()} detail="Roster records" />
+            <ProjectMetric label="Open Weeks" value={openPayrollWeeks.toString()} detail="Payroll still in progress" />
+            <ProjectMetric label="CPR Queue" value={openCprItems.toString()} detail="Subcontractor items" tone={openCprItems > 0 ? 'warning' : 'good'} />
+            <ProjectMetric label="Compliance Fixes" value={violationCount.toString()} detail="Payroll violations" tone={violationCount > 0 ? 'bad' : 'good'} />
+          </div>
+        </div>
+
+        <aside className="border-t border-gray-200 bg-gray-50 p-5 sm:p-6 xl:border-l xl:border-t-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Project facts</p>
+          <dl className="mt-3 space-y-3 text-sm">
+            <FactRow label="Primary WD" value={primaryPin ? `${primaryPin.wdNumber} Rev ${primaryPin.revisionNumber}` : 'Not locked'} />
+            <FactRow label="Construction type" value={primaryPin?.constructionType ?? 'Confirm in wage rates'} />
+            <FactRow label="Created" value={new Date(project.createdAt).toLocaleDateString()} />
+          </dl>
+          {workflow.actions.length > 0 && (
+            <div className="mt-5 border-t border-gray-200 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Next queue</p>
+              <div className="mt-3 space-y-2">
+                {workflow.actions.slice(0, 3).map((action) => (
+                  <Link
+                    key={`${action.priority}-${action.label}`}
+                    to={action.to}
+                    className="block rounded-md border border-gray-200 bg-white p-3 transition-colors hover:border-brand-gold hover:bg-brand-gold/5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-gray-900">{action.label}</p>
+                      <span className="shrink-0 text-xs font-semibold uppercase text-brand-gold">{action.priority}</span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-gray-500">{action.detail}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function ProjectMetric({
+  label,
+  value,
+  detail,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: 'neutral' | 'good' | 'warning' | 'bad';
+}) {
+  const valueClass =
+    tone === 'bad' ? 'text-red-700' : tone === 'warning' ? 'text-amber-700' : tone === 'good' ? 'text-emerald-700' : 'text-gray-950';
+  return (
+    <div className="rounded-md border border-gray-200 bg-white px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${valueClass}`}>{value}</p>
+      <p className="mt-1 text-xs leading-5 text-gray-500">{detail}</p>
+    </div>
+  );
+}
+
+function FactRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <dt className="text-gray-500">{label}</dt>
+      <dd className="max-w-[220px] text-right font-medium text-gray-900">{value}</dd>
+    </div>
+  );
+}
+
+function projectFixTarget(projectId: string, fixTo: string) {
+  if (fixTo.startsWith('/settings')) return `/projects/${projectId}${fixTo}`;
+  if (fixTo.startsWith('#')) return `/projects/${projectId}${fixTo}`;
+  return fixTo;
+}
+
+function requirementBadgeVariant(status: RequiredFormItem['status']) {
+  if (status === 'required') return 'warning';
+  if (status === 'not_applicable') return 'neutral';
+  return 'neutral';
+}
+
+function ProjectRequirementsPanel({ project }: { project: Project }) {
+  const kind = deriveJurisdictionKind(project);
+  const assessment = assessProjectJurisdiction(project);
+  const forms = requiredFormsForProject(project);
+  const blockers = setupBlockersForProject(project);
+  const kindLabel = kind === 'layered' ? 'Layered' : kind.charAt(0).toUpperCase() + kind.slice(1);
+
+  return (
+    <div id="required-forms" className="scroll-mt-24">
+    <Card className="mb-6 shadow-card-elevated">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={blockers.length > 0 ? 'warning' : 'compliant'}>{kindLabel} jurisdiction</Badge>
+            <Badge variant={blockers.length > 0 ? 'violation' : 'compliant'}>
+              {blockers.length > 0 ? `${blockers.length} setup blocker${blockers.length === 1 ? '' : 's'}` : 'Setup fields ready'}
+            </Badge>
+          </div>
+          <h2 className="mt-3 font-headline text-base text-text-primary">Required Forms & Setup Rules</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-600">{jurisdictionExplanation(project)}</p>
+          <p className="mt-2 max-w-3xl text-xs leading-5 text-gray-500">{assessment.precedence}</p>
+        </div>
+        <Link
+          to={`/projects/${project.id}/settings#project-facts`}
+          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm border border-brand-gold px-4 text-sm font-semibold text-black hover:bg-brand-gold/10"
+        >
+          Edit setup
+        </Link>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+        <div>
+          <div className="mb-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Wage source prompt</p>
+            <p className="mt-1 text-sm leading-6 text-gray-700">{assessment.wageSourcePrompt}</p>
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Forms and submission package</p>
+          <div className="mt-3 grid gap-3">
+            {forms.map((form) => (
+              <Link
+                key={form.id}
+                to={projectFixTarget(project.id, form.fixTo ?? '#required-forms')}
+                className="block rounded-md border border-gray-200 bg-white p-4 transition-colors hover:border-brand-gold hover:bg-brand-gold/5"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{form.label}</p>
+                    <p className="mt-1 text-xs leading-5 text-gray-500">{form.reason}</p>
+                  </div>
+                  <Badge variant={requirementBadgeVariant(form.status)}>{form.status.replace('_', ' ')}</Badge>
+                </div>
+              </Link>
+            ))}
+          </div>
+          {assessment.exportPackage.length > 0 && (
+            <div className="mt-4 rounded-md border border-gray-200 bg-white px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Export package</p>
+              <ul className="mt-2 space-y-2 text-sm text-gray-700">
+                {assessment.exportPackage.map((item) => (
+                  <li key={item.id}>
+                    <span className="font-semibold text-gray-900">{item.label}</span>
+                    <span className="block text-xs leading-5 text-gray-500">{item.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Setup blockers</p>
+          {blockers.length === 0 ? (
+            <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              Required jurisdiction fields are present for the current project facts.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {blockers.map((blocker: SetupBlocker) => (
+                <Link
+                  key={blocker.field}
+                  to={projectFixTarget(project.id, blocker.fixTo)}
+                  className="block rounded-md border border-amber-200 bg-white p-3 transition-colors hover:border-brand-gold hover:bg-brand-gold/5"
+                >
+                  <p className="text-sm font-semibold text-gray-900">{blocker.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-gray-600">{blocker.detail}</p>
+                  <span className="mt-2 inline-flex text-xs font-semibold text-brand-gold">Fix field</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </Card>
+    </div>
   );
 }
 
 function ProjectAuditDefensePanel({ projectId }: { projectId: string }) {
   return (
-    <Card className="mb-6 shadow-card-elevated">
+    <Card className="shadow-card-elevated">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
           <h2 className="font-headline text-base text-text-primary mb-1">Audit Defense</h2>
@@ -470,6 +648,7 @@ function ProjectReviewPanel({
           onChange={(event) => setNote(event.target.value)}
           maxLength={1000}
           placeholder="Optional review note"
+          aria-label="Optional review note"
           className="rounded-sm border border-border-default px-3 py-2 text-sm"
         />
         <div className="flex flex-wrap gap-2">
@@ -550,6 +729,11 @@ function ProjectSetupGuidancePanel({
   ].filter(Boolean) as Array<{ title: string; detail: string; to: string; priority: string }>;
 
   if (items.length === 0) return null;
+  const profileSummary = [
+    setup.payrollProvider ? `${providerName(setup.payrollProvider)} payroll` : null,
+    setup.projectManagementProvider ? `${providerName(setup.projectManagementProvider)} project system` : null,
+    `${setup.averageWeeklyWorkers ?? 0} average weekly workers`,
+  ].filter(Boolean).join(', ');
 
   return (
     <Card className="mb-6 border-brand-gold/40 bg-brand-gold/5 shadow-card-elevated">
@@ -557,12 +741,10 @@ function ProjectSetupGuidancePanel({
         <div>
           <h2 className="font-headline text-base text-text-primary mb-1">Setup From Onboarding</h2>
           <p className="text-sm text-gray-600">
-            This project was created with your business profile: {providerName(setup.payrollProvider)} payroll,
-            {' '}{providerName(setup.projectManagementProvider)} project system,
-            {' '}{setup.averageWeeklyWorkers ?? 0} average weekly workers.
+            This project was created with your business profile: {profileSummary}.
           </p>
         </div>
-        <Link to="/onboarding" className="text-sm font-semibold text-brand-gold hover:underline">
+        <Link to="/onboarding" className="inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
           Edit profile
         </Link>
       </div>
@@ -1234,7 +1416,8 @@ function CertificationsSection({ projectId, subId }: { projectId: string; subId:
                         <Pencil className="w-4 h-4 inline" />
                       </button>
                       <button
-                        className="text-xs font-medium text-status-violation hover:underline"
+                        type="button"
+                        className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-status-violation hover:underline"
                         onClick={() => {
                           if (window.confirm('Remove this certification?')) {
                             deleteCertMutation.mutate(cert.id);
@@ -1672,6 +1855,9 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                   <span className="rounded-sm bg-white/70 px-2 py-1 text-amber-900">{cprSummary.nonCompliant} non-compliant</span>
                 </div>
               )}
+              <p className="mt-2 max-w-2xl text-xs leading-5 text-amber-800">
+                Upload requests create internal links first. Email delivery only happens when outbound email is configured; otherwise copy the generated link from the request response.
+              </p>
             </div>
             {cprSummary && cprSummary.readyToRequest > 0 && (
               <Button
@@ -1690,6 +1876,7 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
             {cprQueue.slice(0, 5).map((item, index) => {
               const sub = subsById.get(item.subcontractorId);
               const contactEmail = item.contactEmail?.trim() || sub?.contactEmail?.trim();
+              const operation = getSubcontractorOperationState(item);
               return (
               <div key={`${item.subcontractorId}-${item.weekEndingDate}-${item.status}-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
                 <div>
@@ -1698,15 +1885,11 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                   {item.daysLate > 0 && (
                     <span className="ml-1 text-xs text-amber-800">({item.daysLate} days late)</span>
                   )}
-                  <p className="text-xs text-amber-800">{item.nextAction}</p>
+                  <p className="text-xs text-amber-800">{operation.nextAction}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={item.status === 'overdue' ? 'warning' : 'violation'}>
-                    {item.status === 'overdue'
-                      ? 'Overdue'
-                      : item.status === 'not-received'
-                      ? 'Not Received'
-                      : 'Non-Compliant'}
+                  <Badge variant={operation.badgeVariant}>
+                    {operation.label}
                   </Badge>
                   {contactEmail ? (
                     <button
@@ -1716,14 +1899,14 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                         subcontractorId: item.subcontractorId,
                         weekEndingDate: item.weekEndingDate,
                       })}
-                      className="text-xs font-semibold text-amber-950 underline underline-offset-2 hover:text-brand-navy"
+                      className="inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-amber-950 underline underline-offset-2 hover:text-black"
                     >
                       Send upload request
                     </button>
                   ) : (
                     <button
                       type="button"
-                      className="text-xs font-semibold text-amber-950 underline underline-offset-2 hover:text-brand-navy"
+                      className="inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-amber-950 underline underline-offset-2 hover:text-black"
                       onClick={() => startEdit(sub ?? { id: item.subcontractorId, name: item.subcontractorName } as Subcontractor)}
                     >
                       Add contact email
@@ -1940,14 +2123,14 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-600">Confirm remove?</span>
                       <button
-                        className="text-xs font-medium text-status-violation hover:underline"
+                        className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-status-violation hover:underline"
                         onClick={() => deleteSubMutation.mutate(sub.id)}
                         disabled={deleteSubMutation.isPending}
                       >
                         {deleteSubMutation.isPending ? 'Removing...' : 'Confirm'}
                       </button>
                       <button
-                        className="text-xs font-medium text-gray-500 hover:underline"
+                        className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-gray-600 hover:text-gray-950 hover:underline"
                         onClick={() => setDeletingSubId(null)}
                       >
                         Cancel
@@ -1956,19 +2139,19 @@ function SubcontractorsPanel({ projectId }: { projectId: string }) {
                   ) : (
                     <>
                       <button
-                        className="text-xs font-medium text-gray-700 hover:text-brand-gold transition-colors"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-sm font-semibold text-gray-700 transition-colors hover:text-black"
                         onClick={() => startEdit(sub)}
                       >
                         Edit
                       </button>
                       <button
-                        className="text-xs font-medium text-gray-700 hover:text-status-violation transition-colors"
+                        className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-gray-700 transition-colors hover:text-status-violation"
                         onClick={() => setDeletingSubId(sub.id)}
                       >
                         Remove
                       </button>
                       <button
-                        className="text-sm font-medium text-gray-700 hover:text-brand-gold transition-colors flex items-center"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-black"
                         onClick={() => setExpandedSubId(prev => prev === sub.id ? null : sub.id)}
                         aria-expanded={expandedSubId === sub.id}
                         aria-label={expandedSubId === sub.id ? 'Collapse CPR weeks' : 'Expand CPR weeks'}
@@ -2005,7 +2188,7 @@ function ApprenticeshipSection({ projectId }: { projectId: string }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-brand-navy transition-colors mb-3"
+        className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-sm px-1 text-sm font-semibold text-gray-700 transition-colors hover:text-brand-navy"
         aria-expanded={open}
       >
         <ChevronRight className={`w-4 h-4 transition-transform ${open ? 'rotate-90' : ''}`} />
@@ -2174,16 +2357,6 @@ export function ProjectDetailPage() {
   const maxCivilPenalty = violationCount * CIVIL_PENALTY_PER_VIOLATION;
 
   const openCprItems = cprQueueData?.data.summary.total ?? 0;
-  const steps = [
-    { label: 'Setup', complete: true, to: `/projects/${id}/settings` },
-    { label: 'Wage Rates', complete: primaryPin !== null, to: `/projects/${id}#wage-determinations` },
-    { label: 'Workers', complete: workers.length > 0, to: `/projects/${id}/workers` },
-    { label: 'Payroll', complete: weeks.length > 0 && weeks.every(w => w.submittedAt !== null), to: `/projects/${id}/payroll` },
-    { label: 'Subcontractors', complete: openCprItems === 0, to: `/projects/${id}#subcontractors` },
-    { label: 'Audit Packet', complete: violationCount === 0 && openCprItems === 0, to: `/projects/${id}/activity` },
-    { label: 'Exports', complete: weeks.some(w => w.submittedAt !== null), to: `/projects/${id}/reports` },
-  ];
-
   return (
     <Layout>
       {isLoading && <ProjectDetailSkeleton />}
@@ -2201,30 +2374,47 @@ export function ProjectDetailPage() {
       )}
 
       {project && (
-        <div>
-          <PageHeader
-            title={sampleProject ? `${project.name} (Sample)` : project.name}
-            subtitle={`${project.state} — ${project.county}`}
-          />
+        <div className="flex flex-col">
+          <h1 className="sr-only">{sampleProject ? `${project.name} sample workspace` : `${project.name} workspace`}</h1>
 
           {sampleProject && <SampleProjectPanel projectId={project.id} />}
 
-          <HelpCallout
-            icon={Workflow}
-            title="Complete the project in order"
-            body={<>Use the workflow on the left: setup, wage rates, workers, payroll, audit packet, then exports. Complete each step before generating your <TermTooltip term="WH-347" definition={WH347_DEF} />.</>}
-          />
-
-          <WorkflowProgress steps={steps} />
-
-          <ProjectReadinessPanel
-            projectId={project.id}
+          <ProjectCommandCenter
+            project={project}
             workersCount={workers.length}
             weeks={weeks}
             violationCount={violationCount}
-            hasPrimaryWageDetermination={primaryPin !== null}
             openCprItems={openCprItems}
+            hasPrimaryWageDetermination={primaryPin !== null}
+            primaryPin={primaryPin}
+            controls={
+              <>
+                {project.status === 'active' ? (
+                  <Button variant="secondary" onClick={handleArchiveClick}>
+                    Archive Project
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={() => restoreMutation.mutate()}
+                    disabled={restoreMutation.isPending}
+                  >
+                    {restoreMutation.isPending ? 'Restoring...' : 'Restore Project'}
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  onClick={handleOpenNotifPanel}
+                  aria-label="Notification preferences"
+                >
+                  <Settings className="w-4 h-4 mr-1.5" />
+                  Notifications
+                </Button>
+              </>
+            }
           />
+
+          <ProjectRequirementsPanel project={project} />
 
           <ProjectSetupGuidancePanel
             projectId={project.id}
@@ -2234,72 +2424,8 @@ export function ProjectDetailPage() {
             hasApprenticeshipRatioSetup={hasApprenticeshipRatioSetup}
           />
 
-          <ProjectAuditDefensePanel projectId={project.id} />
-
-          <ProjectReviewPanel projectId={project.id} projectSettings={project.projectSettings} />
-
-          <Card className="w-full md:max-w-lg shadow-card-elevated">
-            <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Project Details</h2>
-            <dl className="space-y-3 text-sm md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-3 md:space-y-0">
-              <div className="flex justify-between">
-                <dt className="text-gray-500">Contract type</dt>
-                <dd className="text-gray-900 font-medium">
-                  {CONTRACT_TYPE_LABELS[project.contractType] ?? project.contractType}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500">Funding type</dt>
-                <dd>
-                  <Badge variant="neutral">
-                    {FUNDING_TYPE_LABELS[project.fundingType] ?? project.fundingType}
-                  </Badge>
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500">Award date</dt>
-                <dd className="text-gray-900 font-medium">{project.awardDate}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500">Status</dt>
-                <dd>
-                  <Badge variant={project.status === 'active' ? 'compliant' : project.status === 'archived' ? 'neutral' : 'warning'}>
-                    {project.status}
-                  </Badge>
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500">Created</dt>
-                <dd className="text-gray-900">{new Date(project.createdAt).toLocaleDateString()}</dd>
-              </div>
-            </dl>
-          </Card>
-
-          <div className="mt-4 flex gap-3">
-            {project.status === 'active' ? (
-              <Button variant="secondary" onClick={handleArchiveClick}>
-                Archive Project
-              </Button>
-            ) : (
-              <Button
-                variant="secondary"
-                onClick={() => restoreMutation.mutate()}
-                disabled={restoreMutation.isPending}
-              >
-                {restoreMutation.isPending ? 'Restoring...' : 'Restore Project'}
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              onClick={handleOpenNotifPanel}
-              aria-label="Notification preferences"
-            >
-              <Settings className="w-4 h-4 mr-1.5" />
-              Notifications
-            </Button>
-          </div>
-
           {notifPanelOpen && (
-            <Card className="mt-4 max-w-lg shadow-card-elevated">
+            <Card className="order-last mt-4 shadow-card-elevated">
               <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Notification Preferences</h2>
               <div className="space-y-5 text-sm font-body">
 
@@ -2492,22 +2618,35 @@ export function ProjectDetailPage() {
             </div>
           )}
 
+          <WorkZone
+            eyebrow="People"
+            title="People & Field Inputs"
+            description="Keep subcontractor CPR, apprenticeship ratios, and field proof in one operational zone."
+            className="order-[30]"
+          >
           {/* Subcontractors panel */}
           <div id="subcontractors" className="scroll-mt-24">
-            <Card className="mt-8 shadow-card-elevated">
+            <Card className="shadow-card-elevated">
               <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Subcontractors</h2>
               <SubcontractorsPanel projectId={project.id} />
             </Card>
           </div>
 
           {/* Apprenticeship Ratios — Phase 117 (APP-01) */}
-          <Card padding="none" className="mt-8 shadow-card-elevated overflow-hidden">
+          <Card padding="none" className="shadow-card-elevated overflow-hidden">
             <ApprenticeshipSection projectId={project.id} />
           </Card>
+          </WorkZone>
 
+          <WorkZone
+            eyebrow="Setup"
+            title="Setup & Rates"
+            description="Confirm the wage source and contractor signature before certified payroll is submitted."
+            className="order-[20]"
+          >
           {/* Wage determinations panel */}
           <div id="wage-determinations" className="scroll-mt-24">
-          <Card className="mt-8 shadow-card-elevated">
+          <Card className="shadow-card-elevated">
             <h2 className="font-headline text-base text-text-primary mb-3 pb-2 border-b border-border-subtle">Wage Rates</h2>
             {/* Stale WD banner — COMP-06 Phase 88 */}
             {showStaleBanner && primaryPin && (
@@ -2522,14 +2661,32 @@ export function ProjectDetailPage() {
           </div>
 
           {/* Phase 96: Contractor Signature */}
-          <div id="contractor-signature" className="mt-8 scroll-mt-24">
+          <div id="contractor-signature" className="scroll-mt-24">
             <SignaturePad projectId={project.id} />
           </div>
+          </WorkZone>
 
+          <WorkZone
+            eyebrow="Evidence"
+            title="Field Evidence"
+            description="Attach job-site photos and field proof that support payroll and audit review."
+            className="order-[40]"
+          >
           {/* Phase 96: Site Photo Gallery */}
-          <div className="mt-8">
+          <div>
             <PhotoGallery projectId={project.id} />
           </div>
+          </WorkZone>
+
+          <WorkZone
+            eyebrow="Review"
+            title="Review & Audit Packet"
+            description="Track reviewer status, export audit evidence, and prove the payroll file after submission."
+            className="order-[50]"
+          >
+            <ProjectReviewPanel projectId={project.id} projectSettings={project.projectSettings} />
+            <ProjectAuditDefensePanel projectId={project.id} />
+          </WorkZone>
         </div>
       )}
     </Layout>

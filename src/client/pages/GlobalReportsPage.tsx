@@ -172,9 +172,9 @@ export function GlobalReportsPage() {
             <a
               href="/api/reports/export-csv?report=compliance"
               download="compliance-summary.csv"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 bg-white hover:bg-gray-50 transition-colors"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
-              <Download className="w-3 h-3" />
+              <Download className="h-4 w-4" aria-hidden="true" />
               Export CSV
             </a>
           </div>

@@ -90,6 +90,21 @@ describe('payroll source reconciliation', () => {
     expect(result.coverage.grossPay).toBe(100);
     expect(result.coverage.taxBreakdown).toBe(50);
     expect(result.coverage.checkNumber).toBe(50);
+    expect(result.fieldGaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'taxBreakdown',
+          label: 'Tax breakdown',
+          missingCount: 1,
+          reason: expect.stringContaining('employee deductions from taxes'),
+        }),
+        expect.objectContaining({
+          field: 'checkNumber',
+          missingCount: 1,
+          nextAction: expect.stringContaining('payment reference'),
+        }),
+      ]),
+    );
     expect(result.netPayMismatchCount).toBe(1);
     expect(result.missingSourceDetailCount).toBe(1);
   });

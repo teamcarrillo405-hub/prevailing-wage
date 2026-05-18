@@ -46,17 +46,17 @@ function TestimonialsNav() {
       <div className="max-w-5xl mx-auto flex items-center justify-between">
         <Link
           to="/"
-          className="text-brand-gold font-headline font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
+          className="inline-flex min-h-11 items-center text-brand-gold font-headline font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
         >
           HCC Prevailing Wage
         </Link>
         <div className="flex items-center gap-6 text-sm">
-          <Link to="/pricing" className="text-gray-400 hover:text-brand-gold transition-colors">
+          <Link to="/pricing" className="inline-flex min-h-11 min-w-11 items-center text-gray-400 hover:text-brand-gold transition-colors">
             Pricing
           </Link>
           <Link
             to="/login"
-            className="text-gray-300 hover:text-white transition-colors font-medium"
+            className="inline-flex min-h-11 min-w-11 items-center text-gray-300 hover:text-white transition-colors font-medium"
           >
             Log In
           </Link>
@@ -212,7 +212,7 @@ function TestimonialsFooter() {
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             {links.map(({ label, to }) => (
-              <Link key={label} to={to} className="text-gray-400 hover:text-brand-gold transition-colors">
+              <Link key={label} to={to} className="inline-flex min-h-11 min-w-11 items-center text-gray-400 hover:text-brand-gold transition-colors">
                 {label}
               </Link>
             ))}

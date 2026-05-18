@@ -223,7 +223,8 @@ export function PhotoGallery({ projectId }: PhotoGalleryProps) {
               <button
                 type="button"
                 onClick={() => handleDelete(photo.id)}
-                className="text-xs text-red-600 hover:underline text-left"
+                className="inline-flex min-h-11 items-center text-left text-sm font-semibold text-red-600 hover:underline"
+                aria-label={`Remove ${photo.caption ?? 'site photo'}`}
               >
                 Remove
               </button>

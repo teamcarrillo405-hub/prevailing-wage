@@ -45,13 +45,13 @@ export function ApiDocsPage() {
           <div className="mt-6 flex gap-4">
             <Link
               to="/settings/api-keys"
-              className="inline-block bg-brand-gold text-black font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-brand-gold/90 transition-colors"
+              className="inline-flex min-h-11 items-center rounded-lg bg-brand-gold px-5 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90"
             >
               Generate API Key
             </Link>
             <a
               href="#endpoints"
-              className="inline-block border border-white/20 text-white px-5 py-2.5 rounded-lg text-sm hover:bg-white/10 transition-colors"
+              className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-5 text-sm text-white transition-colors hover:bg-white/10"
             >
               View Endpoints
             </a>
@@ -67,10 +67,10 @@ export function ApiDocsPage() {
           <p className="text-gray-600 mb-4">
             All API requests must include your API key as a Bearer token in the{' '}
             <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono">Authorization</code> header.
-            Keys are created in <Link to="/settings/api-keys" className="text-blue-600 hover:underline">Settings &rarr; API Keys</Link>.
+            Keys are created in <Link to="/settings/api-keys" className="inline-flex min-h-11 items-center font-semibold text-black hover:underline">Settings &rarr; API Keys</Link>.
           </p>
-          <div className="bg-gray-900 rounded-xl p-5 text-sm font-mono text-gray-300 overflow-x-auto">
-            <pre>{`curl https://prevwage.app/v1/projects \\
+          <div className="overflow-x-auto rounded-xl bg-gray-900 p-5 text-sm font-mono text-gray-300">
+            <pre className="min-w-0 whitespace-pre-wrap break-words">{`curl https://prevwage.app/v1/projects \\
   -H "Authorization: Bearer pw_live_your_key_here"`}</pre>
           </div>
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
@@ -81,8 +81,8 @@ export function ApiDocsPage() {
         {/* Base URL */}
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Base URL</h2>
-          <div className="bg-gray-900 rounded-xl p-5 text-sm font-mono text-gray-300">
-            <pre>{`https://prevwage.app/v1`}</pre>
+          <div className="overflow-x-auto rounded-xl bg-gray-900 p-5 text-sm font-mono text-gray-300">
+            <pre className="min-w-0 whitespace-pre-wrap break-words">{`https://prevwage.app/v1`}</pre>
           </div>
         </section>
 
@@ -93,7 +93,7 @@ export function ApiDocsPage() {
             Each API key is issued with one or more scopes that limit what data can be accessed.
           </p>
           <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[520px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Scope</th>
@@ -122,12 +122,12 @@ export function ApiDocsPage() {
           <div className="space-y-3">
             {ENDPOINTS.map((ep) => (
               <div key={ep.path} className="border border-gray-200 rounded-xl p-4 bg-white">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <span className={`text-xs font-bold px-2 py-0.5 rounded ${METHOD_COLORS[ep.method]}`}>
                     {ep.method}
                   </span>
-                  <code className="font-mono text-sm text-gray-900">{ep.path}</code>
-                  <span className="text-xs text-gray-500 ml-auto font-mono bg-gray-100 px-2 py-0.5 rounded">
+                  <code className="break-all font-mono text-sm text-gray-900">{ep.path}</code>
+                  <span className="text-xs text-gray-500 sm:ml-auto font-mono bg-gray-100 px-2 py-0.5 rounded">
                     {ep.scope}
                   </span>
                 </div>

@@ -12,16 +12,16 @@ export function CaseStudyWaDotPage() {
       {/* Minimal public header */}
       <header className="bg-gray-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-sm text-gray-300 hover:text-white transition-colors">
+          <Link to="/" className="inline-flex min-h-11 items-center text-sm text-gray-300 hover:text-white transition-colors">
             <span className="font-semibold text-white">PrevWage</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link to="/case-studies" className="text-sm text-gray-400 hover:text-white transition-colors">
+            <Link to="/case-studies" className="inline-flex min-h-11 items-center text-sm text-gray-400 hover:text-white transition-colors">
               All Case Studies
             </Link>
             <Link
               to="/register"
-              className="text-sm bg-brand-gold text-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-gold/90 transition-colors"
+              className="inline-flex min-h-11 items-center rounded-lg bg-brand-gold px-4 text-sm font-semibold text-black transition-colors hover:bg-brand-gold/90"
             >
               Start Free
             </Link>
@@ -41,7 +41,7 @@ export function CaseStudyWaDotPage() {
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl">
             Pacific Northwest Infrastructure (name changed) was losing days to WA L&I XML submission
-            rejections. PrevWage's WA-native CPR export eliminated the problem immediately.
+            rejections. PrevWage's WA-native CPR export helped the team correct the package before resubmission.
           </p>
 
           {/* Result metrics */}
@@ -191,7 +191,7 @@ export function CaseStudyWaDotPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
               {[
                 { value: '0', sub: 'submission rejections' },
-                { value: '6', sub: 'rejections eliminated (prior 2 months)' },
+                { value: '6', sub: 'prior rejections reviewed and corrected' },
                 { value: '40%', sub: 'reduction in admin overhead' },
                 { value: '$0', sub: 'compliance inquiry costs' },
               ].map(({ value, sub }) => (
@@ -287,12 +287,12 @@ export function CaseStudyWaDotPage() {
       {/* Footer */}
       <footer className="bg-gray-950 text-gray-500 text-xs py-8 text-center">
         <div className="max-w-5xl mx-auto px-6 flex flex-wrap justify-center gap-6">
-          <Link to="/case-studies" className="hover:text-gray-300 transition-colors">Case Studies</Link>
-          <Link to="/case-studies/hcc" className="hover:text-gray-300 transition-colors">HCC Case Study</Link>
-          <Link to="/api-docs" className="hover:text-gray-300 transition-colors">API Docs</Link>
-          <Link to="/security" className="hover:text-gray-300 transition-colors">Security Policy</Link>
-          <Link to="/contact" className="hover:text-gray-300 transition-colors">Contact</Link>
-          <Link to="/register" className="hover:text-gray-300 transition-colors">Register</Link>
+          <Link to="/case-studies" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Case Studies</Link>
+          <Link to="/case-studies/hcc" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">HCC Case Study</Link>
+          <Link to="/api-docs" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">API Docs</Link>
+          <Link to="/security" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Security Policy</Link>
+          <Link to="/contact" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Contact</Link>
+          <Link to="/register" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Register</Link>
         </div>
         <p className="mt-6 text-gray-600">2026 PrevWage. All rights reserved.</p>
       </footer>

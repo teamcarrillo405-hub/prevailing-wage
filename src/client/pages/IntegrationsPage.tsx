@@ -29,6 +29,26 @@ interface ProcoreStatusResponse {
   };
 }
 
+interface IntegrationReadinessResponse {
+  data: {
+    status: 'integration-ready' | 'import-ready';
+    connectedCount: number;
+    configuredCount: number;
+    totalProviders: number;
+    liveCredentialsReady: boolean;
+    pilotRule: string;
+    providers: Array<{
+      id: string;
+      label: string;
+      configured: boolean;
+      connected: boolean;
+      mode: 'live_oauth' | 'csv_fallback' | 'import_fallback';
+      missingConfig: string[];
+      nextAction: string;
+    }>;
+  };
+}
+
 interface SsoConfigStatus {
   provider: string;
   domain: string | null;
@@ -815,7 +835,13 @@ export function IntegrationsPage() {
     staleTime: 5 * 60_000,
   });
 
+  const { data: readinessData } = useQuery({
+    queryKey: ['integration-readiness'],
+    queryFn: () => api.get<IntegrationReadinessResponse>('/integrations/readiness'),
+  });
+
   const integrationPrompts = onboardingIntegrationPrompts(onboardingData?.data.profile?.onboardingAnswers);
+  const readiness = readinessData?.data;
 
   // Shared project selector for QB employee import + (future) timesheet sync
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -859,7 +885,7 @@ export function IntegrationsPage() {
                       These prompts come from your saved contractor profile. Update onboarding if your software stack changes.
                     </p>
                   </div>
-                  <Link to="/onboarding" className="shrink-0 text-sm font-semibold text-gray-700 underline">
+                  <Link to="/onboarding" className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-sm font-semibold text-black underline">
                     Edit
                   </Link>
                 </div>
@@ -879,13 +905,47 @@ export function IntegrationsPage() {
               </div>
             )}
 
+            {readiness && (
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-900">Integration readiness</h2>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {readiness.connectedCount}/{readiness.totalProviders} connected, {readiness.configuredCount}/{readiness.totalProviders} live OAuth providers configured.
+                    </p>
+                  </div>
+                  <Badge variant={readiness.liveCredentialsReady ? 'compliant' : 'warning'}>
+                    {readiness.liveCredentialsReady ? 'Live credentials ready' : 'Import fallback active'}
+                  </Badge>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {readiness.providers.map((provider) => (
+                    <div key={provider.id} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900">{provider.label}</span>
+                        <Badge variant={provider.connected ? 'compliant' : provider.configured ? 'neutral' : 'warning'}>
+                          {provider.connected ? 'Connected' : provider.configured ? 'Configured' : 'Credential setup needed'}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-gray-600">{provider.nextAction}</p>
+                      {provider.missingConfig.length > 0 && (
+                        <p className="mt-1 font-mono text-[11px] text-amber-800">
+                          Missing {provider.missingConfig.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-gray-500">{readiness.pilotRule}</p>
+              </div>
+            )}
+
             <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">QuickBooks Online</h2>
                   <p className="text-sm text-gray-600 mt-1">
-                    Import employees and time records directly from QuickBooks — eliminates the CSV
-                    export step.
+                    Import employees and time records from QuickBooks when connected, or use CSV review when live credentials are not configured.
                   </p>
                 </div>
                 {status?.connected ? (
@@ -1021,7 +1081,7 @@ export function IntegrationsPage() {
                   <div className="flex flex-wrap gap-3 pt-1">
                     <a
                       href="/procore/import"
-                      className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
                     >
                       Import Timesheets
                     </a>
@@ -1082,10 +1142,11 @@ export function IntegrationsPage() {
                     <span className="font-medium ml-4">Provider:</span> {ssoConfig.provider?.replace('_', ' ')}
                   </div>
                 )}
-                <Link to="/settings/sso">
-                  <Button variant="secondary">
-                    {ssoConfig ? 'Manage SSO Configuration' : 'Configure SSO'}
-                  </Button>
+                <Link
+                  to="/settings/sso"
+                  className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-gold bg-transparent px-4 text-sm font-semibold text-black transition-all duration-150 hover:bg-brand-gold/10"
+                >
+                  {ssoConfig ? 'Manage SSO Configuration' : 'Configure SSO'}
                 </Link>
               </div>
             </div>
@@ -1095,3 +1156,4 @@ export function IntegrationsPage() {
     </Layout>
   );
 }
+

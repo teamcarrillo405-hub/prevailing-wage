@@ -144,7 +144,7 @@ export function SecurityDashboardPage() {
     <Layout>
       <PageHeader
         title="Security"
-        subtitle="Review your access history, manage sessions, and download SOC 2 evidence."
+        subtitle="Review your access history, manage sessions, and download security evidence for review."
       />
 
       <div className="max-w-4xl space-y-6">
@@ -162,7 +162,7 @@ export function SecurityDashboardPage() {
                 ? <Badge variant="compliant">Enabled</Badge>
                 : <Badge variant="warning">Disabled</Badge>}
             </div>
-            <Link to="/settings/mfa" className="mt-3 inline-block text-xs text-brand-gold hover:underline">
+            <Link to="/settings/mfa" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-black hover:underline">
               {user.mfaEnabled ? 'Manage MFA settings' : 'Set up two-factor'}
             </Link>
           </div>
@@ -232,8 +232,8 @@ export function SecurityDashboardPage() {
         <div className="rounded-xl border border-gray-200 shadow-sm bg-white p-5">
           <h3 className="text-base font-semibold text-gray-900">Access log export</h3>
           <p className="text-sm text-gray-600 mt-1 mb-3">
-            Download your last 90 days of security events. SOC 2 auditors accept these CSV exports
-            as evidence of user-side access monitoring.
+            Download your last 90 days of security events. These CSV exports can support access-review
+            evidence, subject to your reviewer or auditor's requirements.
           </p>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => downloadAccessLog('csv')}>

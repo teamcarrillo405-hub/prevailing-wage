@@ -90,10 +90,10 @@ export function ComplianceMethodologyPage() {
                             href={source.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-300 hover:text-gray-950"
+                            className="inline-flex min-h-11 items-center gap-1 rounded border border-gray-200 px-3 text-sm font-semibold text-gray-700 hover:border-gray-300 hover:text-gray-950"
                           >
                             {source.label}
-                            <ExternalLink className="h-3 w-3" />
+                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
                           </a>
                         ))}
                       </div>

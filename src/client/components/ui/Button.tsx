@@ -17,8 +17,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'text-xs px-3 py-2.5',
-  md: 'text-sm px-4 py-2.5',
+  sm: 'min-h-[44px] text-xs px-3 py-2.5',
+  md: 'min-h-[44px] text-sm px-4 py-2.5',
 };
 
 export function Button({

@@ -30,6 +30,17 @@ varianceRouter.get('/:projectId/report', requireAuth, async (req, res) => {
   res.json(report);
 });
 
+// GET /api/variance/:projectId/status — check whether variance reporting is configured
+varianceRouter.get('/:projectId/status', requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const db = getDb();
+  const [budget] = await db
+    .select({ id: schema.projectBudgets.id })
+    .from(schema.projectBudgets)
+    .where(eq(schema.projectBudgets.projectId, projectId as string));
+  res.json({ configured: Boolean(budget) });
+});
+
 // GET /api/variance/:projectId/report/pdf — download PDF
 varianceRouter.get('/:projectId/report/pdf', requireAuth, async (req, res) => {
   const { projectId } = req.params;

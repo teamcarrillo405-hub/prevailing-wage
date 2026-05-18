@@ -20,41 +20,64 @@ integrationsRouter.get('/readiness', requireAuth, async (req, res) => {
     getQboConnection(userId),
     getProcoreConnection(userId),
   ]);
+  const qboMissingConfig = [
+    process.env.QBO_CLIENT_ID ? null : 'QBO_CLIENT_ID',
+    process.env.QBO_CLIENT_SECRET ? null : 'QBO_CLIENT_SECRET',
+    process.env.QBO_REDIRECT_URI ? null : 'QBO_REDIRECT_URI',
+  ].filter(Boolean) as string[];
+  const procoreMissingConfig = [
+    process.env.PROCORE_CLIENT_ID ? null : 'PROCORE_CLIENT_ID',
+    process.env.PROCORE_CLIENT_SECRET ? null : 'PROCORE_CLIENT_SECRET',
+    process.env.PROCORE_REDIRECT_URI ? null : 'PROCORE_REDIRECT_URI',
+  ].filter(Boolean) as string[];
 
   const providers = [
     {
       id: 'quickbooks',
       label: 'QuickBooks Online',
+      configured: qboMissingConfig.length === 0,
       connected: qbo.connected,
       nearExpiry: qbo.nearExpiry,
+      mode: qboMissingConfig.length === 0 ? 'live_oauth' : 'csv_fallback',
+      missingConfig: qboMissingConfig,
       supportedFlows: ['worker roster import', 'time activity sync', 'approved-hours commit', 'payroll register CSV reconciliation'],
       nextAction: qbo.connected
         ? qbo.nearExpiry
           ? 'Reconnect QuickBooks before the refresh token expires.'
           : 'Run employee sync, time sync, then reconcile payroll register totals before export.'
-        : 'Connect QuickBooks or import the payroll register CSV for the pilot week.',
+        : qboMissingConfig.length === 0
+        ? 'Connect QuickBooks or import the payroll register CSV for the pilot week.'
+        : 'QuickBooks live OAuth is not configured; use payroll register CSV import until credentials are added.',
     },
     {
       id: 'procore',
       label: 'Procore',
+      configured: procoreMissingConfig.length === 0,
       connected: procore.connected,
       nearExpiry: procore.nearExpiry,
+      mode: procoreMissingConfig.length === 0 ? 'live_oauth' : 'import_fallback',
+      missingConfig: procoreMissingConfig,
       supportedFlows: ['timesheet entry preview', 'approved timesheet import', 'project time handoff'],
       nextAction: procore.connected
         ? procore.nearExpiry
           ? 'Reconnect Procore before the refresh token expires.'
           : 'Preview timesheet entries, match workers/classifications, then commit approved hours.'
-        : 'Connect Procore when the contractor uses Procore timecards; otherwise use payroll import.',
+        : procoreMissingConfig.length === 0
+        ? 'Connect Procore when the contractor uses Procore timecards; otherwise use payroll import.'
+        : 'Procore live OAuth is not configured; use field clock or payroll import until credentials are added.',
     },
   ];
   const connectedCount = providers.filter((provider) => provider.connected).length;
+  const configuredCount = providers.filter((provider) => provider.configured).length;
 
   res.json({
     data: {
       status: connectedCount > 0 ? 'integration-ready' : 'import-ready',
       connectedCount,
+      configuredCount,
       totalProviders: providers.length,
       providers,
+      liveCredentialsReady: configuredCount === providers.length,
       pilotRule: 'Do not rely on manual entry for production proof unless payroll source totals are reconciled and archived.',
     },
   });

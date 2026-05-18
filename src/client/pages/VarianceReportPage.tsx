@@ -30,11 +30,17 @@ export function VarianceReportPage({ projectId }: Props) {
 
   const loadReport = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/variance/${projectId}/report`, { credentials: 'include' });
-    if (res.status === 404) {
+    const statusRes = await fetch(`/api/variance/${projectId}/status`, { credentials: 'include' });
+    const status = statusRes.ok ? await statusRes.json() as { configured: boolean } : { configured: false };
+    if (!status.configured) {
       setNoBudget(true);
       setReport(null);
-    } else if (res.ok) {
+      setLoading(false);
+      return;
+    }
+
+    const res = await fetch(`/api/variance/${projectId}/report`, { credentials: 'include' });
+    if (res.ok) {
       setNoBudget(false);
       setReport(await res.json());
     }
@@ -74,40 +80,44 @@ export function VarianceReportPage({ projectId }: Props) {
             Set a working budget and total week count to enable variance reporting.
             Burn rate is calculated linearly: working budget / total weeks.
           </p>
-          <form onSubmit={handleSubmit(onSetBudget)} className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit(onSetBudget)} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-amber-900 mb-1">Working Budget ($)</label>
+              <label htmlFor="variance-working-budget" className="block text-xs font-medium text-amber-900 mb-1">Working Budget ($)</label>
               <input
+                id="variance-working-budget"
                 type="number" step="0.01"
                 {...register('workingBudget', { required: 'Required', valueAsNumber: true, min: 0.01 })}
-                className="w-full border border-amber-300 rounded px-3 py-1.5 text-sm bg-white"
+                className="min-h-11 w-full rounded border border-amber-300 bg-white px-3 text-base"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-amber-900 mb-1">Total Weeks</label>
+              <label htmlFor="variance-total-weeks" className="block text-xs font-medium text-amber-900 mb-1">Total Weeks</label>
               <input
+                id="variance-total-weeks"
                 type="number"
                 {...register('totalWeeks', { required: 'Required', valueAsNumber: true, min: 1 })}
-                className="w-full border border-amber-300 rounded px-3 py-1.5 text-sm bg-white"
+                className="min-h-11 w-full rounded border border-amber-300 bg-white px-3 text-base"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-amber-900 mb-1">Original Bid ($, optional)</label>
+              <label htmlFor="variance-bid-amount" className="block text-xs font-medium text-amber-900 mb-1">Original Bid ($, optional)</label>
               <input
+                id="variance-bid-amount"
                 type="number" step="0.01"
                 {...register('bidAmount', { valueAsNumber: true, min: 0 })}
-                className="w-full border border-amber-300 rounded px-3 py-1.5 text-sm bg-white"
+                className="min-h-11 w-full rounded border border-amber-300 bg-white px-3 text-base"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-amber-900 mb-1">Flag Threshold (%)</label>
+              <label htmlFor="variance-threshold" className="block text-xs font-medium text-amber-900 mb-1">Flag Threshold (%)</label>
               <input
+                id="variance-threshold"
                 type="number" step="0.1"
                 {...register('varianceThresholdPct', { valueAsNumber: true, min: 0, max: 100 })}
-                className="w-full border border-amber-300 rounded px-3 py-1.5 text-sm bg-white"
+                className="min-h-11 w-full rounded border border-amber-300 bg-white px-3 text-base"
               />
             </div>
-            <div className="col-span-2 flex justify-end">
+            <div className="sm:col-span-2 flex justify-end">
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : 'Set Budget'}
               </Button>
