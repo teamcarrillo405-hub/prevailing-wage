@@ -1,7 +1,8 @@
 import { logger } from '../logger.js';
 // src/server/services/emailService.ts
-// All email notifications for Phase 46. Mirrors inviteService.ts lazy-init pattern exactly.
+// All email notifications for Phase 46+. Mirrors inviteService.ts lazy-init pattern exactly.
 // All send functions are non-fatal per NFR-02: catch errors, log, never rethrow.
+// Phase 151-03 additions: sendEmail() and sendSupportForward() for welcome/contact/violation wiring.
 
 import { eq, isNull, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
@@ -349,6 +350,31 @@ export async function sendViolationAlertEmail(opts: {
     logger.error({ err: err }, '[email] sendViolationAlertEmail failed:');
     // Non-fatal per NFR-02 — never rethrow
   }
+}
+
+// ── Generic sendEmail() — used by welcome, contact forward, and violation alert ──
+// Graceful no-op when RESEND_API_KEY is absent (never throws per NFR-02).
+
+const FROM_ADDRESS = process.env.EMAIL_FROM ?? 'noreply@hccprevailingwage.com';
+const SUPPORT_ADDRESS = process.env.EMAIL_SUPPORT ?? 'support@hccprevailingwage.com';
+
+export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  const resend = await getResend();
+  if (!resend) {
+    console.warn('[emailService] RESEND_API_KEY not set — emails suppressed');
+    return; // graceful no-op
+  }
+  try {
+    await resend.emails.send({ from: FROM_ADDRESS, to, subject, html });
+  } catch (err) {
+    console.error('[emailService] send failed:', err);
+    // non-blocking — never throw
+  }
+}
+
+export async function sendSupportForward(from: string, name: string, subject: string, message: string): Promise<void> {
+  const html = `<p><strong>From:</strong> ${name} &lt;${from}&gt;</p><p><strong>Subject:</strong> ${subject ?? '(none)'}</p><hr/><p>${message.replace(/\n/g, '<br/>')}</p>`;
+  await sendEmail(SUPPORT_ADDRESS, `[Contact] ${subject ?? 'New message'}`, html);
 }
 
 // ── NOTIF-04: Submission confirmation to acting user ───────────────────────
