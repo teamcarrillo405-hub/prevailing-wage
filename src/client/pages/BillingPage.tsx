@@ -134,7 +134,7 @@ export function BillingPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          priceId: 'price_pro_placeholder',
+          planTier: 'pro',
           quantity: team?.members?.length ?? 1,
         }),
       });

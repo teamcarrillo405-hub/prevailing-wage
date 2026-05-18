@@ -16,11 +16,11 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-// ── Plan price IDs — override via env vars in production ─────────────────────
+// ── Plan price IDs — read from env vars; empty string means not configured ────
 
 export const PLANS = {
-  pro: process.env.STRIPE_PRICE_PRO ?? 'price_pro_placeholder',
-  enterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? 'price_enterprise_placeholder',
+  pro: process.env.STRIPE_PRICE_PRO ?? '',
+  enterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? '',
 } as const;
 
 // ── createCheckoutSession ─────────────────────────────────────────────────────

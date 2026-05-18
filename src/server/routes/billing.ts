@@ -15,6 +15,13 @@ import { getLimits, type PlanTier } from '../utils/planLimits.js';
 
 const router = Router();
 
+// ── Price IDs — read from env vars, never hardcoded ───────────────────────────
+const PRICE_IDS: Record<string, string> = {
+  starter: process.env.STRIPE_PRICE_STARTER ?? '',
+  pro: process.env.STRIPE_PRICE_PRO ?? '',
+  enterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? '',
+};
+
 // ── GET /api/billing/status — requires auth ───────────────────────────────────
 router.get('/status', requireAuth, async (req, res) => {
   const userId = req.user!.userId;
@@ -47,10 +54,17 @@ router.get('/status', requireAuth, async (req, res) => {
 // ── POST /api/billing/checkout — requires auth ────────────────────────────────
 router.post('/checkout', requireAuth, async (req, res) => {
   const userId = req.user!.userId;
-  const { priceId, quantity } = req.body as { priceId?: unknown; quantity?: unknown };
+  const { planTier, quantity } = req.body as { planTier?: unknown; quantity?: unknown };
 
-  if (!priceId || typeof priceId !== 'string' || priceId.trim() === '') {
-    res.status(400).json({ error: 'priceId is required and must be a non-empty string' });
+  // Resolve price ID from env-configured map by plan tier
+  const tier = typeof planTier === 'string' ? planTier : 'pro';
+  const resolvedPriceId = PRICE_IDS[tier] ?? '';
+
+  if (!resolvedPriceId) {
+    res.status(503).json({
+      error: 'STRIPE_NOT_CONFIGURED',
+      message: 'Payment processing is not configured. Contact support.',
+    });
     return;
   }
 
@@ -58,7 +72,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
   const returnUrl = `${req.protocol}://${req.get('host')}/billing`;
 
   try {
-    const { url } = await createCheckoutSession(userId, priceId, returnUrl, seatCount);
+    const { url } = await createCheckoutSession(userId, resolvedPriceId, returnUrl, seatCount);
     res.json({ url });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to create checkout session';
