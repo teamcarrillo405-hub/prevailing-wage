@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import supertest from 'supertest';
 import { app } from '../../src/server/index.js';
 
@@ -83,6 +83,33 @@ async function extractUserIdFromCookie(cookie: string): Promise<string> {
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long-xx';
   process.env.NODE_ENV = 'test';
+});
+
+// ── POST /api/billing/checkout — STRIPE_NOT_CONFIGURED guard ─────────────────
+
+describe('POST /api/billing/checkout — stripe not configured', () => {
+  afterEach(() => {
+    // Restore env var after each test in this suite
+    delete process.env.STRIPE_PRICE_PRO;
+  });
+
+  it('returns 503 STRIPE_NOT_CONFIGURED when STRIPE_PRICE_PRO is empty', async () => {
+    process.env.STRIPE_PRICE_PRO = '';
+    const cookie = await registerUser(`billing-stripe-guard-${Date.now()}@test.com`);
+    const res = await supertest(app)
+      .post('/api/billing/checkout')
+      .set('Cookie', cookie)
+      .send({ planTier: 'pro', quantity: 1 });
+    expect(res.status).toBe(503);
+    expect(res.body.error).toBe('STRIPE_NOT_CONFIGURED');
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    const res = await supertest(app)
+      .post('/api/billing/checkout')
+      .send({ planTier: 'pro' });
+    expect(res.status).toBe(401);
+  });
 });
 
 // ── GET /api/billing/usage ────────────────────────────────────────────────────

@@ -80,6 +80,26 @@ describe('POST /api/auth/register', () => {
   });
 });
 
+describe('POST /api/auth/register — HCC# optional', () => {
+  it('registration succeeds without hccMembershipNumber', async () => {
+    const email = `no-hcc-${Date.now()}@test.com`;
+    const res = await supertest(app)
+      .post('/api/auth/register')
+      .send({ email, password: 'password123' });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.user?.email).toBe(email);
+  });
+
+  it('registration succeeds with hccMembershipNumber provided', async () => {
+    const email = `with-hcc-${Date.now()}@test.com`;
+    const res = await supertest(app)
+      .post('/api/auth/register')
+      .send({ email, password: 'password123', hccMembershipNumber: 'HCC-12345' });
+    expect(res.status).toBe(201);
+    expect(res.body.data?.user?.email).toBe(email);
+  });
+});
+
 describe('POST /api/auth/login', () => {
   it('returns 200 with pw_session cookie on valid credentials', async () => {
     const email = `login-${Date.now()}@test.com`;
