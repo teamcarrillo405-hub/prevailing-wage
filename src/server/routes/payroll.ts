@@ -184,6 +184,28 @@ router.post('/weeks', validate(CreateWeekSchema), async (req, res) => {
     return;
   }
 
+  // COMP-FIX-04: federal projects must have week-ending dates on Saturday (29 CFR Part 3.4)
+  {
+    const [projectRow] = await db
+      .select({ fundingType: projects.fundingType, state: projects.state })
+      .from(projects)
+      .where(eq(projects.id, body.projectId))
+      .limit(1);
+    if (projectRow) {
+      const isFederal = projectRow.fundingType === 'federal' || !projectRow.state;
+      if (isFederal && body.weekEndingDate) {
+        const dayOfWeek = new Date(body.weekEndingDate + 'T00:00:00Z').getUTCDay(); // 6 = Saturday
+        if (dayOfWeek !== 6) {
+          res.status(422).json({
+            error: 'WEEK_MUST_END_SATURDAY',
+            message: 'Federal certified payroll weeks must end on Saturday (29 CFR Part 3.4).',
+          });
+          return;
+        }
+      }
+    }
+  }
+
   const [existingWeek] = await db
     .select({ id: payrollWeeks.id })
     .from(payrollWeeks)
@@ -356,14 +378,24 @@ router.post('/entries', validate(UpsertEntrySchema), async (req, res) => {
     workerName = workerRow?.name;
   } catch { /* best-effort */ }
 
-  const entry = await upsertPayrollEntry({
-    ...body,
-    userId,
-    userEmail: req.user!.email,
-    ipAddress: req.ip ?? null,
-    workerName,
-    payrollNumber: week.payrollNumber,
-  });
+  let entry;
+  try {
+    entry = await upsertPayrollEntry({
+      ...body,
+      userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      workerName,
+      payrollNumber: week.payrollNumber,
+    });
+  } catch (err: any) {
+    if (err.status === 422) {
+      res.status(422).json({ error: err.code, message: err.message });
+      return;
+    }
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   // Fire violation alert email (non-blocking, best-effort)
   try {
@@ -414,14 +446,24 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
     workerNamePut = workerRow?.name;
   } catch { /* best-effort */ }
 
-  const entry = await upsertPayrollEntry({
-    ...body,
-    userId,
-    userEmail: req.user!.email,
-    ipAddress: req.ip ?? null,
-    workerName: workerNamePut,
-    payrollNumber: week.payrollNumber,
-  });
+  let entryPut;
+  try {
+    entryPut = await upsertPayrollEntry({
+      ...body,
+      userId,
+      userEmail: req.user!.email,
+      ipAddress: req.ip ?? null,
+      workerName: workerNamePut,
+      payrollNumber: week.payrollNumber,
+    });
+  } catch (err: any) {
+    if (err.status === 422) {
+      res.status(422).json({ error: err.code, message: err.message });
+      return;
+    }
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
 
   // Fire violation alert email (non-blocking, best-effort)
   try {
@@ -431,7 +473,7 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
     }
   } catch { /* best-effort */ }
 
-  if (!entry) {
+  if (!entryPut) {
     // Fallback: fetch the entry via the payroll week id after upsert
     const db = getDb();
     const [found] = await db
@@ -443,7 +485,7 @@ router.put('/entries/:id', validate(UpsertEntrySchema), async (req, res) => {
     return;
   }
 
-  res.json({ id: entry.id });
+  res.json({ id: entryPut.id });
 });
 
 // DELETE /api/payroll/entries/:entryId — delete a payroll entry (AUDIT-03)
