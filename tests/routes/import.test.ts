@@ -39,6 +39,22 @@ async function createProject(cookie: string): Promise<string> {
   return res.body.data?.project?.id as string;
 }
 
+async function createFederalProject(cookie: string, state = 'TX'): Promise<string> {
+  const res = await supertest(app)
+    .post('/api/projects')
+    .set('Cookie', cookie)
+    .send({
+      name: 'Federal DT Test Project',
+      state,
+      county: 'Travis',
+      contractType: 'federal-davis-bacon',
+      awardDate: '2025-01-01',
+      fundingType: 'federal',
+    });
+  expect(res.status).toBe(201);
+  return res.body.data?.project?.id as string;
+}
+
 async function createWorker(cookie: string, projectId: string, name: string): Promise<{ workerId: string; classificationId: string }> {
   const wRes = await supertest(app)
     .post(`/api/projects/${projectId}/workers`)
@@ -488,6 +504,115 @@ describe('POST /api/payroll/import/commit', () => {
       .where(eq(payrollImports.payrollWeekId, weekId));
     expect(auditRows[0].committedCount).toBe(2);
     expect(auditRows[0].provider).toBe('adp');
+  });
+
+  // ── COMP-FIX-02: dtHours state-based validation ──────────────────────────
+
+  it('COMP-FIX-02: CA project with dtHours=2 is accepted', async () => {
+    // CA is a DT-law state — dtHours should be committed without error
+    const cookie = await registerAndLogin('commit-dt-ca');
+    const projectId = await createProject(cookie); // CA project
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-06-07');
+    const { workerId, classificationId } = await createWorker(cookie, projectId, 'CA DT Worker');
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'quickbooks',
+        matched: [
+          {
+            csvName: 'CA DT Worker',
+            workerId,
+            workerName: 'CA DT Worker',
+            classificationId,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+            dtHours: 2,
+          },
+        ],
+        unmatchedCount: 0,
+        sourceFilename: 'ca-payroll.csv',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.committed).toBe(1);
+  });
+
+  it('COMP-FIX-02: TX (federal) project with dtHours=2 is rejected with 422', async () => {
+    // TX is not a DT-law state — dtHours must be rejected to prevent false certified payroll
+    const cookie = await registerAndLogin('commit-dt-tx');
+    const projectId = await createFederalProject(cookie, 'TX');
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-06-14');
+    const { workerId, classificationId } = await createWorker(cookie, projectId, 'TX DT Worker');
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'quickbooks',
+        matched: [
+          {
+            csvName: 'TX DT Worker',
+            workerId,
+            workerName: 'TX DT Worker',
+            classificationId,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+            dtHours: 2,
+          },
+        ],
+        unmatchedCount: 0,
+        sourceFilename: 'tx-payroll.csv',
+      });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toMatch(/double-time hours not permitted/i);
+    expect(res.body.details).toBeDefined();
+    expect(res.body.details[0]).toContain('TX DT Worker');
+  });
+
+  it('COMP-FIX-02: rows with dtHours=0 or absent are always accepted', async () => {
+    // dtHours absent or zero should not trigger validation for any state
+    const cookie = await registerAndLogin('commit-dt-zero');
+    const projectId = await createFederalProject(cookie, 'IL');
+    const weekId = await createPayrollWeek(cookie, projectId, '2025-06-21');
+    const { workerId, classificationId } = await createWorker(cookie, projectId, 'IL Zero DT Worker');
+
+    const res = await supertest(app)
+      .post('/api/payroll/import/commit')
+      .set('Cookie', cookie)
+      .send({
+        weekId,
+        provider: 'quickbooks',
+        matched: [
+          {
+            csvName: 'IL Zero DT Worker',
+            workerId,
+            workerName: 'IL Zero DT Worker',
+            classificationId,
+            classificationName: 'Carpenter',
+            baseRateSnapshot: 45.00,
+            fringeRateSnapshot: 20.00,
+            monSt: 8, tueSt: 8, wedSt: 8, thuSt: 8, friSt: 8, satSt: 0, sunSt: 0,
+            monOt: 0, tueOt: 0, wedOt: 0, thuOt: 0, friOt: 0, satOt: 0, sunOt: 0,
+            dtHours: 0,
+          },
+        ],
+        unmatchedCount: 0,
+        sourceFilename: 'il-payroll.csv',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.committed).toBe(1);
   });
 });
 

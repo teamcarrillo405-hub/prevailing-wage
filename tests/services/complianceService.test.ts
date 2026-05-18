@@ -412,20 +412,21 @@ describe('computeCompliance', () => {
     expect(result!.certProperPayment).toBe(false);
   });
 
-  // ── COMP-03: Apprentice Ratio ────────────────────────────────────────────
+  // ── COMP-03: Apprentice Ratio (daily per-day check, COMP-FIX-01) ──────────
 
-  it('COMP-03: violation fires when apprentice hours exceed 1:3 ratio', async () => {
-    // 30 JW hours, 20 apprentice hours — max allowed is 10 (30/3), so 20 > 10 triggers violation
+  it('COMP-03: violation fires when 1 apprentice works same day as 1 JW (exceeds 1:3 worker ratio)', async () => {
+    // Daily worker-count check: 1 apprentice : 1 JW on Mon/Tue/Wed exceeds 1:3 allowed ratio.
+    // Foreman/JW only on Thu — no apprentice that day, so no violation for Thu.
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-01', 10);
-    // JW: 30 ST hours
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-03', 10);
+    // JW: hours on Mon, Tue, Wed, Thu
     await seedEntry(cookie, weekId, workerId, classificationId, {
       monSt: 8, tueSt: 8, wedSt: 8, thuSt: 6,
       baseRateSnapshot: 30,
       fringeRateSnapshot: 10,
       grossWages: 1200,
     });
-    // Apprentice: 20 ST hours
+    // Apprentice: hours on Mon, Tue, Wed only
     const { workerId: appId, classificationId: appClassId } = await seedApprenticeWorker(cookie, projectId);
     await seedEntry(cookie, weekId, appId, appClassId, {
       monSt: 8, tueSt: 8, wedSt: 4,
@@ -436,39 +437,80 @@ describe('computeCompliance', () => {
 
     const result = await computeCompliance(db, weekId);
     expect(result).not.toBeNull();
-    expect(result!.weekViolations).toHaveLength(1);
-    expect(result!.weekViolations[0].violationType).toBe('apprentice-ratio');
-    expect(result!.weekViolations[0].apprenticeHours).toBe(20);
-    expect(result!.weekViolations[0].journeyworkerHours).toBe(30);
+    // Mon, Tue, Wed each have 1 App : 1 JW (ratio 1.0 > 1/3) — 3 daily violations
+    const ratioViolations = result!.weekViolations.filter(v => v.violationType === 'apprentice-ratio-daily');
+    expect(ratioViolations.length).toBeGreaterThan(0);
+    expect(ratioViolations[0].violationType).toBe('apprentice-ratio-daily');
     expect(result!.hasViolations).toBe(true);
   });
 
-  it('COMP-03: no violation when apprentice hours equal max allowed (exactly at ratio)', async () => {
-    // 30 JW hours, 10 apprentice hours — max allowed is 10 (30/3), exactly at limit = OK
+  it('COMP-03: no violation when 3 JW and 1 apprentice on same day (at or below 1:3 ratio)', async () => {
+    // 3 journeyworkers + 1 apprentice on Friday: ratio = 1/3 = exactly at limit = OK
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
-    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-02', 11);
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-10', 11);
+    // JW #1
     await seedEntry(cookie, weekId, workerId, classificationId, {
-      monSt: 8, tueSt: 8, wedSt: 8, thuSt: 6,
+      friSt: 8,
       baseRateSnapshot: 30,
       fringeRateSnapshot: 10,
-      grossWages: 1200,
+      grossWages: 320,
     });
+    // JW #2
+    const { workerId: jw2Id, classificationId: jw2ClassId } = await (async () => {
+      const wRes = await supertest(app)
+        .post(`/api/projects/${projectId}/workers`)
+        .set('Cookie', cookie)
+        .send({ name: 'JW Two' });
+      const wId = wRes.body.data?.worker?.id as string;
+      const cRes = await supertest(app)
+        .post(`/api/projects/${projectId}/workers/${wId}/classifications`)
+        .set('Cookie', cookie)
+        .send({ tradeCode: 'ELEC', tradeDescription: 'Electrician', laborType: 'journeyworker' });
+      return { workerId: wId, classificationId: cRes.body.data?.classification?.id as string };
+    })();
+    await seedEntry(cookie, weekId, jw2Id, jw2ClassId, {
+      friSt: 8,
+      baseRateSnapshot: 30,
+      fringeRateSnapshot: 10,
+      grossWages: 320,
+    });
+    // JW #3
+    const { workerId: jw3Id, classificationId: jw3ClassId } = await (async () => {
+      const wRes = await supertest(app)
+        .post(`/api/projects/${projectId}/workers`)
+        .set('Cookie', cookie)
+        .send({ name: 'JW Three' });
+      const wId = wRes.body.data?.worker?.id as string;
+      const cRes = await supertest(app)
+        .post(`/api/projects/${projectId}/workers/${wId}/classifications`)
+        .set('Cookie', cookie)
+        .send({ tradeCode: 'ELEC', tradeDescription: 'Electrician', laborType: 'journeyworker' });
+      return { workerId: wId, classificationId: cRes.body.data?.classification?.id as string };
+    })();
+    await seedEntry(cookie, weekId, jw3Id, jw3ClassId, {
+      friSt: 8,
+      baseRateSnapshot: 30,
+      fringeRateSnapshot: 10,
+      grossWages: 320,
+    });
+    // Apprentice #1 — only on Friday
     const { workerId: appId, classificationId: appClassId } = await seedApprenticeWorker(cookie, projectId);
     await seedEntry(cookie, weekId, appId, appClassId, {
-      monSt: 8, tueSt: 2,
+      friSt: 8,
       baseRateSnapshot: 20,
       fringeRateSnapshot: 5,
-      grossWages: 250,
+      grossWages: 200,
     });
 
     const result = await computeCompliance(db, weekId);
     expect(result).not.toBeNull();
-    expect(result!.weekViolations).toHaveLength(0);
+    const ratioViolations = result!.weekViolations.filter(v => v.violationType === 'apprentice-ratio-daily');
+    expect(ratioViolations).toHaveLength(0);
     expect(result!.hasViolations).toBe(false);
   });
 
-  it('COMP-03: no violation when apprentice hours are below the 1:3 threshold', async () => {
-    // 30 JW hours, 8 apprentice hours — 8 < 10 (30/3) = compliant
+  it('COMP-03: no violation when apprentice only works days without any JW on site', async () => {
+    // JW works Mon-Thu, Apprentice works only Fri — no JW present on Fri → no ratio violation
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
     const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-03', 12);
     await seedEntry(cookie, weekId, workerId, classificationId, {
@@ -479,7 +521,7 @@ describe('computeCompliance', () => {
     });
     const { workerId: appId, classificationId: appClassId } = await seedApprenticeWorker(cookie, projectId);
     await seedEntry(cookie, weekId, appId, appClassId, {
-      monSt: 8,
+      friSt: 8,
       baseRateSnapshot: 20,
       fringeRateSnapshot: 5,
       grossWages: 200,
@@ -487,7 +529,8 @@ describe('computeCompliance', () => {
 
     const result = await computeCompliance(db, weekId);
     expect(result).not.toBeNull();
-    expect(result!.weekViolations).toHaveLength(0);
+    const ratioViolations = result!.weekViolations.filter(v => v.violationType === 'apprentice-ratio-daily');
+    expect(ratioViolations).toHaveLength(0);
   });
 
   it('COMP-03: no violation when journeyworkerHours is 0 and apprenticeHours > 0 (edge case guard)', async () => {
@@ -582,6 +625,38 @@ describe('computeCompliance', () => {
     const result = await computeCompliance(db, weekId);
     expect(result).not.toBeNull();
     expect(result!.weekViolations.some(v => v.violationType === 'apprentice-registration')).toBe(true);
+  });
+
+  it('COMP-FIX-01: violation fires for Monday when 1 JW + 1 App on Monday, but NOT for Friday with no App', async () => {
+    // Regression test: daily check must fire only on days where ratio is exceeded.
+    // Monday: 1 JW + 1 App → ratio 1:1 > 1:3 → violation
+    // Friday: 1 JW + 0 App → no violation
+    const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
+    const weekId = await seedPayrollWeek(cookie, projectId, '2025-07-05', 30);
+    // JW: Monday and Friday
+    await seedEntry(cookie, weekId, workerId, classificationId, {
+      monSt: 8, friSt: 8,
+      baseRateSnapshot: 30,
+      fringeRateSnapshot: 10,
+      grossWages: 640,
+    });
+    // Apprentice: Monday only
+    const { workerId: appId, classificationId: appClassId } = await seedApprenticeWorker(cookie, projectId);
+    await seedEntry(cookie, weekId, appId, appClassId, {
+      monSt: 8,
+      baseRateSnapshot: 20,
+      fringeRateSnapshot: 5,
+      grossWages: 200,
+    });
+
+    const result = await computeCompliance(db, weekId);
+    expect(result).not.toBeNull();
+    const ratioViolations = result!.weekViolations.filter(v => v.violationType === 'apprentice-ratio-daily');
+    // Should have exactly 1 violation (Monday) — Friday has no apprentice, no violation
+    expect(ratioViolations).toHaveLength(1);
+    expect(ratioViolations[0].detail).toContain('mon');
+    expect(ratioViolations[0].apprenticeHours).toBe(1);
+    expect(ratioViolations[0].journeyworkerHours).toBe(1);
   });
 
   // ── NY Daily OT Rule ─────────────────────────────────────────────────────
@@ -737,7 +812,7 @@ describe('computeCompliance', () => {
   });
 
   it('COMP-03: hasViolations is true when weekViolations is non-empty even if violations[] is empty', async () => {
-    // 30 JW hours, 20 apprentice hours — only ratio violation, no wage violations
+    // 1 JW + 1 apprentice on same day — daily ratio violation fires (no wage violations)
     const { projectId, workerId, classificationId, cookie } = await seedProjectAndWorker();
     const weekId = await seedPayrollWeek(cookie, projectId, '2025-05-07', 16);
     // JW correct wages — no under-wage violation
@@ -748,7 +823,8 @@ describe('computeCompliance', () => {
       fringeRateSnapshot: 10,
       grossWages: jwExpected,
     });
-    // Apprentice: 20 hours with correct wages — no under-wage violation
+    // Apprentice: hours on Mon-Wed with correct wages — no under-wage violation
+    // But 1 App : 1 JW on each day exceeds 1:3 daily ratio → fires apprentice-ratio-daily
     const { workerId: appId, classificationId: appClassId } = await seedApprenticeWorker(cookie, projectId);
     const appExpected = 20 * 20 + 20 * 5; // 400 + 100 = 500
     await seedEntry(cookie, weekId, appId, appClassId, {
@@ -760,8 +836,9 @@ describe('computeCompliance', () => {
 
     const result = await computeCompliance(db, weekId);
     expect(result).not.toBeNull();
-    expect(result!.violations).toHaveLength(0);        // no per-entry violations
-    expect(result!.weekViolations).toHaveLength(1);    // 1 ratio violation
+    expect(result!.violations).toHaveLength(0);        // no per-entry wage violations
+    const ratioViolations = result!.weekViolations.filter(v => v.violationType === 'apprentice-ratio-daily');
+    expect(ratioViolations.length).toBeGreaterThan(0); // daily ratio violation(s) fired
     expect(result!.hasViolations).toBe(true);          // true because weekViolations non-empty
   });
 
@@ -898,7 +975,7 @@ describe('computeCompliance', () => {
       v => v.violationType === 'apprentice-trade-ratio',
     );
     expect(tradeRatioViolations).toHaveLength(0);
-    // Note: legacy 'apprentice-ratio' (COMP-03) may still fire — that is unrelated to COMP-04.
+    // Note: 'apprentice-ratio-daily' (COMP-03) may still fire for days with ratio exceeded — unrelated to COMP-04.
   });
 
   it('COMP-04: checks ratios per day, not balanced weekly totals', async () => {
