@@ -19,6 +19,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { RateProvenance } from '../components/ui/RateProvenance';
 import { PhotoCapture } from '../components/field/PhotoCapture';
+import { MobilePayrollEntryCard } from '../components/payroll/MobilePayrollEntryCard';
+import type { MobilePayrollEntry } from '../components/payroll/MobilePayrollEntryCard';
 
 const WH347_DEF = "The U.S. Department of Labor's official certified payroll form. Required weekly for federal prevailing wage projects. Submit to your contracting officer within 7 days of the week ending date.";
 const ECPR_XML_DEF = "Electronic Certified Payroll Report — Washington State's digital submission format. Required for public works projects in WA. Exported as an XML file and uploaded to L&I's online system.";
@@ -801,6 +803,43 @@ export function PayrollWeekDetailPage() {
         deductions: e.deductions,
         netPay: e.netPay,
         subcontractorId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-week', weekId] });
+    },
+  });
+
+  // MOB-13: Mobile day-level hour update — PUT full entry with one field changed
+  const updateHoursMutation = useMutation({
+    mutationFn: async ({
+      entryRow,
+      day,
+      type,
+      value,
+    }: {
+      entryRow: PayrollEntryRow;
+      day: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+      type: 'st' | 'ot';
+      value: number;
+    }) => {
+      const e = entryRow.entry;
+      const fieldKey = `${day}${type === 'st' ? 'St' : 'Ot'}` as keyof typeof e;
+      const updated = { ...e, [fieldKey]: value };
+      return api.put(`/payroll/entries/${e.id}`, {
+        payrollWeekId: updated.payrollWeekId,
+        workerId: updated.workerId,
+        classificationId: updated.classificationId,
+        monSt: updated.monSt, tueSt: updated.tueSt, wedSt: updated.wedSt, thuSt: updated.thuSt,
+        friSt: updated.friSt, satSt: updated.satSt, sunSt: updated.sunSt,
+        monOt: updated.monOt, tueOt: updated.tueOt, wedOt: updated.wedOt, thuOt: updated.thuOt,
+        friOt: updated.friOt, satOt: updated.satOt, sunOt: updated.sunOt,
+        baseRateSnapshot: updated.baseRateSnapshot,
+        fringeRateSnapshot: updated.fringeRateSnapshot,
+        grossWages: updated.grossWages,
+        deductions: updated.deductions,
+        netPay: updated.netPay,
+        subcontractorId: updated.subcontractorId,
       });
     },
     onSuccess: () => {
@@ -3078,70 +3117,45 @@ export function PayrollWeekDetailPage() {
               <h2 className="text-base font-semibold text-gray-900">Payroll Entries</h2>
             </div>
 
-            {/* Mobile card list (< sm) */}
+            {/* Mobile card list (< sm) — MOB-13: accordion day-selector cards */}
             <div className="sm:hidden divide-y divide-gray-100">
-              {entries.map((row, index) => {
-                const e = row.entry;
-                const totalSt = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
-                const totalOt = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
-                const violation = violationsByEntryId.get(e.id);
-                return (
-                  <div
-                    key={e.id}
-                    id={`payroll-entry-mobile-${e.id}`}
-                    tabIndex={-1}
-                    className={cn(
-                      'px-4 py-4 min-h-[56px] scroll-mt-24 outline-none transition-colors',
-                      highlightedEntryId === e.id ? 'ring-2 ring-brand-gold bg-brand-gold/10' : index % 2 === 0 ? 'bg-white' : 'bg-surface-muted',
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <p className="font-semibold text-gray-900 text-sm">{row.workerName}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{row.tradeDescription}</p>
-                      </div>
-                      <div className="shrink-0">
-                        {violation ? (
-                          <Badge variant="violation">{violationLabel(violation.violationType)}</Badge>
-                        ) : (
-                          <Badge variant="compliant">OK</Badge>
-                        )}
-                      </div>
+              <div className="p-3 space-y-3">
+                {entries.map((row) => {
+                  const e = row.entry;
+                  // Cast to MobilePayrollEntry — shape is identical
+                  const mobileEntry = e as unknown as MobilePayrollEntry;
+                  // Build a minimal worker object from projectWorkers
+                  const w = projectWorkers.find((pw) => pw.id === e.workerId);
+                  const mobileWorker = {
+                    id: e.workerId,
+                    name: row.workerName,
+                    classifications: w?.classifications ?? [],
+                  };
+                  return (
+                    <div
+                      key={e.id}
+                      id={`payroll-entry-mobile-${e.id}`}
+                      tabIndex={-1}
+                      className="scroll-mt-24 outline-none"
+                    >
+                      <MobilePayrollEntryCard
+                        entry={mobileEntry}
+                        worker={mobileWorker}
+                        tradeDescription={row.tradeDescription}
+                        canEdit={!week?.submittedAt}
+                        isEditing={false}
+                        onUpdateHours={(entryId, day, type, value) => {
+                          updateHoursMutation.mutate({ entryRow: row, day, type, value });
+                        }}
+                        onDelete={(entryId) => {
+                          // Navigate to the editor page where delete is handled
+                          navigate(`/projects/${projectId}/payroll/${weekId}/edit?entryId=${entryId}&field=deductions`);
+                        }}
+                      />
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
-                      <div>
-                        <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-0.5">Hours</p>
-                        <p>{totalSt} ST / {totalOt} OT</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-0.5">Base / Fringe</p>
-                        <RateProvenance
-                          baseRate={e.baseRateSnapshot}
-                          fringeRate={e.fringeRateSnapshot}
-                          sourceLabel="project wage source"
-                          classificationLabel={row.tradeDescription}
-                          override={Boolean(row.overrideClassificationId)}
-                          compact
-                        />
-                      </div>
-                      <div>
-                        <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-0.5">Net Pay</p>
-                        <p className="font-semibold text-gray-900">{e.netPay !== null ? `$${e.netPay.toFixed(2)}` : '—'}</p>
-                      </div>
-                    </div>
-                    {violation && violation.violationType === 'cwhssa-ot' && (
-                      <div className="mt-2 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-                        CWHSSA OT: expected ${violation.expected.toFixed(2)}, paid ${violation.actual.toFixed(2)} (delta ${violation.delta.toFixed(2)})
-                      </div>
-                    )}
-                    {violation && violation.violationType === 'under-wage' && (
-                      <div className="mt-2 flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                        Under-Wage: expected ${violation.expected.toFixed(2)}, paid ${violation.actual.toFixed(2)} (delta ${violation.delta.toFixed(2)})
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
               <div className="px-4 py-3 bg-gray-50 text-xs font-semibold text-gray-700 flex justify-between">
                 <span>Total Net Pay</span>
                 <span>${entries.reduce((s, r) => s + (r.entry.netPay ?? 0), 0).toFixed(2)}</span>
