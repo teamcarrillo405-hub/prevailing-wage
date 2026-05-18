@@ -11,7 +11,7 @@ import { Button } from '../ui/Button';
 
 const RegisterSchema = z.object({
   companyName: z.string().min(2, 'Enter your company name'),
-  hccMembershipNumber: z.string().min(3, 'Enter your HCC membership number'),
+  hccMembershipNumber: z.string().optional(),
   email: z.string().email('Enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   inviteCode: z.string().optional(),
@@ -35,7 +35,7 @@ export function RegisterForm() {
     try {
       await api.post('/auth/register', {
         companyName: data.companyName,
-        hccMembershipNumber: data.hccMembershipNumber,
+        hccMembershipNumber: data.hccMembershipNumber || undefined,
         email: data.email,
         password: data.password,
         inviteCode: data.inviteCode || undefined,
@@ -61,8 +61,8 @@ export function RegisterForm() {
         id="reg-hcc"
         type="text"
         autoComplete="off"
-        label="HCC membership number"
-        help="Used to verify member access. No subscription payment is collected during signup."
+        label="HCC Member # (optional)"
+        help="Leave blank if not an HCC member — you can link your membership later in Settings."
         error={errors.hccMembershipNumber?.message}
         {...register('hccMembershipNumber')}
       />
