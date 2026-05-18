@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileCheck, ExternalLink, Info } from 'lucide-react';
+import { FileCheck, ExternalLink, Info, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import { enqueueRequest } from '../lib/offlineQueue';
 import { Layout } from '../components/shared/Layout';
@@ -36,6 +36,9 @@ const PROVIDER_LABELS: Record<string, string> = {
   sage_300: 'Sage 300 CRE',
   sage_100: 'Sage 100',
 };
+
+// Violation types that block WH-347 export — must be resolved before certification
+const BLOCKING_VIOLATION_TYPES: ComplianceViolation['violationType'][] = ['under-wage'];
 
 function PayrollWorkZone({
   id,
@@ -670,6 +673,10 @@ export function PayrollWeekDetailPage() {
   const [importParsing, setImportParsing] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccessBanner, setImportSuccessBanner] = useState<string | null>(null);
+
+  // Override modal state — "Download anyway" when blocking violations present (PAY-UX-02)
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideInput, setOverrideInput] = useState('');
 
   const queryClient = useQueryClient();
   const [showSubmitForm, setShowSubmitForm] = useState(false);
@@ -1558,6 +1565,19 @@ export function PayrollWeekDetailPage() {
   const hasSubmitReadyBlockers = (submitReadyData?.blockers ?? 0) > 0;
   const canGenerateCertifiedPayroll = hasPayrollEntries && payRowsComplete && !hasBlockingCompliance && !hasSubmitReadyBlockers;
   const canMarkSubmitted = canGenerateCertifiedPayroll && Boolean(week && !week.submittedAt);
+
+  // Readiness banner severity — PAY-UX-01
+  const allViolations = complianceData?.violations ?? [];
+  const hasBlockingViolations = allViolations.some(v => BLOCKING_VIOLATION_TYPES.includes(v.violationType))
+    || (complianceData?.deductionViolations?.length ?? 0) > 0;
+  const blockingViolationCount = allViolations.filter(v => BLOCKING_VIOLATION_TYPES.includes(v.violationType)).length
+    + (complianceData?.deductionViolations?.length ?? 0);
+  const warningViolationCount = allViolations.filter(v => !BLOCKING_VIOLATION_TYPES.includes(v.violationType)).length
+    + (complianceData?.weekViolations?.length ?? 0);
+  const bannerSeverity: 'success' | 'warning' | 'error' =
+    hasBlockingViolations ? 'error'
+    : (allViolations.length > 0 || (complianceData?.weekViolations?.length ?? 0) > 0) ? 'warning'
+    : 'success';
   const payrollTotals = entries.reduce(
     (totals, row) => {
       const entry = row.entry;
@@ -2385,6 +2405,24 @@ export function PayrollWeekDetailPage() {
             <span className="text-xs text-amber-600 font-medium shrink-0">Auto-saving...</span>
           )}
         </div>
+        {/* Readiness banner — PAY-UX-01: sticky top indicator showing green/amber/red certification status */}
+        {!isLoading && !isError && complianceData && (
+          <div className={`sticky top-0 z-10 px-4 py-2.5 flex items-center gap-2 text-sm font-medium border-b mb-4 ${
+            bannerSeverity === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-700' :
+            bannerSeverity === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-700' :
+            'bg-red-500/10 border-red-500/20 text-red-700'
+          }`}>
+            {bannerSeverity === 'success' && (
+              <><CheckCircle className="h-4 w-4 shrink-0" /><span>Ready to certify</span></>
+            )}
+            {bannerSeverity === 'warning' && (
+              <><AlertTriangle className="h-4 w-4 shrink-0" /><span>{warningViolationCount} warning{warningViolationCount !== 1 ? 's' : ''} — review before certifying</span></>
+            )}
+            {bannerSeverity === 'error' && (
+              <><XCircle className="h-4 w-4 shrink-0" /><span>{blockingViolationCount} violation{blockingViolationCount !== 1 ? 's' : ''} — resolve before downloading WH-347</span></>
+            )}
+          </div>
+        )}
         {!isLoading && !isError && !week?.submittedAt && (
           <PayrollWorkZone
           eyebrow="Command Center"
@@ -3406,19 +3444,42 @@ export function PayrollWeekDetailPage() {
               </Link>
             )}
             {weekId && (
-              <span className="inline-flex w-full items-center gap-1 sm:w-auto">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                  disabled={generating || !canGenerateCertifiedPayroll}
-                  onClick={handleDownloadClick}
-                >
-                  {generating ? 'Generating...' : 'Download WH-347'}
-                </Button>
-                <Tooltip content={canGenerateCertifiedPayroll
-                  ? 'Required form for all federal Davis-Bacon projects under 29 CFR Part 3. Confirm the agency-required WH-347 revision before submission.'
-                  : 'Complete payroll entries and clear blocking compliance issues before generating WH-347 (required under 29 CFR Part 3).'} />
+              <span className="inline-flex w-full flex-col gap-1 sm:w-auto">
+                <span className="inline-flex w-full items-center gap-1 sm:w-auto">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={`w-full sm:w-auto ${hasBlockingViolations ? 'border-red-400 text-red-600 opacity-60 cursor-not-allowed' : ''}`}
+                    disabled={generating || !canGenerateCertifiedPayroll || hasBlockingViolations}
+                    onClick={hasBlockingViolations ? undefined : handleDownloadClick}
+                    title={
+                      hasBlockingViolations
+                        ? 'Resolve violations before downloading WH-347'
+                        : bannerSeverity === 'warning'
+                        ? `${warningViolationCount} warning(s) present — review recommended`
+                        : 'Download WH-347'
+                    }
+                  >
+                    {generating ? 'Generating...' : 'Download WH-347'}
+                  </Button>
+                  <Tooltip content={
+                    hasBlockingViolations
+                      ? 'Resolve compliance violations before generating WH-347. Use the "Download anyway" override if authorized to certify despite issues.'
+                      : canGenerateCertifiedPayroll
+                      ? 'Required form for all federal Davis-Bacon projects under 29 CFR Part 3. Confirm the agency-required WH-347 revision before submission.'
+                      : 'Complete payroll entries and clear blocking compliance issues before generating WH-347 (required under 29 CFR Part 3).'
+                  } />
+                </span>
+                {/* Override option — PAY-UX-03: download despite blocking violations */}
+                {hasBlockingViolations && (
+                  <button
+                    type="button"
+                    onClick={() => { setOverrideInput(''); setShowOverrideModal(true); }}
+                    className="text-xs text-gray-500 underline text-left mt-0.5 hover:text-gray-700"
+                  >
+                    Download anyway (override)
+                  </button>
+                )}
               </span>
             )}
             {/* STATE_FORMS registry-driven primary download button (STATE-12, NFR-06) */}
@@ -5316,6 +5377,72 @@ export function PayrollWeekDetailPage() {
                   onClick={handleContinueAfterPreflight}
                 >
                   {exportPreflight?.blockers ? 'Resolve Blockers First' : 'Continue Export'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Override modal — PAY-UX-03: allows export despite blocking violations after explicit confirmation */}
+        {showOverrideModal && (
+          <div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) { setShowOverrideModal(false); setOverrideInput(''); }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') { setShowOverrideModal(false); setOverrideInput(''); }
+            }}
+            tabIndex={-1}
+          >
+            <Card className="max-w-md w-full mx-4">
+              <div className="flex items-center gap-2 mb-3">
+                <XCircle className="h-5 w-5 text-red-600 shrink-0" />
+                <h2 className="text-base font-headline text-gray-900">Override Export Gate</h2>
+              </div>
+              <p className="text-sm text-gray-700 mb-2">
+                This week has <strong>{blockingViolationCount} blocking violation{blockingViolationCount !== 1 ? 's' : ''}</strong> that must be resolved before certifying payroll under 29 CFR Part 3.
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Downloading despite violations may constitute an inaccurate certified payroll record. This action will be logged.
+              </p>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Type <span className="font-mono bg-gray-100 px-1 rounded">OVERRIDE</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={overrideInput}
+                onChange={(e) => setOverrideInput(e.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono mb-4 focus:outline-none focus:ring-2 focus:ring-red-400"
+                placeholder="OVERRIDE"
+                autoFocus
+              />
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setShowOverrideModal(false); setOverrideInput(''); }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={overrideInput !== 'OVERRIDE' || generating}
+                  onClick={() => {
+                    console.log('[AUDIT] WH-347 override export', {
+                      weekId,
+                      projectId,
+                      blockingViolationCount,
+                      timestamp: new Date().toISOString(),
+                      action: 'wh347-override-download',
+                    });
+                    setShowOverrideModal(false);
+                    setOverrideInput('');
+                    void handleConfirmedDownload();
+                  }}
+                >
+                  Download Anyway
                 </Button>
               </div>
             </Card>
