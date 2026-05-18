@@ -3403,8 +3403,8 @@ export function PayrollWeekDetailPage() {
                   {generating ? 'Generating...' : 'Download WH-347'}
                 </Button>
                 <Tooltip content={canGenerateCertifiedPayroll
-                  ? 'Federal Certified Payroll Report required for Davis-Bacon Act projects. Confirm the agency-required WH-347 revision before submission.'
-                  : 'Complete payroll entries and clear blocking compliance issues before generating WH-347.'} />
+                  ? 'Required form for all federal Davis-Bacon projects under 29 CFR Part 3. Confirm the agency-required WH-347 revision before submission.'
+                  : 'Complete payroll entries and clear blocking compliance issues before generating WH-347 (required under 29 CFR Part 3).'} />
               </span>
             )}
             {/* STATE_FORMS registry-driven primary download button (STATE-12, NFR-06) */}

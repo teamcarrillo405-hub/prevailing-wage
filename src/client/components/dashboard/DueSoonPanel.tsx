@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { AlertCircle, Clock, CalendarCheck, ChevronRight } from 'lucide-react';
+import { AlertCircle, Clock, CalendarCheck, ChevronRight, CheckCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface DueSoonItem {
@@ -43,7 +43,17 @@ export function DueSoonPanel() {
     );
   }
 
-  if (!data || data.length === 0) return null;
+  if (!data || data.length === 0) {
+    return (
+      <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4 flex items-center gap-3">
+        <CheckCircle className="h-5 w-5 text-green-500 shrink-0" aria-hidden="true" />
+        <div>
+          <p className="text-sm font-medium text-green-400">All payroll is current</p>
+          <p className="text-xs text-surface-muted mt-0.5">No deadlines due this week.</p>
+        </div>
+      </div>
+    );
+  }
 
   const overdue = data.filter((d) => d.status === 'overdue');
   const upcoming = data.filter((d) => d.status !== 'overdue');

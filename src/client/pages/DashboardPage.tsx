@@ -567,7 +567,7 @@ export function DashboardPage() {
 
       {/* Premium dark hero — replaces photo background strip */}
       <div
-        className="dashboard-bg relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 -mt-8 pt-10 pb-10 mb-8 overflow-hidden"
+        className="dashboard-bg relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 -mt-8 pt-5 pb-5 mb-8 overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #09090b 0%, #18181b 55%, #111111 100%)' }}
       >
         {/* Dot-grid texture */}
@@ -591,10 +591,10 @@ export function DashboardPage() {
             <p className="text-xs font-semibold text-brand-gold uppercase tracking-widest mb-3">
               HCC Prevailing Wage
             </p>
-            <h1 className="font-headline text-4xl sm:text-5xl text-white mb-2 leading-tight">
+            <h1 className="font-headline text-3xl sm:text-4xl text-white mb-2 leading-tight">
               Project Command Center
             </h1>
-            <p className="text-sm text-gray-400 max-w-md">
+            <p className="hidden sm:block text-sm text-gray-400 max-w-md">
               Start with today's blockers, then open the project that needs payroll, rates, evidence, or export work.
             </p>
           </div>

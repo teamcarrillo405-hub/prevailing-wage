@@ -245,6 +245,7 @@ const FILTER_CHIPS = [
   { key: 'all', label: 'All' },
   { key: 'journeyworker', label: 'Journeyman' },
   { key: 'apprentice', label: 'Apprentice' },
+  { key: 'needs-attention', label: 'Needs attention' },
 ];
 
 export function WorkersPage() {
@@ -254,7 +255,7 @@ export function WorkersPage() {
 
   const [form, setForm] = useState(blankWorkerForm);
   const [formError, setFormError] = useState('');
-  const [laborFilter, setLaborFilter] = useState<'all' | 'journeyworker' | 'apprentice'>('all');
+  const [laborFilter, setLaborFilter] = useState<'all' | 'journeyworker' | 'apprentice' | 'needs-attention'>('all');
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -312,11 +313,18 @@ export function WorkersPage() {
   const hasWd = wdData?.data?.hasWd ?? false;
   const wdNumber = wdData?.data?.wdNumber;
   const allWorkers = data?.data?.workers ?? [];
+  const attentionWorkers = allWorkers.filter(w =>
+    !w.ssnLast4 || !w.ssnLast4.trim() ||
+    ![w.addressStreet, w.addressCity, w.addressState, w.addressZip].some(Boolean)
+  );
+  const attentionCount = attentionWorkers.length;
   const workers = laborFilter === 'all'
     ? allWorkers
-    : allWorkers.filter(w =>
-        w.classifications.some(c => c.laborType === laborFilter)
-      );
+    : laborFilter === 'needs-attention'
+      ? attentionWorkers
+      : allWorkers.filter(w =>
+          w.classifications.some(c => c.laborType === laborFilter)
+        );
 
   // When user is searching, render search hits; when input is empty, render full list.
   const isSearching = debouncedQuery.trim().length > 0;
@@ -682,22 +690,36 @@ export function WorkersPage() {
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Roster view</p>
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Filter workers by labor type">
-                  {FILTER_CHIPS.map(chip => (
-                    <button
-                      key={chip.key}
-                      type="button"
-                      onClick={() => setLaborFilter(chip.key as typeof laborFilter)}
-                      aria-pressed={laborFilter === chip.key}
-                      className={cn(
-                        'inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-semibold transition-colors',
-                        laborFilter === chip.key
-                          ? 'border-gray-950 bg-gray-950 text-white'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-brand-gold hover:text-gray-950'
-                      )}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
+                  {FILTER_CHIPS.map(chip => {
+                    const isAttention = chip.key === 'needs-attention';
+                    const isActive = laborFilter === chip.key;
+                    return (
+                      <button
+                        key={chip.key}
+                        type="button"
+                        onClick={() => setLaborFilter(chip.key as typeof laborFilter)}
+                        aria-pressed={isActive}
+                        className={cn(
+                          'inline-flex min-h-11 items-center gap-1.5 rounded-md border px-4 text-sm font-semibold transition-colors',
+                          isActive
+                            ? 'border-gray-950 bg-gray-950 text-white'
+                            : isAttention && attentionCount > 0
+                              ? 'border-amber-500 bg-white text-amber-600 hover:border-amber-600 hover:text-amber-700'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-brand-gold hover:text-gray-950'
+                        )}
+                      >
+                        {chip.label}
+                        {isAttention && attentionCount > 0 && (
+                          <span className={cn(
+                            'rounded-full px-1.5 py-0.5 text-xs font-bold',
+                            isActive ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
+                          )}>
+                            {attentionCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

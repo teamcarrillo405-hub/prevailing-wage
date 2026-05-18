@@ -86,6 +86,9 @@ const PilotIntakePage = React.lazy(() =>
 const CompetitiveReadinessPage = React.lazy(() =>
   import('./pages/CompetitiveReadinessPage').then(m => ({ default: m.CompetitiveReadinessPage }))
 );
+const ForgotPasswordPage = React.lazy(() =>
+  import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -146,6 +149,7 @@ export default function App() {
 
               {/* Login — unwrapped public route (stays as-is, Phase 14 polishes it) */}
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
               {/* Protected routes — unauthenticated users redirected to /login */}
               <Route element={<ProtectedRoute />}>
