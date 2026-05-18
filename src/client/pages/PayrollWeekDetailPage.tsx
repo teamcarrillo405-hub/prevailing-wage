@@ -1013,6 +1013,28 @@ export function PayrollWeekDetailPage() {
     COOK: { downloadLabel: 'Download Cook County CPR', route: 'cook-cpr' },
     DC: { downloadLabel: 'Download DC DOES CPR', route: 'dc-ocp' },
     'LA-COUNTY': { downloadLabel: 'Download LA County DPW CPR', route: 'la-county-cpr' },
+    // Federal Davis-Bacon only states — no state PW law, WH-347 is the required form
+    AL: { downloadLabel: 'Download WH-347 (AL)', route: 'wh347' },
+    AR: { downloadLabel: 'Download WH-347 (AR)', route: 'wh347' },
+    AZ: { downloadLabel: 'Download WH-347 (AZ)', route: 'wh347' },
+    GA: { downloadLabel: 'Download WH-347 (GA)', route: 'wh347' },
+    IA: { downloadLabel: 'Download WH-347 (IA)', route: 'wh347' },
+    ID: { downloadLabel: 'Download WH-347 (ID)', route: 'wh347' },
+    IN: { downloadLabel: 'Download WH-347 (IN)', route: 'wh347' },
+    KS: { downloadLabel: 'Download WH-347 (KS)', route: 'wh347' },
+    LA: { downloadLabel: 'Download WH-347 (LA)', route: 'wh347' },
+    MI: { downloadLabel: 'Download WH-347 (MI)', route: 'wh347' },
+    MO: { downloadLabel: 'Download WH-347 (MO)', route: 'wh347' },
+    MS: { downloadLabel: 'Download WH-347 (MS)', route: 'wh347' },
+    NC: { downloadLabel: 'Download WH-347 (NC)', route: 'wh347' },
+    NE: { downloadLabel: 'Download WH-347 (NE)', route: 'wh347' },
+    OK: { downloadLabel: 'Download WH-347 (OK)', route: 'wh347' },
+    SC: { downloadLabel: 'Download WH-347 (SC)', route: 'wh347' },
+    SD: { downloadLabel: 'Download WH-347 (SD)', route: 'wh347' },
+    TN: { downloadLabel: 'Download WH-347 (TN)', route: 'wh347' },
+    UT: { downloadLabel: 'Download WH-347 (UT)', route: 'wh347' },
+    WI: { downloadLabel: 'Download WH-347 (WI)', route: 'wh347' },
+    WY: { downloadLabel: 'Download WH-347 (WY)', route: 'wh347' },
   };
   const stateFormConfig = STATE_FORMS[projectData?.data?.project?.locality_name?.toUpperCase() ?? '']
     ?? STATE_FORMS[projectData?.data?.project?.state?.toUpperCase() ?? '']
