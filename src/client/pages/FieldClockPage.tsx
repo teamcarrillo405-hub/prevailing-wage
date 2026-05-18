@@ -1,8 +1,8 @@
 // Phase 75 - Field Clock Page (MOB-08)
 // Route: /projects/:projectId/field
 // Mobile-optimized clock-in/clock-out page for field workers.
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState, useMemo } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Camera, Clock3, MapPin, PencilLine } from 'lucide-react';
 import { api } from '../lib/api';
@@ -47,6 +47,7 @@ function timeInputValue(iso: string): string {
 
 export function FieldClockPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -205,12 +206,13 @@ export function FieldClockPage() {
             <h1 className="mt-1 font-headline text-2xl font-bold text-gray-950">{project.name}</h1>
             <p className="mt-1 text-sm text-gray-500">{formatDate(selectedDate)}</p>
           </div>
-          <Link
-            to={`/projects/${projectId}`}
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
             className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-600 transition-colors hover:text-brand-gold"
           >
             Back to project
-          </Link>
+          </button>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)]">
@@ -455,7 +457,7 @@ export function FieldClockPage() {
                                   setEditTime(timeInputValue(punch.punchedAt));
                                   setCorrectionError(null);
                                 }}
-                                className="mt-1 text-xs font-semibold text-brand-navy hover:underline"
+                                className="mt-1 text-xs font-semibold text-nav-dark hover:underline"
                               >
                                 Edit
                               </button>
@@ -484,7 +486,7 @@ export function FieldClockPage() {
                                   type="button"
                                   onClick={() => savePunchCorrection(punch.id)}
                                   disabled={correctionBusy}
-                                  className="rounded bg-brand-navy px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                                  className="rounded bg-nav-dark px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                                 >
                                   Save correction
                                 </button>
