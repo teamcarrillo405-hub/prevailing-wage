@@ -4,6 +4,7 @@ ALTER TABLE `projects` ADD COLUMN `ky_contract_id` text;
 ALTER TABLE `projects` ADD COLUMN `nm_contract_id` text;
 --> statement-breakpoint
 ALTER TABLE `projects` ADD COLUMN `nv_contract_id` text;
+--> statement-breakpoint
 ALTER TABLE `projects` ADD COLUMN `nv_contractor_license` text;
 --> statement-breakpoint
 ALTER TABLE `projects` ADD COLUMN `ri_contract_id` text;
