@@ -56,6 +56,7 @@ import { dashboardRouter } from './routes/dashboard.js';
 import samGovRouter from './routes/samGov.js';
 import securityRouter from './routes/security.js';
 import { roiLeadsRouter } from './routes/roiLeads.js';
+import contactRouter from './routes/contact.js';
 import { aiClassifyRouter } from './routes/aiClassify.js';
 import { growthRouter } from './routes/growth.js';
 import { ssoRouter } from './routes/sso.js';
@@ -209,6 +210,7 @@ app.get('/api/ready', (_req, res) => {
 });
 app.use('/api/sub-upload', subUploadRouter); // public — no auth required
 app.use('/api/roi-leads', roiLeadsRouter); // public — no auth required
+app.use('/api/contact', contactRouter); // public — no auth required
 app.use('/api/ai', aiClassifyRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/mfa', mfaRouter);
