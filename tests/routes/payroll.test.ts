@@ -63,7 +63,7 @@ describe('payroll routes', () => {
     const res = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-01-05', payrollNumber: 1 });
+      .send({ projectId, weekEndingDate: '2025-01-04', payrollNumber: 1 });
 
     expect(res.status).toBe(201);
     expect(typeof res.body.id).toBe('string');
@@ -77,7 +77,7 @@ describe('payroll routes', () => {
     const createRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-01-12', payrollNumber: 2 });
+      .send({ projectId, weekEndingDate: '2025-01-11', payrollNumber: 2 });
 
     const weekId = createRes.body.id as string;
 
@@ -132,7 +132,7 @@ describe('payroll routes', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-01-26', payrollNumber: 4 });
+      .send({ projectId, weekEndingDate: '2025-01-25', payrollNumber: 4 });
     const weekId = weekRes.body.id as string;
 
     const entryRes = await supertest(app)
@@ -222,7 +222,7 @@ describe('payroll routes', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-02-02', payrollNumber: 5 });
+      .send({ projectId, weekEndingDate: '2025-02-01', payrollNumber: 5 });
     const weekId = weekRes.body.id as string;
 
     const entryRes = await supertest(app)
@@ -261,7 +261,7 @@ describe('payroll routes', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-01-19', payrollNumber: 3 });
+      .send({ projectId, weekEndingDate: '2025-01-18', payrollNumber: 3 });
 
     const weekId = weekRes.body.id as string;
 
@@ -292,12 +292,12 @@ describe('payroll routes', () => {
     await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-01-26', payrollNumber: 4 });
+      .send({ projectId, weekEndingDate: '2025-01-25', payrollNumber: 4 });
 
     await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-02-02', payrollNumber: 5 });
+      .send({ projectId, weekEndingDate: '2025-02-01', payrollNumber: 5 });
 
     const res = await supertest(app)
       .get(`/api/payroll/projects/${projectId}/weeks`)
@@ -318,7 +318,7 @@ describe('PATCH /api/payroll/weeks/:id/submit — SUB-01', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-03-23', payrollNumber: 10 });
+      .send({ projectId, weekEndingDate: '2026-03-21', payrollNumber: 10 });
     const weekId = weekRes.body.id as string;
 
     const res = await supertest(app)
@@ -343,7 +343,7 @@ describe('DELETE /api/payroll/weeks/:id/submit — SUB-03', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-03-23', payrollNumber: 11 });
+      .send({ projectId, weekEndingDate: '2026-03-21', payrollNumber: 11 });
     const weekId = weekRes.body.id as string;
 
     // Submit first
@@ -372,7 +372,7 @@ describe('DELETE /api/payroll/weeks/:id/submit — SUB-03', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-03-24', payrollNumber: 12 });
+      .send({ projectId, weekEndingDate: '2026-03-28', payrollNumber: 12 });
     const weekId = weekRes.body.id as string;
 
     const res = await supertest(app)
@@ -412,7 +412,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
     const wkRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-01-05', payrollNumber: 100 });
+      .send({ projectId, weekEndingDate: '2026-01-03', payrollNumber: 100 });
     const weekId = wkRes.body.id as string;
 
     // Create entry with hours
@@ -486,7 +486,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', cookie)
       .send({
         sourceWeekId,
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 101,
         preview: true,
       });
@@ -509,7 +509,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', cookie)
       .send({
         sourceWeekId,
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 102,
         preview: false,
       });
@@ -532,7 +532,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', cookie)
       .send({
         sourceWeekId,
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 103,
         preview: true,
       });
@@ -555,7 +555,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', cookie)
       .send({
         sourceWeekId,
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 104,
         preview: true,
       });
@@ -609,7 +609,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', cookie)
       .send({
         sourceWeekId,
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 105,
         preview: true,
       });
@@ -630,7 +630,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', cookie)
       .send({
         sourceWeekId,
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 106,
         preview: false,
       });
@@ -659,7 +659,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', cookie)
       .send({
         sourceWeekId,
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 107,
         preview: false,
       });
@@ -686,7 +686,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', cookie)
       .send({
         sourceWeekId: 'non-existent-week-id',
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 108,
         preview: true,
       });
@@ -706,7 +706,7 @@ describe('POST /api/payroll/weeks/copy — PAY-01 + PAY-02', () => {
       .set('Cookie', otherCookie)
       .send({
         sourceWeekId,
-        weekEndingDate: '2026-01-12',
+        weekEndingDate: '2026-01-10',
         payrollNumber: 109,
         preview: true,
       });
@@ -723,13 +723,13 @@ describe('server-side edit lock on submitted weeks — SUB-02', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-03-25', payrollNumber: 20 });
+      .send({ projectId, weekEndingDate: '2026-03-21', payrollNumber: 20 });
     const weekId = weekRes.body.id as string;
 
     await supertest(app)
       .patch(`/api/payroll/weeks/${weekId}/submit`)
       .set('Cookie', cookie)
-      .send({ submittedAt: '2026-03-25', submittedTo: 'DOL Region 9' });
+      .send({ submittedAt: '2026-03-21', submittedTo: 'DOL Region 9' });
 
     return { cookie, weekId, workerId, classificationId };
   }
@@ -785,7 +785,7 @@ describe('POST /api/payroll/weeks/amend — AMD-01 + AMD-03', () => {
     const wkRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-03-01', payrollNumber: 200 });
+      .send({ projectId, weekEndingDate: '2026-02-28', payrollNumber: 200 });
     const weekId = wkRes.body.id as string;
 
     // Create entry with hours and snapshots
@@ -805,7 +805,7 @@ describe('POST /api/payroll/weeks/amend — AMD-01 + AMD-03', () => {
     await supertest(app)
       .patch(`/api/payroll/weeks/${weekId}/submit`)
       .set('Cookie', cookie)
-      .send({ submittedAt: '2026-03-01', submittedTo: 'DOL Region 9' });
+      .send({ submittedAt: '2026-02-28', submittedTo: 'DOL Region 9' });
 
     return { weekId, workerId, classificationId };
   }
@@ -834,7 +834,7 @@ describe('POST /api/payroll/weeks/amend — AMD-01 + AMD-03', () => {
     const wkRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-03-08', payrollNumber: 201 });
+      .send({ projectId, weekEndingDate: '2026-03-07', payrollNumber: 201 });
     const weekId = wkRes.body.id as string;
 
     await supertest(app)
@@ -1021,7 +1021,7 @@ describe('GET /api/export/wh347 — AMD-02', () => {
     const wkRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-04-01', payrollNumber: 300 });
+      .send({ projectId, weekEndingDate: '2026-03-28', payrollNumber: 300 });
     const weekId = wkRes.body.id as string;
 
     await supertest(app)
@@ -1039,7 +1039,7 @@ describe('GET /api/export/wh347 — AMD-02', () => {
     await supertest(app)
       .patch(`/api/payroll/weeks/${weekId}/submit`)
       .set('Cookie', cookie)
-      .send({ submittedAt: '2026-04-01', submittedTo: 'DOL Region 9' });
+      .send({ submittedAt: '2026-03-28', submittedTo: 'DOL Region 9' });
 
     return { weekId };
   }
@@ -1090,7 +1090,7 @@ describe('DT hours - CAL-03', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-04-01', payrollNumber: 400 });
+      .send({ projectId, weekEndingDate: '2026-03-28', payrollNumber: 400 });
     const weekId = weekRes.body.id as string;
 
     const res = await supertest(app)
@@ -1126,7 +1126,7 @@ describe('DT hours - CAL-03', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2026-04-08', payrollNumber: 401 });
+      .send({ projectId, weekEndingDate: '2026-04-04', payrollNumber: 401 });
     const weekId = weekRes.body.id as string;
 
     const res = await supertest(app)
@@ -1177,7 +1177,7 @@ describe('PATCH /api/payroll/weeks/:id/ny-submit - STATE-05', () => {
     const res = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-01-05', payrollNumber: 1 });
+      .send({ projectId, weekEndingDate: '2025-01-04', payrollNumber: 1 });
     return res.body.id as string;
   }
 
@@ -1250,7 +1250,7 @@ describe('MA payroll entry fields (MA-03)', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-03-02', payrollNumber: 500 });
+      .send({ projectId, weekEndingDate: '2025-03-01', payrollNumber: 500 });
     const weekId = weekRes.body.id as string;
 
     const res = await supertest(app)
@@ -1288,7 +1288,7 @@ describe('MA payroll entry fields (MA-03)', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-03-09', payrollNumber: 501 });
+      .send({ projectId, weekEndingDate: '2025-03-08', payrollNumber: 501 });
     const weekId = weekRes.body.id as string;
 
     const res = await supertest(app)
@@ -1326,7 +1326,7 @@ describe('MA payroll entry fields (MA-03)', () => {
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-03-16', payrollNumber: 502 });
+      .send({ projectId, weekEndingDate: '2025-03-15', payrollNumber: 502 });
     const weekId = weekRes.body.id as string;
 
     // Create entry without MA fields
@@ -1390,7 +1390,7 @@ describe('PATCH /api/payroll/weeks/:id/il-submit', () => {
     const res = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
-      .send({ projectId, weekEndingDate: '2025-01-05', payrollNumber: 1 });
+      .send({ projectId, weekEndingDate: '2025-01-04', payrollNumber: 1 });
     return res.body.id as string;
   }
 
@@ -1444,8 +1444,11 @@ describe('GET /api/payroll/due-soon', () => {
     const projectId = await createProject(cookie);
     await createWorkerWithClassification(cookie, projectId);
 
-    // Create a week with a past date (overdue)
-    const pastDate = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
+    // Create a week with a past Saturday date (overdue) — federal projects require Saturday week-end
+    const now = new Date();
+    const daysSinceSat = (now.getUTCDay() + 1) % 7; // days since last Saturday (Sun=1,Mon=2,...,Sat=0)
+    const lastSat = new Date(now.getTime() - (daysSinceSat + 7) * 86_400_000); // at least 7 days ago
+    const pastDate = lastSat.toISOString().slice(0, 10);
     const wRes = await supertest(app)
       .post('/api/payroll/weeks')
       .set('Cookie', cookie)
@@ -1485,5 +1488,169 @@ describe('GET /api/payroll/due-soon', () => {
       .set('Cookie', cookie);
     expect(res.status).toBe(200);
     expect(res.body.find((r: any) => r.weekId === weekId)).toBeUndefined();
+  });
+});
+
+// ── Server-side guard tests — COMP-FIX-03, COMP-FIX-04, COMP-FIX-05 ─────────
+
+describe('server-side payroll entry guards (COMP-FIX-03 / COMP-FIX-05)', () => {
+  async function setupWeekForGuardTests(suffix: string) {
+    const cookie = await registerAndLogin(`guard-${suffix}`);
+    const projectId = await createProject(cookie);
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-01-03', payrollNumber: 1 });
+    const weekId = weekRes.body.id as string;
+    return { cookie, weekId, workerId, classificationId };
+  }
+
+  it('COMP-FIX-05: entry with baseRateSnapshot=0 and no WD in cache → 422 MISSING_WAGE_RATE', async () => {
+    // Use a unique state/county with no WD seeded so repair cannot succeed
+    const cookie = await registerAndLogin('guard-missing-rate');
+    const projRes = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Guard Test Project',
+        state: 'WY',
+        county: `guard-no-wd-county-${Date.now()}`,
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-01-01',
+        fundingType: 'federal',
+      });
+    const projectId = projRes.body.data?.project?.id as string;
+    const { workerId, classificationId } = await createWorkerWithClassification(cookie, projectId);
+    const weekRes = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-01-03', payrollNumber: 1 });
+    const weekId = weekRes.body.id as string;
+
+    const res = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        baseRateSnapshot: 0,
+        fringeRateSnapshot: 0,
+      });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('MISSING_WAGE_RATE');
+  });
+
+  it('COMP-FIX-03: entry where deductions ($200) > grossWages ($100) → 422 DEDUCTION_EXCEEDS_GROSS', async () => {
+    const { cookie, weekId, workerId, classificationId } = await setupWeekForGuardTests('deduction-cap');
+
+    const res = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 1, // 1 hour at $10/hr base + $0 fringe = $10 gross
+        baseRateSnapshot: 10.00,
+        fringeRateSnapshot: 0,
+        deductions: 200, // $200 deductions > $10 gross
+      });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('DEDUCTION_EXCEEDS_GROSS');
+    expect(res.body.message).toMatch(/cannot exceed gross wages/i);
+  });
+
+  it('COMP-FIX-03: entry where deductions equal grossWages → 201 (boundary OK)', async () => {
+    const { cookie, weekId, workerId, classificationId } = await setupWeekForGuardTests('deduction-eq');
+
+    const res = await supertest(app)
+      .post('/api/payroll/entries')
+      .set('Cookie', cookie)
+      .send({
+        payrollWeekId: weekId,
+        workerId,
+        classificationId,
+        monSt: 8,
+        baseRateSnapshot: 10.00,
+        fringeRateSnapshot: 0,
+        deductions: 80, // exactly $80 = 8 hours * $10/hr
+      });
+
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('COMP-FIX-04: federal week must end on Saturday', () => {
+  async function createFederalProject(cookie: string) {
+    const res = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Federal Saturday Test Project',
+        state: 'CA',
+        county: 'Los Angeles',
+        contractType: 'federal-davis-bacon',
+        awardDate: '2025-01-01',
+        fundingType: 'federal',
+      });
+    return res.body.data?.project?.id as string;
+  }
+
+  async function createStateProject(cookie: string) {
+    const res = await supertest(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({
+        name: 'State Saturday Test Project',
+        state: 'CA',
+        county: 'Los Angeles',
+        contractType: 'state-prevailing',
+        awardDate: '2025-01-01',
+        fundingType: 'state',
+      });
+    return res.body.data?.project?.id as string;
+  }
+
+  it('federal project: week ending on Sunday → 422 WEEK_MUST_END_SATURDAY', async () => {
+    const cookie = await registerAndLogin('comp-fix04-federal-sunday');
+    const projectId = await createFederalProject(cookie);
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-01-04', payrollNumber: 1 }); // Sunday
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('WEEK_MUST_END_SATURDAY');
+    expect(res.body.message).toMatch(/Saturday/i);
+  });
+
+  it('federal project: week ending on Saturday → 201 success', async () => {
+    const cookie = await registerAndLogin('comp-fix04-federal-saturday');
+    const projectId = await createFederalProject(cookie);
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-01-03', payrollNumber: 1 }); // Saturday
+
+    expect(res.status).toBe(201);
+  });
+
+  it('state project: week ending on Sunday → 201 success (no Saturday restriction)', async () => {
+    const cookie = await registerAndLogin('comp-fix04-state-sunday');
+    const projectId = await createStateProject(cookie);
+
+    const res = await supertest(app)
+      .post('/api/payroll/weeks')
+      .set('Cookie', cookie)
+      .send({ projectId, weekEndingDate: '2026-01-04', payrollNumber: 1 }); // Sunday — OK for state
+
+    expect(res.status).toBe(201);
   });
 });
