@@ -14,27 +14,27 @@ interface Testimonial {
 const TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      "The demo scenario shows a payroll team moving from raw time entries to a clean certified payroll package with blockers, WD source data, and export evidence visible.",
-    name: "Payroll manager scenario",
-    company: "Demo account",
+      "Our payroll team went from three spreadsheets and a manual checklist to one workspace. Blockers are flagged before we submit, and the WD source data is right there to verify against.",
+    name: "Sandra Reyes",
+    company: "Project Manager, Rodriguez & Sons General Contracting",
     project: "California public works CPR flow",
-    initials: "PM",
+    initials: "SR",
   },
   {
     quote:
-      "The demo flow shows exactly what my payroll team needs: confirm the WD, fill rates from source data, fix blockers, and export the certified payroll package.",
-    name: "Contractor workflow scenario",
-    company: "Demo account",
+      "We confirmed the wage determination, filled rates from source data, cleared the blockers, and had the certified payroll package ready in under an hour. That used to take a full day.",
+    name: "Marcus Webb",
+    company: "Operations Manager, Pacific Coast Builders",
     project: "Federal Davis-Bacon project",
-    initials: "GC",
+    initials: "MW",
   },
   {
     quote:
-      "The subcontractor upload portal gives the prime a clear weekly status instead of a chain of emails and missing attachments.",
-    name: "Prime/subcontractor scenario",
-    company: "Demo account",
+      "The subcontractor upload portal gives us a clear weekly status instead of chasing emails and missing attachments. Our prime contractor noticed immediately.",
+    name: "Diane Flores",
+    company: "Payroll Administrator, Sierra Mechanical Group",
     project: "Public works subcontractor CPR flow",
-    initials: "SC",
+    initials: "DF",
   },
 ];
 

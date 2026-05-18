@@ -286,7 +286,7 @@ function FaqSection() {
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.75fr_1.25fr]">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-gold">Questions</p>
-          <h2 className="mt-4 font-headline text-4xl font-bold text-gray-950">Short answers for the first demo.</h2>
+          <h2 className="mt-4 font-headline text-4xl font-bold text-gray-950">Frequently Asked Questions</h2>
         </div>
         <div className="divide-y divide-gray-200 border-y border-gray-200">
           {faqs.map(({ q, a }) => (
