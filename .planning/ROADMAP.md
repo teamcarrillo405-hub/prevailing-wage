@@ -22,6 +22,20 @@
 
 - ✅ **v3.0** Team & Integration — Phases 31-36 (shipped 2026-03-31)
 
+- ✅ **v4.0** Compliance Depth + Operations — Phases 37-46 (shipped 2026-04-07)
+
+- ✅ **v5.0** State Expansion (CA/WA/NY/IL/TX/FL/MA/NJ) — Phases 47-59 (shipped)
+
+- ✅ **v6.0** Mobile Field + Apprenticeship + DBE — Phases 83-106 (shipped 2026-04-27)
+
+- ✅ **v7.0** Search + Scheduled Reports + QBO Sync — Phases 85-92 (shipped)
+
+- ✅ **v8.0** Security + SOC2 + MFA — Phases 93-125 (shipped 2026-04-27)
+
+- 🚧 **v9.0** Construction ERP Integrations — Phases 126-134 (in progress)
+
+- 📋 **v10.0** Complete State + County + Local Coverage — Phases 135-150 (planned)
+
 
 
 ## Phases
@@ -2802,4 +2816,711 @@ Plans:
 | 132. Viewpoint Vista Adapter Foundation | v9.0 | 0/TBD | Not started | - |
 | 133. Viewpoint Vista Compliance Push | v9.0 | 0/TBD | Not started | - |
 | 134. Integration Dashboard | v9.0 | 0/TBD | Not started | - |
+
+---
+
+## v10.0 Complete State + County + Local Prevailing Wage Coverage (Phases 135-150)
+
+**Milestone goal:** Every US jurisdiction where prevailing wage law applies — all 50 states for federal Davis-Bacon (WH-347 already done), all ~20 states with their own prevailing wage laws and state-specific certified payroll forms, all state-level county/city wage determination systems — is fully supported with correct wage lookups, compliance calculations, state-specific PDF/XML forms, and rate-snapshot enforcement. A contractor working in any US market can run a complete payroll cycle end-to-end without leaving the app.
+
+**Coverage baseline entering v10.0:**
+- Federal WH-347: ✅ All 50 states (federal-funded projects)
+- State forms built: CA, WA, NY, IL, TX, FL, MA, NJ, MN, VA (10 states)
+- County/local rates: none (no county-level rate lookup or county selector on any form)
+
+**Coverage target after v10.0:**
+- Federal WH-347: all 50 states (no change — already complete)
+- State certified payroll forms: all 20 states with active state prevailing wage laws
+- County wage rates: CA (58 counties), NY (62 counties + NYC DDC), IL (102 counties + Chicago CDOT), WA (39 counties), OR (Metro Portland), MD (24 counties), NJ (21 counties), MA (14 counties), OH (88 counties), PA (67 counties)
+- Municipal/local rates: NYC DDC trades, Chicago DOT, Seattle area, Boston area
+
+**States with NO state prevailing wage law (federal WH-347 is sufficient — already covered):**
+AL, AR, AZ, GA, IA, ID, IN, KS, LA, MS, NC, ND, NE, NH, OK, SC, SD, TN, UT, VT, WY (21 states — no action needed)
+
+**Entering v10.0:** Phase 134 complete (v9.0 ERP integrations shipped). STATE_FORMS registry exists (Phase 47). SSN encryption live (Phase 31). County field exists on projects table as freetext (needs structured replacement). State comparison pattern locked to `.toUpperCase()` (Phase 47).
+
+---
+
+## Phases (v10.0)
+
+- [ ] **Phase 135: State Coverage Infrastructure** — county_wage_determinations table, state_wage_sources table, county selector on ProjectForm, STATE_FORMS registry v2 with 50-state coverage map, county-aware rate lookup in wdolSync.ts
+- [ ] **Phase 136: Pacific West — AK, HI, OR, NV** — 4 states with active PW laws: wage sources, compliance rules, state-specific certified payroll PDF forms, state-gated download buttons
+- [ ] **Phase 137: Mountain/Southwest — CO, MT, NM** — 3 states: CDLE (CO), MT DOL, NM DOL wage sources; compliance rules; state PDF forms; CO is WH-347 + state payroll certification hybrid
+- [ ] **Phase 138: New England — CT, ME, RI** — 3 states: CT DOL, ME DOL, RI DOL wage sources; compliance rules; state PDF forms; all three use Monday-first weekly payroll grids
+- [ ] **Phase 139: Mid-Atlantic — DC, DE, MD, WV** — 4 jurisdictions: DC OCA, DE DOL, MD DLLR, WV DOL wage sources; compliance rules; state PDF forms; DC Living Wage Act layer
+- [ ] **Phase 140: Great Lakes — MI, OH, WI** — 3 states: MI LARA (Act 166, restored 2024), OH ODRP (ORC 4115), WI DWD; wage sources; compliance rules; state PDF forms
+- [ ] **Phase 141: Appalachian/Border — KY, MO, PA** — 3 states: KY Labor Cabinet, MO DOL, PA L&I; wage sources; compliance rules; PA EL-28 form (most complex — weekly payroll certification with notarized statement)
+- [ ] **Phase 142: California County Wage System** — DIR county wage determination sync for all 58 CA counties; county selector on CA ProjectForm; county-aware A-1-131 header and rate lookup; county rate UI on workers page
+- [ ] **Phase 143: New York County Wage System** — NY DOL county wage schedules for all 62 NY counties; NYC DDC rates (separate from state PW, applies to NYC capital projects); county selector on NY ProjectForm; NYC-specific PW-12 header fields
+- [ ] **Phase 144: Illinois County + Chicago Municipal System** — IL DOL county rates for all 102 IL counties; Chicago CDOT/OEMC trade rates (Municipal Code § 2-92-330); county/city selector on IL ProjectForm; rate override when Chicago rates exceed county rates
+- [ ] **Phase 145: Washington County Wage System** — WA L&I county wage schedules for all 39 WA counties; county selector on WA ProjectForm; county-aware F700-065-000 header; trade-code × county rate matrix sync
+- [ ] **Phase 146: Multi-State County Systems — OR, MD, NJ, MA, OH, PA** — county wage data for OR (36 counties + Portland Metro premium), MD (24 counties), NJ (21 counties), MA (14 counties + Boston premium), OH (88 counties from ODRP), PA (67 counties from L&I); county selectors on all state ProjectForms
+- [ ] **Phase 147: Municipal/Local Rate Layer** — NYC trade-specific prevailing wage (NYC DDC schedule vs. state PW), Chicago DOT local rates vs. IL state, Seattle/King County premium rates vs. WA state, Boston/Suffolk premium vs. MA state; local-rate-override logic in computeCompliance() for covered jurisdictions
+- [ ] **Phase 148: State Compliance Engine Expansion** — per-state compliance rules for all 20 newly-added states: daily OT thresholds, weekly OT thresholds, apprentice ratio requirements, fringe benefit treatment, deduction caps; computeCompliance() state-dispatch table replacing per-state if-blocks
+- [ ] **Phase 149: Complete State + County Test Suite** — Vitest suite covering all 50 states: WH-347 generation (federal), all 20 state form PDF generators, all county rate lookups, all compliance rule dispatches; minimum 10 test cases per state; rate snapshot accuracy; county rate override; apprentice ratio enforcement
+- [ ] **Phase 150: 50-State Coverage Dashboard + Guidance** — upgrade UsComplianceMap to full 50-state interactive map with coverage status (full/partial/federal-only); per-state compliance guide pages at /compliance/:state; state-specific HelpText in project creation wizard; landing page "50 States Covered" section; REQUIREMENTS.md traceability for all STATE-* IDs
+
+---
+
+## Phase Details (v10.0)
+
+---
+
+### Phase 135: State Coverage Infrastructure
+
+**Goal**: The database and data model support county-level wage determinations, the ProjectForm has a structured county/city selector, the STATE_FORMS registry is extended to 50 states, and the wage lookup system can resolve county-specific rates when available — without breaking any existing state (CA, WA, NY, IL, TX, FL, MA, NJ, MN, VA) behavior.
+
+**Depends on**: Phase 134 (v9.0 complete); existing county text field on projects; existing STATE_FORMS registry (Phase 47)
+
+**Requirements**: STATE-20, STATE-21, STATE-22, COUNTY-01, COUNTY-02
+
+**Success Criteria** (what must be TRUE):
+  1. `county_wage_determinations` table exists in the DB with columns: `id`, `state` (text), `county` (text), `city` (text nullable), `tradeCode` (text), `laborType` (text), `baseRate` (real), `fringeRate` (real), `effectiveDate` (text ISO), `source` (text — 'dir'|'dol'|'lni'|'manual'), `syncedAt` (text ISO), `expiresAt` (text ISO nullable)
+  2. `state_wage_sources` table exists with columns: `state` (text PK), `sourceType` (text — 'api'|'pdf'|'csv'|'manual'), `apiUrl` (text nullable), `scrapePath` (text nullable), `lastSyncedAt` (text ISO nullable), `syncStatus` (text — 'ok'|'error'|'pending')
+  3. ProjectForm county field is replaced with a structured two-step selector: first a state-aware county dropdown (populated from a hardcoded county list per state), then an optional city/municipality dropdown for states that have municipal-level rates (IL, NY, MA, OR, WA); the county value is stored as a normalized slug (e.g. `los-angeles`, `cook`, `new-york-city`)
+  4. `getCachedWd()` in wdolSync.ts checks `county_wage_determinations` first when a project has a county slug; falls back to state-level WD if no county match; falls back to federal WD if no state match — three-tier cascade
+  5. STATE_FORMS registry (Phase 47 constant) is replaced with a DB-backed `state_forms` lookup that maps `(state, formType)` → `{routeKey, label, requiresCounty, requiresCity, portalUrl, instructions}` for all 50 states; existing CA/WA/NY/IL/TX/FL/MA/NJ/MN/VA entries are migrated into the new structure with no behavior change
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 136: Pacific West — AK, HI, OR, NV
+
+**Goal**: Contractors on Alaska, Hawaii, Oregon, and Nevada prevailing wage projects can select those states, enter project-specific fields, pass state-specific compliance checks, and download the correct state certified payroll form — with wage rates sourced from each state's DOL.
+
+**Depends on**: Phase 135 (county selector, state_wage_sources table, STATE_FORMS registry v2)
+
+**Requirements**: STATE-AK-01, STATE-AK-02, STATE-HI-01, STATE-HI-02, STATE-OR-01, STATE-OR-02, STATE-NV-01, STATE-NV-02
+
+**State details:**
+
+**Alaska (AS 36.05 — Alaska Wage and Hour Act):**
+- Wage source: Alaska DOL & Workforce Development wage schedules (PDF per project type, manual entry for v10.0; API research flag)
+- Compliance rules: AK uses federal 8-hour daily OT threshold; Alaska Little Davis-Bacon applies to state-funded projects >$25,000; apprentice ratio: 1 apprentice per 3 journeyworkers per trade
+- Form: Alaska certified payroll statement — weekly format similar to WH-347 but with AK contractor license number, AK project number fields, and AK "Statement of Compliance" with Alaska-specific certification language; PDF generated programmatically via pdf-lib
+- Project fields: AK contractor license number, AK DOL project number, awarding agency
+- Portal: Alaska DOL accepts PDF submission directly (no electronic portal as of 2026)
+
+**Hawaii (HRS Chapter 104):**
+- Wage source: Hawaii DOL & Industrial Relations wage schedules published by county (Honolulu, Maui, Hawaii, Kauai counties) — critical: HI rates are county-specific from day one
+- Compliance rules: HI 8-hour daily OT threshold; HI apprentice ratio: 1 per 5 journeyworkers; HI requires health & welfare fringe paid either directly or into approved fund; apprenticeship program must be registered with HI DLIR
+- Form: HI DOL certified payroll form HC-1 — includes county field, contractor license number, HI-specific fringe contribution columns; PDF generated via pdf-lib
+- Project fields: HI contractor license, HI project number, island/county, awarding agency
+- Counties: Honolulu County, Maui County, Hawaii County (Big Island), Kauai County — 4 counties, each with distinct wage schedules
+
+**Oregon (ORS 279C.800-279C.870):**
+- Wage source: Oregon BOLI prevailing wage rates — published twice per year (January and July); by county; available as HTML tables on BOLI website (scrape/manual entry for v10.0); Portland Metro premium applies in Multnomah, Washington, Clackamas counties
+- Compliance rules: OR 8-hour daily OT, 40-hour weekly OT; fringe can be paid into approved benefit fund or as cash equivalent; apprentice ratio: 1 per 4 journeyworkers; OR requires recording of benefits plan administrator
+- Form: Oregon PWR-100 certified payroll record — weekly format; includes BOLI project number, contractor CCB license, county field, trade classification code per OR BOLI classification system; fringe benefit plan section; PDF via pdf-lib
+- Project fields: OR CCB contractor license, BOLI project registration number, awarding agency, county
+- Portal: No electronic submission portal — paper/PDF to awarding agency
+
+**Nevada (NRS Chapter 338):**
+- Wage source: Nevada Labor Commissioner wage determinations — published by county; Clark County (Las Vegas), Washoe County (Reno), and rural counties have distinct schedules; available via Nevada LC website
+- Compliance rules: NV 8-hour daily OT, 40-hour weekly OT; NV requires journeyworker rate paid for all overtime hours (no blended rate); apprentice ratio: 1 per 5 journeyworkers per trade; NV fringe includes health, pension, and vacation columns separately
+- Form: Nevada LCB-25 certified payroll form — includes NV contractor license, county field, NV project number, separate fringe columns (H&W, pension, vacation, apprenticeship); "Statement of Compliance" with Nevada-specific certification; PDF via pdf-lib
+- Project fields: NV contractor license, NV public works project number, county, awarding agency
+
+**Success Criteria** (what must be TRUE):
+  1. AK, HI, OR, NV appear as selectable states in ProjectForm; state-specific project fields surface when each is selected
+  2. For each state, `computeCompliance()` applies the correct daily OT threshold, weekly OT threshold, and apprentice ratio; violations appear in PayrollWeekDetailPage with state-attributed violation type
+  3. Download button for each state's form appears on PayrollWeekDetailPage only when the project state matches; clicking downloads a correctly populated PDF with all project fields, worker rows, and fringe columns
+  4. Rate entry for AK, OR, NV projects allows manual prevailing wage rate input per worker (same as WA pattern, Phase 25) since no live API is available; HI rate entry uses county-specific wage schedule selector
+  5. All 4 states pass a smoke-test round-trip: create project → add worker → enter payroll → download form → verify PDF has correct state fields
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 137: Mountain/Southwest — CO, MT, NM
+
+**Goal**: Contractors on Colorado, Montana, and New Mexico prevailing wage projects can select those states, enter project-specific fields, pass state compliance checks, and download the correct state certified payroll form. Colorado uses a WH-347 + CDLE payroll certification hybrid (the CDLE does not publish its own CPR PDF form — contractors use WH-347 and attach a Colorado-specific cover sheet).
+
+**Depends on**: Phase 135 (infrastructure), Phase 136 (patterns established for Pacific West states)
+
+**Requirements**: STATE-CO-01, STATE-CO-02, STATE-MT-01, STATE-MT-02, STATE-NM-01, STATE-NM-02
+
+**State details:**
+
+**Colorado (Colorado Wage Claim Act / CDLE — effective 2021):**
+- Law: SB 19-085 restored Colorado prevailing wage (repealed in 1991, restored 2021); applies to state-funded projects >$500,000 for construction, $150,000 for services
+- Wage source: CDLE publishes wage orders by region (Front Range, Eastern Plains, Western Slope, San Luis Valley, Mountain) — manual entry for v10.0; CDLE does not have an API
+- Compliance rules: CO defers to federal FLSA OT (40hr/week, no daily threshold); apprentice ratio: 1 per 4 journeyworkers; CO fringe benefits paid as cash supplement or into bona fide plan; CO requires fringe benefit statement per worker
+- Form: CO uses WH-347 (federal form) + mandatory CDLE "Statement of Compliance for Prevailing Wages" cover page — existing WH-347 generator is reused; new CDLE cover page PDF is generated and prepended; cover includes CDLE project registration number, CO contractor registration, CO region
+- Project fields: CDLE project registration number, CO contractor registration, CO region (dropdown: Front Range / Eastern Plains / Western Slope / San Luis Valley / Mountain)
+- Portal: No electronic portal — PDF package to awarding agency
+
+**Montana (MCA §18-2-401 through 18-2-432):**
+- Wage source: MT DOL publishes wage schedules by county; available as PDF tables; manual entry for v10.0
+- Compliance rules: MT uses federal 40-hour weekly OT only (no daily threshold); apprentice ratio: 1 per 3 journeyworkers; MT fringe includes H&W and pension columns; MT requires notation of apprentice registration number on CPR
+- Form: Montana certified payroll form — similar to WH-347 weekly grid; includes MT contractor license, MT DOL project number, county, trade classification per MT DOL classification system; "Certification" section citing MCA 18-2-407; PDF via pdf-lib
+- Project fields: MT contractor license, MT project number, county, awarding agency
+
+**New Mexico (NMSA 1978 §13-4-10 through 13-4-17):**
+- Wage source: NM DOL publishes wage decisions per project type (heavy, highway, building, residential) and county; available via NM DOL website; manual entry for v10.0
+- Compliance rules: NM uses 40-hour weekly OT; apprentice ratio: 1 per 3 journeyworkers; NM fringe must be paid to bona fide plan or as supplemental hourly pay; NM requires "Statement of Non-Discrimination" on CPR
+- Form: NM DOL certified payroll record — weekly grid similar to WH-347; includes NM CID contractor license, NM project number, county, statement of non-discrimination; PDF via pdf-lib
+- Project fields: NM CID license number, NM project number, county, awarding agency
+
+**Success Criteria** (what must be TRUE):
+  1. CO, MT, NM appear as selectable states; state-specific project fields surface on selection
+  2. CO generates WH-347 PDF + CDLE cover page as a merged 2-document PDF package; MT and NM generate their state-specific CPR forms
+  3. Compliance rules are correctly applied per state: CO uses 40hr/week OT only; MT uses 40hr/week OT + apprentice registration number requirement; NM uses 40hr/week OT + non-discrimination statement
+  4. Rate entry uses manual input pattern (same as WA) for all three states
+  5. All 3 states pass smoke-test round-trip
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 138: New England — CT, ME, RI
+
+**Goal**: Contractors on Connecticut, Maine, and Rhode Island prevailing wage projects can select those states, enter project-specific fields, pass state compliance checks, and download the correct state certified payroll PDF.
+
+**Depends on**: Phase 135, Phase 136 (patterns)
+
+**Requirements**: STATE-CT-01, STATE-CT-02, STATE-ME-01, STATE-ME-02, STATE-RI-01, STATE-RI-02
+
+**State details:**
+
+**Connecticut (CGS §31-53 — Connecticut Prevailing Wage Act):**
+- Wage source: CT DOL publishes prevailing wage schedules by project type and county (Fairfield, Hartford, Litchfield, Middlesex, New Haven, New London, Tolland, Windham — 8 counties); available via CT DOL prevailing wage tool; manual entry for v10.0
+- Compliance rules: CT uses federal 40-hour weekly OT; apprentice ratio: 1 per 3 journeyworkers; CT requires fringe benefits paid into bona fide plan or as cash equivalent; CT requires contractor registration number on CPR; project threshold: $1,000,000+ for new construction, $100,000+ for renovation
+- Form: CT DOL certified payroll form — weekly grid format with CT-specific fields: CT contractor registration number, CT DOL case number, county, statement of compliance citing CGS §31-53; Monday-through-Sunday daily hour columns; PDF via pdf-lib
+- Project fields: CT contractor registration, CT DOL case number, county, awarding agency
+
+**Maine (Title 26 MRSA Chapter 15 — Maine Prevailing Wage Law):**
+- Wage source: ME DOL publishes wage rates by project type (building, heavy, highway, residential) and county (Androscoggin, Aroostook, Cumberland, Franklin, Hancock, Kennebec, Knox, Lincoln, Oxford, Penobscot, Piscataquis, Sagadahoc, Somerset, Waldo, Washington, York — 16 counties); manual entry for v10.0
+- Compliance rules: ME uses federal 40-hour weekly OT; apprentice ratio: 1 per 3 journeyworkers; ME requires fringe benefit plan documentation; project threshold: $50,000+ (lower than most states)
+- Form: Maine certified payroll report — weekly grid; includes ME contractor registration, ME project number, county, trade classification per ME DOL schedule; certification citing MRSA Chapter 15; PDF via pdf-lib
+- Project fields: ME contractor registration, ME project number, county, awarding agency
+
+**Rhode Island (RIGL §37-13-1 through 37-13-16 — RI Prevailing Wages Law):**
+- Wage source: RI DOL publishes wage rates by trade and project type; RI is a small state (5 counties) — Providence, Kent, Washington, Newport, Bristol; manual entry for v10.0
+- Compliance rules: RI uses federal 40-hour weekly OT; apprentice ratio: 1 per 5 journeyworkers; RI requires fringe contributions listed separately for H&W, pension, and apprenticeship; RI CPR must be submitted weekly to awarding agency
+- Form: RI DOL certified payroll record — weekly grid with RI-specific fields: RI contractor license, RI project number, county, certification citing RIGL §37-13; weekly submission timestamp field; PDF via pdf-lib
+- Project fields: RI contractor license, RI project number, county, awarding agency
+
+**Success Criteria** (what must be TRUE):
+  1. CT, ME, RI appear as selectable states; state-specific project fields surface on selection; county dropdown populated per state
+  2. Each state generates its own certified payroll PDF with correct state-specific fields, certification language, and column layout
+  3. Compliance rules applied correctly; apprentice ratios enforced per state (CT/ME: 1:3; RI: 1:5)
+  4. All 3 states pass smoke-test round-trip
+  5. CT form uses Monday-Sunday grid; ME and RI use Monday-Sunday grid; all verified against official form layouts
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 139: Mid-Atlantic — DC, DE, MD, WV
+
+**Goal**: Contractors on District of Columbia, Delaware, Maryland, and West Virginia prevailing wage projects can select those jurisdictions, enter project-specific fields, pass state compliance checks, and download the correct certified payroll form. Maryland and DC are high-priority markets for HCC contractors.
+
+**Depends on**: Phase 135, Phase 136 (patterns)
+
+**Requirements**: STATE-DC-01, STATE-DC-02, STATE-DE-01, STATE-DE-02, STATE-MD-01, STATE-MD-02, STATE-WV-01, STATE-WV-02
+
+**Jurisdiction details:**
+
+**District of Columbia (DC Code §32-1301 et seq. + DC Living Wage Act):**
+- Wage source: DC OCA (Office of Contracting and Procurement) publishes wage determinations per trade and project; DC also enforces the DC Living Wage Act ($17.50/hr+ base for service workers); manual entry for v10.0
+- Compliance rules: DC uses federal 40-hour weekly OT; DC apprentice ratio: 1 per 4 journeyworkers; DC requires "certified payroll record" submitted to OCA weekly; DC Living Wage layer: if project receives DC government assistance, living wage floor applies to all workers regardless of trade classification; DC requires contractor business license number
+- Form: DC OCA certified payroll form — weekly grid; includes DC contractor business license, DC OCA contract number, DC agency name, project address, DC Living Wage Act compliance checkbox; certification citing DC Code §32; PDF via pdf-lib
+- Project fields: DC contractor business license, DC OCA contract/purchase order number, awarding agency, DC Living Wage compliance flag (checkbox)
+
+**Delaware (29 Del. C. §6960 — Delaware Prevailing Wage Law):**
+- Wage source: DE DOL publishes wage determinations by county (New Castle, Kent, Sussex); manual entry for v10.0
+- Compliance rules: DE uses federal 40-hour weekly OT; apprentice ratio: 1 per 4 journeyworkers; DE requires fringe paid into bona fide plan or as cash supplement; project threshold: $500,000+
+- Form: DE DOL certified payroll record — weekly grid; includes DE contractor registration, DE project number, county (3-county dropdown), certification citing 29 Del. C. §6960; PDF via pdf-lib
+- Project fields: DE contractor registration, DE project number, county
+
+**Maryland (State Finance & Procurement Article §17-201 et seq.):**
+- Wage source: MD DLLR (Department of Labor, Licensing and Regulation) publishes wage decisions by county (24 counties/Baltimore City); available via MD DLLR online directory; manual entry for v10.0; note: MD has 23 counties + Baltimore City as independent city — 24 jurisdictions
+- Compliance rules: MD uses federal 40-hour weekly OT; apprentice ratio: 1 per 3 journeyworkers; MD fringe benefit contributions must be listed separately; MD requires contractor MHIC license (for building trades); project threshold: $500,000+
+- Form: MD DLLR "Prevailing Wage Statement of Compliance" + certified payroll record — two-part form; includes MHIC or contractor license, MD project number, county (24-item dropdown), statement of compliance citing State Finance Art. §17; weekly payroll grid; PDF via pdf-lib
+- Project fields: MD contractor license (MHIC or equivalent), MD project number, county
+
+**West Virginia (WV Code §21-5A-1 et seq. — WV Prevailing Wages for Public Employees):**
+- Wage source: WV DOL publishes wage rates by county (55 counties); available as PDF wage sheets; manual entry for v10.0
+- Compliance rules: WV uses federal 40-hour weekly OT; apprentice ratio: 1 per 4 journeyworkers; WV requires fringe paid to approved fund; project threshold: $500,000+
+- Form: WV DOL certified payroll statement — weekly grid; includes WV contractor license, WV project number, county (55-county dropdown), certification citing WV Code §21-5A; PDF via pdf-lib
+- Project fields: WV contractor license, WV project number, county, awarding agency
+
+**Success Criteria** (what must be TRUE):
+  1. DC, DE, MD, WV appear as selectable states/jurisdictions; county/district selectors populate correctly (DC is a single jurisdiction, no county needed; DE has 3 counties; MD has 24 counties + Baltimore City; WV has 55 counties)
+  2. DC Living Wage Act compliance flag surfaces on DC project creation and is included in DC CPR PDF
+  3. MD generates two-part PDF (compliance statement + payroll grid) as a merged document
+  4. All 4 jurisdictions pass smoke-test round-trip
+  5. Apprentice ratios enforced per jurisdiction: DC/DE/WV 1:4; MD 1:3
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 140: Great Lakes — MI, OH, WI
+
+**Goal**: Contractors on Michigan, Ohio, and Wisconsin prevailing wage projects can select those states, enter project-specific fields, pass state compliance checks, and download the correct state certified payroll form. Michigan's prevailing wage was restored in 2024 after a 5-year repeal, making this a high-priority state for new business.
+
+**Depends on**: Phase 135, Phase 136 (patterns)
+
+**Requirements**: STATE-MI-01, STATE-MI-02, STATE-OH-01, STATE-OH-02, STATE-WI-01, STATE-WI-02
+
+**State details:**
+
+**Michigan (PA 166 of 1965 — Michigan Prevailing Wage Act; restored 2024 via PA 10):**
+- Wage source: MI LARA (Department of Labor and Economic Opportunity) publishes wage orders per county (83 counties); LARA has a prevailing wage portal; manual entry for v10.0 due to no public API
+- Compliance rules: MI uses federal 40-hour weekly OT; apprentice ratio: 1 per 5 journeyworkers per trade; MI requires apprentice to be registered with MI BFBE (Bureau of Fire Fighters Board of Examiners) or USDOL registered apprenticeship; MI fringe benefit contributions must be broken out by H&W, pension, vacation, training; project threshold: contracts with a state agency ≥$50,000
+- Form: Michigan certified payroll record — weekly grid format; includes MI contractor license, MI LARA project number, county (83-county dropdown), trade per MI LARA classification, apprentice registration number field, fringe breakdown columns; certification citing PA 166; PDF via pdf-lib
+- Project fields: MI contractor license, MI LARA project/wage order number, county, awarding agency
+
+**Ohio (ORC Chapter 4115 — Ohio Prevailing Wage Law):**
+- Wage source: OH ODRP (Office of Diversity, Research and Policy) publishes wage determinations by county (88 counties) and project type; wage schedules available as Excel/PDF from ODRP; manual entry for v10.0
+- Compliance rules: OH uses federal 40-hour weekly OT; apprentice ratio: 1 per 4 journeyworkers; OH requires fringe paid into bona fide plan or equivalent; OH CPR must be submitted to ODRP and awarding agency; OH requires contractor certificate of compliance
+- Form: Ohio certified payroll report (ODRP form) — weekly grid; includes OH contractor license, OH ODRP project number, county (88-county dropdown), classification per OH ODRP schedule, fringe columns (H&W, pension, vacation, apprenticeship training), contractor certificate of compliance section; certification citing ORC 4115; PDF via pdf-lib
+- Project fields: OH contractor license, OH ODRP project number, county, awarding agency
+
+**Wisconsin (Wis. Stat. §66.0903 — Wisconsin Prevailing Wage Law):**
+- Wage source: WI DWD (Department of Workforce Development) publishes wage rates by trade and county (72 counties); available via DWD website; manual entry for v10.0
+- Compliance rules: WI uses federal 40-hour weekly OT; apprentice ratio: 1 per 3 journeyworkers; WI requires apprentice registered with WI Bureau of Apprenticeship Standards; WI fringe must be paid into bona fide plan; project threshold: $234,000+ (2026 threshold, indexed annually)
+- Form: Wisconsin payroll record (WI DWD format) — weekly grid; includes WI contractor registration, WI DWD project number, county (72-county dropdown), WI classification code, apprentice registration number field, fringe columns; certification citing Wis. Stat. §66.0903; PDF via pdf-lib
+- Project fields: WI contractor registration, WI project number, county, awarding agency
+
+**Success Criteria** (what must be TRUE):
+  1. MI, OH, WI appear as selectable states; county dropdowns populated (MI: 83, OH: 88, WI: 72)
+  2. MI apprentice registration number field visible for apprentice workers; OH ODRP certificate of compliance section in PDF; WI apprentice registration field visible
+  3. Each state generates correct state-specific PDF with all required fields
+  4. All 3 states pass smoke-test round-trip
+  5. MI Act 166 restoration flagged in onboarding for MI projects: "Michigan prevailing wage restored 2024 — applies to state contracts ≥$50,000"
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 141: Appalachian/Border — KY, MO, PA
+
+**Goal**: Contractors on Kentucky, Missouri, and Pennsylvania prevailing wage projects can select those states, enter project-specific fields, pass state compliance checks, and download the correct state certified payroll form. Pennsylvania's EL-28 is the most complex state form in the US — it requires a notarized statement of compliance and full worker identification including SSN-last-4 on the face of the form.
+
+**Depends on**: Phase 135, Phase 136 (patterns)
+
+**Requirements**: STATE-KY-01, STATE-KY-02, STATE-MO-01, STATE-MO-02, STATE-PA-01, STATE-PA-02, STATE-PA-03
+
+**State details:**
+
+**Kentucky (KRS Chapter 337 — Kentucky Labor Cabinet Prevailing Wage):**
+- Wage source: KY Labor Cabinet publishes wage decisions per county (120 counties); available via LC website; manual entry for v10.0
+- Compliance rules: KY uses federal 40-hour weekly OT; apprentice ratio: 1 per 3 journeyworkers; KY requires fringe paid into bona fide plan or as cash equivalent; project threshold: $250,000+
+- Form: KY Labor Cabinet certified payroll record — weekly grid; includes KY contractor license, KY project number, county (120-county dropdown), trade per KY LC classification, fringe columns, certification citing KRS Chapter 337; PDF via pdf-lib
+- Project fields: KY contractor license, KY LC project number, county, awarding agency
+
+**Missouri (RSMo §290.210 et seq. — Missouri Prevailing Wage Law):**
+- Wage source: MO DOL publishes annual wage orders by county (114 counties + St. Louis City independent city — 115 jurisdictions); available as annual PDF; manual entry for v10.0
+- Compliance rules: MO uses federal 40-hour weekly OT; apprentice ratio: 1 per 3 journeyworkers; MO requires fringe paid to bona fide plan; project threshold: $75,000+; important: MO prevailing wage applies to ANY public works project, including school districts and municipalities
+- Form: MO DOL certified payroll statement — weekly grid; includes MO contractor registration, MO annual wage order number, county or St. Louis City (115 jurisdictions), trade per MO DOL occupational classification, fringe breakdown, certification citing RSMo §290; PDF via pdf-lib
+- Project fields: MO contractor registration, MO annual wage order number, county, awarding agency
+
+**Pennsylvania (Act 442 of 1961 — Pennsylvania Prevailing Wage Act):**
+- Wage source: PA L&I (Department of Labor and Industry) publishes wage determinations by county (67 counties) and project type (building, heavy, highway); wage requests submitted per-project to PA L&I; manual entry per project for v10.0
+- Compliance rules: PA uses federal 40-hour weekly OT; apprentice ratio: 1 per 4 journeyworkers; PA requires apprentice registered with PA Apprenticeship & Training Council; PA fringe must be detailed by type; PROJECT-SPECIFIC CRITICAL: each PA project must request its own wage determination from PA L&I; no statewide schedule
+- Form: Pennsylvania EL-28 (Employer Weekly Payroll Certification for Public Works Projects) — THIS IS THE MOST COMPLEX STATE FORM: includes contractor business name/address, PA contractor registration, county (67-county dropdown), PA L&I project wage determination number, week ending date, complete worker roster with full legal name + last 4 SSN + occupation + wage rate + all daily hours (Mon-Sat) + OT hours + gross wages + deductions itemized + net wages, apprentice registration number if applicable, fringe columns (H&W / pension / vacation / other), PLUS a "Statement of Compliance" on page 2 that must be signed under penalty of perjury (print warning only — user must physically sign); certification citing Act 442
+- Project fields: PA contractor registration number, PA L&I project wage determination number, county, awarding agency, contractor business address
+- Note: SSN last-4 appears on the face of PA EL-28 — use `ssnLast4` field from workers table per existing Phase 31 pattern (never full SSN)
+
+**Success Criteria** (what must be TRUE):
+  1. KY, MO, PA appear as selectable states; county dropdowns populated (KY: 120, MO: 115 including St. Louis City, PA: 67)
+  2. PA EL-28 PDF contains all required fields: worker last-4 SSN, daily hour columns Mon-Sat, itemized deduction rows, fringe columns, Statement of Compliance on page 2; "Must be signed under penalty of perjury" notice printed prominently
+  3. KY and MO generate their state-specific CPR PDFs with correct field layouts
+  4. All 3 states pass smoke-test round-trip
+  5. PA project creation warns: "Pennsylvania requires a project-specific wage determination from PA L&I before work begins — enter the PA L&I determination number in the project settings"
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 142: California County Wage System
+
+**Goal**: California projects automatically use county-specific prevailing wage rates from the CA DIR wage determination schedule — the correct rates for the project's county appear in compliance checks and on the A-1-131 PDF header — covering all 58 CA counties without requiring manual rate entry per worker.
+
+**Depends on**: Phase 135 (county_wage_determinations table, county selector), Phase 24/29/53 (CA A-1-131 + eCPR XML already built)
+
+**Requirements**: COUNTY-CA-01, COUNTY-CA-02, COUNTY-CA-03, COUNTY-CA-04
+
+**Implementation details:**
+- CA DIR publishes prevailing wage determinations by county per craft/classification at dir.ca.gov/OPRL/PWD; available as HTML tables; sync via scheduled scrape or manual import for v10.0; rate data includes: county, craft, determination number, straight time rate, OT rate, double time rate, fringe (H&W + pension + vacation + training), effective date, expiration date
+- County sync job: runs weekly (Sunday night cron); fetches DIR HTML for each of 58 counties; parses classification × rate table; upserts into county_wage_determinations (state='CA'); stores DIR determination number as source reference
+- 58 counties: Alameda, Alpine, Amador, Butte, Calaveras, Colusa, Contra Costa, Del Norte, El Dorado, Fresno, Glenn, Humboldt, Imperial, Inyo, Kern, Kings, Lake, Lassen, Los Angeles, Madera, Marin, Mariposa, Mendocino, Merced, Modoc, Mono, Monterey, Napa, Nevada, Orange, Placer, Plumas, Riverside, Sacramento, San Benito, San Bernardino, San Diego, San Francisco, San Joaquin, San Luis Obispo, San Mateo, Santa Barbara, Santa Clara, Santa Cruz, Shasta, Sierra, Siskiyou, Solano, Sonoma, Stanislaus, Sutter, Tehama, Trinity, Tulare, Tuolumne, Ventura, Yolo, Yuba
+- County selector: CA ProjectForm shows county dropdown (58 items) as first step in project creation; county slug stored on project record; lookup cascade: county_wage_determinations (state=CA, county=slug) → fallback to statewide DIR schedule → fallback to federal WD
+- A-1-131 PDF update: CA A-1-131 header now includes county name and DIR determination number; rate sourced from county schedule rather than manual entry
+- eCPR XML update: county and DIR determination number added to XML header per CA DIR eCPR schema
+
+**Success Criteria** (what must be TRUE):
+  1. CA county wage sync job runs and populates county_wage_determinations for all 58 counties with at least 5 trade classifications each; cron registered in index.ts
+  2. Creating a CA project requires county selection from 58-county dropdown; county slug persisted on project
+  3. Worker wages on a CA project default to the county prevailing wage rate for their trade; rate snapshot locked at payroll entry time per existing pattern
+  4. A-1-131 PDF header shows county name and DIR determination number; eCPR XML includes county field
+  5. Changing county on an existing CA project warns: "Changing county will affect future payroll entries but will not update rate snapshots on existing entries"
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 143: New York County Wage System
+
+**Goal**: New York projects use county-specific prevailing wage schedules from NY DOL — with special handling for NYC DDC projects (which use NYC-specific rates set by the NYC Comptroller, separate from and typically higher than NY state rates) — covering all 62 NY counties.
+
+**Depends on**: Phase 135, Phase 40-41 (NY PW-12 + MPWR XML already built)
+
+**Requirements**: COUNTY-NY-01, COUNTY-NY-02, COUNTY-NY-03
+
+**Implementation details:**
+- NY DOL publishes Prevailing Wage Schedules (PRC numbers) per county per trade; available as county-level PDF and online lookup at labor.ny.gov/workerprotection/publicwork/PWForm.shtm; sync via manual import for v10.0 (no public API)
+- NYC DDC (Department of Design and Construction) rates: NYC Comptroller publishes annual wage schedule for NYC public works at comptroller.nyc.gov; applies to projects for NYC capital agencies; NYC rates are the highest in the US — often 2-3x state rates; NYC rates apply in all 5 boroughs (Bronx, Brooklyn, Manhattan, Queens, Staten Island)
+- 62 counties (including 5 NYC boroughs): Albany, Allegany, Bronx, Broome, Cattaraugus, Cayuga, Chautauqua, Chemung, Chenango, Clinton, Columbia, Cortland, Delaware, Dutchess, Erie, Essex, Franklin, Fulton, Genesee, Greene, Hamilton, Herkimer, Jefferson, Kings (Brooklyn), Lewis, Livingston, Madison, Monroe, Montgomery, Nassau, New York (Manhattan), Niagara, Oneida, Onondaga, Ontario, Orange, Orleans, Oswego, Otsego, Putnam, Queens, Rensselaer, Richmond (Staten Island), Rockland, Saratoga, Schenectady, Schoharie, Schuyler, Seneca, St. Lawrence, Steuben, Suffolk, Sullivan, Tioga, Tompkins, Ulster, Warren, Washington, Wayne, Westchester, Wyoming, Yates
+- NYC project detection: if county is Bronx/Kings/Manhattan/Queens/Richmond AND project is flagged as "NYC capital project" → use NYC DDC rate schedule; otherwise use NY DOL county schedule
+- PW-12 PDF update: county name and NY DOL PRC number added to header; NYC projects show "NYC Comptroller Wage Schedule" reference
+- MPWR XML update: county field added per NY WCB requirements
+
+**Success Criteria** (what must be TRUE):
+  1. NY ProjectForm shows county dropdown (62 counties); NYC capital project checkbox appears for the 5 NYC boroughs
+  2. NYC capital projects use NYC Comptroller wage schedule rates; non-NYC projects use NY DOL county schedule
+  3. PW-12 PDF header updated with county and PRC number; MPWR XML updated with county
+  4. Compliance checks use county-specific rates for rate comparisons
+  5. All 62 county entries in county_wage_determinations populated with at least carpentry/electrical/labor trades
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 144: Illinois County + Chicago Municipal System
+
+**Goal**: Illinois projects use county-specific prevailing wage rates from the IL DOL county wage schedules, with Chicago CDOT municipal rates applied for projects within Chicago city limits (Chicago rates exceed the Cook County state rate for most trades), covering all 102 IL counties.
+
+**Depends on**: Phase 135, Phase 42-43 (IL form already built)
+
+**Requirements**: COUNTY-IL-01, COUNTY-IL-02, COUNTY-IL-03
+
+**Implementation details:**
+- IL DOL publishes prevailing wage rates by county (102 counties); counties must adopt or may set their own rates; IL DOL publishes a statewide schedule; manual import for v10.0
+- Chicago CDOT (Chicago Department of Transportation) sets its own prevailing wage rates for city-funded projects under Municipal Code §2-92-330; Chicago rates typically 15-25% above Cook County IL DOL rates for electricians, carpenters, laborers
+- 102 IL counties: Adams, Alexander, Bond, Boone, Brown, Bureau, Calhoun, Carroll, Cass, Champaign, Christian, Clark, Clay, Clinton, Coles, Cook, Crawford, Cumberland, DeKalb, DeWitt, Douglas, DuPage, Edgar, Edwards, Effingham, Fayette, Ford, Franklin, Fulton, Gallatin, Greene, Grundy, Hamilton, Hancock, Hardin, Henderson, Henry, Iroquois, Jackson, Jasper, Jefferson, Jersey, Jo Daviess, Johnson, Kane, Kankakee, Kendall, Knox, La Salle, Lake, Lawrence, Lee, Livingston, Logan, Macon, Macoupin, Madison, Marion, Marshall, Mason, Massac, McDonough, McHenry, McLean, Menard, Mercer, Monroe, Montgomery, Morgan, Moultrie, Ogle, Peoria, Perry, Piatt, Pike, Pope, Pulaski, Putnam, Randolph, Richland, Rock Island, Saline, Sangamon, Schuyler, Scott, Shelby, St. Clair, Stark, Stephenson, Tazewell, Union, Vermilion, Wabash, Warren, Washington, Wayne, White, Whiteside, Will, Williamson, Winnebago, Woodford
+- Chicago detection: if county = cook AND city = chicago → Chicago CDOT rates take precedence; city field added to project record for IL projects with Cook County
+- IL form update: county and Chicago flag added to IL DOL CPR PDF header
+
+**Success Criteria** (what must be TRUE):
+  1. IL ProjectForm shows county dropdown (102 counties); Cook County selection shows optional city field with "Chicago" option triggering CDOT rate lookup
+  2. Chicago projects use CDOT rates; non-Chicago Cook County projects use IL DOL Cook County rates; all other counties use IL DOL county rates
+  3. IL CPR PDF header updated with county and city; Chicago projects show "Chicago CDOT Municipal Code §2-92-330" reference
+  4. All 102 county wage determination entries populated in DB with core trades
+  5. Rate cascade: Chicago CDOT → IL DOL county → IL DOL statewide → federal WH-347
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 145: Washington County Wage System
+
+**Goal**: Washington projects use county-specific prevailing wage rates from WA L&I — which already publishes rates by county and trade — covering all 39 WA counties and replacing the current manual rate entry pattern for WA projects.
+
+**Depends on**: Phase 135, Phase 25/30 (WA F700-065-000 + CPR XML already built)
+
+**Requirements**: COUNTY-WA-01, COUNTY-WA-02, COUNTY-WA-03
+
+**Implementation details:**
+- WA L&I publishes prevailing wage rates at lni.wa.gov/licensing-permits/public-works-projects/prevailing-wage — rates organized by county × trade classification; available as Excel download and HTML; auto-sync possible via WA L&I data format; rate data includes: county, trade code, journey base rate, journey fringe, apprentice base rate, apprentice fringe, effective date
+- WA L&I county rate sync: existing wage sync job extended to fetch WA L&I Excel export; parse county × trade matrix; upsert into county_wage_determinations (state='WA'); replaces manual rate entry for WA projects
+- 39 WA counties: Adams, Asotin, Benton, Chelan, Clallam, Clark, Columbia, Cowlitz, Douglas, Ferry, Franklin, Garfield, Grant, Grays Harbor, Island, Jefferson, King (Seattle Metro), Kitsap, Kittitas, Klickitat, Lewis, Lincoln, Mason, Okanogan, Pacific, Pend Oreille, Pierce, San Juan, Skagit, Skamania, Snohomish, Spokane, Stevens, Thurston, Wahkiakum, Walla Walla, Whatcom, Whitman, Yakima
+- WA trade code system: existing 4-letter codes (CARP, ELEC, LABO, PLAS, etc.) mapped to L&I county-level rates; WA county rate replaces manual entry UI for WA projects
+- F700-065-000 PDF update: rate now sourced from county schedule + trade code; manual rate entry field hidden when county rate is available
+
+**Success Criteria** (what must be TRUE):
+  1. WA county wage sync job fetches L&I data and populates county_wage_determinations for all 39 counties with all standard trade codes
+  2. WA ProjectForm county selector defaults to county-based rate lookup; manual rate override still possible for trades not in L&I schedule
+  3. Worker wage compliance on WA projects checks against county L&I rate (not manual entry); rate snapshot still frozen at entry time
+  4. F700-065-000 PDF shows county L&I rate source; trade code × county rate table visible in project settings
+  5. Rate sync fails gracefully: if WA L&I fetch fails, existing manual rate entry fallback activates with warning banner
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 146: Multi-State County Systems — OR, MD, NJ, MA, OH, PA
+
+**Goal**: The county wage systems for Oregon, Maryland, New Jersey, Massachusetts, Ohio, and Pennsylvania are populated and integrated — giving these states the same county-level rate accuracy as CA, NY, IL, and WA. These are high-construction-volume states with active prevailing wage enforcement.
+
+**Depends on**: Phase 135, Phase 137 (CO/MT/NM — OR built there), Phase 139 (MD/WV built there), Phase 140 (OH built there), Phase 141 (PA built there)
+
+**Requirements**: COUNTY-OR-01, COUNTY-MD-01, COUNTY-NJ-01, COUNTY-MA-01, COUNTY-OH-01, COUNTY-PA-01
+
+**State county details:**
+
+**Oregon (36 counties + Portland Metro premium):**
+- OR BOLI publishes county-level rates for 36 counties; Portland Metro area (Multnomah, Washington, Clackamas) has premium rates ~8-12% above rural OR
+- County sync: manual BOLI PDF import for v10.0; Portland Metro flag on county selection
+- 36 OR counties: Baker, Benton, Clackamas, Clatsop, Columbia, Coos, Crook, Curry, Deschutes, Douglas, Gilliam, Grant, Harney, Hood River, Jackson, Jefferson, Josephine, Klamath, Lake, Lane, Lincoln, Linn, Malheur, Marion, Morrow, Multnomah, Polk, Sherman, Tillamook, Umatilla, Union, Wallowa, Wasco, Washington, Wheeler, Yamhill
+- Portland Metro premium: projects in Multnomah, Washington, or Clackamas county with project address within Portland Metro Urban Growth Boundary get premium rates
+
+**Maryland (24 jurisdictions: 23 counties + Baltimore City):**
+- MD DLLR publishes county wage orders for 23 counties + Baltimore City (independent city not part of any county): Allegany, Anne Arundel, Baltimore County, Baltimore City, Calvert, Caroline, Carroll, Cecil, Charles, Dorchester, Frederick, Garrett, Harford, Howard, Kent, Montgomery, Prince George's, Queen Anne's, St. Mary's, Somerset, Talbot, Washington, Wicomico, Worcester
+- Montgomery County and Prince George's County (DC suburbs) typically have the highest MD prevailing wages
+
+**New Jersey (21 counties):**
+- NJ DOL publishes county-level prevailing wage rates; all 21 counties: Atlantic, Bergen, Burlington, Camden, Cape May, Cumberland, Essex, Gloucester, Hudson, Hunterdon, Mercer, Middlesex, Monmouth, Morris, Ocean, Passaic, Salem, Somerset, Sussex, Union, Warren
+- Hudson County (NYC metro) and Essex/Bergen typically highest wages in NJ
+
+**Massachusetts (14 counties + Boston premium):**
+- MA AG (Attorney General) publishes wage schedules by county; 14 counties: Barnstable, Berkshire, Bristol, Dukes, Essex, Franklin, Hampden, Hampshire, Middlesex, Nantucket, Norfolk, Plymouth, Suffolk (Boston), Worcester
+- Boston/Suffolk premium: Boston projects typically have the highest MA rates; Cambridge (Middlesex), Quincy (Norfolk) also premium areas
+
+**Ohio (88 counties from ODRP):**
+- OH ODRP publishes county wage orders for all 88 counties: Adams, Allen, Ashland, Ashtabula, Athens, Auglaize, Belmont, Brown, Butler, Carroll, Champaign, Clark, Clermont, Clinton, Columbiana, Coshocton, Crawford, Cuyahoga (Cleveland), Darke, Defiance, Delaware, Erie, Fairfield, Fayette, Franklin (Columbus), Fulton, Gallia, Geauga, Greene, Guernsey, Hamilton (Cincinnati), Hancock, Hardin, Harrison, Henry, Highland, Hocking, Holmes, Huron, Jackson, Jefferson, Knox, Lake, Lawrence, Licking, Logan, Lorain, Lucas (Toledo), Madison, Mahoning, Marion, Medina, Meigs, Mercer, Miami, Monroe, Montgomery (Dayton), Morgan, Morrow, Muskingum, Noble, Ottawa, Paulding, Perry, Pickaway, Pike, Portage, Preble, Putnam, Richland, Ross, Sandusky, Scioto, Seneca, Shelby, Stark, Summit (Akron), Trumbull, Tuscarawas, Union, Van Wert, Vinton, Warren, Washington, Wayne, Williams, Wood, Wyandot
+
+**Pennsylvania (67 counties):**
+- PA L&I issues project-specific wage determinations; county is used to request the determination; 67 counties: Adams, Allegheny (Pittsburgh), Armstrong, Beaver, Bedford, Berks, Blair, Bradford, Bucks, Butler, Cambria, Cameron, Carbon, Centre, Chester, Clarion, Clearfield, Clinton, Columbia, Crawford, Cumberland, Dauphin (Harrisburg), Delaware, Elk, Erie, Fayette, Forest, Franklin, Fulton, Greene, Huntingdon, Indiana, Jefferson, Juniata, Lackawanna (Scranton), Lancaster, Lawrence, Lebanon, Lehigh, Luzerne, Lycoming, McKean, Mercer, Mifflin, Monroe, Montgomery, Montour, Northampton, Northumberland, Perry, Philadelphia, Pike, Potter, Schuylkill, Snyder, Somerset, Sullivan, Susquehanna, Tioga, Union, Venango, Warren, Washington, Wayne, Westmoreland, Wyoming, York
+
+**Success Criteria** (what must be TRUE):
+  1. All 6 states have county dropdowns populated on their ProjectForms with correct county counts (OR: 36, MD: 24, NJ: 21, MA: 14, OH: 88, PA: 67)
+  2. County_wage_determinations table populated with manually-imported rate data for all counties for at least: carpenter, electrician, laborer, plumber, ironworker, painter trade codes
+  3. County rate lookup works correctly in rate cascade for all 6 states
+  4. Portland Metro premium flag working for OR; Boston premium for MA; Pittsburgh/Philadelphia premium for PA
+  5. All 6 states pass county rate smoke tests
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 147: Municipal/Local Rate Layer
+
+**Goal**: Contractors working on projects within major US cities that set their own prevailing wage rates above the state/county floor — NYC DDC, Chicago CDOT, Seattle/King County, and Boston — are automatically shown the applicable local rate and have it enforced in compliance checks, with the local rate taking precedence over state and county rates.
+
+**Depends on**: Phase 142 (CA county), Phase 143 (NY county + NYC DDC), Phase 144 (IL/Chicago), Phase 145 (WA county)
+
+**Requirements**: LOCAL-01, LOCAL-02, LOCAL-03, LOCAL-04, LOCAL-05
+
+**Municipal jurisdictions:**
+
+**New York City (NYC DDC — 5 boroughs):**
+- Already partially handled in Phase 143; this phase wires the NYC DDC rate to computeCompliance() for enforcement
+- NYC DDC rate: if project.county in ['bronx','kings','new-york','queens','richmond'] AND project.nycCapitalProject=true → use NYC DDC wage schedule
+- Compliance violation type: `nyc-ddc-underwage` (separate from `ny-under-wage`) for clear audit trail
+- NYC DDC rates published annually by NYC Comptroller; manual import update process documented
+
+**Chicago (Chicago CDOT + Municipal Code §2-92-330):**
+- Already partially handled in Phase 144; this phase wires Chicago CDOT rate enforcement
+- Chicago CDOT rate: if project.county='cook' AND project.city='chicago' → use Chicago CDOT schedule
+- Compliance violation type: `chicago-cdot-underwage`
+- Chicago rates apply to ALL public improvement contracts let by city of Chicago regardless of funding source
+
+**Seattle / King County (WA L&I King County + Seattle Office of Labor Standards):**
+- Seattle has a local minimum wage ($20.76/hr in 2026) that applies as a floor but does not replace L&I prevailing wage for trades
+- WA L&I King County rates already highest in WA state for most trades; no separate Seattle prevailing wage schedule
+- Implementation: King County county_wage_determinations used directly; Seattle minimum wage floor enforcement added as COMP-KingFloor violation type when any worker pay (base + fringe) falls below Seattle minimum
+
+**Boston / Suffolk County (MA AG Suffolk County):**
+- Boston does not set a separate prevailing wage schedule; MA AG Suffolk County rates apply within Boston
+- Boston premium already captured in county_wage_determinations via Phase 146 MD import
+- No additional local override needed; Phase 146 covers this via county selection
+
+**Philadelphia (PA L&I Philadelphia County):**
+- Philadelphia enforces prevailing wage with a city wage supplement — the Philadelphia Living Wage Ordinance adds a floor for city-funded projects
+- Philadelphia Living Wage: currently $15.37/hr minimum for city contracts; if base prevailing wage is above this, prevailing wage governs
+- Implementation: Philadelphia county selection surfaces Living Wage warning on project creation; compliance engine adds `phila-living-wage-floor` violation type
+
+**Success Criteria** (what must be TRUE):
+  1. NYC DDC rate enforced in computeCompliance() for NYC capital projects; violation type `nyc-ddc-underwage` emitted when worker pay below NYC DDC schedule
+  2. Chicago CDOT rate enforced for Chicago city projects; violation type `chicago-cdot-underwage` emitted
+  3. Seattle minimum wage floor enforced for King County WA projects; violation type `seattle-min-wage-floor` emitted
+  4. Philadelphia Living Wage warning surfaced on Philadelphia project creation; `phila-living-wage-floor` violation type in compliance engine
+  5. PayrollWeekDetailPage violation badges distinguish NYC DDC, Chicago CDOT, Seattle floor, and Phila Living Wage from standard under-wage violations
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+### Phase 148: State Compliance Engine Expansion
+
+**Goal**: The compliance engine (`computeCompliance()`) handles all 20 newly-added states' specific rules — daily OT thresholds, weekly OT thresholds, apprentice ratio requirements, fringe treatment rules, and deduction caps — through a clean state-dispatch table that replaces growing if-blocks, making adding a new state a one-file change.
+
+**Depends on**: Phases 136-141 (all new states added), Phase 147 (municipal layer)
+
+**Requirements**: COMP-STATE-01, COMP-STATE-02, COMP-STATE-03, COMP-STATE-04
+
+**Compliance rules by state (complete reference):**
+
+| State | Daily OT threshold | Weekly OT threshold | Apprentice ratio | Fringe treatment | Deduction cap |
+|---|---|---|---|---|---|
+| AK | 8 hrs/day | 40 hrs/week | 1:3 per trade | Bona fide plan or cash | 30% gross |
+| CA | 8 hrs/day (DT after 12) | 40 hrs/week | 1:5 per trade | DIR schedule — disaggregated | 30% gross |
+| CO | None | 40 hrs/week | 1:4 per trade | Bona fide plan or cash | 30% gross |
+| CT | None | 40 hrs/week | 1:3 per trade | Bona fide plan or cash | 30% gross |
+| DC | None | 40 hrs/week | 1:4 per trade | Bona fide plan or cash | 30% gross |
+| DE | None | 40 hrs/week | 1:4 per trade | Bona fide plan or cash | 30% gross |
+| FL | (no state PW law — federal only) | 40 hrs/week | 1:3 federal | Federal fringe | 30% gross |
+| HI | 8 hrs/day | 40 hrs/week | 1:5 per trade | HI DLIR schedule | 30% gross |
+| IL | None | 40 hrs/week | 1:5 per trade | IL DOL schedule | 30% gross |
+| KY | None | 40 hrs/week | 1:3 per trade | Bona fide plan or cash | 30% gross |
+| MA | None | 40 hrs/week | 1:5 per trade | AG schedule | 30% gross |
+| MD | None | 40 hrs/week | 1:3 per trade | Bona fide plan or cash | 30% gross |
+| ME | None | 40 hrs/week | 1:3 per trade | Bona fide plan or cash | 30% gross |
+| MI | None | 40 hrs/week | 1:5 per trade | LARA schedule | 30% gross |
+| MN | None | 48 hrs/week | 1:5 per trade | DLI schedule | 30% gross |
+| MO | None | 40 hrs/week | 1:3 per trade | Bona fide plan or cash | 30% gross |
+| MT | None | 40 hrs/week | 1:3 per trade | MT DOL schedule | 30% gross |
+| NJ | None | 40 hrs/week | 1:5 per trade | DOL schedule | 30% gross |
+| NM | None | 40 hrs/week | 1:3 per trade | Bona fide plan or cash | 30% gross |
+| NV | 8 hrs/day | 40 hrs/week | 1:5 per trade | LC schedule | 30% gross |
+| NY | 8 hrs/day | 40 hrs/week | 1:4 per trade | DOL schedule | 30% gross |
+| OH | None | 40 hrs/week | 1:4 per trade | ODRP schedule | 30% gross |
+| OR | 8 hrs/day | 40 hrs/week | 1:4 per trade | BOLI schedule | 30% gross |
+| PA | None | 40 hrs/week | 1:4 per trade | L&I schedule | 30% gross |
+| RI | None | 40 hrs/week | 1:5 per trade | DOL schedule | 30% gross |
+| TX | None | 40 hrs/week | 1:3 per trade | Federal fringe | 30% gross |
+| VA | None | 40 hrs/week | 1:5 per trade | DOLI schedule | 30% gross |
+| WA | None | 40 hrs/week | 1:5 per trade | L&I schedule | 30% gross |
+| WI | None | 40 hrs/week | 1:3 per trade | DWD schedule | 30% gross |
+| WV | None | 40 hrs/week | 1:4 per trade | DOL schedule | 30% gross |
+
+**Implementation: state-dispatch table in complianceService.ts:**
+- Replace all `if (project.state === 'CA')` / `if (project.state === 'NY')` blocks with a `STATE_COMPLIANCE_RULES` map keyed by state code
+- Each entry: `{ dailyOtThreshold: number|null, weeklyOtThreshold: number, dailyDtThreshold: number|null, apprenticeRatio: number, fringeSource: string, deductionCap: number }`
+- `computeCompliance()` looks up rule by `project.state?.toUpperCase()` → applies thresholds → falls back to federal rule if state not found
+- New violation types: `{state}-daily-ot`, `{state}-weekly-ot`, `{state}-apprentice-ratio`, `{state}-fringe-shortage` — namespaced to prevent collision with existing violation type strings
+- MN weekly OT threshold is 48 hrs (not 40) — already in existing MN implementation; ensure this is migrated into the dispatch table
+
+**Success Criteria** (what must be TRUE):
+  1. `STATE_COMPLIANCE_RULES` map contains entries for all 30 state codes (including previously built states: CA, WA, NY, IL, TX, FL, MA, NJ, MN, VA)
+  2. `computeCompliance()` uses the dispatch table exclusively; no per-state if-blocks remain in the function body
+  3. Daily OT violation fires for AK, CA, HI, NV, NY, OR workers exceeding respective daily thresholds
+  4. Apprentice ratio violation fires for all states with correct per-state ratio
+  5. All existing compliance tests still pass after refactor; 20+ new compliance rule tests added (one set per new state)
+
+**Plans**: TBD
+
+**UI hint**: no
+
+---
+
+### Phase 149: Complete State + County Test Suite
+
+**Goal**: Every state's certified payroll form, every county wage rate lookup, and every compliance rule has automated Vitest test coverage — ensuring that a code change in any part of the system cannot silently break a state-specific calculation or form generation. Minimum 10 test cases per state (250+ new tests total).
+
+**Depends on**: Phases 136-148 (all states and county systems built)
+
+**Requirements**: TEST-STATE-01, TEST-STATE-02, TEST-STATE-03, TEST-COUNTY-01, TEST-COUNTY-02
+
+**Test categories per state:**
+
+1. **Wage rate lookup tests** — for each of 20 new states: `getCachedWd(state, county, trade)` returns correct rate from county_wage_determinations; fallback to statewide when county has no entry; fallback to federal when state has no entry
+2. **Compliance rule tests** — for each of 20 new states: daily OT violation fires at correct threshold; daily OT does NOT fire for states with no daily threshold; apprentice ratio violation fires at correct 1:N ratio; deduction cap violation fires at 30% gross
+3. **Form generation tests** — for each of 20 new states: PDF generator produces a buffer > 0 bytes; PDF contains worker name; PDF contains state-specific certification language; PDF contains correct state project number field; no unhandled exception on missing optional fields
+4. **County rate tests** — for CA (58 counties), NY (62 counties), IL (102 counties), WA (39 counties): county rate lookup returns value; county rate differs from statewide rate; rate snapshot frozen correctly on payroll entry; changing county after payroll entry does not retroactively update snapshots
+5. **Municipal rate tests** — NYC DDC: compliance fires `nyc-ddc-underwage` when below DDC rate; Chicago CDOT: compliance fires `chicago-cdot-underwage`; Seattle floor: fires `seattle-min-wage-floor`
+6. **Round-trip integration tests** — for each of 20 new states: create project (API) → add worker (API) → submit payroll entry (API) → call compliance endpoint → call PDF download endpoint → assert 200 OK and PDF buffer returned
+
+**Coverage targets:**
+- State compliance rules: ≥ 10 tests per state × 20 states = 200+ new tests
+- County rate lookups: ≥ 5 tests per county cluster = 30+ new tests
+- Form generation: ≥ 5 tests per new state form = 100+ new tests
+- Total new test count: ≥ 330 tests; overall suite target: ≥ 1,100 passing tests
+
+**Success Criteria** (what must be TRUE):
+  1. All 330+ new tests pass with zero failures on `npx vitest run`
+  2. No existing test regresses (all pre-v10.0 tests still pass)
+  3. Test files organized by state: `tests/states/ak.test.ts`, `tests/states/co.test.ts`, etc.
+  4. County test files: `tests/counties/ca-counties.test.ts`, `tests/counties/ny-counties.test.ts`, etc.
+  5. CI pipeline (if configured) passes fully
+
+**Plans**: TBD
+
+**UI hint**: no
+
+---
+
+### Phase 150: 50-State Coverage Dashboard + Guidance
+
+**Goal**: Contractors can see a full 50-state coverage map showing which states have full support (state form + county rates + compliance rules), partial support (federal WH-347 only + compliance), and no state law (federal only). Per-state compliance guide pages provide quick-reference checklists. The landing page is updated to lead with 50-state coverage as a competitive differentiator.
+
+**Depends on**: Phases 136-149 (all states built and tested)
+
+**Requirements**: UX-STATE-01, UX-STATE-02, UX-STATE-03, UX-STATE-04
+
+**Implementation details:**
+
+**50-State Interactive Map (upgrade of Phase 114 UsComplianceMap):**
+- Three visual tiers: 🟢 Full (state form + county rates + compliance rules) | 🟡 Partial (federal WH-347 + state compliance rules, no state form) | ⬜ Federal-only (no state PW law — WH-347 sufficient)
+- Expected tiers post-v10.0: Full: CA, WA, NY, IL, TX, MA, NJ, MN, VA, AK, HI, OR, NV, CO, MT, NM, CT, ME, RI, DC, DE, MD, WV, MI, OH, WI, KY, MO, PA (29 jurisdictions); Federal-only: AL, AR, AZ, FL, GA, IA, ID, IN, KS, LA, MS, NC, ND, NE, NH, OK, SC, SD, TN, UT, VT, WY (22 states)
+- Hover tooltip per state: state name, law citation, threshold, form type, portal URL
+- Click-through to per-state guide page at `/compliance/:state`
+
+**Per-state guide pages (`/compliance/:stateCode`):**
+- Route: public, no auth required
+- Content per state: law name + citation, project threshold (dollar amount triggering PW), compliance officer contact, form name + download sample link, key rules (daily OT? apprentice ratio? fringe requirement?), portal submission URL, HelpCallout for common pitfalls
+- 50 pages total (even for federal-only states: "This state has no prevailing wage law — federal WH-347 applies on federally-funded projects")
+
+**Landing page update:**
+- "50 States Covered" hero stat (alongside "Bank-grade SSN security" and current stats)
+- State coverage section with mini-map preview linking to full coverage map
+- "Compare coverage" table vs. B2Gnow, LCPtracker — updated to show HCC at 29/50 full-state forms vs. competitors' claimed coverage
+
+**Project creation wizard update:**
+- When user selects a state, HelpCallout shows state-specific onboarding note: law name, threshold, any gotchas (e.g. "PA requires requesting a wage determination from PA L&I before work begins")
+
+**Success Criteria** (what must be TRUE):
+  1. `/compliance/map` renders all 50 states with correct tier coloring; hover tooltip shows correct law citation for each PW-law state
+  2. `/compliance/:state` pages render for all 50 states; include law name, threshold, form name, portal URL, key rules; no 404 for any US state code
+  3. Landing page shows "29 States — Full Form Coverage" stat; coverage map preview renders correctly; comparison table updated
+  4. Project creation HelpCallout surfaces state-specific note for all 29 full-coverage states
+  5. REQUIREMENTS.md updated with all STATE-*, COUNTY-*, LOCAL-*, TEST-STATE-*, UX-STATE-* IDs marked as validated after Phase 150
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+---
+
+## v10.0 Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 135. State Coverage Infrastructure | v10.0 | 0/TBD | Not started | - |
+| 136. Pacific West — AK, HI, OR, NV | v10.0 | 0/TBD | Not started | - |
+| 137. Mountain/Southwest — CO, MT, NM | v10.0 | 0/TBD | Not started | - |
+| 138. New England — CT, ME, RI | v10.0 | 0/TBD | Not started | - |
+| 139. Mid-Atlantic — DC, DE, MD, WV | v10.0 | 0/TBD | Not started | - |
+| 140. Great Lakes — MI, OH, WI | v10.0 | 0/TBD | Not started | - |
+| 141. Appalachian/Border — KY, MO, PA | v10.0 | 0/TBD | Not started | - |
+| 142. California County Wage System | v10.0 | 0/TBD | Not started | - |
+| 143. New York County Wage System | v10.0 | 0/TBD | Not started | - |
+| 144. Illinois County + Chicago Municipal | v10.0 | 0/TBD | Not started | - |
+| 145. Washington County Wage System | v10.0 | 0/TBD | Not started | - |
+| 146. Multi-State County Systems | v10.0 | 0/TBD | Not started | - |
+| 147. Municipal/Local Rate Layer | v10.0 | 0/TBD | Not started | - |
+| 148. State Compliance Engine Expansion | v10.0 | 0/TBD | Not started | - |
+| 149. Complete State + County Test Suite | v10.0 | 0/TBD | Not started | - |
+| 150. 50-State Coverage Dashboard + Guidance | v10.0 | 0/TBD | Not started | - |
 
