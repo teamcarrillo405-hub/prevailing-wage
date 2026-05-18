@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import rateLimit from 'express-rate-limit';
+import { readFileSync } from 'fs';
+import path from 'path';
 import { getDb } from '../db/index.js';
 import { users, projectMembers, teamInvites, onboardingProfiles } from '../db/schema.js';
 import { hashPassword, verifyPassword, createSessionToken } from '../services/auth.js';
@@ -11,6 +13,18 @@ import { validate } from '../middleware/validate.js';
 import { validateToken } from '../services/inviteService.js';
 import { insertSecurityEvent, insertLoginAttempt } from '../db/auditHelpers.js';
 import { verifyTotpToken, consumeBackupCode } from '../services/mfaService.js';
+import { sendEmail } from '../services/emailService.js';
+
+// Load welcome email template at module load (fail-safe: empty string if file missing)
+let welcomeTemplate = '';
+try {
+  welcomeTemplate = readFileSync(
+    path.join(process.cwd(), 'src/server/email/templates/welcome.html'),
+    'utf8',
+  );
+} catch {
+  console.warn('[auth] welcome.html template not found — welcome emails disabled');
+}
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -90,6 +104,16 @@ authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (r
   res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
   void insertLoginAttempt({ email, success: true, ipAddress: req.ip });
   void insertSecurityEvent({ userId: id, eventType: 'register', ipAddress: req.ip, userAgent: req.headers['user-agent'] as string | undefined });
+
+  // Fire welcome email — non-blocking, never delay registration response
+  if (welcomeTemplate) {
+    const firstName = (companyName || email.split('@')[0]).split(' ')[0];
+    const welcomeHtml = welcomeTemplate
+      .replace('{{firstName}}', firstName)
+      .replace('{{appUrl}}', process.env.APP_URL ?? 'https://hccprevailingwage.com');
+    sendEmail(email, 'Welcome to HCC Prevailing Wage', welcomeHtml).catch(() => {});
+  }
+
   res.status(201).json({
     data: {
       user: {
