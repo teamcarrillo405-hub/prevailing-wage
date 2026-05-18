@@ -82,6 +82,29 @@ import {
   type TxCprInput,
 } from '../services/txCprPdfGenerator.js';
 import { getStateSupport, validateStateProjectField } from '../../shared/stateSupport.js';
+import { fillPaCpr, type PaCprInput } from '../services/paCprGenerator.js';
+import { fillOhPwc28, type OhPwc28Input } from '../services/ohPwc28Generator.js';
+import { fillCoCpr, type CoCprInput } from '../services/coCprGenerator.js';
+import { fillMdDllr, type MdDllrInput } from '../services/mdDllrGenerator.js';
+import { fillOrBoli, type OrBoliInput } from '../services/orBoliGenerator.js';
+import { fillCtDol, type CtDolInput } from '../services/ctDolGenerator.js';
+import { fillHiDli, type HiDliInput } from '../services/hiDliGenerator.js';
+import { fillKyCpr, type KyCprInput } from '../services/kyCprGenerator.js';
+import { fillNmCpr, type NmCprInput } from '../services/nmCprGenerator.js';
+import { fillNvDir, type NvDirInput } from '../services/nvDirGenerator.js';
+import { fillRiDol, type RiDolInput } from '../services/riDolGenerator.js';
+import { fillWvDol, type WvDolInput } from '../services/wvDolGenerator.js';
+import { fillMeDol, type MeDolInput } from '../services/meDolGenerator.js';
+import { fillVtDfr, type VtDfrInput } from '../services/vtDfrGenerator.js';
+import { fillMtDli, type MtDliInput } from '../services/mtDliGenerator.js';
+import { fillNdDlt, type NdDltInput } from '../services/ndDltGenerator.js';
+import { fillDeDol, type DeDolInput } from '../services/deDolGenerator.js';
+import { fillNhDot, type NhDotInput } from '../services/nhDotGenerator.js';
+import { fillAkDol, type AkDolInput } from '../services/akDolGenerator.js';
+import { fillNycCpr, type NycCprInput } from '../services/nycCprGenerator.js';
+import { fillCookCpr, type CookCprInput } from '../services/cookCprGenerator.js';
+import { fillDcOcp, type DcOcpInput } from '../services/dcOcpGenerator.js';
+import { fillLaCountyCpr, type LaCountyCprInput } from '../services/laCountyCprGenerator.js';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
 
@@ -1936,6 +1959,702 @@ router.get('/tx-cpr/:weekId', async (req, res) => {
   res.set('Content-Type', 'application/pdf');
   res.set('Content-Disposition', `attachment; filename="tx-cpr-${weekId}.pdf"`);
   res.send(Buffer.from(pdfBytes));
+});
+
+// ── PA CPR ─────────────────────────────────────────────────────────────────
+router.get('/pa-cpr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: PaCprInput = {
+      contractor: {
+        name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''),
+        address: `${p.state ?? ''}, ${p.county ?? ''}`,
+        paContractorLicense: p.paContractorLicense != null ? String(p.paContractorLicense) : null,
+      },
+      project: {
+        name: String(p.name ?? ''), paContractId: p.paContractId != null ? String(p.paContractId) : null,
+        county: String(p.county ?? ''), awardingAuthority: String(p.awardingAgency ?? ''),
+      },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: entries.map((e) => ({
+        workerName: e.workerName ?? '', workerSsnLast4: e.ssnLast4 ?? null,
+        workerAddress: e.workerAddress ?? '', classification: e.tradeDescription ?? '',
+        isApprentice: e.laborType === 'apprentice',
+        monSt: e.monSt ?? 0, monOt: e.monOt ?? 0, tueSt: e.tueSt ?? 0, tueOt: e.tueOt ?? 0,
+        wedSt: e.wedSt ?? 0, wedOt: e.wedOt ?? 0, thuSt: e.thuSt ?? 0, thuOt: e.thuOt ?? 0,
+        friSt: e.friSt ?? 0, friOt: e.friOt ?? 0, satSt: e.satSt ?? 0, satOt: e.satOt ?? 0,
+        sunSt: e.sunSt ?? 0, sunOt: e.sunOt ?? 0,
+        baseRate: e.baseRate ?? 0, fringeRate: e.fringeRate ?? 0, grossWages: e.grossWages ?? 0,
+        ficaTax: e.ficaTax ?? 0, fitWithheld: e.fitWithheld ?? 0, stateWithheld: e.stateWithheld ?? 0,
+        otherDeductions: e.otherDeductions ?? 0, netPay: e.netPay ?? 0,
+      })),
+      compliance: { certifierName: String(p.certifierName ?? ''), certifierTitle: String(p.certifierTitle ?? ''), signatureDate: week.weekEndingDate },
+    };
+    const bytes = await fillPaCpr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="pa-cpr-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'PA CPR export failed');
+    return res.status(500).json({ error: 'PA CPR export failed' });
+  }
+});
+
+// ── OH PWC-28 ────────────────────────────────────────────────────────────────
+router.get('/oh-pwc28/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: OhPwc28Input = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), ohContractId: p.ohContractId != null ? String(p.ohContractId) : null, ohAwardingAuthority: String(p.awardingAgency ?? ''), county: String(p.county ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: entries.map((e) => ({
+        workerName: e.workerName ?? '', workerSsnLast4: e.ssnLast4 ?? null, workerAddress: e.workerAddress ?? '',
+        classification: e.tradeDescription ?? '', isApprentice: e.laborType === 'apprentice',
+        monSt: e.monSt ?? 0, monOt: e.monOt ?? 0, tueSt: e.tueSt ?? 0, tueOt: e.tueOt ?? 0,
+        wedSt: e.wedSt ?? 0, wedOt: e.wedOt ?? 0, thuSt: e.thuSt ?? 0, thuOt: e.thuOt ?? 0,
+        friSt: e.friSt ?? 0, friOt: e.friOt ?? 0, satSt: e.satSt ?? 0, satOt: e.satOt ?? 0,
+        sunSt: e.sunSt ?? 0, sunOt: e.sunOt ?? 0,
+        baseRate: e.baseRate ?? 0, fringeRate: e.fringeRate ?? 0, grossWages: e.grossWages ?? 0,
+        ficaTax: e.ficaTax ?? 0, fitWithheld: e.fitWithheld ?? 0, stateWithheld: e.stateWithheld ?? 0,
+        otherDeductions: e.otherDeductions ?? 0, netPay: e.netPay ?? 0,
+      })),
+      compliance: { certifierName: String(p.certifierName ?? ''), certifierTitle: String(p.certifierTitle ?? ''), signatureDate: week.weekEndingDate },
+    };
+    const bytes = await fillOhPwc28(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="oh-pwc28-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'OH PWC-28 export failed');
+    return res.status(500).json({ error: 'OH PWC-28 export failed' });
+  }
+});
+
+// ── CO CPR ────────────────────────────────────────────────────────────────────
+router.get('/co-cpr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: CoCprInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), coContractId: p.coContractId != null ? String(p.coContractId) : null, coAwardingAgency: String(p.awardingAgency ?? ''), projectCounty: String(p.county ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: entries.map((e) => ({
+        workerName: e.workerName ?? '', workerSsnLast4: e.ssnLast4 ?? null, workerAddress: e.workerAddress ?? '',
+        classification: e.tradeDescription ?? '', isApprentice: e.laborType === 'apprentice',
+        monSt: e.monSt ?? 0, monOt: e.monOt ?? 0, tueSt: e.tueSt ?? 0, tueOt: e.tueOt ?? 0,
+        wedSt: e.wedSt ?? 0, wedOt: e.wedOt ?? 0, thuSt: e.thuSt ?? 0, thuOt: e.thuOt ?? 0,
+        friSt: e.friSt ?? 0, friOt: e.friOt ?? 0, satSt: e.satSt ?? 0, satOt: e.satOt ?? 0,
+        sunSt: e.sunSt ?? 0, sunOt: e.sunOt ?? 0,
+        baseRate: e.baseRate ?? 0, fringeRate: e.fringeRate ?? 0, grossWages: e.grossWages ?? 0,
+        ficaTax: e.ficaTax ?? 0, fitWithheld: e.fitWithheld ?? 0, stateWithheld: e.stateWithheld ?? 0,
+        otherDeductions: e.otherDeductions ?? 0, netPay: e.netPay ?? 0,
+      })),
+      compliance: { certifierName: String(p.certifierName ?? ''), certifierTitle: String(p.certifierTitle ?? ''), signatureDate: week.weekEndingDate },
+    };
+    const bytes = await fillCoCpr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="co-cpr-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'CO CPR export failed');
+    return res.status(500).json({ error: 'CO CPR export failed' });
+  }
+});
+
+// Helper for building standard GenericCprEntry entries from payroll data
+function buildGenericEntries(entries: Awaited<ReturnType<typeof getPayrollEntriesWithWorkerDetails>>) {
+  return entries.map((e) => ({
+    workerName: e.workerName ?? '', workerSsnLast4: e.ssnLast4 ?? null,
+    classification: e.tradeDescription ?? '', isApprentice: e.laborType === 'apprentice',
+    monSt: e.monSt ?? 0, monOt: e.monOt ?? 0, tueSt: e.tueSt ?? 0, tueOt: e.tueOt ?? 0,
+    wedSt: e.wedSt ?? 0, wedOt: e.wedOt ?? 0, thuSt: e.thuSt ?? 0, thuOt: e.thuOt ?? 0,
+    friSt: e.friSt ?? 0, friOt: e.friOt ?? 0, satSt: e.satSt ?? 0, satOt: e.satOt ?? 0,
+    sunSt: e.sunSt ?? 0, sunOt: e.sunOt ?? 0,
+    baseRate: e.baseRate ?? 0, grossWages: e.grossWages ?? 0,
+    ficaTax: e.ficaTax ?? 0, fitWithheld: e.fitWithheld ?? 0, stateWithheld: e.stateWithheld ?? 0,
+    otherDeductions: e.otherDeductions ?? 0, netPay: e.netPay ?? 0,
+  }));
+}
+
+function buildGenericCompliance(p: Record<string, unknown>, week: { weekEndingDate: string }, statuteCitation: string) {
+  return { certifierName: String(p.certifierName ?? ''), certifierTitle: String(p.certifierTitle ?? ''), signatureDate: week.weekEndingDate, statuteCitation };
+}
+
+// ── MD DLLR ──────────────────────────────────────────────────────────────────
+router.get('/md-dllr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: MdDllrInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), mdContractId: p.mdContractId != null ? String(p.mdContractId) : null, mdAwardingAgency: String(p.awardingAgency ?? ''), county: String(p.county ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'MD Code, Lab. & Emp. \u00a7 17-201 et seq.'),
+    };
+    const bytes = await fillMdDllr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="md-dllr-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'MD DLLR export failed');
+    return res.status(500).json({ error: 'MD DLLR export failed' });
+  }
+});
+
+// ── OR BOLI ──────────────────────────────────────────────────────────────────
+router.get('/or-boli/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: OrBoliInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}`, orCcbLicense: p.orContractorCcb != null ? String(p.orContractorCcb) : null },
+      project: { name: String(p.name ?? ''), orBoliProjectId: p.orBoliProjectId != null ? String(p.orBoliProjectId) : null, county: String(p.county ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: entries.map((e) => ({ ...buildGenericEntries([e])[0], isWoman: null, isMinority: null })),
+      compliance: buildGenericCompliance(p, week, 'ORS 279C.800 et seq.'),
+    };
+    const bytes = await fillOrBoli(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="or-boli-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'OR BOLI export failed');
+    return res.status(500).json({ error: 'OR BOLI export failed' });
+  }
+});
+
+// ── CT DOL ───────────────────────────────────────────────────────────────────
+router.get('/ct-dol/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: CtDolInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), ctContractId: p.ctContractId != null ? String(p.ctContractId) : null, ctAwardingMunicipality: String(p.awardingAgency ?? p.county ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'CGS \u00a7 31-53 (Connecticut Prevailing Wage Law)'),
+    };
+    const bytes = await fillCtDol(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="ct-dol-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'CT DOL export failed');
+    return res.status(500).json({ error: 'CT DOL export failed' });
+  }
+});
+
+// ── HI DLI ───────────────────────────────────────────────────────────────────
+router.get('/hi-dli/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: HiDliInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), hiContractId: p.hiContractId != null ? String(p.hiContractId) : null, hiAwardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: entries.map((e) => ({
+        workerName: e.workerName ?? '', workerSsnLast4: e.ssnLast4 ?? null, classification: e.tradeDescription ?? '',
+        isApprentice: e.laborType === 'apprentice',
+        monSt: e.monSt ?? 0, monOt: e.monOt ?? 0, monDt: 0, tueSt: e.tueSt ?? 0, tueOt: e.tueOt ?? 0, tueDt: 0,
+        wedSt: e.wedSt ?? 0, wedOt: e.wedOt ?? 0, wedDt: 0, thuSt: e.thuSt ?? 0, thuOt: e.thuOt ?? 0, thuDt: 0,
+        friSt: e.friSt ?? 0, friOt: e.friOt ?? 0, friDt: 0, satSt: e.satSt ?? 0, satOt: e.satOt ?? 0, satDt: 0,
+        sunSt: e.sunSt ?? 0, sunOt: e.sunOt ?? 0, sunDt: 0,
+        baseRate: e.baseRate ?? 0, dtRate: (e.baseRate ?? 0) * 2, grossWages: e.grossWages ?? 0,
+        ficaTax: e.ficaTax ?? 0, fitWithheld: e.fitWithheld ?? 0, stateWithheld: e.stateWithheld ?? 0,
+        otherDeductions: e.otherDeductions ?? 0, netPay: e.netPay ?? 0,
+      })),
+      compliance: buildGenericCompliance(p, week, 'HRS Chapter 104'),
+    };
+    const bytes = await fillHiDli(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="hi-dli-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'HI DLI export failed');
+    return res.status(500).json({ error: 'HI DLI export failed' });
+  }
+});
+
+// ── KY CPR ───────────────────────────────────────────────────────────────────
+router.get('/ky-cpr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: KyCprInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), kyContractId: p.kyContractId != null ? String(p.kyContractId) : null, kyAwardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'KRS 337.505\u2013337.550 (Kentucky Prevailing Wage Act)'),
+    };
+    const bytes = await fillKyCpr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="ky-cpr-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'KY CPR export failed');
+    return res.status(500).json({ error: 'KY CPR export failed' });
+  }
+});
+
+// ── NM CPR ───────────────────────────────────────────────────────────────────
+router.get('/nm-cpr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: NmCprInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), nmContractId: p.nmContractId != null ? String(p.nmContractId) : null, nmAwardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'NMSA \u00a7 13-4-11 et seq.'),
+    };
+    const bytes = await fillNmCpr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="nm-cpr-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'NM CPR export failed');
+    return res.status(500).json({ error: 'NM CPR export failed' });
+  }
+});
+
+// ── NV DIR ───────────────────────────────────────────────────────────────────
+router.get('/nv-dir/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: NvDirInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}`, nvContractorLicense: p.nvContractorLicense != null ? String(p.nvContractorLicense) : null },
+      project: { name: String(p.name ?? ''), nvContractId: p.nvContractId != null ? String(p.nvContractId) : null, county: String(p.county ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'NRS 338.010 et seq.'),
+    };
+    const bytes = await fillNvDir(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="nv-dir-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'NV DIR export failed');
+    return res.status(500).json({ error: 'NV DIR export failed' });
+  }
+});
+
+// ── RI DOL ───────────────────────────────────────────────────────────────────
+router.get('/ri-dol/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: RiDolInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), riContractId: p.riContractId != null ? String(p.riContractId) : null, awardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'RIGL \u00a7 37-13-1 et seq.'),
+    };
+    const bytes = await fillRiDol(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="ri-dol-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'RI DOL export failed');
+    return res.status(500).json({ error: 'RI DOL export failed' });
+  }
+});
+
+// ── WV DOL ───────────────────────────────────────────────────────────────────
+router.get('/wv-dol/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: WvDolInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), wvContractId: p.wvContractId != null ? String(p.wvContractId) : null, awardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'WV Code \u00a7 21-5A-1 et seq.'),
+    };
+    const bytes = await fillWvDol(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="wv-dol-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'WV DOL export failed');
+    return res.status(500).json({ error: 'WV DOL export failed' });
+  }
+});
+
+// ── ME DOL ───────────────────────────────────────────────────────────────────
+router.get('/me-dol/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: MeDolInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), meContractId: p.meContractId != null ? String(p.meContractId) : null, awardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, '26 MRS \u00a7 1311 et seq.'),
+    };
+    const bytes = await fillMeDol(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="me-dol-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'ME DOL export failed');
+    return res.status(500).json({ error: 'ME DOL export failed' });
+  }
+});
+
+// ── VT DFR ───────────────────────────────────────────────────────────────────
+router.get('/vt-dfr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: VtDfrInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), vtContractId: p.vtContractId != null ? String(p.vtContractId) : null, awardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, '21 VSA \u00a7 391 et seq.'),
+    };
+    const bytes = await fillVtDfr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="vt-dfr-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'VT DFR export failed');
+    return res.status(500).json({ error: 'VT DFR export failed' });
+  }
+});
+
+// ── MT DLI ───────────────────────────────────────────────────────────────────
+router.get('/mt-dli/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: MtDliInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), mtContractId: p.mtContractId != null ? String(p.mtContractId) : null, awardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'MCA \u00a7 18-2-401 et seq.'),
+    };
+    const bytes = await fillMtDli(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="mt-dli-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'MT DLI export failed');
+    return res.status(500).json({ error: 'MT DLI export failed' });
+  }
+});
+
+// ── ND DLT ───────────────────────────────────────────────────────────────────
+router.get('/nd-dlt/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: NdDltInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), ndContractId: p.ndContractId != null ? String(p.ndContractId) : null, awardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'NDCC 34-14-01 et seq.'),
+    };
+    const bytes = await fillNdDlt(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="nd-dlt-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'ND DLT export failed');
+    return res.status(500).json({ error: 'ND DLT export failed' });
+  }
+});
+
+// ── DE DOL ───────────────────────────────────────────────────────────────────
+router.get('/de-dol/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: DeDolInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), deContractId: p.deContractId != null ? String(p.deContractId) : null, awardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, '29 Del. C. \u00a7 6960 et seq.'),
+    };
+    const bytes = await fillDeDol(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="de-dol-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'DE DOL export failed');
+    return res.status(500).json({ error: 'DE DOL export failed' });
+  }
+});
+
+// ── NH DOT ───────────────────────────────────────────────────────────────────
+router.get('/nh-dot/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: NhDotInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), nhContractId: p.nhContractId != null ? String(p.nhContractId) : null, nhDotProjectNumber: null },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'RSA 228:22'),
+    };
+    const bytes = await fillNhDot(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="nh-dot-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'NH DOT export failed');
+    return res.status(500).json({ error: 'NH DOT export failed' });
+  }
+});
+
+// ── AK DOL ───────────────────────────────────────────────────────────────────
+router.get('/ak-dol/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: AkDolInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: { name: String(p.name ?? ''), akContractId: p.akContractId != null ? String(p.akContractId) : null, akAwardingAgency: String(p.awardingAgency ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: entries.map((e) => ({
+        workerName: e.workerName ?? '', workerSsnLast4: e.ssnLast4 ?? null, classification: e.tradeDescription ?? '',
+        isApprentice: e.laborType === 'apprentice',
+        sunSt: e.sunSt ?? 0, monSt: e.monSt ?? 0, tueSt: e.tueSt ?? 0, wedSt: e.wedSt ?? 0,
+        thuSt: e.thuSt ?? 0, friSt: e.friSt ?? 0, satSt: e.satSt ?? 0,
+        sunOt: e.sunOt ?? 0, monOt: e.monOt ?? 0, tueOt: e.tueOt ?? 0, wedOt: e.wedOt ?? 0,
+        thuOt: e.thuOt ?? 0, friOt: e.friOt ?? 0, satOt: e.satOt ?? 0,
+        baseRate: e.baseRate ?? 0, grossWages: e.grossWages ?? 0,
+        ficaTax: e.ficaTax ?? 0, fitWithheld: e.fitWithheld ?? 0, stateWithheld: e.stateWithheld ?? 0,
+        otherDeductions: e.otherDeductions ?? 0, netPay: e.netPay ?? 0,
+      })),
+      compliance: buildGenericCompliance(p, week, 'AS 36.05.010 et seq.'),
+    };
+    const bytes = await fillAkDol(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="ak-dol-week-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'AK DOL export failed');
+    return res.status(500).json({ error: 'AK DOL export failed' });
+  }
+});
+
+// ── NYC DCAS CPR ─────────────────────────────────────────────────────────────
+router.get('/nyc-cpr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: NycCprInput = {
+      contractor: {
+        name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''),
+        address: String(p.address ?? ''), nycVendorId: p.nycVendorId != null ? String(p.nycVendorId) : null,
+      },
+      project: {
+        name: String(p.name ?? ''), nycContractNumber: p.nycContractNumber != null ? String(p.nycContractNumber) : null,
+        borough: String(p.nycBorough ?? ''), dcasProjectManager: p.dcasProjectManager != null ? String(p.dcasProjectManager) : null,
+      },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: entries.map((e) => ({
+        workerName: e.workerName ?? '', workerSsnLast4: e.ssnLast4 ?? null,
+        workerAddress: e.workerAddress ?? '', classification: e.tradeDescription ?? '',
+        isApprentice: e.laborType === 'apprentice',
+        monSt: e.monSt ?? 0, monOt: e.monOt ?? 0, tueSt: e.tueSt ?? 0, tueOt: e.tueOt ?? 0,
+        wedSt: e.wedSt ?? 0, wedOt: e.wedOt ?? 0, thuSt: e.thuSt ?? 0, thuOt: e.thuOt ?? 0,
+        friSt: e.friSt ?? 0, friOt: e.friOt ?? 0, satSt: e.satSt ?? 0, satOt: e.satOt ?? 0,
+        sunSt: e.sunSt ?? 0, sunOt: e.sunOt ?? 0,
+        baseRate: e.baseRate ?? 0, fringeRate: e.fringeRate ?? 0,
+        grossWages: e.grossWages ?? 0, deductions: (e.ficaTax ?? 0) + (e.fitWithheld ?? 0) + (e.stateWithheld ?? 0),
+        netPay: e.netPay ?? 0,
+      })),
+      compliance: { certifierName: String(p.certifierName ?? ''), certifierTitle: String(p.certifierTitle ?? ''), signatureDate: week.weekEndingDate },
+    };
+    const bytes = await fillNycCpr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="nyc-cpr-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'NYC CPR export failed');
+    return res.status(500).json({ error: 'NYC CPR export failed' });
+  }
+});
+
+// ── Cook County CPR ──────────────────────────────────────────────────────────
+router.get('/cook-cpr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: CookCprInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}` },
+      project: {
+        name: String(p.name ?? ''), cookContractId: p.cookContractId != null ? String(p.cookContractId) : null,
+        location: String(p.county ?? ''), contractingAgency: String(p.awardingAgency ?? ''),
+        cookLivingWageApplies: Boolean(p.cookLivingWageApplies), ccllwoContractYear: p.ccllwoContractYear != null ? String(p.ccllwoContractYear) : null,
+      },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, '820 ILCS 130/5'),
+    };
+    const bytes = await fillCookCpr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="cook-cpr-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'Cook County CPR export failed');
+    return res.status(500).json({ error: 'Cook County CPR export failed' });
+  }
+});
+
+// ── DC OCP CPR ───────────────────────────────────────────────────────────────
+router.get('/dc-ocp/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: DcOcpInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}`, dcBusinessLicense: p.dcBusinessLicense != null ? String(p.dcBusinessLicense) : null },
+      project: { name: String(p.name ?? ''), dcContractNumber: p.dcContractNumber != null ? String(p.dcContractNumber) : null, dcAgency: String(p.awardingAgency ?? ''), dcProjectManager: null },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'DC Code \u00a7 32-1002 et seq.'),
+    };
+    const bytes = await fillDcOcp(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="dc-ocp-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'DC OCP export failed');
+    return res.status(500).json({ error: 'DC OCP export failed' });
+  }
+});
+
+// ── LA County DPW CPR ────────────────────────────────────────────────────────
+router.get('/la-county-cpr/:weekId', async (req, res) => {
+  try {
+    const week = await getPayrollWeek(req.params.weekId);
+    if (!week) return res.status(404).json({ error: 'Payroll week not found' });
+    const { project } = await assertProjectAccess(getDb(), week.projectId, req.user!.userId);
+    const entries = await getPayrollEntriesWithWorkerDetails(req.params.weekId);
+    const p = project as unknown as Record<string, unknown>;
+    const input: LaCountyCprInput = {
+      contractor: { name: String(p.name ?? ''), fein: String(p.contractorFein ?? ''), address: `${p.state ?? ''}, ${p.county ?? ''}`, cslbLicense: p.cslbLicense != null ? String(p.cslbLicense) : null },
+      project: { name: String(p.name ?? ''), laCountyProjectId: p.laCountyProjectId != null ? String(p.laCountyProjectId) : null, laDpwDistrict: p.laDpwDistrict != null ? String(p.laDpwDistrict) : null, dirProjectId: String(p.dirProjectId ?? '') },
+      week: { weekEndingDate: week.weekEndingDate, payrollNumber: String(week.payrollNumber ?? '1') },
+      entries: buildGenericEntries(entries),
+      compliance: buildGenericCompliance(p, week, 'CA Labor Code \u00a7 1720 et seq.'),
+    };
+    const bytes = await fillLaCountyCpr(input);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="la-county-cpr-${req.params.weekId}.pdf"`);
+    return res.send(Buffer.from(bytes));
+  } catch (err) {
+    if ((err as Error).message === 'Project access denied') return res.status(403).json({ error: 'Access denied' });
+    logger.error({ err }, 'LA County CPR export failed');
+    return res.status(500).json({ error: 'LA County CPR export failed' });
+  }
 });
 
 export { router as exportRouter };
