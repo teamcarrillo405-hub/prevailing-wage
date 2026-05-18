@@ -304,6 +304,11 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     }
   }
 
+  // COMP-FIX-05: reject entries where no wage rate is available after repair attempt
+  if (!effectiveBase || effectiveBase <= 0) {
+    throw { status: 422, code: 'MISSING_WAGE_RATE', message: 'Worker has no wage rate. Fetch wage determinations first.' };
+  }
+
   // Phase 64: compute grossWages + netPay server-side if client didn't provide
   // them. Treats null or missing as "please compute." When client provides a
   // value explicitly, respect it (the CSV import path and copy-week path may
@@ -330,6 +335,15 @@ export async function upsertPayrollEntry(input: UpsertPayrollEntryInput) {
     );
     effectiveGross = computed.grossWages;
     if (effectiveNet == null) effectiveNet = computed.netPay;
+  }
+
+  // COMP-FIX-03: reject entries where total deductions exceed gross wages
+  if (effectiveGross !== null && resolvedDeductions > effectiveGross) {
+    throw {
+      status: 422,
+      code: 'DEDUCTION_EXCEEDS_GROSS',
+      message: `Total deductions ($${resolvedDeductions.toFixed(2)}) cannot exceed gross wages ($${effectiveGross.toFixed(2)})`,
+    };
   }
 
   const values = {
