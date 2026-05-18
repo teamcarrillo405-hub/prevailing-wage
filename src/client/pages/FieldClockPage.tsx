@@ -118,6 +118,25 @@ export function FieldClockPage() {
   const project = projectData?.data?.project;
   const workers = (workersData?.data?.workers ?? []).filter((w) => w.isActive);
   const punches = punchesData?.data?.punches ?? [];
+
+  // Derive which workers are currently clocked in (have an 'in' with no matching 'out')
+  const clockedInIds = useMemo(() => {
+    const ids = new Set<string>();
+    const byWorker = new Map<string, { inCount: number; outCount: number }>();
+    punches.forEach((p) => {
+      const cur = byWorker.get(p.workerId) ?? { inCount: 0, outCount: 0 };
+      if (p.punchType === 'in') cur.inCount++;
+      else cur.outCount++;
+      byWorker.set(p.workerId, cur);
+    });
+    byWorker.forEach((counts, workerId) => {
+      if (counts.inCount > counts.outCount) ids.add(workerId);
+    });
+    return ids;
+  }, [punches]);
+
+  const clockedInCount = workers.filter((w) => clockedInIds.has(w.id)).length;
+
   const punchRows = [...punches]
     .sort((a, b) => new Date(b.punchedAt).getTime() - new Date(a.punchedAt).getTime())
     .map((punch) => ({ punch, evidence: getTimeEvidenceState(punch) }));
@@ -214,6 +233,24 @@ export function FieldClockPage() {
             Back to project
           </button>
         </div>
+
+        {/* Crew status banner */}
+        {workers.length > 0 && (
+          <div className="bg-surface-card rounded-lg p-3 mb-4 flex items-center gap-3">
+            <div className="flex gap-1">
+              {workers.map((w) => (
+                <div
+                  key={w.id}
+                  className={`h-2.5 w-2.5 rounded-full ${clockedInIds.has(w.id) ? 'bg-green-500' : 'bg-gray-300'}`}
+                  title={w.name}
+                />
+              ))}
+            </div>
+            <span className="text-sm text-white font-medium">
+              {clockedInCount} of {workers.length} workers clocked in
+            </span>
+          </div>
+        )}
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)]">
           <div className="space-y-5">
