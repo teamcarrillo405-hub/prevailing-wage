@@ -210,69 +210,12 @@ export function DashboardPage() {
 
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
-  const { data: mfaStatus } = useQuery({
-    queryKey: ['mfa-status'],
-    queryFn: () => api.get<{ data: { enabled: boolean; backupCodesRemaining: number } }>('/mfa/status'),
-    staleTime: 60_000,
-  });
-
-  const { data: teamData } = useQuery({
-    queryKey: ['team'],
-    queryFn: () => api.get<{ data: { isOwner: boolean } }>('/team'),
-    staleTime: 60_000,
-  });
-
-  const isOwner = teamData?.data?.isOwner === true;
-
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['projects', showArchived ? 'all' : 'active'],
-    queryFn: () => api.get<{ data: { projects: Project[] } }>(
-      showArchived ? '/projects?status=all' : '/projects'
-    ),
-  });
-
   interface ProjectSummaryItem {
     id: string;
     status: string;
     violationCount: number;
     unsubmittedWeekEndingDates: string[];
   }
-
-  const { data: summaryData } = useQuery({
-    queryKey: ['compliance-summary-batch'],
-    queryFn: () => api.get<{ projects: ProjectSummaryItem[] }>(
-      '/compliance/projects/summary'
-    ),
-    staleTime: 60_000,
-  });
-
-  const { data: statsData } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: () => api.get<{ activeProjects: number; openViolations: number; weeksDueThisWeek: number }>(
-      '/dashboard/stats'
-    ),
-    staleTime: 60_000,
-  });
-
-  const { data: contractorActionsData } = useQuery({
-    queryKey: ['dashboard-contractor-actions'],
-    queryFn: () => api.get<{ actions: ContractorAction[] }>('/dashboard/contractor-actions'),
-    staleTime: 60_000,
-  });
-
-  const { data: onboardingData } = useQuery({
-    queryKey: ['onboarding-profile'],
-    queryFn: () => api.get<OnboardingResponse>('/onboarding'),
-    staleTime: 5 * 60_000,
-  });
-
-  const { data: trendResp } = useQuery({
-    queryKey: ['dashboard-compliance-trend'],
-    queryFn: () => api.get<{ weeks: Array<{ weekLabel: string; violationCount: number }> }>(
-      '/dashboard/compliance-trend'
-    ),
-    staleTime: 60_000,
-  });
 
   interface EconomicImpactData {
     totalWagesByCraft: { trade: string; totalWages: number; workerCount: number; projectCount: number }[];
@@ -291,17 +234,49 @@ export function DashboardPage() {
     projectRankings: { projectId: string; projectName: string; totalWages: number; workers: number; compliance: number }[];
   }
 
+  interface AtRiskProject {
+    id: string;
+    name: string;
+    openViolationCount: number;
+    oldestViolationDays: number;
+  }
+
+  interface DashboardResponse {
+    mfaStatus: { enabled: boolean; backupCodesRemaining: number };
+    team: { isOwner: boolean };
+    projects: Project[];
+    complianceSummary: ProjectSummaryItem[];
+    stats: { activeProjects: number; openViolations: number; weeksDueThisWeek: number };
+    contractorActions: ContractorAction[];
+    onboarding: OnboardingResponse;
+    complianceTrend: Array<{ weekLabel: string; violationCount: number }>;
+    atRisk: AtRiskProject[];
+    economicImpact: { data: EconomicImpactData | null };
+  }
+
+  const { data: dashData, isLoading, isError, refetch } = useQuery({
+    queryKey: ['dashboard', showArchived ? 'all' : 'active'],
+    queryFn: () => api.get<DashboardResponse>(
+      showArchived ? '/dashboard?status=all' : '/dashboard'
+    ),
+    staleTime: 30_000,
+  });
+
+  // Derive all sub-data from the unified response
+  const mfaStatus = dashData?.mfaStatus ? { data: dashData.mfaStatus } : undefined;
+  const isOwner = dashData?.team?.isOwner === true;
+  const summaryData = dashData?.complianceSummary ? { projects: dashData.complianceSummary } : undefined;
+  const statsData = dashData?.stats;
+  const contractorActionsData = dashData?.contractorActions ? { actions: dashData.contractorActions } : undefined;
+  const onboardingData = dashData?.onboarding;
+  const trendResp = dashData?.complianceTrend ? { weeks: dashData.complianceTrend } : undefined;
+  const economicData = dashData?.economicImpact;
+
   // Sortable table types
   type SortDir = 'asc' | 'desc';
   type RankingRow = { projectId: string; projectName: string; totalWages: number; workers: number; compliance: number };
 
   const PUNCTUALITY_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
-
-  const { data: economicData } = useQuery({
-    queryKey: ['economic-impact'],
-    queryFn: () => api.get<{ data: EconomicImpactData }>('/dashboard/economic-impact'),
-    staleTime: 5 * 60_000,
-  });
 
   // Sortable project rankings state
   const [rankSortKey, setRankSortKey] = useState<keyof RankingRow>('totalWages');
@@ -330,7 +305,7 @@ export function DashboardPage() {
     });
   }, [economicData?.data?.projectRankings, rankSortKey, rankSortDir]);
 
-  const projects = data?.data?.projects ?? [];
+  const projects = dashData?.projects ?? [];
 
   // Map from project id → full summary item (status + violationCount + unsubmitted dates)
   const summaryItemMap = useMemo(() => {
@@ -359,21 +334,8 @@ export function DashboardPage() {
   // DASH-02 12-week trend — sourced from server (replaces client-side bucket approximation)
   const trendData = trendResp?.weeks ?? [];
 
-  // DASH-03 at-risk projects — sourced from server endpoint (replaces legacy /violations polling)
-  interface AtRiskProject {
-    id: string;
-    name: string;
-    openViolationCount: number;
-    oldestViolationDays: number;
-  }
-
-  const { data: atRiskResp } = useQuery({
-    queryKey: ['dashboard-at-risk'],
-    queryFn: () => api.get<{ projects: AtRiskProject[] }>('/dashboard/at-risk'),
-    staleTime: 60_000,
-  });
-
-  const atRiskProjects: AtRiskProject[] = atRiskResp?.projects ?? [];
+  // DASH-03 at-risk projects — sourced from unified dashboard endpoint
+  const atRiskProjects: AtRiskProject[] = dashData?.atRisk ?? [];
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
@@ -526,10 +488,10 @@ export function DashboardPage() {
   }
   const primaryTodayAction = urgentContractorActions[0] ?? contractorActions[0] ?? null;
   const readyProjectCount = projects.filter((project) => summaryMap.get(project.id) === 'compliant').length;
-  const highVarianceTradeCount = economicData?.data.wageVarianceByTrade.filter((row) => row.deviation > 5).length ?? 0;
-  const apprenticeGapCount = economicData?.data.apprenticeshipProgress.filter((row) => row.gap > 0).length ?? 0;
-  const overtimeProjectCount = economicData?.data.overtimeExposure.length ?? 0;
-  const topOvertimeProject = economicData?.data.overtimeExposure[0] ?? null;
+  const highVarianceTradeCount = economicData?.data?.wageVarianceByTrade.filter((row) => row.deviation > 5).length ?? 0;
+  const apprenticeGapCount = economicData?.data?.apprenticeshipProgress.filter((row) => row.gap > 0).length ?? 0;
+  const overtimeProjectCount = economicData?.data?.overtimeExposure.length ?? 0;
+  const topOvertimeProject = economicData?.data?.overtimeExposure[0] ?? null;
   const onboardingAnswers = onboardingData?.data.profile?.onboardingAnswers;
   const recommendedNextSteps = onboardingData?.data.profile?.recommendedNextSteps ?? [];
   const onboardingHasWorkers = projects.length > 0 && !contractorActions.some(

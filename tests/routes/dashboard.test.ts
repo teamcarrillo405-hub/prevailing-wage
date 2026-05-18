@@ -185,3 +185,161 @@ describe('GET /api/dashboard/at-risk', () => {
     }
   });
 });
+
+// ── GET /api/dashboard (unified) ──────────────────────────────────────────
+
+describe('GET /api/dashboard', () => {
+  it('returns 401 when not authenticated', async () => {
+    const res = await supertest(app).get('/api/dashboard');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 200 with all required top-level keys', async () => {
+    const cookie = await registerAndLogin('unified-keys');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    const REQUIRED_KEYS = [
+      'mfaStatus',
+      'team',
+      'projects',
+      'complianceSummary',
+      'stats',
+      'contractorActions',
+      'onboarding',
+      'complianceTrend',
+      'atRisk',
+      'economicImpact',
+    ];
+    for (const key of REQUIRED_KEYS) {
+      expect(res.body).toHaveProperty(key);
+    }
+  });
+
+  it('stats sub-key has correct numeric shape', async () => {
+    const cookie = await registerAndLogin('unified-stats');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.stats.activeProjects).toBe('number');
+    expect(typeof res.body.stats.openViolations).toBe('number');
+    expect(typeof res.body.stats.weeksDueThisWeek).toBe('number');
+  });
+
+  it('projects sub-key is an array', async () => {
+    const cookie = await registerAndLogin('unified-projects');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.projects)).toBe(true);
+  });
+
+  it('complianceSummary sub-key is an array', async () => {
+    const cookie = await registerAndLogin('unified-summary');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.complianceSummary)).toBe(true);
+  });
+
+  it('contractorActions sub-key is an array', async () => {
+    const cookie = await registerAndLogin('unified-actions');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.contractorActions)).toBe(true);
+  });
+
+  it('complianceTrend sub-key has 12 entries', async () => {
+    const cookie = await registerAndLogin('unified-trend');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.complianceTrend)).toBe(true);
+    expect(res.body.complianceTrend).toHaveLength(12);
+    for (const w of res.body.complianceTrend) {
+      expect(typeof w.weekLabel).toBe('string');
+      expect(typeof w.violationCount).toBe('number');
+    }
+  });
+
+  it('mfaStatus has enabled boolean and backupCodesRemaining number', async () => {
+    const cookie = await registerAndLogin('unified-mfa');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.mfaStatus.enabled).toBe('boolean');
+    expect(typeof res.body.mfaStatus.backupCodesRemaining).toBe('number');
+  });
+
+  it('team has isOwner boolean', async () => {
+    const cookie = await registerAndLogin('unified-team');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.team.isOwner).toBe('boolean');
+  });
+
+  it('atRisk is an array with at most 5 entries', async () => {
+    const cookie = await registerAndLogin('unified-atrisk');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.atRisk)).toBe(true);
+    expect(res.body.atRisk.length).toBeLessThanOrEqual(5);
+  });
+
+  it('new user stats are all zero', async () => {
+    const cookie = await registerAndLogin('unified-zero');
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.stats).toEqual({ activeProjects: 0, openViolations: 0, weeksDueThisWeek: 0 });
+    expect(res.body.projects).toEqual([]);
+    expect(res.body.contractorActions).toEqual([]);
+    expect(res.body.atRisk).toEqual([]);
+  });
+
+  it('accepts ?status=all query param and returns 200', async () => {
+    const cookie = await registerAndLogin('unified-status-all');
+    const res = await supertest(app)
+      .get('/api/dashboard?status=all')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.projects)).toBe(true);
+  });
+
+  it('includes project in projects array after creation', async () => {
+    const cookie = await registerAndLogin('unified-with-project');
+    await createProject(cookie);
+
+    const res = await supertest(app)
+      .get('/api/dashboard')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.projects.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.stats.activeProjects).toBeGreaterThanOrEqual(1);
+  });
+});

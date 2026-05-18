@@ -14,6 +14,8 @@ import {
   payrollWeeks,
   subcontractors,
   subcontractorCprWeeks,
+  users,
+  onboardingProfiles,
 } from '../db/schema.js';
 import { getBatchProjectCompliance } from '../services/complianceService.js';
 
@@ -956,5 +958,403 @@ dashboardRouter.get('/economic-impact', requireAuth, async (req, res) => {
       fringeVsBaseWage,
       projectRankings,
     },
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/dashboard
+// Unified dashboard endpoint — runs all sub-queries in parallel and returns a
+// single combined payload so the client only needs one network round-trip.
+// Any failing sub-call resolves to a safe empty default via Promise.allSettled.
+// ─────────────────────────────────────────────────────────────────────────────
+dashboardRouter.get('/', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+  const statusFilter = (req.query.status as string | undefined) ?? 'active';
+
+  // ── Sub-query helpers ────────────────────────────────────────────────────
+
+  async function getMfaStatus() {
+    const [user] = await db
+      .select({ enabled: users.totpEnabled, backupCodes: users.totpBackupCodes })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!user) return { enabled: false, backupCodesRemaining: 0 };
+    let remaining = 0;
+    if (user.backupCodes) {
+      try {
+        const list = JSON.parse(user.backupCodes) as unknown[];
+        if (Array.isArray(list)) remaining = list.length;
+      } catch { /* ignore */ }
+    }
+    return { enabled: user.enabled === true, backupCodesRemaining: remaining };
+  }
+
+  async function getTeam() {
+    const [row] = await db
+      .select({ id: projectMembers.id })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.userId, userId), eq(projectMembers.role, 'owner'), isNull(projectMembers.removedAt)))
+      .limit(1);
+    return { isOwner: !!row };
+  }
+
+  async function getProjects() {
+    const statusCondition = (!statusFilter || statusFilter === 'active')
+      ? eq(projects.status, 'active')
+      : undefined;
+    const rows = await db
+      .select({ project: projects })
+      .from(projects)
+      .innerJoin(
+        projectMembers,
+        and(
+          eq(projectMembers.projectId, projects.id),
+          eq(projectMembers.userId, userId),
+          isNull(projectMembers.removedAt),
+        ),
+      )
+      .where(statusCondition);
+    return rows.map((r: { project: typeof projects.$inferSelect }) => r.project);
+  }
+
+  async function getComplianceSummary() {
+    const summaryMap = await getBatchProjectCompliance(db, userId);
+    return Array.from(summaryMap.entries()).map(([id, summary]) => ({
+      id,
+      status: summary.status,
+      violationCount: summary.violationCount,
+      unsubmittedWeekEndingDates: summary.unsubmittedWeekEndingDates,
+    }));
+  }
+
+  async function getStats(complianceSummary: Awaited<ReturnType<typeof getComplianceSummary>>) {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const limitStr = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    let activeProjects = 0;
+    let openViolations = 0;
+    let weeksDueThisWeek = 0;
+    for (const item of complianceSummary) {
+      if (item.status !== 'archived') activeProjects++;
+      openViolations += item.violationCount;
+      if (item.unsubmittedWeekEndingDates.some((d) => d >= todayStr && d <= limitStr)) weeksDueThisWeek++;
+    }
+    return { activeProjects, openViolations, weeksDueThisWeek };
+  }
+
+  async function getContractorActions() {
+    const memberRows = await db
+      .select({ projectId: projectMembers.projectId })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.userId, userId), isNull(projectMembers.removedAt)));
+    const projectIds = new Set(memberRows.map((r: { projectId: string }) => r.projectId));
+    if (projectIds.size === 0) return [];
+
+    const [projectRows, workerRows, weekRows, subRows, cprRows] = await Promise.all([
+      db.select({ id: projects.id, name: projects.name, status: projects.status }).from(projects),
+      db.select({ projectId: workers.projectId }).from(workers),
+      db.select({ id: payrollWeeks.id, projectId: payrollWeeks.projectId, payrollNumber: payrollWeeks.payrollNumber, weekEndingDate: payrollWeeks.weekEndingDate, submittedAt: payrollWeeks.submittedAt }).from(payrollWeeks),
+      db.select({ id: subcontractors.id, projectId: subcontractors.projectId, name: subcontractors.name }).from(subcontractors),
+      db.select({ id: subcontractorCprWeeks.id, subcontractorId: subcontractorCprWeeks.subcontractorId, weekEndingDate: subcontractorCprWeeks.weekEndingDate, receivedDate: subcontractorCprWeeks.receivedDate, isCompliant: subcontractorCprWeeks.isCompliant }).from(subcontractorCprWeeks),
+    ]);
+
+    type ActionProjectRow = { id: string; name: string; status: string };
+    type ActionWeekRow = { id: string; projectId: string; payrollNumber: number; weekEndingDate: string; submittedAt: string | null };
+    type ActionSubRow = { id: string; projectId: string; name: string };
+    type ActionCprRow = { id: string; subcontractorId: string; weekEndingDate: string; receivedDate: string | null; isCompliant: number | null };
+
+    const typedProjectRows = projectRows as ActionProjectRow[];
+    const typedWorkerRows = workerRows as Array<{ projectId: string }>;
+    const typedWeekRows = weekRows as ActionWeekRow[];
+    const typedSubRows = subRows as ActionSubRow[];
+    const typedCprRows = cprRows as ActionCprRow[];
+
+    const projectMap = new Map<string, ActionProjectRow>(
+      typedProjectRows.filter((p) => projectIds.has(p.id) && p.status !== 'archived').map((p) => [p.id, p]),
+    );
+    const workerCount = new Map<string, number>();
+    for (const row of typedWorkerRows) {
+      if (!projectMap.has(row.projectId)) continue;
+      workerCount.set(row.projectId, (workerCount.get(row.projectId) ?? 0) + 1);
+    }
+
+    const weeksByProject = new Map<string, ActionWeekRow[]>();
+    for (const week of typedWeekRows) {
+      if (!projectMap.has(week.projectId)) continue;
+      const arr = weeksByProject.get(week.projectId) ?? [];
+      arr.push(week);
+      weeksByProject.set(week.projectId, arr);
+    }
+
+    const subProjectMap = new Map<string, { projectId: string; name: string }>();
+    for (const sub of typedSubRows) {
+      if (projectMap.has(sub.projectId)) subProjectMap.set(sub.id, { projectId: sub.projectId, name: sub.name });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const weekLimit = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const compliance = await getBatchProjectCompliance(db, userId);
+    const actions: ContractorAction[] = [];
+
+    for (const [projectId, project] of projectMap) {
+      const summary = compliance.get(projectId);
+      if ((summary?.violationCount ?? 0) > 0) {
+        actions.push({ id: `${projectId}:violations`, projectId, projectName: project.name, type: 'violation', priority: 'critical', label: `Resolve ${summary!.violationCount} compliance violation${summary!.violationCount === 1 ? '' : 's'}`, detail: 'Fix wages, overtime, deductions, or apprenticeship issues before this CPR is certified.', to: `/projects/${projectId}/payroll`, dueDate: null });
+      }
+      const projectWeeks = (weeksByProject.get(projectId) ?? []).slice().sort((a, b) => a.weekEndingDate.localeCompare(b.weekEndingDate));
+      const openWeeks = projectWeeks.filter((w) => !w.submittedAt);
+      const overdue = openWeeks.filter((w) => daysBetween(today, w.weekEndingDate) > 7);
+      const dueSoon = openWeeks.filter((w) => w.weekEndingDate >= today && w.weekEndingDate <= weekLimit);
+      const targetOverdue = overdue[0];
+      if (targetOverdue) {
+        actions.push({ id: `${projectId}:overdue:${targetOverdue.id}`, projectId, projectName: project.name, type: 'overdue_payroll', priority: 'high', label: `Submit Payroll Week ${targetOverdue.payrollNumber}`, detail: `Week ending ${targetOverdue.weekEndingDate} is past the 7-day certified payroll window.`, to: `/projects/${projectId}/payroll/${targetOverdue.id}`, dueDate: targetOverdue.weekEndingDate });
+      } else if (dueSoon[0]) {
+        actions.push({ id: `${projectId}:due:${dueSoon[0].id}`, projectId, projectName: project.name, type: 'due_payroll', priority: 'medium', label: `Finish Payroll Week ${dueSoon[0].payrollNumber}`, detail: `Week ending ${dueSoon[0].weekEndingDate} is coming due.`, to: `/projects/${projectId}/payroll/${dueSoon[0].id}`, dueDate: dueSoon[0].weekEndingDate });
+      }
+      if ((workerCount.get(projectId) ?? 0) === 0) {
+        actions.push({ id: `${projectId}:workers`, projectId, projectName: project.name, type: 'setup', priority: 'medium', label: 'Add workers and classifications', detail: 'Payroll cannot be certified until workers and trade classifications exist.', to: `/projects/${projectId}/workers`, dueDate: null });
+      } else if (projectWeeks.length === 0) {
+        actions.push({ id: `${projectId}:weeks`, projectId, projectName: project.name, type: 'setup', priority: 'medium', label: 'Create the first payroll week', detail: 'Set up weekly CPR tracking for this project.', to: `/projects/${projectId}/payroll`, dueDate: null });
+      }
+    }
+
+    for (const cpr of typedCprRows) {
+      const sub = subProjectMap.get(cpr.subcontractorId);
+      if (!sub) continue;
+      const cprStatus = getCprQueueStatus(cpr.weekEndingDate, cpr.receivedDate, cpr.isCompliant);
+      if (cprStatus !== 'overdue' && cprStatus !== 'received-non-compliant') continue;
+      const project = projectMap.get(sub.projectId);
+      if (!project) continue;
+      actions.push({ id: `${sub.projectId}:sub-cpr:${cpr.id}`, projectId: sub.projectId, projectName: project.name, type: 'subcontractor_cpr', priority: cprStatus === 'overdue' ? 'high' : 'medium', label: cprStatus === 'overdue' ? `Collect CPR from ${sub.name}` : `Review non-compliant CPR from ${sub.name}`, detail: `Subcontractor week ending ${cpr.weekEndingDate} needs contractor follow-up.`, to: `/projects/${sub.projectId}`, dueDate: cpr.weekEndingDate });
+    }
+
+    const priorityRank: Record<ContractorAction['priority'], number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    actions.sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority] || (a.dueDate ?? '9999-99-99').localeCompare(b.dueDate ?? '9999-99-99'));
+    return actions.slice(0, 12);
+  }
+
+  async function getOnboarding() {
+    const [user] = await db
+      .select({ hccMembershipNumber: users.hccMembershipNumber, companyName: users.companyName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const [profile] = await db
+      .select()
+      .from(onboardingProfiles)
+      .where(eq(onboardingProfiles.userId, userId))
+      .limit(1);
+    return {
+      data: {
+        user: { companyName: user?.companyName ?? null, hccMembershipNumber: user?.hccMembershipNumber ?? null },
+        profile: profile
+          ? { ...profile, primaryStates: JSON.parse(profile.primaryStates) as string[], workTypes: JSON.parse(profile.workTypes) as string[], onboardingAnswers: JSON.parse(profile.onboardingAnswers) as Record<string, unknown>, recommendedNextSteps: JSON.parse(profile.recommendedNextSteps) as string[] }
+          : null,
+      },
+    };
+  }
+
+  async function getComplianceTrend() {
+    const summary = await getBatchProjectCompliance(db, userId);
+    const now = new Date();
+    const weeks: { weekLabel: string; weekEnd: string; violationCount: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i * 7);
+      weeks.push({ weekLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), weekEnd: d.toISOString().slice(0, 10), violationCount: 0 });
+    }
+    const windowStart = weeks[0]?.weekEnd ?? '';
+    for (const item of summary.values()) {
+      if (item.violationCount === 0) continue;
+      const relevant = item.unsubmittedWeekEndingDates.filter((d) => d >= windowStart);
+      if (relevant.length === 0) continue;
+      const latestDate = relevant.sort().pop()!;
+      let bestIdx = 0;
+      let bestDiff = Infinity;
+      for (let i = 0; i < weeks.length; i++) {
+        const diff = Math.abs(new Date(latestDate).getTime() - new Date(weeks[i].weekEnd).getTime());
+        if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+      }
+      weeks[bestIdx].violationCount += item.violationCount;
+    }
+    return weeks.map(({ weekLabel, violationCount }) => ({ weekLabel, violationCount }));
+  }
+
+  async function getAtRisk() {
+    const memberRows = await db
+      .select({ projectId: projectMembers.projectId })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.userId, userId), isNull(projectMembers.removedAt)));
+    const projectIds = new Set(memberRows.map((r: { projectId: string }) => r.projectId));
+    if (projectIds.size === 0) return [];
+
+    const projectRows = await db.select({ id: projects.id, name: projects.name }).from(projects);
+    const nameMap = new Map<string, string>();
+    for (const p of projectRows) { if (projectIds.has(p.id)) nameMap.set(p.id, p.name); }
+
+    const weekRows = await db.select({ projectId: payrollWeeks.projectId, weekEndingDate: payrollWeeks.weekEndingDate, submittedAt: payrollWeeks.submittedAt }).from(payrollWeeks);
+    const now = new Date();
+    const thresholdStr = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const perProject = new Map<string, { count: number; oldest: string }>();
+    for (const week of weekRows) {
+      if (!projectIds.has(week.projectId) || week.submittedAt || week.weekEndingDate >= thresholdStr) continue;
+      const entry = perProject.get(week.projectId);
+      if (!entry) { perProject.set(week.projectId, { count: 1, oldest: week.weekEndingDate }); }
+      else { entry.count += 1; if (week.weekEndingDate < entry.oldest) entry.oldest = week.weekEndingDate; }
+    }
+
+    return Array.from(perProject.entries())
+      .map(([id, { count, oldest }]) => ({ id, name: nameMap.get(id) ?? '(unknown)', openViolationCount: count, oldestViolationDays: Math.max(0, Math.floor((now.getTime() - new Date(oldest).getTime()) / (24 * 60 * 60 * 1000))) }))
+      .sort((a, b) => b.openViolationCount - a.openViolationCount)
+      .slice(0, 5);
+  }
+
+  async function getEconomicImpact() {
+    const emptyResponse = { totalWagesByCraft: [], localHirePercent: 0, apprenticePercent: 0, stateBreakdown: [], totalWagesPaid: 0, complianceTrend: [], topViolatingProjects: [], wageVarianceByTrade: [], overtimeExposure: [], apprenticeshipProgress: [], submissionPunctuality: { onTime: 0, late: 0, missing: 0, percentOnTime: 0 }, weeklyWageBurn: [], fringeVsBaseWage: { fringe: 0, base: 0, fringePercent: 0 }, projectRankings: [] };
+    const memberRows2 = await db.select({ projectId: projectMembers.projectId }).from(projectMembers).where(and(eq(projectMembers.userId, userId), isNull(projectMembers.removedAt)));
+    const projectIds2 = memberRows2.map((r: { projectId: string }) => r.projectId);
+    if (projectIds2.length === 0) return emptyResponse;
+    const projectSet2 = new Set(projectIds2);
+
+    const projectRows2 = await db.select({ id: projects.id, name: projects.name, state: projects.state, apprenticeshipRequirements: projects.apprenticeshipRequirements }).from(projects);
+    const userProjects2 = projectRows2.filter((p: typeof projectRows2[number]) => projectSet2.has(p.id));
+    const projectStateMap2 = new Map<string, string>();
+    const projectNameMap2 = new Map<string, string>();
+    for (const p of projectRows2) { projectStateMap2.set(p.id, p.state); projectNameMap2.set(p.id, p.name); }
+
+    const entryRows2 = await db.select({ tradeDescription: workerClassifications.tradeDescription, laborType: workerClassifications.laborType, grossWages: payrollEntries.grossWages, baseRateSnapshot: payrollEntries.baseRateSnapshot, fringeRateSnapshot: payrollEntries.fringeRateSnapshot, fringeHealthWelfare: payrollEntries.fringeHealthWelfare, fringePension: payrollEntries.fringePension, fringeVacation: payrollEntries.fringeVacation, fringeTraining: payrollEntries.fringeTraining, monSt: payrollEntries.monSt, tueSt: payrollEntries.tueSt, wedSt: payrollEntries.wedSt, thuSt: payrollEntries.thuSt, friSt: payrollEntries.friSt, satSt: payrollEntries.satSt, sunSt: payrollEntries.sunSt, monOt: payrollEntries.monOt, tueOt: payrollEntries.tueOt, wedOt: payrollEntries.wedOt, thuOt: payrollEntries.thuOt, friOt: payrollEntries.friOt, satOt: payrollEntries.satOt, sunOt: payrollEntries.sunOt, monDt: payrollEntries.monDt, tueDt: payrollEntries.tueDt, wedDt: payrollEntries.wedDt, thuDt: payrollEntries.thuDt, friDt: payrollEntries.friDt, satDt: payrollEntries.satDt, sunDt: payrollEntries.sunDt, projectId: payrollWeeks.projectId, weekEndingDate: payrollWeeks.weekEndingDate, submittedAt: payrollWeeks.submittedAt, workerId: payrollEntries.workerId }).from(payrollEntries).innerJoin(workerClassifications, eq(payrollEntries.classificationId, workerClassifications.id)).innerJoin(payrollWeeks, eq(payrollEntries.payrollWeekId, payrollWeeks.id));
+    const filteredEntries2 = entryRows2.filter((r: typeof entryRows2[number]) => projectSet2.has(r.projectId));
+
+    const allWeekRows2 = await db.select({ id: payrollWeeks.id, projectId: payrollWeeks.projectId, weekEndingDate: payrollWeeks.weekEndingDate, submittedAt: payrollWeeks.submittedAt }).from(payrollWeeks);
+    const filteredWeeks2 = allWeekRows2.filter((w: typeof allWeekRows2[number]) => projectSet2.has(w.projectId));
+
+    const workerRows2 = await db.select({ projectId: workers.projectId, addressState: workers.addressState }).from(workers);
+    const userWorkers2 = workerRows2.filter((w: typeof workerRows2[number]) => projectSet2.has(w.projectId));
+
+    const craftWageMap2 = new Map<string, number>();
+    const craftWorkerMap2 = new Map<string, Set<string>>();
+    const craftProjectMap2 = new Map<string, Set<string>>();
+    let totalWagesPaid2 = 0; let apprenticeWages2 = 0; let totalBaseWages2 = 0; let totalFringeWages2 = 0;
+    for (const entry of filteredEntries2) {
+      const wages = entry.grossWages ?? 0; const trade = entry.tradeDescription;
+      craftWageMap2.set(trade, (craftWageMap2.get(trade) ?? 0) + wages);
+      if (!craftWorkerMap2.has(trade)) craftWorkerMap2.set(trade, new Set());
+      craftWorkerMap2.get(trade)!.add(entry.workerId);
+      if (!craftProjectMap2.has(trade)) craftProjectMap2.set(trade, new Set());
+      craftProjectMap2.get(trade)!.add(entry.projectId);
+      totalWagesPaid2 += wages;
+      if (entry.laborType === 'apprentice') apprenticeWages2 += wages;
+      const stHours = (entry.monSt ?? 0) + (entry.tueSt ?? 0) + (entry.wedSt ?? 0) + (entry.thuSt ?? 0) + (entry.friSt ?? 0) + (entry.satSt ?? 0) + (entry.sunSt ?? 0);
+      const otHours = (entry.monOt ?? 0) + (entry.tueOt ?? 0) + (entry.wedOt ?? 0) + (entry.thuOt ?? 0) + (entry.friOt ?? 0) + (entry.satOt ?? 0) + (entry.sunOt ?? 0);
+      const totalHrs = stHours + otHours;
+      totalBaseWages2 += totalHrs * (entry.baseRateSnapshot ?? 0);
+      const fringeDisagg = (entry.fringeHealthWelfare ?? 0) + (entry.fringePension ?? 0) + (entry.fringeVacation ?? 0) + (entry.fringeTraining ?? 0);
+      totalFringeWages2 += fringeDisagg > 0 ? fringeDisagg : totalHrs * (entry.fringeRateSnapshot ?? 0);
+    }
+    const totalWagesByCraft2 = Array.from(craftWageMap2.entries()).map(([trade, totalWages]) => ({ trade, totalWages: Math.round(totalWages * 100) / 100, workerCount: craftWorkerMap2.get(trade)?.size ?? 0, projectCount: craftProjectMap2.get(trade)?.size ?? 0 })).sort((a, b) => b.totalWages - a.totalWages);
+    const apprenticePercent2 = totalWagesPaid2 > 0 ? Math.round((apprenticeWages2 / totalWagesPaid2) * 100) : 0;
+
+    let localCount2 = 0;
+    for (const w of userWorkers2) { if (w.addressState && projectStateMap2.get(w.projectId) && w.addressState.toLowerCase() === projectStateMap2.get(w.projectId)!.toLowerCase()) localCount2++; }
+    const localHirePercent2 = userWorkers2.length > 0 ? Math.round((localCount2 / userWorkers2.length) * 100) : 0;
+
+    const stateProjectMap2 = new Map<string, number>();
+    for (const p of userProjects2) stateProjectMap2.set(p.state, (stateProjectMap2.get(p.state) ?? 0) + 1);
+    const stateWorkerMap2 = new Map<string, number>(); const stateWageMap2 = new Map<string, number>();
+    for (const w of userWorkers2) { const s = projectStateMap2.get(w.projectId); if (s) stateWorkerMap2.set(s, (stateWorkerMap2.get(s) ?? 0) + 1); }
+    for (const entry of filteredEntries2) { const s = projectStateMap2.get(entry.projectId); if (s) stateWageMap2.set(s, (stateWageMap2.get(s) ?? 0) + (entry.grossWages ?? 0)); }
+    const stateBreakdown2 = Array.from(stateProjectMap2.entries()).map(([state, projectCount]) => ({ state, projectCount, workerCount: stateWorkerMap2.get(state) ?? 0, totalWages: Math.round((stateWageMap2.get(state) ?? 0) * 100) / 100 })).sort((a, b) => b.projectCount - a.projectCount);
+
+    const now2 = new Date(); const todayStr2 = now2.toISOString().slice(0, 10);
+    const weekBuckets2: { weekLabel: string; weekEnd: string; violations: number; compliant: number }[] = [];
+    for (let i = 11; i >= 0; i--) { const d = new Date(now2); d.setDate(d.getDate() - i * 7); weekBuckets2.push({ weekLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), weekEnd: d.toISOString().slice(0, 10), violations: 0, compliant: 0 }); }
+    const window12Start2 = weekBuckets2[0].weekEnd;
+    for (const week of filteredWeeks2) {
+      if (week.weekEndingDate < window12Start2) continue;
+      let bestIdx = 0; let bestDiff = Infinity;
+      for (let i = 0; i < weekBuckets2.length; i++) { const diff = Math.abs(new Date(week.weekEndingDate).getTime() - new Date(weekBuckets2[i].weekEnd).getTime()); if (diff < bestDiff) { bestDiff = diff; bestIdx = i; } }
+      if (week.submittedAt) { weekBuckets2[bestIdx].compliant += 1; } else if (week.weekEndingDate < todayStr2) { weekBuckets2[bestIdx].violations += 1; }
+    }
+    const complianceTrend2 = weekBuckets2.map(({ weekLabel, violations, compliant }) => ({ weekLabel, violations, compliant }));
+
+    const projectViolationMap2 = new Map<string, { count: number; lastDate: string }>();
+    for (const week of filteredWeeks2) { if (!week.submittedAt && week.weekEndingDate < todayStr2) { const ex = projectViolationMap2.get(week.projectId); if (!ex) { projectViolationMap2.set(week.projectId, { count: 1, lastDate: week.weekEndingDate }); } else { ex.count += 1; if (week.weekEndingDate > ex.lastDate) ex.lastDate = week.weekEndingDate; } } }
+    const topViolatingProjects2 = Array.from(projectViolationMap2.entries()).map(([projectId, { count, lastDate }]) => ({ projectId, projectName: projectNameMap2.get(projectId) ?? projectId, violations: count, lastViolation: lastDate })).sort((a, b) => b.violations - a.violations).slice(0, 5);
+
+    const tradeRateMap2 = new Map<string, number[]>();
+    for (const entry of filteredEntries2) { const rate = entry.baseRateSnapshot ?? 0; if (rate === 0) continue; if (!tradeRateMap2.has(entry.tradeDescription)) tradeRateMap2.set(entry.tradeDescription, []); tradeRateMap2.get(entry.tradeDescription)!.push(rate); }
+    const wageVarianceByTrade2 = Array.from(tradeRateMap2.entries()).map(([trade, rates]) => { const avg = rates.reduce((s, r) => s + r, 0) / rates.length; const min = Math.min(...rates); const max = Math.max(...rates); const dev = Math.sqrt(rates.reduce((s, r) => s + Math.pow(r - avg, 2), 0) / rates.length); return { trade, avgRate: Math.round(avg * 100) / 100, minRate: Math.round(min * 100) / 100, maxRate: Math.round(max * 100) / 100, deviation: Math.round(dev * 100) / 100 }; }).sort((a, b) => b.deviation - a.deviation);
+
+    const projectOtMap2 = new Map<string, { dtHours: number; otHours: number; premiumCost: number }>();
+    for (const entry of filteredEntries2) { if (!projectOtMap2.has(entry.projectId)) projectOtMap2.set(entry.projectId, { dtHours: 0, otHours: 0, premiumCost: 0 }); const rec = projectOtMap2.get(entry.projectId)!; const otHrs = (entry.monOt ?? 0) + (entry.tueOt ?? 0) + (entry.wedOt ?? 0) + (entry.thuOt ?? 0) + (entry.friOt ?? 0) + (entry.satOt ?? 0) + (entry.sunOt ?? 0); const dtHrs = (entry.monDt ?? 0) + (entry.tueDt ?? 0) + (entry.wedDt ?? 0) + (entry.thuDt ?? 0) + (entry.friDt ?? 0) + (entry.satDt ?? 0) + (entry.sunDt ?? 0); const base = entry.baseRateSnapshot ?? 0; rec.otHours += otHrs; rec.dtHours += dtHrs; rec.premiumCost += (otHrs * base * 0.5) + (dtHrs * base * 1.0); }
+    const overtimeExposure2 = Array.from(projectOtMap2.entries()).filter(([, rec]) => rec.otHours > 0 || rec.dtHours > 0).map(([projectId, rec]) => ({ projectId, projectName: projectNameMap2.get(projectId) ?? projectId, dtHours: Math.round(rec.dtHours * 100) / 100, otHours: Math.round(rec.otHours * 100) / 100, estimatedPremium: Math.round(rec.premiumCost * 100) / 100 })).sort((a, b) => b.estimatedPremium - a.estimatedPremium).slice(0, 10);
+
+    const tradeRequiredPct2 = new Map<string, number>();
+    for (const p of userProjects2) { if (!p.apprenticeshipRequirements) continue; try { const reqs = JSON.parse(p.apprenticeshipRequirements) as Record<string, { maxRatio: string }>; for (const [trade, req] of Object.entries(reqs)) { if (!req?.maxRatio) continue; const [num, denom] = req.maxRatio.split(':').map(Number); if (!isNaN(num) && !isNaN(denom) && denom > 0) tradeRequiredPct2.set(trade, Math.max(tradeRequiredPct2.get(trade) ?? 0, (num / (num + denom)) * 100)); } } catch { /* ignore */ } }
+    const tradeApprenticeHours2 = new Map<string, number>(); const tradeTotalHours2 = new Map<string, number>();
+    for (const entry of filteredEntries2) { const stH = (entry.monSt ?? 0) + (entry.tueSt ?? 0) + (entry.wedSt ?? 0) + (entry.thuSt ?? 0) + (entry.friSt ?? 0) + (entry.satSt ?? 0) + (entry.sunSt ?? 0); const otH = (entry.monOt ?? 0) + (entry.tueOt ?? 0) + (entry.wedOt ?? 0) + (entry.thuOt ?? 0) + (entry.friOt ?? 0) + (entry.satOt ?? 0) + (entry.sunOt ?? 0); const hrs = stH + otH; tradeTotalHours2.set(entry.tradeDescription, (tradeTotalHours2.get(entry.tradeDescription) ?? 0) + hrs); if (entry.laborType === 'apprentice') tradeApprenticeHours2.set(entry.tradeDescription, (tradeApprenticeHours2.get(entry.tradeDescription) ?? 0) + hrs); }
+    const apprenticeshipProgress2 = Array.from(tradeTotalHours2.entries()).map(([trade, totalHrs]) => { const appHrs = tradeApprenticeHours2.get(trade) ?? 0; const required = tradeRequiredPct2.get(trade) ?? 25; const actual = totalHrs > 0 ? Math.round((appHrs / totalHrs) * 100) : 0; return { trade, required: Math.round(required), actual, gap: Math.max(0, Math.round(required) - actual) }; }).sort((a, b) => b.gap - a.gap);
+
+    let onTime2 = 0; let late2 = 0; let missing2 = 0;
+    for (const week of filteredWeeks2) { if (week.weekEndingDate >= todayStr2) continue; if (!week.submittedAt) { missing2 += 1; } else { const dL = (new Date(week.submittedAt).getTime() - new Date(week.weekEndingDate).getTime()) / (1000 * 60 * 60 * 24); if (dL <= 7) { onTime2 += 1; } else { late2 += 1; } } }
+    const totalSub2 = onTime2 + late2 + missing2;
+    const submissionPunctuality2 = { onTime: onTime2, late: late2, missing: missing2, percentOnTime: totalSub2 > 0 ? Math.round((onTime2 / totalSub2) * 100) : 0 };
+
+    const wageBurnBuckets2: { weekLabel: string; weekEnd: string; wages: number; workerSet: Set<string> }[] = [];
+    for (let i = 11; i >= 0; i--) { const d = new Date(now2); d.setDate(d.getDate() - i * 7); wageBurnBuckets2.push({ weekLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), weekEnd: d.toISOString().slice(0, 10), wages: 0, workerSet: new Set() }); }
+    for (const entry of filteredEntries2) { if (entry.weekEndingDate < window12Start2) continue; let bestIdx = 0; let bestDiff = Infinity; for (let i = 0; i < wageBurnBuckets2.length; i++) { const diff = Math.abs(new Date(entry.weekEndingDate).getTime() - new Date(wageBurnBuckets2[i].weekEnd).getTime()); if (diff < bestDiff) { bestDiff = diff; bestIdx = i; } } wageBurnBuckets2[bestIdx].wages += entry.grossWages ?? 0; wageBurnBuckets2[bestIdx].workerSet.add(entry.workerId); }
+    const weeklyWageBurn2 = wageBurnBuckets2.map(({ weekLabel, wages, workerSet }) => ({ weekLabel, wages: Math.round(wages * 100) / 100, workers: workerSet.size }));
+
+    const fringePercent2 = (totalBaseWages2 + totalFringeWages2) > 0 ? Math.round((totalFringeWages2 / (totalBaseWages2 + totalFringeWages2)) * 100) : 0;
+    const fringeVsBaseWage2 = { fringe: Math.round(totalFringeWages2 * 100) / 100, base: Math.round(totalBaseWages2 * 100) / 100, fringePercent: fringePercent2 };
+
+    const projectWagesMap2 = new Map<string, number>(); const projectWorkersMap2 = new Map<string, Set<string>>();
+    for (const entry of filteredEntries2) { projectWagesMap2.set(entry.projectId, (projectWagesMap2.get(entry.projectId) ?? 0) + (entry.grossWages ?? 0)); if (!projectWorkersMap2.has(entry.projectId)) projectWorkersMap2.set(entry.projectId, new Set()); projectWorkersMap2.get(entry.projectId)!.add(entry.workerId); }
+    const projectWeekCountMap2 = new Map<string, number>(); const projectSubmittedCountMap2 = new Map<string, number>();
+    for (const week of filteredWeeks2) { projectWeekCountMap2.set(week.projectId, (projectWeekCountMap2.get(week.projectId) ?? 0) + 1); if (week.submittedAt) projectSubmittedCountMap2.set(week.projectId, (projectSubmittedCountMap2.get(week.projectId) ?? 0) + 1); }
+    const projectRankings2 = Array.from(projectWagesMap2.entries()).map(([projectId, totalWages]) => { const wc = projectWeekCountMap2.get(projectId) ?? 0; const sc = projectSubmittedCountMap2.get(projectId) ?? 0; return { projectId, projectName: projectNameMap2.get(projectId) ?? projectId, totalWages: Math.round(totalWages * 100) / 100, workers: projectWorkersMap2.get(projectId)?.size ?? 0, compliance: wc > 0 ? Math.round((sc / wc) * 100) : 100 }; }).sort((a, b) => b.totalWages - a.totalWages).slice(0, 10);
+
+    return { totalWagesByCraft: totalWagesByCraft2, localHirePercent: localHirePercent2, apprenticePercent: apprenticePercent2, stateBreakdown: stateBreakdown2, totalWagesPaid: Math.round(totalWagesPaid2 * 100) / 100, complianceTrend: complianceTrend2, topViolatingProjects: topViolatingProjects2, wageVarianceByTrade: wageVarianceByTrade2, overtimeExposure: overtimeExposure2, apprenticeshipProgress: apprenticeshipProgress2, submissionPunctuality: submissionPunctuality2, weeklyWageBurn: weeklyWageBurn2, fringeVsBaseWage: fringeVsBaseWage2, projectRankings: projectRankings2 };
+  }
+
+  // Run all independent sub-queries in parallel; failing ones fall back to safe defaults
+  const complianceSummaryResult = await Promise.allSettled([getComplianceSummary()]);
+  const complianceSummary = complianceSummaryResult[0].status === 'fulfilled' ? complianceSummaryResult[0].value : [];
+
+  const [
+    mfaResult,
+    teamResult,
+    projectsResult,
+    statsResult,
+    actionsResult,
+    onboardingResult,
+    trendResult,
+    atRiskResult,
+    economicResult,
+  ] = await Promise.allSettled([
+    getMfaStatus(),
+    getTeam(),
+    getProjects(),
+    getStats(complianceSummary),
+    getContractorActions(),
+    getOnboarding(),
+    getComplianceTrend(),
+    getAtRisk(),
+    getEconomicImpact(),
+  ]);
+
+  res.json({
+    mfaStatus: mfaResult.status === 'fulfilled' ? mfaResult.value : { enabled: false, backupCodesRemaining: 0 },
+    team: teamResult.status === 'fulfilled' ? teamResult.value : { isOwner: false },
+    projects: projectsResult.status === 'fulfilled' ? projectsResult.value : [],
+    complianceSummary: complianceSummary,
+    stats: statsResult.status === 'fulfilled' ? statsResult.value : { activeProjects: 0, openViolations: 0, weeksDueThisWeek: 0 },
+    contractorActions: actionsResult.status === 'fulfilled' ? actionsResult.value : [],
+    onboarding: onboardingResult.status === 'fulfilled' ? onboardingResult.value : { data: { user: { companyName: null, hccMembershipNumber: null }, profile: null } },
+    complianceTrend: trendResult.status === 'fulfilled' ? trendResult.value : [],
+    atRisk: atRiskResult.status === 'fulfilled' ? atRiskResult.value : [],
+    economicImpact: economicResult.status === 'fulfilled' ? { data: economicResult.value } : { data: null },
   });
 });
