@@ -280,6 +280,130 @@ router.get('/:projectId/workers/search', async (req, res) => {
   res.json({ data: { workers: rows } });
 });
 
+// POST /api/projects/:projectId/workers/bulk — bulk-create workers from CSV import
+// MUST be registered BEFORE /:projectId/workers/:workerId routes — "bulk" would otherwise
+// be captured as :workerId param (Express matches in order).
+router.post('/:projectId/workers/bulk', async (req, res) => {
+  const projectId = req.params.projectId as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectWriteAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const body = req.body as { workers?: unknown };
+  if (!Array.isArray(body.workers)) {
+    res.status(400).json({ error: 'Request body must have a "workers" array.' });
+    return;
+  }
+
+  const MAX_BULK = 200;
+  if (body.workers.length > MAX_BULK) {
+    res.status(400).json({ error: `Maximum ${MAX_BULK} workers per bulk request. Received ${body.workers.length}.` });
+    return;
+  }
+
+  const BulkWorkerSchema = z.object({
+    name: z.string().min(1).max(200),
+    tradeDescription: z.string().min(1).max(200),
+    laborType: z.enum(['journeyworker', 'apprentice', 'foreman']),
+    addressStreet: z.string().max(500).optional(),
+    addressCity: z.string().max(200).optional(),
+    addressState: z.string().max(50).optional(),
+    addressZip: z.string().max(20).optional(),
+    ssnLast4: z.string().max(4).regex(/^\d{0,4}$/).optional(),
+    tradeUnion: z.string().max(200).optional(),
+    unionLocal: z.string().max(200).optional(),
+  });
+
+  type BulkWorkerInput = z.infer<typeof BulkWorkerSchema>;
+
+  // Validate each row, collecting per-row errors
+  const validRows: Array<{ idx: number; data: BulkWorkerInput }> = [];
+  const errors: Array<{ row: number; name: string; reason: string }> = [];
+
+  for (let i = 0; i < body.workers.length; i++) {
+    const raw = body.workers[i];
+    const parsed = BulkWorkerSchema.safeParse(raw);
+    if (!parsed.success) {
+      const name = (raw as any)?.name ?? `Row ${i + 1}`;
+      errors.push({ row: i + 1, name: String(name), reason: parsed.error.issues.map((e) => e.message).join('; ') });
+    } else {
+      validRows.push({ idx: i, data: parsed.data });
+    }
+  }
+
+  // Transaction threshold: if more than 50% fail validation, abort early (422)
+  const totalRows = body.workers.length;
+  if (errors.length > totalRows / 2) {
+    res.status(422).json({
+      error: 'More than 50% of rows failed validation. No workers were created.',
+      errors,
+    });
+    return;
+  }
+
+  // Fetch existing worker names in this project for duplicate detection
+  const existingWorkers = await db.select({ name: workers.name }).from(workers).where(eq(workers.projectId, projectId));
+  const existingNames = new Set(existingWorkers.map((w) => w.name.trim().toLowerCase()));
+
+  let created = 0;
+  let skipped = 0;
+  const now = new Date().toISOString();
+
+  for (const { idx, data } of validRows) {
+    const nameLower = data.name.trim().toLowerCase();
+    if (existingNames.has(nameLower)) {
+      skipped++;
+      continue;
+    }
+    const id = randomUUID();
+    try {
+      await db.insert(workers).values({
+        id,
+        projectId,
+        name: data.name.trim(),
+        ssnLast4: data.ssnLast4 ?? null,
+        ssnEncrypted: null,
+        tradeUnion: data.tradeUnion ?? null,
+        addressStreet: data.addressStreet ?? null,
+        addressCity: data.addressCity ?? null,
+        addressState: data.addressState ?? null,
+        addressZip: data.addressZip ?? null,
+        unionLocal: data.unionLocal ?? null,
+        unionBookNumber: null,
+        apprenticeshipCommittee: null,
+        apprenticeshipRegNumber: null,
+        nysRegisteredApprentice: false,
+        race: null,
+        ethnicity: null,
+        gender: null,
+        veteranStatus: null,
+        skillLevel: null,
+        isWoman: null,
+        isMinority: null,
+        oshaTraining: null,
+        workerSex: null,
+        apprenticeshipProgramName: null,
+        rapidsNumber: null,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      existingNames.add(nameLower); // prevent duplicate within the same batch
+      created++;
+    } catch (insertErr: any) {
+      errors.push({ row: idx + 1, name: data.name, reason: insertErr?.message ?? 'Insert failed' });
+    }
+  }
+
+  res.status(200).json({ data: { created, skipped, errors } });
+});
+
 // POST /api/projects/:projectId/workers — create a worker on a project
 router.post('/:projectId/workers', validate(CreateWorkerSchema), async (req, res) => {
   const projectId = req.params.projectId as string;

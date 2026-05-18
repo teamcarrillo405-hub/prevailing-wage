@@ -18,6 +18,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { WorkersEmptyIllustration } from '../components/illustrations/EmptyIllustrations';
 import { TermTooltip } from '../components/ui/TermTooltip';
 import { RateProvenance } from '../components/ui/RateProvenance';
+import { WorkerCsvImportModal } from '../components/workers/WorkerCsvImportModal';
 
 const DB_DEF = "A federal law requiring contractors on federal or federally funded construction projects to pay workers the locally prevailing wage for their trade. Wages are set by the Department of Labor and published on SAM.gov.";
 
@@ -253,6 +254,7 @@ export function WorkersPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
+  const [showCsvImport, setShowCsvImport] = useState(false);
   const [form, setForm] = useState(blankWorkerForm);
   const [formError, setFormError] = useState('');
   const [laborFilter, setLaborFilter] = useState<'all' | 'journeyworker' | 'apprentice' | 'needs-attention'>('all');
@@ -566,7 +568,12 @@ export function WorkersPage() {
         <PageHeader
           title="Worker Roster"
           subtitle="Add workers once, keep WH-347 identity fields clean, and assign the trade classifications payroll will use."
-          action={<Button onClick={focusAddWorkerForm}>Add Worker</Button>}
+          action={
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setShowCsvImport(true)}>Import CSV</Button>
+              <Button onClick={focusAddWorkerForm}>Add Worker</Button>
+            </div>
+          }
           className="mb-0"
         />
 
@@ -1815,6 +1822,17 @@ export function WorkersPage() {
         </Card>
 
       </div>
+
+      {showCsvImport && (
+        <WorkerCsvImportModal
+          projectId={projectId!}
+          onClose={() => setShowCsvImport(false)}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ['workers', projectId] });
+            setShowCsvImport(false);
+          }}
+        />
+      )}
     </Layout>
   );
 }
