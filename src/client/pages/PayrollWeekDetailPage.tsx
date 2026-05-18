@@ -989,8 +989,34 @@ export function PayrollWeekDetailPage() {
     NJ: { downloadLabel: 'Download NJ MW-562', route: 'nj-mw562' },
     MN: { downloadLabel: 'Download MN DLI Payroll', route: 'mn-dli' },
     VA: { downloadLabel: 'Download VA DOLI Payroll', route: 'va-doli' },
+    PA: { downloadLabel: 'Download PA PWC-28', route: 'pa-cpr' },
+    OH: { downloadLabel: 'Download OH PWC-28', route: 'oh-pwc28' },
+    CO: { downloadLabel: 'Download CO CPR', route: 'co-cpr' },
+    MD: { downloadLabel: 'Download MD CPR', route: 'md-cpr' },
+    OR: { downloadLabel: 'Download OR BOLI CPR', route: 'or-boli-cpr' },
+    CT: { downloadLabel: 'Download CT CPR', route: 'ct-cpr' },
+    HI: { downloadLabel: 'Download HI CPR', route: 'hi-cpr' },
+    KY: { downloadLabel: 'Download KY CPR', route: 'ky-cpr' },
+    NM: { downloadLabel: 'Download NM CPR', route: 'nm-cpr' },
+    NV: { downloadLabel: 'Download NV CPR', route: 'nv-cpr' },
+    RI: { downloadLabel: 'Download RI CPR', route: 'ri-cpr' },
+    WV: { downloadLabel: 'Download WV CPR', route: 'wv-cpr' },
+    ME: { downloadLabel: 'Download ME CPR', route: 'me-cpr' },
+    VT: { downloadLabel: 'Download VT CPR', route: 'vt-cpr' },
+    MT: { downloadLabel: 'Download MT CPR', route: 'mt-cpr' },
+    ND: { downloadLabel: 'Download ND CPR', route: 'nd-cpr' },
+    DE: { downloadLabel: 'Download DE CPR', route: 'de-cpr' },
+    NH: { downloadLabel: 'Download NH CPR', route: 'nh-cpr' },
+    AK: { downloadLabel: 'Download AK CPR', route: 'ak-cpr' },
+    // County/municipal jurisdictions (matched via locality_name on project)
+    NYC: { downloadLabel: 'Download NYC DCAS CPR', route: 'nyc-cpr' },
+    COOK: { downloadLabel: 'Download Cook County CPR', route: 'cook-cpr' },
+    DC: { downloadLabel: 'Download DC DOES CPR', route: 'dc-ocp' },
+    'LA-COUNTY': { downloadLabel: 'Download LA County DPW CPR', route: 'la-county-cpr' },
   };
-  const stateFormConfig = STATE_FORMS[projectData?.data?.project?.state?.toUpperCase() ?? ''] ?? null;
+  const stateFormConfig = STATE_FORMS[projectData?.data?.project?.locality_name?.toUpperCase() ?? '']
+    ?? STATE_FORMS[projectData?.data?.project?.state?.toUpperCase() ?? '']
+    ?? null;
 
   // Workers query — needed for import unmatched worker remap dropdown (Phase 36)
   const { data: workersData } = useQuery({
