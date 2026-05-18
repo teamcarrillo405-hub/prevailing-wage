@@ -181,6 +181,11 @@ const COL = {
   gross:       MARGIN + 405,
   ded:         MARGIN + 435,
   net:         MARGIN + 465,
+  // BUG-06: fringe benefit columns for NY PW-12 form
+  fringeHW:    MARGIN + 100,
+  fringePen:   MARGIN + 145,
+  fringeVac:   MARGIN + 190,
+  fringeTrn:   MARGIN + 235,
 } as const;
 
 function drawTableHeaders(page: PDFPage, y: number, ctx: DrawCtx): number {
@@ -264,7 +269,22 @@ function drawWorkerRow(
   page.drawText(String(entry.totalOtHours),       { x: COL.totalHrs, y, size: rowSize, font, color: black, maxWidth: 22 });
   page.drawText(fmtDollar(otRate),                { x: COL.rate,     y, size: rowSize, font, color: black, maxWidth: 28 });
 
-  y -= 6;
+  y -= 10;
+
+  // BUG-06: fringe benefit summary row for NY PW-12
+  const hasFringes = entry.fringeHealthWelfare != null || entry.fringePension != null ||
+    entry.fringeVacation != null || entry.fringeTraining != null;
+  if (hasFringes) {
+    const fringeSize = rowSize - 1;
+    page.drawText('Fringes:', { x: COL.nameSSN, y, size: fringeSize, font: boldFont, color: black, maxWidth: 98 });
+    page.drawText(`H&W: ${fmtDollar(entry.fringeHealthWelfare)}`, { x: COL.fringeHW,  y, size: fringeSize, font, color: black, maxWidth: 43 });
+    page.drawText(`Pen: ${fmtDollar(entry.fringePension)}`,       { x: COL.fringePen, y, size: fringeSize, font, color: black, maxWidth: 43 });
+    page.drawText(`Vac: ${fmtDollar(entry.fringeVacation)}`,     { x: COL.fringeVac, y, size: fringeSize, font, color: black, maxWidth: 43 });
+    page.drawText(`Trn: ${fmtDollar(entry.fringeTraining)}`,     { x: COL.fringeTrn, y, size: fringeSize, font, color: black, maxWidth: 43 });
+    y -= 8;
+  } else {
+    y -= 4;
+  }
 
   // Thin separator after each worker
   page.drawLine({

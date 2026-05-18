@@ -52,15 +52,16 @@ export async function fillHiDli(data: HiDliInput): Promise<Uint8Array> {
     y -= 20;
     page.drawRectangle({ x: MARGIN, y: y-16, width: CONTENT_W, height: 16, color: NAVY });
     // Compressed header with ST/OT/DT per day
+    // BUG-07: Added missing DT column labels for Wed, Thu, Fri, Sat, Sun
     const hdrs: Array<[string, number]> = [
       ['Worker/Class',MARGIN+2],['M-ST',MARGIN+106],['OT',MARGIN+122],['DT',MARGIN+138],
       ['Tu-S',MARGIN+154],['OT',MARGIN+170],['DT',MARGIN+186],
-      ['W-ST',MARGIN+202],['OT',MARGIN+218],
-      ['Th-S',MARGIN+234],['OT',MARGIN+250],
-      ['F-ST',MARGIN+266],['OT',MARGIN+282],
-      ['Sa-S',MARGIN+298],['Su-S',MARGIN+314],
-      ['T-ST',MARGIN+330],['T-OT',MARGIN+346],['T-DT',MARGIN+362],
-      ['Base',MARGIN+382],['Gross',MARGIN+416],['Ded',MARGIN+452],['Net',MARGIN+486],
+      ['W-ST',MARGIN+202],['OT',MARGIN+214],['DT',MARGIN+226],
+      ['Th-S',MARGIN+238],['OT',MARGIN+250],['DT',MARGIN+262],
+      ['F-ST',MARGIN+274],['OT',MARGIN+286],['DT',MARGIN+298],
+      ['Sa-S',MARGIN+310],['Su-S',MARGIN+322],
+      ['T-ST',MARGIN+334],['T-OT',MARGIN+346],['T-DT',MARGIN+358],
+      ['Base',MARGIN+374],['Gross',MARGIN+408],['Ded',MARGIN+444],['Net',MARGIN+476],
     ];
     hdrs.forEach(([h,x]) => page.drawText(h, { x, y: y-12, size: 5, font: bold, color: WHITE }));
     y -= 20;
@@ -81,21 +82,24 @@ export async function fillHiDli(data: HiDliInput): Promise<Uint8Array> {
     const totSt=e.monSt+e.tueSt+e.wedSt+e.thuSt+e.friSt+e.satSt+e.sunSt;
     const totOt=e.monOt+e.tueOt+e.wedOt+e.thuOt+e.friOt+e.satOt+e.sunOt;
     const totDt=e.monDt+e.tueDt+e.wedDt+e.thuDt+e.friDt+e.satDt+e.sunDt;
+    // BUG-07: Updated vals to match corrected column positions including Wed/Thu/Fri DT
     const vals: Array<[number,number]> = [
       [e.monSt,MARGIN+106],[e.monOt,MARGIN+122],[e.monDt,MARGIN+138],
       [e.tueSt,MARGIN+154],[e.tueOt,MARGIN+170],[e.tueDt,MARGIN+186],
-      [e.wedSt,MARGIN+202],[e.wedOt,MARGIN+218],
-      [e.thuSt,MARGIN+234],[e.thuOt,MARGIN+250],
-      [e.friSt,MARGIN+266],[e.friOt,MARGIN+282],
-      [e.satSt,MARGIN+298],[e.sunSt,MARGIN+314],
-      [totSt,MARGIN+330],[totOt,MARGIN+346],[totDt,MARGIN+362],
+      [e.wedSt,MARGIN+202],[e.wedOt,MARGIN+214],[e.wedDt,MARGIN+226],
+      [e.thuSt,MARGIN+238],[e.thuOt,MARGIN+250],[e.thuDt,MARGIN+262],
+      [e.friSt,MARGIN+274],[e.friOt,MARGIN+286],[e.friDt,MARGIN+298],
+      [e.satSt,MARGIN+310],[e.sunSt,MARGIN+322],
+      [totSt,MARGIN+334],[totOt,MARGIN+346],[totDt,MARGIN+358],
     ];
     vals.forEach(([h,x]) => currentPage.drawText(h>0?String(h):'\u2014', { x, y: y-14, size: 6, font: reg, color: BLACK }));
     const ded=e.ficaTax+e.fitWithheld+e.stateWithheld+e.otherDeductions;
-    currentPage.drawText(`$${fmt(e.baseRate)}`, { x: MARGIN+382, y: y-14, size: 6, font: reg, color: BLACK });
-    currentPage.drawText(`$${fmt(e.grossWages)}`, { x: MARGIN+416, y: y-14, size: 6, font: reg, color: BLACK });
-    currentPage.drawText(`$${fmt(ded)}`, { x: MARGIN+452, y: y-14, size: 6, font: reg, color: BLACK });
-    currentPage.drawText(`$${fmt(e.netPay)}`, { x: MARGIN+486, y: y-14, size: 6, font: reg, color: BLACK });
+    // BUG-07: Draw dtRate alongside baseRate
+    currentPage.drawText(`$${fmt(e.baseRate)}`, { x: MARGIN+374, y: y-10, size: 6, font: reg, color: BLACK });
+    currentPage.drawText(`DT:$${fmt(e.dtRate)}`, { x: MARGIN+374, y: y-20, size: 5, font: reg, color: BLACK });
+    currentPage.drawText(`$${fmt(e.grossWages)}`, { x: MARGIN+408, y: y-14, size: 6, font: reg, color: BLACK });
+    currentPage.drawText(`$${fmt(ded)}`, { x: MARGIN+444, y: y-14, size: 6, font: reg, color: BLACK });
+    currentPage.drawText(`$${fmt(e.netPay)}`, { x: MARGIN+476, y: y-14, size: 6, font: reg, color: BLACK });
     y -= 26;
   }
 

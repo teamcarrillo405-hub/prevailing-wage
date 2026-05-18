@@ -306,7 +306,9 @@ router.get('/wh347/:weekId', async (req, res) => {
   const workerRows: Wh347WorkerRow[] = entries.map((row: EntryRow, index: number) => {
     const e = row.entry;
     const totalSt = e.monSt + e.tueSt + e.wedSt + e.thuSt + e.friSt + e.satSt + e.sunSt;
-    const totalOt = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt;
+    // BUG-01: CA double-time hours are counted in the OT column per WH-347 Column 5 spec
+    const totalDtHours = (e.monDt ?? 0) + (e.tueDt ?? 0) + (e.wedDt ?? 0) + (e.thuDt ?? 0) + (e.friDt ?? 0) + (e.satDt ?? 0) + (e.sunDt ?? 0);
+    const totalOt = e.monOt + e.tueOt + e.wedOt + e.thuOt + e.friOt + e.satOt + e.sunOt + totalDtHours;
 
     const grossWagesProject = e.grossWages ?? 0;
     const netPay = e.netPay ?? 0;
@@ -1466,6 +1468,9 @@ router.get('/ma-cpr/:weekId', async (req, res) => {
       totalWeekGross: e.entry?.totalWeekGrossWages ?? null,
       allOtherHours: e.entry?.allOtherHours ?? null,
       checkNumber: e.entry?.checkNumber ?? null,
+      // BUG-02: MA DLS requires deductions and net pay
+      deductions: e.entry?.deductions ?? null,
+      netPay: e.entry?.netPay ?? null,
     })),
   };
 
@@ -1663,6 +1668,9 @@ router.get('/mn-dli/:weekId', async (req, res) => {
       fringeTraining: e.entry?.fringeTraining ?? null,
       grossWages: e.entry?.grossWages ?? null,
       checkNumber: e.entry?.checkNumber ?? null,
+      // BUG-03: MN DLI requires deductions and net pay
+      deductions: e.entry?.deductions ?? null,
+      netPay: e.entry?.netPay ?? null,
     })),
   };
 
@@ -1751,6 +1759,9 @@ router.get('/va-doli/:weekId', async (req, res) => {
       fringeTraining: e.entry?.fringeTraining ?? null,
       grossWages: e.entry?.grossWages ?? null,
       checkNumber: e.entry?.checkNumber ?? null,
+      // BUG-04: VA DOLI requires deductions and net pay
+      deductions: e.entry?.deductions ?? null,
+      netPay: e.entry?.netPay ?? null,
     })),
   };
 
@@ -2081,6 +2092,8 @@ router.get('/co-cpr/:weekId', async (req, res) => {
 function buildGenericEntries(entries: Awaited<ReturnType<typeof getPayrollEntriesWithWorkerDetails>>) {
   return entries.map((e) => ({
     workerName: e.workerName ?? '', workerSsnLast4: e.ssnLast4 ?? null,
+    // BUG-08: include worker address in generic CPR entries
+    workerAddress: e.workerAddress ?? '',
     classification: e.tradeDescription ?? '', isApprentice: e.laborType === 'apprentice',
     monSt: e.monSt ?? 0, monOt: e.monOt ?? 0, tueSt: e.tueSt ?? 0, tueOt: e.tueOt ?? 0,
     wedSt: e.wedSt ?? 0, wedOt: e.wedOt ?? 0, thuSt: e.thuSt ?? 0, thuOt: e.thuOt ?? 0,

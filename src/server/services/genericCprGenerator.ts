@@ -40,6 +40,7 @@ export interface GenericCprHeaderFields {
 export interface GenericCprEntry {
   workerName: string;
   workerSsnLast4: string | null;
+  workerAddress?: string;           // BUG-08: worker address for state CPR forms
   classification: string;
   isApprentice: boolean;
   monSt: number; monOt: number;
@@ -99,6 +100,10 @@ function drawWorkerRow(page: PDFPage, reg: PDFFont, y: number, e: GenericCprEntr
   const ssn = e.workerSsnLast4 ? `***-**-${e.workerSsnLast4}` : '';
   page.drawText(`${e.workerName} ${ssn}`, { x: MARGIN + 2, y: y - 10, size: 7, font: reg, color: BLACK });
   page.drawText(`${e.classification}${e.isApprentice ? ' (App)' : ''}`, { x: MARGIN + 2, y: y - 20, size: 6, font: reg, color: BLACK });
+  // BUG-08: Draw worker address below the worker name if provided
+  if (e.workerAddress) {
+    page.drawText(e.workerAddress, { x: MARGIN + 2, y: y - 28, size: 5, font: reg, color: BLACK, maxWidth: 110 });
+  }
   const totSt = e.monSt+e.tueSt+e.wedSt+e.thuSt+e.friSt+e.satSt+e.sunSt;
   const totOt = e.monOt+e.tueOt+e.wedOt+e.thuOt+e.friOt+e.satOt+e.sunOt;
   [e.monSt,e.tueSt,e.wedSt,e.thuSt,e.friSt,e.satSt,e.sunSt,totSt,totOt].forEach((h, j) => {

@@ -61,6 +61,8 @@ export interface MnPdfInput {
     fringeTraining: number | null;
     grossWages: number | null;
     checkNumber: string | null;
+    deductions: number | null;  // total deductions (MN DLI required)
+    netPay: number | null;      // net pay (MN DLI required)
   }>;
 }
 
@@ -104,23 +106,25 @@ function addPage(pdfDoc: PDFDocument): PDFPage {
 // Day column order is MONDAY-FIRST (Mo-Tu-We-Th-Fr-Sa-Su) — MN DLI form standard
 
 const MN_COL = {
-  nameSSN:  36,
-  address: 118,
-  class:   185,
-  monSt:   250,
-  tueSt:   265,
-  wedSt:   280,
-  thuSt:   295,
-  friSt:   310,
-  satSt:   325,
-  sunSt:   340,
-  baseRate: 360,
-  hw:      385,
-  pension: 405,
-  vacation: 425,
-  training: 445,
-  gross:   468,
-  checkNum: 500,
+  nameSSN:    36,
+  address:   118,
+  class:     185,
+  monSt:     250,
+  tueSt:     265,
+  wedSt:     280,
+  thuSt:     295,
+  friSt:     310,
+  satSt:     325,
+  sunSt:     340,
+  baseRate:  360,
+  hw:        385,
+  pension:   405,
+  vacation:  425,
+  training:  445,
+  gross:     468,
+  checkNum:  492,
+  deductions: 514,
+  netPay:    540,
 } as const;
 
 // ── Draw header section on a page (returns y position after header) ──────────
@@ -224,8 +228,10 @@ function drawTableHeaders(page: PDFPage, y: number, ctx: DrawCtx): number {
   page.drawText('Pen.',     { x: MN_COL.pension,   y, size: hSize, font: boldFont, color: black, maxWidth: 18 });
   page.drawText('Vac.',     { x: MN_COL.vacation,  y, size: hSize, font: boldFont, color: black, maxWidth: 18 });
   page.drawText('Trn.',     { x: MN_COL.training,  y, size: hSize, font: boldFont, color: black, maxWidth: 21 });
-  page.drawText('Gross',    { x: MN_COL.gross,     y, size: hSize, font: boldFont, color: black, maxWidth: 30 });
-  page.drawText('Chk#',     { x: MN_COL.checkNum,  y, size: hSize, font: boldFont, color: black, maxWidth: 40 });
+  page.drawText('Gross',    { x: MN_COL.gross,      y, size: hSize, font: boldFont, color: black, maxWidth: 22 });
+  page.drawText('Chk#',    { x: MN_COL.checkNum,   y, size: hSize, font: boldFont, color: black, maxWidth: 20 });
+  page.drawText('Ded',     { x: MN_COL.deductions, y, size: hSize, font: boldFont, color: black, maxWidth: 24 });
+  page.drawText('Net',     { x: MN_COL.netPay,     y, size: hSize, font: boldFont, color: black, maxWidth: 24 });
 
   y -= 3;
   page.drawLine({
@@ -306,8 +312,11 @@ function drawWorkerRow(
   page.drawText(fmtDollar(entry.fringeTraining),      { x: MN_COL.training, y, size: rowSize, font, color: black, maxWidth: 21 });
 
   // Gross pay — null renders as blank
-  page.drawText(fmtOptional(entry.grossWages), { x: MN_COL.gross,   y, size: rowSize, font, color: black, maxWidth: 30 });
-  page.drawText(fmtOptional(entry.checkNumber), { x: MN_COL.checkNum, y, size: rowSize, font, color: black, maxWidth: 40 });
+  page.drawText(fmtOptional(entry.grossWages),  { x: MN_COL.gross,      y, size: rowSize, font, color: black, maxWidth: 22 });
+  page.drawText(fmtOptional(entry.checkNumber), { x: MN_COL.checkNum,   y, size: rowSize, font, color: black, maxWidth: 20 });
+  // BUG-03: MN DLI requires deductions and net pay columns
+  page.drawText(fmtDollar(entry.deductions),    { x: MN_COL.deductions, y, size: rowSize, font, color: black, maxWidth: 24 });
+  page.drawText(fmtDollar(entry.netPay),        { x: MN_COL.netPay,     y, size: rowSize, font, color: black, maxWidth: 24 });
 
   // Thin separator after each worker
   const separatorY = y - 20;

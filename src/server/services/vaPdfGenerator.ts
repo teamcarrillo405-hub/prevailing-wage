@@ -61,6 +61,8 @@ export interface VaPdfInput {
     fringeTraining: number | null;
     grossWages: number | null;
     checkNumber: string | null;
+    deductions: number | null;  // total deductions (VA DOLI required)
+    netPay: number | null;      // net pay (VA DOLI required)
   }>;
 }
 
@@ -104,23 +106,25 @@ function addPage(pdfDoc: PDFDocument): PDFPage {
 // Day column order is MONDAY-FIRST (Mo-Tu-We-Th-Fr-Sa-Su) — VA DOLI form standard
 
 const VA_COL = {
-  nameSSN:  36,
-  address: 118,
-  class:   185,
-  monSt:   250,
-  tueSt:   265,
-  wedSt:   280,
-  thuSt:   295,
-  friSt:   310,
-  satSt:   325,
-  sunSt:   340,
-  baseRate: 360,
-  hw:      385,
-  pension: 405,
-  vacation: 425,
-  training: 445,
-  gross:   468,
-  checkNum: 500,
+  nameSSN:    36,
+  address:   118,
+  class:     185,
+  monSt:     250,
+  tueSt:     265,
+  wedSt:     280,
+  thuSt:     295,
+  friSt:     310,
+  satSt:     325,
+  sunSt:     340,
+  baseRate:  360,
+  hw:        385,
+  pension:   405,
+  vacation:  425,
+  training:  445,
+  gross:     468,
+  checkNum:  492,
+  deductions: 514,
+  netPay:    540,
 } as const;
 
 // ── Draw header section on a page (returns y position after header) ──────────
@@ -224,8 +228,10 @@ function drawTableHeaders(page: PDFPage, y: number, ctx: DrawCtx): number {
   page.drawText('Pen.',     { x: VA_COL.pension,   y, size: hSize, font: boldFont, color: black, maxWidth: 18 });
   page.drawText('Vac.',     { x: VA_COL.vacation,  y, size: hSize, font: boldFont, color: black, maxWidth: 18 });
   page.drawText('Trn.',     { x: VA_COL.training,  y, size: hSize, font: boldFont, color: black, maxWidth: 21 });
-  page.drawText('Gross',    { x: VA_COL.gross,     y, size: hSize, font: boldFont, color: black, maxWidth: 30 });
-  page.drawText('Chk#',     { x: VA_COL.checkNum,  y, size: hSize, font: boldFont, color: black, maxWidth: 40 });
+  page.drawText('Gross',    { x: VA_COL.gross,      y, size: hSize, font: boldFont, color: black, maxWidth: 22 });
+  page.drawText('Chk#',    { x: VA_COL.checkNum,   y, size: hSize, font: boldFont, color: black, maxWidth: 20 });
+  page.drawText('Ded',     { x: VA_COL.deductions, y, size: hSize, font: boldFont, color: black, maxWidth: 24 });
+  page.drawText('Net',     { x: VA_COL.netPay,     y, size: hSize, font: boldFont, color: black, maxWidth: 24 });
 
   y -= 3;
   page.drawLine({
@@ -306,8 +312,11 @@ function drawWorkerRow(
   page.drawText(fmtDollar(entry.fringeTraining),      { x: VA_COL.training, y, size: rowSize, font, color: black, maxWidth: 21 });
 
   // Gross pay — null renders as blank
-  page.drawText(fmtOptional(entry.grossWages),  { x: VA_COL.gross,   y, size: rowSize, font, color: black, maxWidth: 30 });
-  page.drawText(fmtOptional(entry.checkNumber), { x: VA_COL.checkNum, y, size: rowSize, font, color: black, maxWidth: 40 });
+  page.drawText(fmtOptional(entry.grossWages),  { x: VA_COL.gross,      y, size: rowSize, font, color: black, maxWidth: 22 });
+  page.drawText(fmtOptional(entry.checkNumber), { x: VA_COL.checkNum,   y, size: rowSize, font, color: black, maxWidth: 20 });
+  // BUG-04: VA DOLI requires deductions and net pay columns
+  page.drawText(fmtDollar(entry.deductions),    { x: VA_COL.deductions, y, size: rowSize, font, color: black, maxWidth: 24 });
+  page.drawText(fmtDollar(entry.netPay),        { x: VA_COL.netPay,     y, size: rowSize, font, color: black, maxWidth: 24 });
 
   // Thin separator after each worker
   const separatorY = y - 20;

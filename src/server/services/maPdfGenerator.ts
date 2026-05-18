@@ -66,6 +66,8 @@ export interface MaPdfInput {
     totalWeekGross: number | null;    // total gross wages across all projects (may be null)
     allOtherHours: number | null;     // hours on other projects (may be null)
     checkNumber: string | null;       // paycheck number (may be null)
+    deductions: number | null;        // total deductions (MA DLS required)
+    netPay: number | null;            // net pay (MA DLS required)
   }>;
 }
 
@@ -168,7 +170,9 @@ const MA_COL = {
   projectGross: 503,
   totalGross:  524,
   allOther:    546,
-  checkNum:    560,
+  checkNum:    540,
+  deductions:  556,
+  netPay:      572,
 } as const;
 
 // ── Draw header section on a page (returns y position after header) ──────────
@@ -279,7 +283,9 @@ function drawTableHeaders(page: PDFPage, y: number, ctx: DrawCtx): number {
   page.drawText('Proj$',      { x: MA_COL.projectGross,  y, size: hSize, font: boldFont, color: black, maxWidth: 20 });
   page.drawText('Tot$',       { x: MA_COL.totalGross,    y, size: hSize, font: boldFont, color: black, maxWidth: 20 });
   page.drawText('Oth.Hr',     { x: MA_COL.allOther,      y, size: hSize, font: boldFont, color: black, maxWidth: 13 });
-  page.drawText('Chk#',       { x: MA_COL.checkNum,      y, size: hSize, font: boldFont, color: black, maxWidth: 30 });
+  page.drawText('Chk#',       { x: MA_COL.checkNum,      y, size: hSize, font: boldFont, color: black, maxWidth: 14 });
+  page.drawText('Ded',        { x: MA_COL.deductions,    y, size: hSize, font: boldFont, color: black, maxWidth: 14 });
+  page.drawText('Net',        { x: MA_COL.netPay,        y, size: hSize, font: boldFont, color: black, maxWidth: 14 });
 
   y -= 3;
   page.drawLine({
@@ -388,8 +394,11 @@ function drawWorkerRow(
   page.drawText(fmtDollar(entry.totalWeekGross), { x: MA_COL.totalGross,   y, size: rowSize, font, color: black, maxWidth: 20 });
 
   // Optional fields — null renders blank
-  page.drawText(fmtOptional(entry.allOtherHours), { x: MA_COL.allOther, y, size: rowSize, font, color: black, maxWidth: 13 });
-  page.drawText(fmtOptional(entry.checkNumber),   { x: MA_COL.checkNum, y, size: rowSize, font, color: black, maxWidth: 30 });
+  page.drawText(fmtOptional(entry.allOtherHours), { x: MA_COL.allOther,   y, size: rowSize, font, color: black, maxWidth: 13 });
+  page.drawText(fmtOptional(entry.checkNumber),   { x: MA_COL.checkNum,   y, size: rowSize, font, color: black, maxWidth: 14 });
+  // BUG-02: MA DLS requires deductions and net pay columns
+  page.drawText(fmtDollar(entry.deductions),      { x: MA_COL.deductions, y, size: rowSize, font, color: black, maxWidth: 14 });
+  page.drawText(fmtDollar(entry.netPay),          { x: MA_COL.netPay,     y, size: rowSize, font, color: black, maxWidth: 14 });
 
   // Thin separator after each worker
   const separatorY = y - 20;

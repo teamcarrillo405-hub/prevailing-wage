@@ -230,6 +230,8 @@ async function fillSingleSet(
   drawText('header_weekEndingDate', data.weekEndingDate, { align: 'center', size: 5.25 });
   drawText('header_wcPolicyNumber', data.wcPolicyNumber, { align: 'center', size: 5.25 });
   drawText('header_contractNo', data.contractNo, { align: 'center', size: 5.25 });
+  // BUG-05: CA DIR requires the applicable wage determination number on every CPR
+  drawText('header_wageDeterminationNo', data.wageDeterminationNo ?? '', { align: 'center', size: 5.25 });
   drawText('header_projectLocation', data.projectLocation, { size: 5.25 });
 
   if (totalSets > 1) {

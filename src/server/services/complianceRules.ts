@@ -223,7 +223,16 @@ export function detectDeductionViolations(rows: ComplianceRowLike[]): DeductionV
     const deductions = row.entry.deductions ?? 0;
     if (!gross || gross <= 0 || deductions <= 0) continue;
 
-    const ratio = deductions / gross;
+    // BUG-09: 29 CFR §3.5 deduction cap applies only to non-tax deductions.
+    // FICA, federal income tax, and state income tax are statutory and excluded from the cap.
+    // Accessing these fields via type assertion since PayrollEntryLike may not declare them.
+    const entryAny = row.entry as Record<string, unknown>;
+    const ficaTax = Number(entryAny['ficaTax'] ?? 0);
+    const federalIncomeTax = Number(entryAny['federalIncomeTax'] ?? 0);
+    const stateIncomeTax = Number(entryAny['stateIncomeTax'] ?? 0);
+    const nonTaxDeductions = Math.max(0, deductions - ficaTax - federalIncomeTax - stateIncomeTax);
+
+    const ratio = nonTaxDeductions / gross;
     if (ratio > cap) {
       violations.push({
         violationType: 'deduction-ratio',
