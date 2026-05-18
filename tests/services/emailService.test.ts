@@ -23,6 +23,8 @@ import {
   sendDueSoonEmail,
   sendActivityEmail,
   sendSubmissionConfirmationEmail,
+  sendEmail,
+  sendSupportForward,
 } from '../../src/server/services/emailService.js';
 import { getDb } from '../../src/server/db/index.js';
 
@@ -419,6 +421,87 @@ describe('sendSubmissionConfirmationEmail', () => {
 
     await expect(
       sendSubmissionConfirmationEmail('user@example.com', 'Project', 'WA L&I', '2026-04-06', 'proj-1'),
+    ).resolves.toBeUndefined();
+
+    delete process.env.RESEND_API_KEY;
+  });
+});
+
+// ── sendEmail ───────────────────────────────────────────────────────────────
+
+describe('sendEmail', () => {
+  it('is a no-op and does not throw when RESEND_API_KEY is absent', async () => {
+    const saved = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+
+    await expect(
+      sendEmail('user@example.com', 'Test Subject', '<p>Hello</p>'),
+    ).resolves.toBeUndefined();
+
+    expect(mockSend).not.toHaveBeenCalled();
+    process.env.RESEND_API_KEY = saved;
+  });
+
+  it('calls Resend.send with correct from/to/subject/html when key is set', async () => {
+    process.env.RESEND_API_KEY = 'test-key';
+
+    await sendEmail('recipient@example.com', 'Hello World', '<p>Body</p>');
+
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const args = mockSend.mock.calls[0][0];
+    expect(args.to).toBe('recipient@example.com');
+    expect(args.subject).toBe('Hello World');
+    expect(args.html).toBe('<p>Body</p>');
+    delete process.env.RESEND_API_KEY;
+  });
+
+  it('does not throw when Resend.send throws internally (NFR-02)', async () => {
+    process.env.RESEND_API_KEY = 'test-key';
+    mockSend.mockRejectedValueOnce(new Error('Resend down'));
+
+    await expect(
+      sendEmail('user@example.com', 'Subject', '<p>Body</p>'),
+    ).resolves.toBeUndefined();
+
+    delete process.env.RESEND_API_KEY;
+  });
+});
+
+// ── sendSupportForward ──────────────────────────────────────────────────────
+
+describe('sendSupportForward', () => {
+  it('is a no-op when RESEND_API_KEY is absent', async () => {
+    const saved = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+
+    await expect(
+      sendSupportForward('user@example.com', 'Jane Doe', 'Help needed', 'I need assistance.'),
+    ).resolves.toBeUndefined();
+
+    expect(mockSend).not.toHaveBeenCalled();
+    process.env.RESEND_API_KEY = saved;
+  });
+
+  it('sends to SUPPORT_ADDRESS with [Contact] prefix in subject', async () => {
+    process.env.RESEND_API_KEY = 'test-key';
+
+    await sendSupportForward('user@example.com', 'Jane Doe', 'Help needed', 'I need assistance.');
+
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const args = mockSend.mock.calls[0][0];
+    expect(args.subject).toContain('[Contact]');
+    expect(args.subject).toContain('Help needed');
+    expect(args.html).toContain('Jane Doe');
+    expect(args.html).toContain('user@example.com');
+    delete process.env.RESEND_API_KEY;
+  });
+
+  it('does not throw when Resend.send throws internally (NFR-02)', async () => {
+    process.env.RESEND_API_KEY = 'test-key';
+    mockSend.mockRejectedValueOnce(new Error('Resend down'));
+
+    await expect(
+      sendSupportForward('user@example.com', 'Jane', 'Subject', 'Message'),
     ).resolves.toBeUndefined();
 
     delete process.env.RESEND_API_KEY;
