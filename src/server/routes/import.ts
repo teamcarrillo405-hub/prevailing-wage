@@ -13,7 +13,7 @@ import { getPayrollWeek, upsertPayrollEntry } from '../services/payrollService.j
 import { parseImportFile } from '../services/importService.js';
 import { calculateCertifiedPayrollPay } from '../services/calculations.js';
 import { getDb } from '../db/index.js';
-import { payrollEntries, payrollImports, payrollProviderMappings, payrollWeeks, subcontractors, submitReadyAcknowledgements } from '../db/schema.js';
+import { payrollEntries, payrollImports, payrollProviderMappings, payrollWeeks, projects, subcontractors, submitReadyAcknowledgements } from '../db/schema.js';
 import type { ImportedRow, ImportProvider } from '../services/importTypes.js';
 import { reconcilePayrollSourceDetails } from '../services/payrollSourceReconciliation.js';
 import { buildPayrollAutomationSummary } from '../services/payrollAutomation.js';
@@ -238,6 +238,30 @@ importRouter.post('/commit', async (req, res) => {
     return;
   }
 
+  // Load project for state-based DT hours validation (COMP-FIX-02)
+  const [projectRow] = await db
+    .select({ state: projects.state })
+    .from(projects)
+    .where(eq(projects.id, week.projectId))
+    .limit(1);
+
+  const projectState = projectRow?.state?.toUpperCase() ?? '';
+  const DT_ALLOWED_STATES = ['CA', 'AK', 'NV'];
+
+  // COMP-FIX-02: reject rows with dtHours if project is in a non-DT state
+  const dtErrors: string[] = [];
+  for (let i = 0; i < body.matched.length; i++) {
+    const row = body.matched[i];
+    const dtHours = row.dtHours ?? 0;
+    if (dtHours > 0 && !DT_ALLOWED_STATES.includes(projectState)) {
+      dtErrors.push(`Row ${i + 1} (${row.workerName}): dtHours not allowed for ${projectState || 'federal'} projects`);
+    }
+  }
+  if (dtErrors.length > 0) {
+    res.status(422).json({ error: 'Double-time hours not permitted for this project state', details: dtErrors });
+    return;
+  }
+
   // Re-validate: conflict check before any inserts (D-06, per context pitfalls)
   const existingEntries = await db
     .select({
@@ -296,7 +320,7 @@ importRouter.post('/commit', async (req, res) => {
       friOt: row.friOt,
       satOt: row.satOt,
       sunOt: row.sunOt,
-      monDt: 0,
+      monDt: row.dtHours ?? 0,
       tueDt: 0,
       wedDt: 0,
       thuDt: 0,

@@ -77,6 +77,8 @@ export interface ImportedRow {
   deductionOtherDescription?: string | null;
   // Phase 108 (DBE-08): optional sub attribution stamped at import time
   subcontractorId?: string | null;
+  // COMP-FIX-02: double-time hours total (per week) — split evenly into Mon slot for storage
+  dtHours?: number | null;
 }
 
 export interface UnmatchedRow {
