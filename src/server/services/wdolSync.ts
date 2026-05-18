@@ -3867,7 +3867,30 @@ export const WD_SEED_LIST: Array<{
   { wdNumber: 'WY20250001', state: 'WY', county: null, revision: 0 },
   { wdNumber: 'WY20260002', state: 'WY', county: null, revision: 0 },
   { wdNumber: 'WY20260003', state: 'WY', county: null, revision: 0 },
-
+  // ── Service Contract Act (SCA) WDs ──────────────────────────────────────────
+  // SCA: 41 USC §§ 6701–6707. Covers service workers on federal contracts.
+  // These are fetched by WD number via /api/wages/fetch?wdNumber=...
+  // Format: 4-digit year + sequential number (modern SAM.gov format)
+  { wdNumber: '2015-4', state: 'CA', county: 'Los Angeles', revision: 0 },
+  { wdNumber: '2015-5', state: 'NY', county: 'New York', revision: 0 },
+  { wdNumber: '2015-3', state: 'TX', county: 'Harris', revision: 0 },
+  { wdNumber: '2015-6', state: 'IL', county: 'Cook', revision: 0 },
+  { wdNumber: '2015-7', state: 'FL', county: 'Miami-Dade', revision: 0 },
+  { wdNumber: '2015-8', state: 'PA', county: 'Philadelphia', revision: 0 },
+  { wdNumber: '2015-9', state: 'OH', county: 'Cuyahoga', revision: 0 },
+  { wdNumber: '2015-10', state: 'GA', county: 'Fulton', revision: 0 },
+  { wdNumber: '2015-11', state: 'WA', county: 'King', revision: 0 },
+  { wdNumber: '2015-12', state: 'MA', county: 'Suffolk', revision: 0 },
+  { wdNumber: '2015-13', state: 'AZ', county: 'Maricopa', revision: 0 },
+  { wdNumber: '2015-14', state: 'CO', county: 'Denver', revision: 0 },
+  { wdNumber: '2015-15', state: 'MD', county: 'Montgomery', revision: 0 },
+  { wdNumber: '2015-16', state: 'DC', county: 'DC', revision: 0 },
+  { wdNumber: '2015-17', state: 'OR', county: 'Multnomah', revision: 0 },
+  { wdNumber: '2015-18', state: 'MN', county: 'Hennepin', revision: 0 },
+  { wdNumber: '2015-19', state: 'MI', county: 'Wayne', revision: 0 },
+  { wdNumber: '2015-20', state: 'NC', county: 'Mecklenburg', revision: 0 },
+  { wdNumber: '2015-21', state: 'VA', county: 'Fairfax', revision: 0 },
+  { wdNumber: '2015-22', state: 'NJ', county: 'Hudson', revision: 0 },
 ];
 
 type ActiveWdRow = {
