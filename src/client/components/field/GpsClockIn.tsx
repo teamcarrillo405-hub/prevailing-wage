@@ -66,6 +66,7 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
     workers.length === 1 ? workers[0].id : '',
   );
   const [gpsState, setGpsState] = useState<GpsState>({ status: 'idle' });
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -165,6 +166,7 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
     setGpsState({ status: 'acquiring' });
     try {
       const position = await acquireGps();
+      setGpsAccuracy(position.accuracyMeters);
       const isPoor = position.accuracyMeters > POOR_ACCURACY_THRESHOLD_M;
       setGpsState(isPoor ? { status: 'poor', position } : { status: 'ok', position });
     } catch (err: any) {
@@ -203,6 +205,14 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
 
   const workerName = workers.find((w) => w.id === selectedWorkerId)?.name ?? '';
   const isSubmitting = punchMutation.isPending;
+
+  const accuracyBorderClass = gpsAccuracy === null
+    ? 'border-transparent'
+    : gpsAccuracy < 10
+    ? 'border-green-500'
+    : gpsAccuracy < 50
+    ? 'border-amber-500'
+    : 'border-red-500';
 
   // Distance from job site (if site coords configured)
   let distanceWarning: string | null = null;
@@ -246,7 +256,7 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
                   onClick={() => { setSelectedWorkerId(w.id); setGpsState({ status: 'idle' }); setError(null); }}
                   className={`min-h-[52px] px-3 py-3 rounded-lg border text-sm font-medium transition-colors text-left truncate ${
                     selectedWorkerId === w.id
-                      ? 'bg-brand-navy text-white border-brand-navy'
+                      ? 'bg-nav-dark text-white border-nav-dark'
                       : 'bg-white text-gray-700 border-gray-300 hover:border-brand-gold'
                   }`}
                 >
@@ -324,7 +334,7 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
           </div>
           {/* MOB-14: 60px confirm button */}
           <button
-            className="w-full min-h-[60px] rounded-xl font-bold text-lg text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+            className="w-full min-h-[60px] rounded-xl font-bold text-lg text-white bg-nav-dark hover:bg-nav-dark/90 transition-colors disabled:opacity-50"
             onClick={handleConfirmWithGps}
             disabled={isSubmitting}
           >
@@ -352,7 +362,7 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
             </p>
           </div>
           <button
-            className="w-full min-h-[60px] rounded-xl font-bold text-lg text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+            className="w-full min-h-[60px] rounded-xl font-bold text-lg text-white bg-nav-dark hover:bg-nav-dark/90 transition-colors disabled:opacity-50"
             onClick={handleProceedWithoutGps}
             disabled={isSubmitting}
           >
@@ -371,7 +381,7 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
             </p>
           </div>
           <button
-            className="w-full min-h-[60px] rounded-xl font-bold text-lg text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+            className="w-full min-h-[60px] rounded-xl font-bold text-lg text-white bg-nav-dark hover:bg-nav-dark/90 transition-colors disabled:opacity-50"
             onClick={handleProceedWithoutGps}
             disabled={isSubmitting}
           >
@@ -382,21 +392,23 @@ export function GpsClockIn({ project, workers, onSuccess }: GpsClockInProps) {
 
       {/* MOB-14: Primary clock-in/out button — 60px height, primary CTA */}
       {gpsState.status === 'idle' && selectedWorkerId && (
-        <button
-          className={`w-full min-h-[60px] rounded-xl font-bold text-xl tracking-wide transition-colors disabled:opacity-50 shadow-sm ${
-            isClockedIn
-              ? 'bg-red-600 hover:bg-red-700 text-white'
-              : 'bg-green-600 hover:bg-green-700 text-white'
-          }`}
-          onClick={handleClockAction}
-          disabled={isSubmitting || openPunchLoading || !selectedWorkerId}
-        >
-          {openPunchLoading
-            ? 'Loading...'
-            : isClockedIn
-            ? 'Clock Out'
-            : 'Clock In'}
-        </button>
+        <div className={`rounded-xl border-2 ${accuracyBorderClass} transition-colors`}>
+          <button
+            className={`w-full min-h-[60px] rounded-xl font-bold text-xl tracking-wide transition-colors disabled:opacity-50 shadow-sm ${
+              isClockedIn
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+            onClick={handleClockAction}
+            disabled={isSubmitting || openPunchLoading || !selectedWorkerId}
+          >
+            {openPunchLoading
+              ? 'Loading...'
+              : isClockedIn
+              ? 'Clock Out'
+              : 'Clock In'}
+          </button>
+        </div>
       )}
 
       {/* Offline indicator */}
