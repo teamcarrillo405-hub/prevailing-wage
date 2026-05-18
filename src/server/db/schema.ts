@@ -309,6 +309,8 @@ export const payrollWeeks = sqliteTable('payroll_weeks', {
   ilIdolSubmittedAt: text('il_idol_submitted_at'),
   // Phase 47 — TX CPR submission tracking
   txCprSubmittedAt: text('tx_cpr_submitted_at'),
+  // Phase 153 — QBO journal entry link (optional)
+  qboJournalEntryId: text('qbo_journal_entry_id'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -856,6 +858,20 @@ export const aiClassifications = sqliteTable('ai_classifications', {
   latencyMs: integer('latency_ms'),
   createdAt: text('created_at').notNull(),
 });
+
+// ── Phase 153: Compliance Cache (PERF-01) ────────────────────────────────
+// Write-through cache keyed by (project_id, week_id). TTL = 5 minutes.
+// Invalidated on every payroll entry save. Eliminates N+1 in getBatchProjectCompliance.
+export const complianceCache = sqliteTable('compliance_cache', {
+  projectId: text('project_id').notNull(),
+  weekId: text('week_id').notNull(),
+  computedAt: integer('computed_at').notNull(),
+  violationCount: integer('violation_count').notNull().default(0),
+  hasCritical: integer('has_critical').notNull().default(0),
+  violationsJson: text('violations_json').notNull().default('[]'),
+}, (table) => ({
+  complianceCachePk: uniqueIndex('compliance_cache_pk').on(table.projectId, table.weekId),
+}));
 
 // PrevWage Copilot interactions. The Copilot is advisory by default: it may
 // explain and prepare fixes, but user approval is required before any mutation.
