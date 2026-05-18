@@ -137,6 +137,25 @@ export function FieldClockPage() {
 
   const clockedInCount = workers.filter((w) => clockedInIds.has(w.id)).length;
 
+  // Group entries by worker for accordion display
+  const groupedByWorker = useMemo(() => {
+    const map = new Map<string, { worker: Worker; entries: Array<{ punch: TimePunch; evidence: ReturnType<typeof getTimeEvidenceState> }> }>();
+    [...punches]
+      .sort((a, b) => new Date(b.punchedAt).getTime() - new Date(a.punchedAt).getTime())
+      .forEach((punch) => {
+        const worker = workers.find((w) => w.id === punch.workerId);
+        if (!worker) return;
+        const existing = map.get(punch.workerId) ?? { worker, entries: [] };
+        existing.entries.push({ punch, evidence: getTimeEvidenceState(punch) });
+        map.set(punch.workerId, existing);
+      });
+    return Array.from(map.values()).sort((a, b) => {
+      const aIn = clockedInIds.has(a.worker.id);
+      const bIn = clockedInIds.has(b.worker.id);
+      return aIn === bIn ? 0 : aIn ? -1 : 1;
+    });
+  }, [punches, workers, clockedInIds]);
+
   const punchRows = [...punches]
     .sort((a, b) => new Date(b.punchedAt).getTime() - new Date(a.punchedAt).getTime())
     .map((punch) => ({ punch, evidence: getTimeEvidenceState(punch) }));
@@ -433,114 +452,133 @@ export function FieldClockPage() {
               <div className="mt-4">
                 {punchesLoading ? (
                   <p className="rounded border border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-400">Loading punches...</p>
-                ) : sortedPunches.length === 0 ? (
+                ) : groupedByWorker.length === 0 ? (
                   <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-3 py-8 text-center text-sm text-gray-400">No punches recorded for this date.</p>
                 ) : (
-                  <ul className="divide-y divide-gray-100 rounded border border-gray-200">
-                    {sortedPunches.map(({ punch, evidence }) => {
-                      const worker = workers.find((w) => w.id === punch.workerId);
-                      const acc = punch.accuracyMeters;
-                      const ringColor = acc == null
-                        ? 'bg-gray-300'
-                        : acc <= 50
-                        ? 'bg-green-500'
-                        : acc <= 500
-                        ? 'bg-amber-400'
-                        : 'bg-red-500';
-
+                  <div className="space-y-2">
+                    {groupedByWorker.map(({ worker, entries }) => {
+                      const isIn = clockedInIds.has(worker.id);
+                      const filteredEntries = sourceFilter === 'all' ? entries : entries.filter((e) => e.evidence.source === sourceFilter);
+                      if (filteredEntries.length === 0) return null;
                       return (
-                        <li key={punch.id} className="bg-white px-3 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${ringColor}`}
-                                  title={acc != null ? `GPS accuracy: ${Math.round(acc)}m` : 'No GPS data'}
-                                  aria-hidden="true"
-                                />
-                                <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${
-                                  punch.punchType === 'in' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {punch.punchType === 'in' ? 'IN' : 'OUT'}
-                                </span>
-                                <span className="truncate text-sm font-semibold text-gray-950">
-                                  {worker?.name ?? punch.workerId}
-                                </span>
-                              </div>
-                              {acc != null && (
-                                <p className="mt-1 pl-4 text-xs text-gray-400">GPS accuracy {Math.round(acc)}m</p>
-                              )}
-                              <div className="mt-2 flex flex-wrap gap-2 pl-4">
-                                <span className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
-                                  {evidence.sourceLabel}
-                                </span>
-                                <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${
-                                  evidence.reviewStatus === 'captured'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-amber-100 text-amber-800'
-                                }`}>
-                                  {evidence.reviewLabel}
-                                </span>
-                              </div>
-                              <p className="mt-1 pl-4 text-xs leading-5 text-gray-500">{evidence.detail}</p>
+                        <details key={worker.id} className="rounded border border-gray-200 overflow-hidden" open={isIn}>
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-gray-50 px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${isIn ? 'bg-green-500' : 'bg-gray-300'}`}
+                                aria-hidden="true"
+                              />
+                              <span className="text-sm font-semibold text-gray-950">{worker.name}</span>
+                              <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${isIn ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                                {isIn ? 'IN' : 'OUT'}
+                              </span>
                             </div>
-                            <div className="shrink-0 text-right">
-                              <p className="text-sm font-semibold text-gray-950">{formatTime(punch.punchedAt)}</p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingPunchId(punch.id);
-                                  setEditPunchType(punch.punchType);
-                                  setEditTime(timeInputValue(punch.punchedAt));
-                                  setCorrectionError(null);
-                                }}
-                                className="mt-1 text-xs font-semibold text-nav-dark hover:underline"
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          </div>
-                          {editingPunchId === punch.id && (
-                            <div className="mt-3 space-y-2 rounded border border-gray-200 bg-gray-50 p-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                <select
-                                  value={editPunchType}
-                                  onChange={(e) => setEditPunchType(e.target.value as 'in' | 'out')}
-                                  className="rounded border border-gray-300 px-2 py-2 text-base"
-                                >
-                                  <option value="in">Clock in</option>
-                                  <option value="out">Clock out</option>
-                                </select>
-                                <input
-                                  type="time"
-                                  value={editTime}
-                                  onChange={(e) => setEditTime(e.target.value)}
-                                  className="rounded border border-gray-300 px-2 py-2 text-base"
-                                />
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => savePunchCorrection(punch.id)}
-                                  disabled={correctionBusy}
-                                  className="rounded bg-nav-dark px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-                                >
-                                  Save correction
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingPunchId(null)}
-                                  className="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </li>
+                            <span className="text-[11px] text-gray-400">{filteredEntries.length} punch{filteredEntries.length !== 1 ? 'es' : ''}</span>
+                          </summary>
+                          <ul className="divide-y divide-gray-100">
+                            {filteredEntries.map(({ punch, evidence }) => {
+                              const acc = punch.accuracyMeters;
+                              const ringColor = acc == null
+                                ? 'bg-gray-300'
+                                : acc <= 50
+                                ? 'bg-green-500'
+                                : acc <= 500
+                                ? 'bg-amber-400'
+                                : 'bg-red-500';
+                              return (
+                                <li key={punch.id} className="bg-white px-3 py-3">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span
+                                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${ringColor}`}
+                                          title={acc != null ? `GPS accuracy: ${Math.round(acc)}m` : 'No GPS data'}
+                                          aria-hidden="true"
+                                        />
+                                        <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${
+                                          punch.punchType === 'in' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                        }`}>
+                                          {punch.punchType === 'in' ? 'IN' : 'OUT'}
+                                        </span>
+                                      </div>
+                                      {acc != null && (
+                                        <p className="mt-1 pl-4 text-xs text-gray-400">GPS accuracy {Math.round(acc)}m</p>
+                                      )}
+                                      <div className="mt-2 flex flex-wrap gap-2 pl-4">
+                                        <span className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
+                                          {evidence.sourceLabel}
+                                        </span>
+                                        <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${
+                                          evidence.reviewStatus === 'captured'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-amber-100 text-amber-800'
+                                        }`}>
+                                          {evidence.reviewLabel}
+                                        </span>
+                                      </div>
+                                      <p className="mt-1 pl-4 text-xs leading-5 text-gray-500">{evidence.detail}</p>
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      <p className="text-sm font-semibold text-gray-950">{formatTime(punch.punchedAt)}</p>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingPunchId(punch.id);
+                                          setEditPunchType(punch.punchType);
+                                          setEditTime(timeInputValue(punch.punchedAt));
+                                          setCorrectionError(null);
+                                        }}
+                                        className="mt-1 text-xs font-semibold text-nav-dark hover:underline"
+                                      >
+                                        Edit
+                                      </button>
+                                    </div>
+                                  </div>
+                                  {editingPunchId === punch.id && (
+                                    <div className="mt-3 space-y-2 rounded border border-gray-200 bg-gray-50 p-2">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <select
+                                          value={editPunchType}
+                                          onChange={(e) => setEditPunchType(e.target.value as 'in' | 'out')}
+                                          className="rounded border border-gray-300 px-2 py-2 text-base"
+                                        >
+                                          <option value="in">Clock in</option>
+                                          <option value="out">Clock out</option>
+                                        </select>
+                                        <input
+                                          type="time"
+                                          value={editTime}
+                                          onChange={(e) => setEditTime(e.target.value)}
+                                          className="rounded border border-gray-300 px-2 py-2 text-base"
+                                        />
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => savePunchCorrection(punch.id)}
+                                          disabled={correctionBusy}
+                                          className="rounded bg-nav-dark px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                                        >
+                                          Save correction
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingPunchId(null)}
+                                          className="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </details>
                       );
                     })}
-                  </ul>
+                  </div>
                 )}
               </div>
             </section>
