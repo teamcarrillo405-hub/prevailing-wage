@@ -112,6 +112,26 @@ export function GlobalReportsPage() {
 
   const complianceRows = complianceData?.rows ?? [];
 
+  const [sortCol, setSortCol] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  function toggleSort(col: string) {
+    if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortCol(col); setSortDir('asc'); }
+  }
+
+  const sortedRows = useMemo(() => {
+    if (!sortCol) return complianceRows;
+    return [...complianceRows].sort((a, b) => {
+      const av = (a as Record<string, unknown>)[sortCol];
+      const bv = (b as Record<string, unknown>)[sortCol];
+      let cmp = 0;
+      if (typeof av === 'number' && typeof bv === 'number') cmp = av - bv;
+      else cmp = String(av ?? '').localeCompare(String(bv ?? ''));
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [complianceRows, sortCol, sortDir]);
+
   const wageStatementHref = selectedProjectId
     ? `/api/reports/export-csv?report=wage-statement&projectId=${selectedProjectId}`
     : undefined;
@@ -222,18 +242,29 @@ export function GlobalReportsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Project</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">State</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Weeks</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Submitted</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Violations</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Wages</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">App. Hours</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Hours</th>
+                    {([
+                      { key: 'projectName', label: 'Project', align: 'left' },
+                      { key: 'state', label: 'State', align: 'left' },
+                      { key: 'weekCount', label: 'Weeks', align: 'right' },
+                      { key: 'submittedCount', label: 'Submitted', align: 'right' },
+                      { key: 'violationCount', label: 'Violations', align: 'right' },
+                      { key: 'totalWages', label: 'Total Wages', align: 'right' },
+                      { key: 'apprenticeHours', label: 'App. Hours', align: 'right' },
+                      { key: 'totalHours', label: 'Total Hours', align: 'right' },
+                    ] as const).map(({ key, label, align }) => (
+                      <th
+                        key={key}
+                        onClick={() => toggleSort(key)}
+                        className={`px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none hover:text-gray-800 ${align === 'left' ? 'text-left' : 'text-right'}`}
+                      >
+                        {label}{' '}
+                        {sortCol === key ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {complianceRows.map(row => (
+                  {sortedRows.map(row => (
                     <tr key={row.projectId} className="hover:bg-gray-50">
                       <td className="px-5 py-3 font-medium text-gray-900 max-w-[200px] truncate">
                         {row.projectName}
