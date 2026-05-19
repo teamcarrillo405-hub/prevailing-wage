@@ -19,10 +19,19 @@ async function fetchDueSoon(): Promise<DueSoonItem[]> {
   return res.json();
 }
 
-function daysLabel(days: number): string {
-  if (days < 0) return `${Math.abs(days)}d overdue`;
-  if (days === 0) return 'Due today';
-  return `${days}d`;
+type Urgency = 'error' | 'warning' | 'muted';
+
+function getUrgency(daysUntil: number): Urgency {
+  if (daysUntil <= 1) return 'error';
+  if (daysUntil <= 3) return 'warning';
+  return 'muted';
+}
+
+function getRelativeLabel(daysUntil: number): string {
+  if (daysUntil < 0) return `${Math.abs(daysUntil)}d overdue`;
+  if (daysUntil === 0) return 'Due today';
+  if (daysUntil === 1) return 'Due tomorrow';
+  return `Due in ${daysUntil} days`;
 }
 
 export function DueSoonPanel() {
@@ -99,20 +108,23 @@ export function DueSoonPanel() {
 }
 
 function DueSoonRow({ item }: { item: DueSoonItem }) {
+  const urgency = getUrgency(item.daysUntil);
   const isOverdue = item.status === 'overdue';
   const isToday = item.status === 'due-today';
 
   return (
     <Link
       to={`/projects/${item.projectId}/payroll/${item.weekId}`}
-      aria-label={`Open payroll week ${item.payrollNumber} for ${item.projectName}, ${daysLabel(item.daysUntil)}`}
+      aria-label={`Open payroll week ${item.payrollNumber} for ${item.projectName}, ${getRelativeLabel(item.daysUntil)}`}
       title={`Open payroll week ${item.payrollNumber} for ${item.projectName}`}
       className={cn(
         'group flex min-h-11 items-center justify-between rounded-lg px-3.5 py-2.5 text-sm transition-all duration-150',
         'hover:shadow-sm',
-        isOverdue
-          ? 'bg-red-50 border border-red-100 hover:border-red-200'
-          : 'bg-gray-50 border border-gray-100 hover:border-amber-200 hover:bg-amber-50/40',
+        urgency === 'error'
+          ? 'bg-red-500/10 border border-red-500/20 hover:border-red-500/40'
+          : urgency === 'warning'
+            ? 'bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/40'
+            : 'bg-surface-card border border-gray-100 hover:border-amber-200',
       )}
     >
       <div className="flex items-center gap-2.5 min-w-0">
@@ -129,9 +141,9 @@ function DueSoonRow({ item }: { item: DueSoonItem }) {
       <div className="flex items-center gap-1.5 shrink-0 ml-3">
         <span className={cn(
           'text-xs font-semibold',
-          isOverdue ? 'text-red-600' : isToday ? 'text-amber-600' : 'text-amber-500',
+          urgency === 'error' ? 'text-red-400' : urgency === 'warning' ? 'text-amber-400' : 'text-surface-muted',
         )}>
-          {daysLabel(item.daysUntil)}
+          {getRelativeLabel(item.daysUntil)}
         </span>
         <ChevronRight className="size-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" aria-hidden="true" />
       </div>
