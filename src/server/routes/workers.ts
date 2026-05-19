@@ -175,6 +175,8 @@ router.get('/:projectId/wage-classifications', async (req, res) => {
 });
 
 // GET /api/projects/:projectId/workers — list workers with classifications + live WD rates
+// SEC-02 audit: ssnEncrypted is stripped from every response via safeWorker() / destructure.
+// Only ssnLast4 (last 4 digits) is returned. Full SSN never appears in API responses.
 router.get('/:projectId/workers', async (req, res) => {
   const projectId = req.params.projectId as string;
   const userId = req.user!.userId;
