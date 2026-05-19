@@ -49,6 +49,8 @@ const CreateProjectSchema = z.object({
   // Phase 70 — Apprenticeship enforcement (IRA/IIJA flag only; ratio table is managed separately)
   isIraIijaProject: z.boolean().optional(),
   projectSettings: z.string().optional(),
+  // Phase 166 — SCA project type
+  projectType: z.enum(['davis-bacon', 'sca', 'both']).optional(),
 });
 
 type ProjectFields = z.infer<typeof CreateProjectSchema>;
@@ -380,6 +382,15 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             <p className="text-red-600 text-xs mt-1">{errors.fundingType.message}</p>
           )}
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm text-surface-muted mb-1">Project Type</label>
+        <select {...register('projectType')} className="w-full bg-surface-card text-white rounded-lg px-3 py-2 border border-surface-card focus:border-brand-gold outline-none text-sm">
+          <option value="davis-bacon">Davis-Bacon Act</option>
+          <option value="sca">Service Contract Act (SCA)</option>
+          <option value="both">Both (Davis-Bacon + SCA)</option>
+        </select>
       </div>
 
       </section>
