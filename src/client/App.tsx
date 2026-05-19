@@ -36,6 +36,7 @@ const TeamPage = React.lazy(() => import('./pages/TeamPage.js').then(m => ({ def
 const BillingPage = React.lazy(() => import('./pages/BillingPage').then(m => ({ default: m.BillingPage })));
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage.js').then(m => ({ default: m.AcceptInvitePage })));
 const SubUploadPage = React.lazy(() => import('./pages/SubUploadPage').then(m => ({ default: m.SubUploadPage })));
+const SubcontractorsPage = React.lazy(() => import('./pages/SubcontractorsPage').then(m => ({ default: m.SubcontractorsPage })));
 const IntegrationsPage = React.lazy(() => import('./pages/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })));
 const ProcoreImportPage = React.lazy(() => import('./pages/ProcoreImportPage').then(m => ({ default: m.ProcoreImportPage })));
 const FieldClockPage = React.lazy(() => import('./pages/FieldClockPage').then(m => ({ default: m.FieldClockPage })));
@@ -177,6 +178,7 @@ export default function App() {
                 <Route path="/projects/:projectId/payroll/:weekId" element={<PayrollWeekDetailPage />} />
                 <Route path="/projects/:projectId/ot-scenarios" element={<OtScenarioPage />} />
                 <Route path="/projects/:projectId/workers" element={<WorkersPage />} />
+                <Route path="/projects/:projectId/subcontractors" element={<SubcontractorsPage />} />
                 <Route path="/projects/:projectId/workers/:workerId/compliance-history" element={<WorkerComplianceHistoryPage />} />
                 <Route path="/projects/:projectId/variance" element={<VarianceReportPageRoute />} />
                 <Route path="/projects/:projectId/reports" element={<ReportsPage />} />
