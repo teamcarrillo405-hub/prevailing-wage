@@ -748,6 +748,10 @@ export const timePunches = sqliteTable('time_punches', {
   latitude: real('latitude'),
   longitude: real('longitude'),
   accuracyMeters: real('accuracy_meters'),
+  // Phase 164 — Supervisor approval workflow
+  status: text('status').notNull().default('approved').$type<'draft' | 'submitted' | 'approved' | 'rejected'>(),
+  rejectionReason: text('rejection_reason'),
+  supervisorId: text('supervisor_id').references(() => users.id),
   // Audit
   createdBy: text('created_by').notNull().references(() => users.id),
   createdAt: text('created_at').notNull(),
