@@ -877,6 +877,16 @@ export const complianceCache = sqliteTable('compliance_cache', {
   complianceCachePk: uniqueIndex('compliance_cache_pk').on(table.projectId, table.weekId),
 }));
 
+// Phase 161 — QuickBooks GL account mapping (one row per account type per project)
+export const qboAccountMapping = sqliteTable('qbo_account_mapping', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  accountType: text('account_type').notNull().$type<'labor' | 'fringe' | 'tax'>(),
+  qboAccountId: text('qbo_account_id').notNull(),
+  qboAccountName: text('qbo_account_name').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
 // PrevWage Copilot interactions. The Copilot is advisory by default: it may
 // explain and prepare fixes, but user approval is required before any mutation.
 export const copilotInteractions = sqliteTable('copilot_interactions', {

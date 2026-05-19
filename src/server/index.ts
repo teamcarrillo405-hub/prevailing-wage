@@ -65,6 +65,7 @@ import { apprenticeshipRouter } from './routes/apprenticeship.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { copilotRouter } from './routes/copilot.js';
 import agencyRouter from './routes/agency.js';
+import qboRouter from './routes/qbo.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
@@ -259,6 +260,7 @@ app.use('/v1', publicApiRouter);
 app.use('/api/sso', ssoRouter);
 app.use('/api/apprenticeship', apprenticeshipRouter);
 app.use('/api/agency', requireAuth, agencyRouter);
+app.use('/api/qbo', requireAuth, qboRouter);
 
 // API-03 — OpenAPI spec + Swagger UI (mounted before SPA catch-all)
 app.get('/api/docs', (_req, res) => {
