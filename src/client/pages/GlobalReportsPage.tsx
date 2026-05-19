@@ -2,7 +2,7 @@
 // Top-level Reports hub — cross-project CSV exports and compliance dashboard.
 // Route: /reports (protected)
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Download, ClipboardList, Users, GraduationCap } from 'lucide-react';
 import { Layout } from '../components/shared/Layout';
@@ -79,6 +79,16 @@ function fmtCurrency(n: number) {
 
 export function GlobalReportsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | 'quarter' | 'year'>('30d');
+
+  const startDate = useMemo(() => {
+    const d = new Date();
+    if (dateRange === '7d') d.setDate(d.getDate() - 7);
+    else if (dateRange === '30d') d.setDate(d.getDate() - 30);
+    else if (dateRange === 'quarter') d.setDate(d.getDate() - 90);
+    else d.setFullYear(d.getFullYear() - 1);
+    return d.toISOString().split('T')[0];
+  }, [dateRange]);
 
   // Projects list for wage-statement selector
   const { data: projectsData } = useQuery({
@@ -95,8 +105,8 @@ export function GlobalReportsPage() {
     isLoading: complianceLoading,
     error: complianceError,
   } = useQuery({
-    queryKey: ['reports-compliance-summary'],
-    queryFn: () => api.get<{ rows: ComplianceSummaryRow[] }>('/reports/compliance-summary'),
+    queryKey: ['reports-compliance-summary', dateRange],
+    queryFn: () => api.get<{ rows: ComplianceSummaryRow[] }>(`/reports/compliance-summary?startDate=${startDate}`),
     staleTime: 5 * 60_000,
   });
 
@@ -160,6 +170,20 @@ export function GlobalReportsPage() {
             downloadHref="/api/reports/export-csv?report=economic-impact"
             downloadFilename="economic-impact.csv"
           />
+        </div>
+
+        {/* Date range filter */}
+        <div className="flex gap-2 mb-4">
+          {(['7d', '30d', 'quarter', 'year'] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setDateRange(r)}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${dateRange === r ? 'bg-brand-gold text-black' : 'bg-surface-card text-surface-muted hover:text-white'}`}
+            >
+              {r === '7d' ? 'Last 7 days' : r === '30d' ? 'Last 30 days' : r === 'quarter' ? 'This quarter' : 'This year'}
+            </button>
+          ))}
         </div>
 
         {/* Compliance Summary table */}
