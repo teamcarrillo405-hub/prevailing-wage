@@ -132,6 +132,28 @@ export function GlobalReportsPage() {
     });
   }, [complianceRows, sortCol, sortDir]);
 
+  function handleExport() {
+    const headers = ['Project', 'State', 'Weeks', 'Submitted', 'Violations', 'Total Wages', 'App. Hours', 'Total Hours'];
+    const rows = sortedRows.map((r) => [
+      r.projectName,
+      r.state,
+      r.weekCount,
+      r.submittedCount,
+      r.violationCount,
+      r.totalWages.toFixed(2),
+      r.apprenticeHours.toFixed(1),
+      r.totalHours.toFixed(1),
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'compliance-report.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  }
+
   const wageStatementHref = selectedProjectId
     ? `/api/reports/export-csv?report=wage-statement&projectId=${selectedProjectId}`
     : undefined;
@@ -213,14 +235,15 @@ export function GlobalReportsPage() {
               <h2 className="text-sm font-semibold text-gray-800">Compliance Summary — All Projects</h2>
               <p className="text-xs text-gray-400 mt-0.5">CPR submission health across your entire portfolio</p>
             </div>
-            <a
-              href="/api/reports/export-csv?report=compliance"
-              download="compliance-summary.csv"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={sortedRows.length === 0}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:opacity-40"
             >
               <Download className="h-4 w-4" aria-hidden="true" />
               Export CSV
-            </a>
+            </button>
           </div>
 
           {complianceLoading && (
