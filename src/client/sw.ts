@@ -213,6 +213,9 @@ self.addEventListener('sync', (event) => {
     syncEvent.waitUntil(replayOfflineQueue());
   } else if (syncEvent.tag === 'payroll-queue-replay') {
     syncEvent.waitUntil(replayPayrollQueue());
+  } else if (syncEvent.tag === 'flush-clock-queue') {
+    // Client-side flush handles this via the online event in OfflineBanner
+    console.log('[SW] sync: flush-clock-queue');
   }
 });
 
