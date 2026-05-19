@@ -157,17 +157,17 @@ export function CaseStudiesPage() {
             ))}
           </div>
 
-          {/* "Your company here" CTA */}
+          {/* Feature your organization CTA */}
           <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-              Coming soon
+              Submit your story
             </p>
             <h3 className="text-xl font-bold text-gray-900 mb-3 font-headline">
-              Your company here?
+              Feature your organization
             </h3>
             <p className="text-gray-600 text-sm max-w-md mx-auto mb-6">
               We publish verified case studies for contractors who achieve measurable compliance
-              results on PrevWage. Share your story and we'll feature it here.
+              results on PrevWage. Share your results and we'll feature your organization here.
             </p>
             <a
               href="mailto:support@prevwage.com?subject=Case%20Study%20Inquiry"
