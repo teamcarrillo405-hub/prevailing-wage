@@ -547,6 +547,13 @@
       "when": 1747612802,
       "tag": "0086_clock_entry_status",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1748217600000,
+      "tag": "0087_sca_project_type",
+      "breakpoints": true
     }
   ]
 }

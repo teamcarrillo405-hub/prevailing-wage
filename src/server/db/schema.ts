@@ -69,6 +69,8 @@ export const projects = sqliteTable('projects', {
   wdLockedAt: text('wd_locked_at'),
 
   status: text('status').notNull().default('active').$type<'active' | 'closed'>(),
+  // Phase 166 — SCA (Service Contract Act) support
+  projectType: text('project_type').notNull().default('davis-bacon').$type<'davis-bacon' | 'sca' | 'both'>(),
   // Phase 24 — California-specific fields
   cslbLicense: text('cslb_license'),
   wcPolicyNumber: text('wc_policy_number'),
