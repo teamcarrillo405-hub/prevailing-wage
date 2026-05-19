@@ -92,6 +92,12 @@ const ForgotPasswordPage = React.lazy(() =>
 const SupervisorApprovalsPage = React.lazy(() =>
   import('./pages/SupervisorApprovalsPage').then(m => ({ default: m.SupervisorApprovalsPage }))
 );
+const AgencyReviewPage = React.lazy(() =>
+  import('./pages/AgencyReviewPage').then(m => ({ default: m.AgencyReviewPage }))
+);
+const SettingsPage = React.lazy(() =>
+  import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -177,6 +183,7 @@ export default function App() {
                 <Route path="/projects/:id/activity" element={<ProjectActivityPage />} />
                 <Route path="/team" element={<TeamPage />} />
                 <Route path="/billing" element={<BillingPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/settings/integrations" element={<IntegrationsPage />} />
                 <Route path="/settings/sso" element={<SsoConfigPage />} />
                 <Route path="/procore/import" element={<ProcoreImportPage />} />
@@ -196,6 +203,7 @@ export default function App() {
                 <Route path="/pilot-intake" element={<PilotIntakePage />} />
                 <Route path="/competitive-readiness" element={<CompetitiveReadinessPage />} />
                 <Route path="/supervisor/approvals" element={<SupervisorApprovalsPage />} />
+                <Route path="/agency" element={<AgencyReviewPage />} />
               </Route>
 
               {/* Public pages — no auth required */}
