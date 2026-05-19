@@ -47,6 +47,7 @@ interface Project {
   projectSettings: string | null;
   gpsClockInEnabled?: boolean;
   apprenticeshipRequirements: string | null;
+  project_type?: string | null;
 }
 
 interface NotifSettings {
@@ -313,6 +314,11 @@ function ProjectCommandCenter({
                 </Badge>
                 {totalFixes > 0 ? <Badge variant="violation">{totalFixes} open fix{totalFixes === 1 ? '' : 'es'}</Badge> : <Badge variant="compliant">No open fixes</Badge>}
               </div>
+              {project.project_type !== 'davis-bacon' && project.project_type != null && (
+                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-400 rounded border border-purple-500/30">
+                  {project.project_type === 'both' ? 'Davis-Bacon + SCA' : 'SCA'}
+                </span>
+              )}
               <h2 className="mt-3 font-headline text-2xl leading-tight text-gray-950">{project.name}</h2>
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-600">
                 <span className="inline-flex items-center gap-1.5">
