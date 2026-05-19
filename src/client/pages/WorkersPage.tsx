@@ -19,6 +19,7 @@ import { WorkersEmptyIllustration } from '../components/illustrations/EmptyIllus
 import { TermTooltip } from '../components/ui/TermTooltip';
 import { RateProvenance } from '../components/ui/RateProvenance';
 import { WorkerCsvImportModal } from '../components/workers/WorkerCsvImportModal';
+import { WorkerSlideOver } from '../components/workers/WorkerSlideOver';
 
 const DB_DEF = "A federal law requiring contractors on federal or federally funded construction projects to pay workers the locally prevailing wage for their trade. Wages are set by the Department of Labor and published on SAM.gov.";
 
@@ -255,6 +256,8 @@ export function WorkersPage() {
   const qc = useQueryClient();
 
   const [showCsvImport, setShowCsvImport] = useState(false);
+  const [slideOverOpen, setSlideOverOpen] = useState(false);
+  const [slideOverWorker, setSlideOverWorker] = useState<Worker | null>(null);
   const [form, setForm] = useState(blankWorkerForm);
   const [formError, setFormError] = useState('');
   const [laborFilter, setLaborFilter] = useState<'all' | 'journeyworker' | 'apprentice' | 'needs-attention'>('all');
@@ -571,7 +574,7 @@ export function WorkersPage() {
           action={
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="sm" onClick={() => setShowCsvImport(true)}>Import CSV</Button>
-              <Button onClick={focusAddWorkerForm}>Add Worker</Button>
+              <Button onClick={() => { setSlideOverWorker(null); setSlideOverOpen(true); }}>Add Worker</Button>
             </div>
           }
           className="mb-0"
@@ -609,7 +612,7 @@ export function WorkersPage() {
                     : 'Roster is ready for payroll entry.'}
               </p>
               <div className="mt-4 flex flex-col gap-2">
-                <Button onClick={focusAddWorkerForm} variant={missingPayrollDataCount > 0 || classifiedWorkerCount < allWorkers.length ? 'primary' : 'secondary'}>
+                <Button onClick={() => { setSlideOverWorker(null); setSlideOverOpen(true); }} variant={missingPayrollDataCount > 0 || classifiedWorkerCount < allWorkers.length ? 'primary' : 'secondary'}>
                   Add or update worker
                 </Button>
                 {allWorkers.length > 0 && (
@@ -663,7 +666,7 @@ export function WorkersPage() {
             heading="No workers on this project yet"
             message="Add your first worker to begin tracking prevailing wage compliance."
             action={
-              <Button onClick={focusAddWorkerForm}>
+              <Button onClick={() => { setSlideOverWorker(null); setSlideOverOpen(true); }}>
                 Add Your First Worker
               </Button>
             }
@@ -1136,7 +1139,7 @@ export function WorkersPage() {
                         </Link>
                         <button
                           type="button"
-                          onClick={() => { setEditingId(w.id); setEditForm(workerToEditForm(w)); setAddingClassFor(null); }}
+                          onClick={() => { setSlideOverWorker(w); setSlideOverOpen(true); setEditingId(null); setAddingClassFor(null); }}
                           className="inline-flex min-h-11 items-center rounded-md border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
                           aria-label={`Edit ${w.name}`}
                         >
@@ -1833,6 +1836,14 @@ export function WorkersPage() {
           }}
         />
       )}
+
+      <WorkerSlideOver
+        open={slideOverOpen}
+        onClose={() => { setSlideOverOpen(false); setSlideOverWorker(null); }}
+        projectId={projectId!}
+        worker={slideOverWorker}
+        projectState={projectData?.data?.project?.state}
+      />
     </Layout>
   );
 }
