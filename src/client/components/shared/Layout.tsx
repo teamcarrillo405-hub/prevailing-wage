@@ -12,6 +12,7 @@ import { SyncStatusIndicator } from '../ui/SyncStatusIndicator';
 import { PwaInstallBanner } from '../ui/PwaInstallBanner';
 import { ProjectWorkspaceNav } from '../projects/ProjectWorkspaceNav';
 import { HelpCenterPanel } from '../help/HelpCenterPanel';
+import { AveroOrbLogo } from './AveroOrbLogo';
 
 function navCls({ isActive }: { isActive: boolean }) {
   return `inline-flex min-h-11 min-w-11 items-center justify-center text-sm font-medium transition-colors ${
@@ -114,14 +115,8 @@ export function Layout({ children }: LayoutProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 flex items-center justify-between h-[68px]">
           {/* Logo + wordmark */}
           <Link to="/dashboard" className="group flex min-h-11 min-w-11 items-center gap-2" aria-label="AVERO Prevailing Wage home">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full">
-              <iframe
-                src="/avero-orb.html"
-                title="AVERO"
-                className="absolute inset-0 h-full w-full border-0"
-                style={{ pointerEvents: 'none' }}
-                scrolling="no"
-              />
+            <div className="shrink-0 rounded-full overflow-hidden">
+              <AveroOrbLogo size={40} />
             </div>
             <div className="flex flex-col leading-none">
               <span className="text-base font-bold text-white tracking-wide group-hover:text-brand-gold transition-colors" style={{ fontFamily: 'DM Sans, sans-serif' }}>

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle, ClipboardCheck, FileCheck, ShieldCheck, Timer, UploadCloud } from 'lucide-react';
 import { UsComplianceMap } from '../components/UsComplianceMap.js';
+import { AveroOrbLogo } from '../components/shared/AveroOrbLogo';
 
 const workflow = [
   {
@@ -73,8 +74,8 @@ function LandingNav() {
     <header className="absolute left-0 right-0 top-0 z-20">
       <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
         <Link to="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold tracking-wide text-white">
-          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
-            <iframe src="/avero-orb.html" title="AVERO" className="absolute inset-0 h-full w-full border-0" style={{ pointerEvents: 'none' }} scrolling="no" />
+          <div className="shrink-0 rounded-full overflow-hidden">
+            <AveroOrbLogo size={32} />
           </div>
           <span>AVERO <span className="font-normal text-white/70">Prevailing Wage</span></span>
         </Link>
