@@ -16,6 +16,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cron from 'node-cron';
 import { errorHandler } from './middleware/errorHandler.js';
+import { requireAuth } from './middleware/auth.js';
 import authRouter from './routes/auth.js';
 import projectsRouter from './routes/projects.js';
 import workersRouter from './routes/workers.js';
@@ -63,6 +64,7 @@ import { ssoRouter } from './routes/sso.js';
 import { apprenticeshipRouter } from './routes/apprenticeship.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { copilotRouter } from './routes/copilot.js';
+import agencyRouter from './routes/agency.js';
 import { runWageSync } from './services/wdolSync.js';
 import { runDueSoonScan } from './services/dueSoonService.js';
 import { checkWdChanges } from './services/wdChangeDetector.js';
@@ -256,6 +258,7 @@ app.use('/api/copilot', copilotRouter);
 app.use('/v1', publicApiRouter);
 app.use('/api/sso', ssoRouter);
 app.use('/api/apprenticeship', apprenticeshipRouter);
+app.use('/api/agency', requireAuth, agencyRouter);
 
 // API-03 — OpenAPI spec + Swagger UI (mounted before SPA catch-all)
 app.get('/api/docs', (_req, res) => {
