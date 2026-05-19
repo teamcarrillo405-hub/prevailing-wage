@@ -353,6 +353,11 @@ authRouter.post('/accept-invite', validate(AcceptInviteSchema), async (req, res)
   res.status(201).json({ data: { user: { id: newUserId, email: invite.inviteeEmail } } });
 });
 
+// GET /api/auth/google — stub until GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are configured
+authRouter.get('/google', (req, res) => {
+  res.status(501).json({ error: 'OAUTH_NOT_CONFIGURED', message: 'Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET env vars.' });
+});
+
 // GET /api/auth/me
 authRouter.get('/me', requireAuth, async (req, res) => {
   const db = getDb();
