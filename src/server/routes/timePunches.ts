@@ -157,6 +157,109 @@ router.get('/open', async (req, res) => {
   res.json({ data: { openPunch } });
 });
 
+// POST /api/time-punches/:id/approve
+router.post('/:id/approve', async (req, res) => {
+  const punchId = req.params.id;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const [punch] = await db
+    .select()
+    .from(timePunches)
+    .where(eq(timePunches.id, punchId))
+    .limit(1);
+
+  if (!punch) {
+    res.status(404).json({ error: 'Punch not found' });
+    return;
+  }
+
+  try {
+    await assertProjectWriteAccess(db, punch.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  await db.update(timePunches)
+    .set({ status: 'approved', supervisorId: userId })
+    .where(eq(timePunches.id, punchId));
+
+  res.json({ ok: true });
+});
+
+// POST /api/time-punches/:id/reject
+router.post('/:id/reject', async (req, res) => {
+  const punchId = req.params.id;
+  const { reason } = req.body as { reason?: string };
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const [punch] = await db
+    .select()
+    .from(timePunches)
+    .where(eq(timePunches.id, punchId))
+    .limit(1);
+
+  if (!punch) {
+    res.status(404).json({ error: 'Punch not found' });
+    return;
+  }
+
+  try {
+    await assertProjectWriteAccess(db, punch.projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  await db.update(timePunches)
+    .set({ status: 'rejected', rejectionReason: reason ?? null, supervisorId: userId })
+    .where(eq(timePunches.id, punchId));
+
+  res.json({ ok: true });
+});
+
+// GET /api/time-punches/pending?projectId=
+router.get('/pending', async (req, res) => {
+  const projectId = req.query.projectId as string | undefined;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  if (projectId) {
+    try {
+      await assertProjectAccess(db, projectId, userId);
+    } catch (err: any) {
+      res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+      return;
+    }
+  }
+
+  const conditions = [eq(timePunches.status, 'submitted')];
+  if (projectId) conditions.push(eq(timePunches.projectId, projectId));
+
+  const rows = await db
+    .select({
+      id: timePunches.id,
+      projectId: timePunches.projectId,
+      workerId: timePunches.workerId,
+      punchType: timePunches.punchType,
+      punchedAt: timePunches.punchedAt,
+      status: timePunches.status,
+      rejectionReason: timePunches.rejectionReason,
+      latitude: timePunches.latitude,
+      longitude: timePunches.longitude,
+      createdAt: timePunches.createdAt,
+      workerName: workers.name,
+    })
+    .from(timePunches)
+    .leftJoin(workers, eq(timePunches.workerId, workers.id))
+    .where(and(...conditions))
+    .orderBy(desc(timePunches.punchedAt));
+
+  res.json(rows);
+});
+
 // DELETE /api/time-punches/:id
 router.delete('/:id', async (req, res) => {
   const punchId = req.params.id;
