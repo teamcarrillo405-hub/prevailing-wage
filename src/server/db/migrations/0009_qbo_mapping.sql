@@ -1,5 +1,3 @@
-ALTER TABLE payroll_weeks ADD COLUMN qbo_journal_entry_id TEXT;
--->statement-breakpoint
 CREATE TABLE IF NOT EXISTS qbo_account_mapping (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
