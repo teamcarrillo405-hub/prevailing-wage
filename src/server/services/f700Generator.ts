@@ -128,43 +128,53 @@ export interface F700Data {
 // Placeholder values are 0 — fillF700() will render but text will appear at
 // origin until real coordinates are measured and plugged in.
 
+// ── WA F700-065A field coordinates (portrait, 8.5x11, 72 dpi PDF units) ──────
+//
+// Source: secondary sources (workyard.com, construction-business-forms.com).
+// Confidence: MEDIUM — estimated from standard LNI form layout.
+// TODO (Plan 25-02): Verify against the official blank form once obtained from LNI.
+// Replace with pdfminer-measured values if they differ.
+
 const HEADER = {
-  // Placeholder coordinates — replace after measuring official form
-  contractorName:    { x: 0, y: 0 },
-  ubiNumber:         { x: 0, y: 0 },
-  lniCertificate:    { x: 0, y: 0 },
-  wcAccount:         { x: 0, y: 0 },
-  address:           { x: 0, y: 0 },
-  payrollNo:         { x: 0, y: 0 },
-  weekEndingDate:    { x: 0, y: 0 },
-  projectName:       { x: 0, y: 0 },
-  projectLocation:   { x: 0, y: 0 },
-  contractNo:        { x: 0, y: 0 },
+  contractorName:    { x: 85,  y: 698 },
+  ubiNumber:         { x: 350, y: 698 },
+  lniCertificate:    { x: 85,  y: 680 },
+  wcAccount:         { x: 350, y: 680 },
+  address:           { x: 85,  y: 662 },
+  payrollNo:         { x: 500, y: 698 },
+  weekEndingDate:    { x: 350, y: 644 },
+  projectName:       { x: 85,  y: 644 },
+  projectLocation:   { x: 85,  y: 626 },
+  contractNo:        { x: 350, y: 626 },
 } as const;
 
-// Worker row column x-positions — placeholder, replace after measuring form
+// Worker row layout — x-positions for each column, y-positions computed per row.
+// Row 0 baseline y = 580; each subsequent row is 20pt lower.
 const COL = {
-  entryNo:      0,
-  workerName:   0,
-  identifyingNo: 0,
-  laborType:    0,
-  waTradeCode:  0,
-  classification: 0,
-  monHours:     0,
-  tueHours:     0,
-  wedHours:     0,
-  thuHours:     0,
-  friHours:     0,
-  satHours:     0,
-  sunHours:     0,
-  totalStHours: 0,
-  totalOtHours: 0,
-  baseRate:     0,
-  grossWages:   0,
-  deductions:   0,
-  netPay:       0,
-  fringeCredit: 0,
+  entryNo:        40,
+  workerName:     70,
+  identifyingNo:  195,
+  laborType:      245,
+  waTradeCode:    265,
+  classification: 295,
+  monHours:       370,
+  tueHours:       393,
+  wedHours:       416,
+  thuHours:       439,
+  friHours:       462,
+  satHours:       485,
+  sunHours:       508,
+  totalStHours:   531,
+  totalOtHours:   554,
+  baseRate:       420,
+  grossWages:     490,
+  deductions:     540,
+  netPay:         565,
+  fringeCredit:   340,
 } as const;
+
+const ROW_BASE_Y  = 580;
+const ROW_STEP_PT = 20;
 
 const ROWS_PER_PAGE = 8;  // TODO: confirm from official form
 
@@ -250,7 +260,7 @@ export async function fillF700(
     for (let i = 0; i < chunk.length; i++) {
       const w = chunk[i];
       // TODO (Plan 25-02): Replace 0 with actual Y position per row
-      const rowY = 0;  // placeholder — measure row Y positions from official form
+      const rowY = ROW_BASE_Y - i * ROW_STEP_PT;
 
       dt(String(w.entryNo),   COL.entryNo,       rowY);
       dt(w.workerName,        COL.workerName,     rowY, { maxWidth: 80 });
@@ -267,10 +277,10 @@ export async function fillF700(
       dt(fmtHours(w.sunSt),   COL.sunHours,       rowY);
       dt(fmtHours(w.totalSt), COL.totalStHours,   rowY);
       dt(fmtHours(w.totalOt), COL.totalOtHours,   rowY);
-      dt(fmtDollar(w.baseRate),    COL.baseRate,    rowY);
-      dt(fmtDollar(w.grossWages),  COL.grossWages,  rowY);
-      dt(fmtDollar(w.deductions),  COL.deductions,  rowY);
-      dt(fmtDollar(w.netPay),      COL.netPay,      rowY);
+      dt(fmtDollar(w.baseRate),     COL.baseRate,     rowY);
+      dt(fmtDollar(w.grossWages),   COL.grossWages,   rowY);
+      dt(fmtDollar(w.deductions),   COL.deductions,   rowY);
+      dt(fmtDollar(w.netPay),       COL.netPay,       rowY);
       dt(fmtDollar(w.fringeCredit), COL.fringeCredit, rowY);
     }
   }
