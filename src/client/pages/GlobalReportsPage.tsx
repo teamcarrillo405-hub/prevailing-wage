@@ -46,7 +46,7 @@ function ReportCard({ icon, title, description, downloadLabel, downloadHref, dow
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
       <div className="flex items-start gap-4">
-        <div className="p-2.5 rounded-lg bg-brand-gold/10 text-brand-navy shrink-0">
+        <div className="p-2.5 rounded-lg bg-brand-gold/10 text-nav-dark shrink-0">
           {icon}
         </div>
         <div className="flex-1 min-w-0">
@@ -59,7 +59,7 @@ function ReportCard({ icon, title, description, downloadLabel, downloadHref, dow
         <a
           href={downloadHref}
           download={downloadFilename}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-navy text-white text-sm font-medium hover:bg-brand-navy/90 transition-colors min-h-[44px]"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-nav-dark text-white text-sm font-medium hover:bg-nav-dark/90 transition-colors min-h-[44px]"
         >
           <Download className="w-4 h-4" />
           {downloadLabel ?? 'Download CSV'}
