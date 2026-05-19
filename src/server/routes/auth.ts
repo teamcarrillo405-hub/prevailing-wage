@@ -49,9 +49,9 @@ const COOKIE_NAME = 'pw_session';
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  sameSite: 'strict' as const,
   path: '/',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  maxAge: 8 * 60 * 60 * 1000, // 8 hours (SEC-01: shorter session lifetime)
 };
 
 const RegisterSchema = z.object({
