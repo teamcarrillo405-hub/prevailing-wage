@@ -1,14 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { HelpCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { GLOSSARY } from '../../lib/glossary';
 
 interface TermTooltipProps {
   term: string;
-  definition: string;
+  definition?: string;
   className?: string;
 }
 
 export function TermTooltip({ term, definition, className }: TermTooltipProps) {
+  const entry = GLOSSARY.find(g => g.term.toLowerCase() === term.toLowerCase());
+  const content = entry?.definition ?? definition ?? '';
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
 
@@ -48,7 +51,7 @@ export function TermTooltip({ term, definition, className }: TermTooltipProps) {
           role="tooltip"
           className="absolute bottom-full left-0 mb-1 z-50 max-w-xs bg-nav-dark text-white text-xs leading-relaxed p-3 rounded-sm shadow-card"
         >
-          {definition}
+          {content}
         </span>
       )}
     </span>
