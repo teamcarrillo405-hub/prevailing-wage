@@ -18,7 +18,7 @@ interface Step {
   title: string;
   description: string;
   complete: boolean;
-  optional?: boolean;
+  required: boolean;
   href?: string;
   disabled?: boolean;
 }
@@ -42,6 +42,7 @@ export function OnboardingChecklist({
         ? 'Your first job is ready for certified payroll tracking.'
         : 'Add your federal or state job to start tracking certified payroll.',
       complete: hasProjects,
+      required: true,
       href: '/dashboard',
     },
     {
@@ -49,6 +50,7 @@ export function OnboardingChecklist({
       title: 'Add your workers',
       description: 'Register all workers with trade classification and encrypted SSN before entering payroll.',
       complete: hasWorkers,
+      required: true,
       href: firstProjectId ? `/projects/${firstProjectId}/workers` : undefined,
       disabled: !firstProjectId,
     },
@@ -57,6 +59,7 @@ export function OnboardingChecklist({
       title: (hasWageDetermination ?? hasProjects) ? 'Wage determination selected' : 'Set wage determinations for your state',
       description: "Find your county's Davis-Bacon wage determination from SAM.gov — rates auto-populate.",
       complete: hasWageDetermination ?? hasProjects,
+      required: true,
       href: '/wages',
     },
     {
@@ -64,6 +67,7 @@ export function OnboardingChecklist({
       title: 'Enter your first payroll week',
       description: 'Submit certified payroll weekly to stay DOL-compliant — import from QuickBooks or enter manually.',
       complete: hasPayroll,
+      required: true,
       href: firstProjectId ? `/projects/${firstProjectId}/payroll` : undefined,
       disabled: !firstProjectId,
     },
@@ -72,6 +76,7 @@ export function OnboardingChecklist({
       title: 'Generate and download your certified payroll report',
       description: 'Export the WH-347 or your state-specific form — pre-filled and ready to submit.',
       complete: hasReport,
+      required: true,
       href: firstProjectId ? `/projects/${firstProjectId}/reports` : undefined,
       disabled: !firstProjectId,
     },
@@ -80,6 +85,7 @@ export function OnboardingChecklist({
       title: 'Invite a team member or subcontractor',
       description: 'Add teammates with role-based access, or share a sub upload link for CPR submissions.',
       complete: hasTeamMember,
+      required: false,
       href: '/team',
     },
     {
@@ -87,13 +93,16 @@ export function OnboardingChecklist({
       title: 'Connect QuickBooks for automated imports',
       description: 'Link your QB Online account so employee time records flow in automatically each week.',
       complete: hasQboConnection,
-      optional: true,
+      required: false,
       href: '/settings/integrations',
     },
   ];
 
-  const completedCount = steps.filter(s => s.complete).length;
-  const progressPct = Math.round((completedCount / steps.length) * 100);
+  const requiredItems = steps.filter(s => s.required);
+  const optionalItems = steps.filter(s => !s.required);
+  const completedRequired = requiredItems.filter(s => s.complete).length;
+  const progressPct = requiredItems.length > 0 ? Math.round(completedRequired / requiredItems.length * 100) : 0;
+  const completedOptional = optionalItems.filter(s => s.complete).length;
 
   return (
     <div className="rounded-xl border border-brand-gold/40 bg-brand-gold/5 p-5 mb-6">
@@ -108,10 +117,10 @@ export function OnboardingChecklist({
         </button>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar — required steps only */}
       <div className="mb-5">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-gray-500">{completedCount} of {steps.length} complete</span>
+          <span className="text-xs text-gray-500">{completedRequired} of {requiredItems.length} required steps complete</span>
           <span className="text-xs font-semibold text-brand-gold">{progressPct}%</span>
         </div>
         <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
@@ -122,11 +131,26 @@ export function OnboardingChecklist({
         </div>
       </div>
 
+      {/* Required steps */}
       <div className="space-y-2">
-        {steps.map((step) => (
+        {requiredItems.map((step) => (
           <StepRow key={step.num} step={step} />
         ))}
       </div>
+
+      {/* Optional steps — collapsible */}
+      {optionalItems.length > 0 && (
+        <details className="mt-3">
+          <summary className="text-xs text-surface-muted cursor-pointer hover:text-white select-none">
+            Optional setup ({completedOptional}/{optionalItems.length})
+          </summary>
+          <div className="mt-2 space-y-2">
+            {optionalItems.map((step) => (
+              <StepRow key={step.num} step={step} />
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
@@ -134,7 +158,7 @@ export function OnboardingChecklist({
 function StepRow({ step }: { step: Step }) {
   const content = (
     <div className="flex items-start gap-3">
-      {/* Numbered circle — gold when incomplete, navy when complete */}
+      {/* Numbered circle — gold when incomplete, check when complete */}
       {step.complete ? (
         <CheckCircle className="w-6 h-6 text-status-compliant flex-shrink-0 mt-0.5" />
       ) : (
@@ -147,7 +171,7 @@ function StepRow({ step }: { step: Step }) {
           <span className={`text-sm font-semibold ${step.complete ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
             {step.title}
           </span>
-          {step.optional && !step.complete && (
+          {!step.required && !step.complete && (
             <span className="text-xs font-normal text-gray-400">(optional)</span>
           )}
         </div>
