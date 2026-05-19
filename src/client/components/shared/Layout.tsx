@@ -11,6 +11,7 @@ import { OfflineBanner, OfflineBadge } from '../ui/OfflineBanner';
 import { SyncStatusIndicator } from '../ui/SyncStatusIndicator';
 import { PwaInstallBanner } from '../ui/PwaInstallBanner';
 import { ProjectWorkspaceNav } from '../projects/ProjectWorkspaceNav';
+import { HelpCenterPanel } from '../help/HelpCenterPanel';
 
 function navCls({ isActive }: { isActive: boolean }) {
   return `inline-flex min-h-11 min-w-11 items-center justify-center text-sm font-medium transition-colors ${
@@ -45,6 +46,7 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // ── Swipe gesture routing (MOB-21) ────────────────────────────────────────
   const touchStartX = useRef<number | null>(null);
@@ -365,6 +367,16 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       {showCopilot && <CopilotWidget />}
+
+      {/* Help FAB */}
+      <button
+        onClick={() => setHelpOpen(true)}
+        className="fixed bottom-20 right-4 sm:bottom-6 h-10 w-10 rounded-full bg-surface-card border border-brand-gold text-brand-gold flex items-center justify-center shadow-lg z-30 hover:bg-brand-gold hover:text-black transition-colors"
+        title="Help Center"
+      >
+        <span className="font-bold text-sm">?</span>
+      </button>
+      <HelpCenterPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {/* Phase 97: Mobile bottom tab bar */}
       <BottomTabBar />
