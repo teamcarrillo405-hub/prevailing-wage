@@ -89,6 +89,9 @@ const CompetitiveReadinessPage = React.lazy(() =>
 const ForgotPasswordPage = React.lazy(() =>
   import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage }))
 );
+const SupervisorApprovalsPage = React.lazy(() =>
+  import('./pages/SupervisorApprovalsPage').then(m => ({ default: m.SupervisorApprovalsPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -192,6 +195,7 @@ export default function App() {
                 <Route path="/compliance-methodology" element={<ComplianceMethodologyPage />} />
                 <Route path="/pilot-intake" element={<PilotIntakePage />} />
                 <Route path="/competitive-readiness" element={<CompetitiveReadinessPage />} />
+                <Route path="/supervisor/approvals" element={<SupervisorApprovalsPage />} />
               </Route>
 
               {/* Public pages — no auth required */}
