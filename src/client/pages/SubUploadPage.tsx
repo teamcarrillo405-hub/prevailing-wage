@@ -186,7 +186,7 @@ export function SubUploadPage() {
           <button
             onClick={() => void submit()}
             disabled={!file || status === 'uploading'}
-            className="w-full min-h-[52px] bg-brand-navy text-white rounded-xl font-bold text-base transition-colors hover:bg-brand-navy/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full min-h-[52px] bg-nav-dark text-white rounded-xl font-bold text-base transition-colors hover:bg-nav-dark/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {status === 'uploading' ? (
               <span className="flex items-center justify-center gap-2">

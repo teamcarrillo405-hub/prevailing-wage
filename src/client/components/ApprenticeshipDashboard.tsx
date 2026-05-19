@@ -46,7 +46,7 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{label}</p>
-      <p className="text-2xl font-bold text-brand-navy font-headline">{value}</p>
+      <p className="text-2xl font-bold text-nav-dark font-headline">{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   );
@@ -134,7 +134,7 @@ function ApprenticeSparkline({
             </text>
           </>
         )}
-        {/* Apprentice % line — brand-navy: #1B2A4A — SVG stroke cannot use Tailwind token */}
+        {/* Apprentice % line — nav-dark: #1d1d1f — SVG stroke cannot use Tailwind token */}
         <polyline
           points={points}
           fill="none"

@@ -117,7 +117,7 @@ export function StateSupportPage() {
           <Link to="/pilot-intake" className="inline-flex min-h-11 items-center rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-black hover:bg-brand-gold/90">
             Open Pilot Intake
           </Link>
-          <Link to="/methodology" className="inline-flex min-h-11 items-center rounded bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy/90">
+          <Link to="/methodology" className="inline-flex min-h-11 items-center rounded bg-nav-dark px-4 py-2 text-sm font-semibold text-white hover:bg-nav-dark/90">
             Methodology
           </Link>
           <Link to="/contact" className="inline-flex min-h-11 items-center rounded border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">

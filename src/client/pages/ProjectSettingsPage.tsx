@@ -338,7 +338,7 @@ function ProjectFactsSection({
         type="button"
         onClick={handleSaveFacts}
         disabled={saveFactsMutation.isPending}
-        className="px-5 py-2 rounded font-semibold text-sm text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+        className="px-5 py-2 rounded font-semibold text-sm text-white bg-nav-dark hover:bg-nav-dark/90 transition-colors disabled:opacity-50"
       >
         {saveFactsMutation.isPending ? 'Saving...' : 'Save Project Facts'}
       </button>
@@ -425,7 +425,7 @@ function ReportScheduleSection({ projectId, projectSettings }: { projectId: stri
         <button
           onClick={() => saveMutation.mutate()}
           disabled={saveMutation.isPending}
-          className="px-5 py-2 rounded font-semibold text-sm text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+          className="px-5 py-2 rounded font-semibold text-sm text-white bg-nav-dark hover:bg-nav-dark/90 transition-colors disabled:opacity-50"
         >
           {saveMutation.isPending ? 'Saving...' : 'Save Report Schedule'}
         </button>
@@ -576,7 +576,7 @@ function StateProjectFieldsSection({
           type="button"
           onClick={handleSaveStateFields}
           disabled={saveStateFields.isPending}
-          className="px-5 py-2 rounded font-semibold text-sm text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+          className="px-5 py-2 rounded font-semibold text-sm text-white bg-nav-dark hover:bg-nav-dark/90 transition-colors disabled:opacity-50"
         >
           {saveStateFields.isPending ? 'Saving...' : 'Save State Fields'}
         </button>
@@ -1033,7 +1033,7 @@ export function ProjectSettingsPage() {
           >
             &larr; Back to project
           </Link>
-          <h1 className="font-headline text-xl font-bold text-brand-navy mt-1">
+          <h1 className="font-headline text-xl font-bold text-nav-dark mt-1">
             Project Setup
           </h1>
           <p className="text-sm text-gray-500">{project.name}</p>
@@ -1135,7 +1135,7 @@ export function ProjectSettingsPage() {
               aria-checked={gpsEnabled}
               onClick={() => setGpsEnabled((v) => !v)}
               className={`relative inline-flex h-11 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-1 ${
-                gpsEnabled ? 'bg-brand-navy' : 'bg-gray-300'
+                gpsEnabled ? 'bg-nav-dark' : 'bg-gray-300'
               }`}
             >
               <span
@@ -1304,7 +1304,7 @@ export function ProjectSettingsPage() {
             <button
               onClick={handleSave}
               disabled={saveMutation.isPending}
-              className="px-5 py-2 rounded font-semibold text-sm text-white bg-brand-navy hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+              className="px-5 py-2 rounded font-semibold text-sm text-white bg-nav-dark hover:bg-nav-dark/90 transition-colors disabled:opacity-50"
             >
               {saveMutation.isPending ? 'Saving...' : 'Save Settings'}
             </button>

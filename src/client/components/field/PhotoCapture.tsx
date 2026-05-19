@@ -321,7 +321,7 @@ export function PhotoCapture({ projectId, weekId, onUploaded }: PhotoCaptureProp
           {'mediaDevices' in navigator && (
             <button
               onClick={startCamera}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-sm bg-brand-navy text-white text-sm font-semibold px-4 py-2 hover:bg-brand-navy/90 transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-sm bg-nav-dark text-white text-sm font-semibold px-4 py-2 hover:bg-nav-dark/90 transition-colors"
             >
               Take Photo
             </button>

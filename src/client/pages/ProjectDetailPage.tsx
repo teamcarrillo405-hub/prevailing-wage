@@ -2194,7 +2194,7 @@ function ApprenticeshipSection({ projectId }: { projectId: string }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-sm px-1 text-sm font-semibold text-gray-700 transition-colors hover:text-brand-navy"
+        className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-sm px-1 text-sm font-semibold text-gray-700 transition-colors hover:text-nav-dark"
         aria-expanded={open}
       >
         <ChevronRight className={`w-4 h-4 transition-transform ${open ? 'rotate-90' : ''}`} />
