@@ -30,7 +30,7 @@ export function PublicComplianceMethodologyPage() {
     <main className="min-h-screen bg-white text-gray-950">
       <header className="border-b border-gray-200">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <Link to="/" className="inline-flex min-h-11 items-center font-headline text-lg font-bold">HCC Prevailing Wage</Link>
+          <Link to="/" className="inline-flex min-h-11 items-center font-headline text-lg font-bold">AVERO Prevailing Wage</Link>
           <div className="flex items-center gap-3">
             <Link to="/login" className="inline-flex min-h-11 min-w-11 items-center text-sm font-semibold text-gray-700 hover:text-gray-950">Log in</Link>
             <Link to="/register" className="inline-flex min-h-10 items-center rounded-sm bg-brand-gold px-4 text-sm font-bold text-black">

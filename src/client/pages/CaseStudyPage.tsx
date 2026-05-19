@@ -13,7 +13,7 @@ export function CaseStudyPage() {
       <header className="bg-gray-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex min-h-11 items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors">
-            <span className="font-semibold text-white">PrevWage</span>
+            <span className="font-semibold text-white">AVERO Prevailing Wage</span>
           </Link>
           <Link
             to="/register"
@@ -35,7 +35,7 @@ export function CaseStudyPage() {
             <span className="text-brand-gold">4 Hours to 20 Minutes</span>
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl">
-            The Hispanic Construction Council adopted PrevWage to automate certified payroll
+            The Hispanic Construction Council adopted AVERO Prevailing Wage to automate certified payroll
             compliance across 8 states, saving hundreds of administrative hours each year.
           </p>
 
@@ -100,7 +100,7 @@ export function CaseStudyPage() {
           </h2>
           <div className="prose prose-gray max-w-none text-gray-600 space-y-4">
             <p>
-              PrevWage automated the full certified payroll lifecycle for HCC: from entering
+              AVERO Prevailing Wage automated the full certified payroll lifecycle for HCC: from entering
               weekly hours to generating state-native forms and verifying every line against
               the locked wage determination on record.
             </p>
@@ -299,7 +299,7 @@ export function CaseStudyPage() {
           <Link to="/security" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Security Policy</Link>
           <Link to="/register" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Register</Link>
         </div>
-        <p className="mt-6 text-gray-600">2026 PrevWage. All rights reserved.</p>
+        <p className="mt-6 text-gray-600">2026 AVERO Prevailing Wage. All rights reserved.</p>
       </footer>
     </div>
   );

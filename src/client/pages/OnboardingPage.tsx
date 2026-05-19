@@ -98,7 +98,7 @@ export function OnboardingPage() {
   async function saveOnboarding() {
     setError(null);
     if (!form.companyName.trim() || !form.hccMembershipNumber.trim()) {
-      setError('Company name and HCC membership number are required.');
+      setError('Company name is required.');
       return;
     }
     if (form.primaryStates.length === 0 || form.workTypes.length === 0) {
@@ -144,7 +144,7 @@ export function OnboardingPage() {
       <header className="border-b border-gray-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
           <Link to="/" className="inline-flex min-h-11 items-center font-headline text-lg font-bold text-gray-950">
-            HCC Prevailing Wage
+            AVERO Prevailing Wage
           </Link>
           <span className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-600">Member onboarding</span>
         </div>
@@ -197,7 +197,7 @@ export function OnboardingPage() {
             />
             <Input
               id="hccMembershipNumber"
-              label="HCC membership number"
+              label="Member Number (optional)"
               help="Used as the access credential for the initial program."
               value={form.hccMembershipNumber}
               onChange={(event) => setForm({ ...form, hccMembershipNumber: event.target.value })}

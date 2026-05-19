@@ -108,8 +108,8 @@ export function RegisterForm() {
           id="reg-hcc"
           type="text"
           autoComplete="off"
-          label="HCC Member # (optional)"
-          help="Leave blank if not an HCC member — you can link your membership later in Settings."
+          label="Member # (optional)"
+          help="Leave blank — you can link your membership number later in Settings."
           error={errors.hccMembershipNumber?.message}
           {...register('hccMembershipNumber')}
         />

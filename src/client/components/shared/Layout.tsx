@@ -113,17 +113,24 @@ export function Layout({ children }: LayoutProps) {
       <nav className="bg-nav-dark sticky top-0 z-40" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 flex items-center justify-between h-[68px]">
           {/* Logo + wordmark */}
-          <Link to="/dashboard" className="group flex min-h-11 min-w-11 items-center gap-3" aria-label="HCC Prevailing Wage home">
-            <img
-              src="/images/hcc-logo.svg"
-              alt="HCC"
-              className="h-8 w-auto opacity-95 group-hover:opacity-100 transition-opacity"
-              style={{ filter: 'brightness(1)' }}
-            />
-            <div className="h-5 w-px bg-white/20" aria-hidden="true" />
-            <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors tracking-wide">
-              Prevailing Wage
-            </span>
+          <Link to="/dashboard" className="group flex min-h-11 min-w-11 items-center gap-2" aria-label="AVERO Prevailing Wage home">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full">
+              <iframe
+                src="/avero-orb.html"
+                title="AVERO"
+                className="absolute inset-0 h-full w-full border-0"
+                style={{ pointerEvents: 'none' }}
+                scrolling="no"
+              />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-base font-bold text-white tracking-wide group-hover:text-brand-gold transition-colors" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+                AVERO
+              </span>
+              <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
+                Prevailing Wage
+              </span>
+            </div>
           </Link>
 
           {/* Desktop nav links */}
@@ -385,9 +392,9 @@ export function Layout({ children }: LayoutProps) {
       <footer className="border-t border-gray-200 mt-12 py-6 bg-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-xl">
-            <p className="text-xs text-gray-400">&copy; 2026 PrevWage</p>
+            <p className="text-xs text-gray-400">&copy; 2026 AVERO Prevailing Wage</p>
             <p className="mt-1 text-xs leading-5 text-gray-500">
-              PrevWage prepares and reviews certified payroll records. Final certification, legal classification decisions,
+              AVERO Prevailing Wage prepares and reviews certified payroll records. Final certification, legal classification decisions,
               and agency submission remain the responsibility of the authorized reviewer.
             </p>
           </div>

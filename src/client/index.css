@@ -3,9 +3,11 @@
 
 @theme {
   /* Existing tokens — do not remove */
-  --color-brand-gold: #F5C518;
-  --font-headline: 'Oswald', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --color-brand-gold: #B85042;
+  --color-brand-gold-hover: #D17A52;
+  --font-headline: 'DM Sans', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
 
   /* Brand identity */
   --color-nav-dark: #1d1d1f;

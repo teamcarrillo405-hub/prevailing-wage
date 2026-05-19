@@ -28,7 +28,7 @@ export function RegisterPage() {
 
           <div className="grid max-w-2xl gap-3">
             {[
-              'Company and HCC membership details',
+              'Company and membership details',
               'Payroll, accounting, and project system preferences',
               'State coverage and public work types',
             ].map((item) => (
@@ -48,7 +48,7 @@ export function RegisterPage() {
             </Link>
 
             <div className="mb-7">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500">HCC Prevailing Wage</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500">AVERO Prevailing Wage</p>
               <h2 className="mt-3 font-headline text-4xl font-bold text-gray-950">
                 Create account
               </h2>

@@ -21,7 +21,7 @@ const caseStudies: CaseStudyCard[] = [
     company: 'Hispanic Construction Council',
     headline: 'Certified payroll prep cut from 4 hours to 20 minutes',
     description:
-      'HCC managed prevailing wage compliance across 8 states using spreadsheets and PDFs. PrevWage automated the full certified payroll lifecycle — WH-347, CA eCPR, WA F700-065, and more — eliminating 76% of prep time in 90 days.',
+      'HCC managed prevailing wage compliance across 8 states using spreadsheets and PDFs. AVERO Prevailing Wage automated the full certified payroll lifecycle — WH-347, CA eCPR, WA F700-065, and more — eliminating 76% of prep time in 90 days.',
     stats: [
       { value: '76%', label: 'Faster prep' },
       { value: '0', label: 'Missed submissions' },
@@ -35,7 +35,7 @@ const caseStudies: CaseStudyCard[] = [
     company: 'Pacific Northwest Infrastructure (name changed)',
     headline: 'Zero WA L&I XML rejections across 3 simultaneous projects',
     description:
-      'Six XML rejections in two months from WA L&I were delaying projects and triggering compliance inquiries. PrevWage\'s WA-native CPR export helped the team review schema issues before resubmission.',
+      'Six XML rejections in two months from WA L&I were delaying projects and triggering compliance inquiries. AVERO Prevailing Wage\'s WA-native CPR export helped the team review schema issues before resubmission.',
     stats: [
       { value: '0', label: 'Rejections' },
       { value: '40%', label: 'Admin reduction' },
@@ -104,7 +104,7 @@ export function CaseStudiesPage() {
       <header className="bg-gray-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="inline-flex min-h-11 items-center text-sm text-gray-300 hover:text-white transition-colors">
-            <span className="font-semibold text-white">PrevWage</span>
+            <span className="font-semibold text-white">AVERO Prevailing Wage</span>
           </Link>
           <Link
             to="/register"
@@ -125,7 +125,7 @@ export function CaseStudiesPage() {
             Real Results from Real Contractors
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            See how contractors across 8 states use PrevWage to reduce certified payroll
+            See how contractors across 8 states use AVERO Prevailing Wage to reduce certified payroll
             errors, prepare for audits, and reclaim hours of admin time every week.
           </p>
         </div>
@@ -167,7 +167,7 @@ export function CaseStudiesPage() {
             </h3>
             <p className="text-gray-600 text-sm max-w-md mx-auto mb-6">
               We publish verified case studies for contractors who achieve measurable compliance
-              results on PrevWage. Share your results and we'll feature your organization here.
+              results on AVERO Prevailing Wage. Share your results and we'll feature your organization here.
             </p>
             <a
               href="mailto:support@prevwage.com?subject=Case%20Study%20Inquiry"
@@ -203,7 +203,7 @@ export function CaseStudiesPage() {
           <Link to="/security" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Security Policy</Link>
           <Link to="/register" className="inline-flex min-h-11 items-center hover:text-gray-300 transition-colors">Register</Link>
         </div>
-        <p className="mt-6 text-gray-600">2026 PrevWage. All rights reserved.</p>
+        <p className="mt-6 text-gray-600">2026 AVERO Prevailing Wage. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avero Orb</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+    canvas { display: block; width: 100% !important; height: 100% !important; }
+  </style>
+
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/",
+      "postprocessing": "https://esm.sh/postprocessing@6.36.4"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="orbCanvas"></canvas>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer, RenderPass, BloomEffect, EffectPass, VignetteEffect, NoiseEffect, BlendFunction } from 'postprocessing';
+
+    const canvas   = document.getElementById('orbCanvas');
+    const W = () => canvas.parentElement ? canvas.parentElement.clientWidth  : window.innerWidth;
+    const H = () => canvas.parentElement ? canvas.parentElement.clientHeight : window.innerHeight;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(W(), H());
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.3;
+    renderer.outputColorSpace    = THREE.SRGBColorSpace;
+    renderer.setClearColor(0x000000, 0);
+
+    const scene  = new THREE.Scene();
+    scene.background = null;
+
+    const camera = new THREE.PerspectiveCamera(42, W() / H(), 0.05, 200);
+    camera.position.set(0, 0.3, 6.5);
+
+    const keyLight  = new THREE.DirectionalLight(0xfff4e8, 4.0);  keyLight.position.set(3, 4, 5);    scene.add(keyLight);
+    const fillLight = new THREE.DirectionalLight(0xc8d4e8, 1.1);  fillLight.position.set(-4, 1, 3);  scene.add(fillLight);
+    const rimLight  = new THREE.DirectionalLight(0xe8f0ff, 2.5);  rimLight.position.set(-2, 3, -5);  scene.add(rimLight);
+    scene.add(new THREE.AmbientLight(0x303030, 0.5));
+
+    // Studio env map — procedural warm top, dark bottom
+    {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      pmrem.compileEquirectangularShader();
+      const ec = document.createElement('canvas'); ec.width = 256; ec.height = 128;
+      const ctx = ec.getContext('2d');
+      const g = ctx.createLinearGradient(0, 0, 0, 128);
+      g.addColorStop(0,    '#c8d0d8');
+      g.addColorStop(0.30, '#9098a0');
+      g.addColorStop(0.55, '#555d65');
+      g.addColorStop(0.75, '#282e34');
+      g.addColorStop(1,    '#141820');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 128);
+      const w1 = ctx.createRadialGradient(195, 30, 0, 195, 30, 42);
+      w1.addColorStop(0,   'rgba(255,250,238,1.0)');
+      w1.addColorStop(0.4, 'rgba(255,250,238,0.55)');
+      w1.addColorStop(1,   'rgba(255,250,238,0)');
+      ctx.fillStyle = w1; ctx.fillRect(0, 0, 256, 128);
+      const w2 = ctx.createRadialGradient(50, 40, 0, 50, 40, 30);
+      w2.addColorStop(0, 'rgba(200,215,240,0.65)');
+      w2.addColorStop(1, 'rgba(200,215,240,0)');
+      ctx.fillStyle = w2; ctx.fillRect(0, 0, 256, 128);
+      const et = new THREE.CanvasTexture(ec);
+      et.mapping = THREE.EquirectangularReflectionMapping;
+      scene.environment = pmrem.fromEquirectangular(et).texture;
+      et.dispose(); pmrem.dispose();
+    }
+
+    // ── FIBONACCI CLUSTER ────────────────────────────────────────────────────
+    const isLowPower = navigator.hardwareConcurrency <= 4 || /Android|iPhone|iPad/i.test(navigator.userAgent);
+    const N_BALLS    = isLowPower ? 120 : 220;
+    const usePost    = !isLowPower;
+    const CLUSTER_R  = 0.92;
+    const BALL_R     = 0.115;
+
+    const restPositions = [];
+    const _goldenAngle  = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < N_BALLS; i++) {
+      const y = 1 - (i / (N_BALLS - 1)) * 2;
+      const r = Math.sqrt(Math.max(0, 1 - y * y));
+      const t = _goldenAngle * i;
+      restPositions.push(new THREE.Vector3(CLUSTER_R * r * Math.cos(t), CLUSTER_R * y, CLUSTER_R * r * Math.sin(t)));
+    }
+
+    const velArr = restPositions.map(() => new THREE.Vector3());
+    const posArr = restPositions.map(p => p.clone());
+
+    const _dummy  = new THREE.Object3D();
+    const _tmpClr = new THREE.Color();
+    const _clrWht = new THREE.Color(0xffffff);
+
+    // 4-color cycle: burnt orange → yellow → green → white → (loops back)
+    const colorCycle = [
+      new THREE.Color(0xB85042),  // 0 burnt orange (rest)
+      new THREE.Color(0xF5C518),  // 1 warm yellow
+      new THREE.Color(0x2ECC71),  // 2 bright green
+      new THREE.Color(0xFFFFFF),  // 3 white
+    ];
+    const N_CLR = colorCycle.length;
+
+    const huePhase  = new Float32Array(N_BALLS);
+    const shedFlash = new Float32Array(N_BALLS);
+    const shedScale = new Float32Array(N_BALLS);
+
+    const _inv4    = new THREE.Matrix4();
+    const _lRayO   = new THREE.Vector3();
+    const _lRayD   = new THREE.Vector3();
+    const _lRay    = new THREE.Ray();
+    const _closest = new THREE.Vector3();
+    const _push    = new THREE.Vector3();
+
+    const ballGeo = new THREE.SphereGeometry(BALL_R, 12, 12);
+    const ballMat = new THREE.MeshPhysicalMaterial({
+      metalness: 0.95, roughness: 0.11, envMapIntensity: 3.5,
+      emissive: new THREE.Color(0xB85042), emissiveIntensity: 0.18,
+    });
+    ballMat.onBeforeCompile = (shader) => {
+      shader.uniforms.uBeat = { value: 0.0 };
+      ballMat.userData.shader = shader;
+      shader.fragmentShader = 'uniform float uBeat;\n' + shader.fragmentShader.replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+        {
+          vec3 N = normalize(vNormal);
+          vec3 V = normalize(vViewPosition);
+          float disc = smoothstep(0.90, 0.99, dot(N, V)) * 0.22;
+          totalEmissiveRadiance += vec3(0.72, 0.31, 0.26) * disc * uBeat;
+        }`
+      );
+    };
+
+    const cluster = new THREE.InstancedMesh(ballGeo, ballMat, N_BALLS);
+    cluster.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    for (let i = 0; i < N_BALLS; i++) {
+      _dummy.position.copy(restPositions[i]); _dummy.updateMatrix();
+      cluster.setMatrixAt(i, _dummy.matrix);
+      cluster.setColorAt(i, colorCycle[0]);
+    }
+    cluster.instanceMatrix.needsUpdate = true;
+    cluster.instanceColor.needsUpdate  = true;
+
+    const clusterGroup = new THREE.Group();
+    clusterGroup.add(cluster);
+    clusterGroup.position.set(0, 0, 0);
+    scene.add(clusterGroup);
+
+    // ── MICRO-PARTICLE SYSTEM ────────────────────────────────────────────────
+    const P_MAX  = 768;
+    const _pPos  = new Float32Array(P_MAX * 3);
+    const _pIClr = new Float32Array(P_MAX * 3);
+    const _pClr  = new Float32Array(P_MAX * 3);
+    const _pLife = new Float32Array(P_MAX);
+    const _pVelX = new Float32Array(P_MAX);
+    const _pVelY = new Float32Array(P_MAX);
+    const _pVelZ = new Float32Array(P_MAX);
+    const _pTmpP = new THREE.Vector3();
+
+    for (let pi = 0; pi < P_MAX; pi++) _pPos[pi * 3 + 1] = -999;
+
+    const _pGeo = new THREE.BufferGeometry();
+    _pGeo.setAttribute('position', new THREE.BufferAttribute(_pPos, 3).setUsage(THREE.DynamicDrawUsage));
+    _pGeo.setAttribute('color',    new THREE.BufferAttribute(_pClr, 3).setUsage(THREE.DynamicDrawUsage));
+    const _pMat = new THREE.PointsMaterial({
+      size: 0.04, vertexColors: true,
+      transparent: true, opacity: 1.0,
+      depthWrite: false, depthTest: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+    });
+    const _pPoints = new THREE.Points(_pGeo, _pMat);
+    _pPoints.frustumCulled = false;
+    scene.add(_pPoints);
+
+    let _pNext = 0;
+
+    function _emitP(wx, wy, wz, colorIdx, speedMult) {
+      const pi = _pNext; _pNext = (_pNext + 1) % P_MAX;
+      const c  = colorCycle[colorIdx % N_CLR];
+      const spd = (0.018 + Math.random() * 0.028) * (speedMult || 1);
+      let dx = Math.random() - 0.5;
+      let dy = Math.random() - 0.5;
+      let dz = Math.random() - 0.5;
+      const dl = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1;
+      dx /= dl; dy /= dl; dz /= dl;
+      _pVelX[pi] = dx * spd; _pVelY[pi] = dy * spd; _pVelZ[pi] = dz * spd;
+      _pPos[pi*3]   = wx + dx * BALL_R;
+      _pPos[pi*3+1] = wy + dy * BALL_R;
+      _pPos[pi*3+2] = wz + dz * BALL_R;
+      const j = 0.10;
+      const r = Math.min(1, Math.max(0, c.r + (Math.random()-0.5)*j));
+      const g = Math.min(1, Math.max(0, c.g + (Math.random()-0.5)*j));
+      const b = Math.min(1, Math.max(0, c.b + (Math.random()-0.5)*j));
+      _pIClr[pi*3] = r; _pIClr[pi*3+1] = g; _pIClr[pi*3+2] = b;
+      _pClr[pi*3]  = r; _pClr[pi*3+1]  = g; _pClr[pi*3+2]  = b;
+      _pLife[pi]   = 0.30 + Math.random() * 0.20;
+    }
+
+    // Mouse / touch
+    const _mouse = new THREE.Vector2(-9999, -9999);
+    const _rc    = new THREE.Raycaster();
+    const _camPX = { x: 0, y: 0 };
+
+    function _setMouse(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      _mouse.x =  ((clientX - rect.left)  / rect.width)  * 2 - 1;
+      _mouse.y = -((clientY - rect.top)   / rect.height) * 2 + 1;
+    }
+    window.addEventListener('mousemove',  e => _setMouse(e.clientX, e.clientY));
+    canvas.addEventListener('touchmove',  e => { e.preventDefault(); _setMouse(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+    canvas.addEventListener('touchstart', e => _setMouse(e.touches[0].clientX, e.touches[0].clientY));
+    canvas.addEventListener('mouseleave', () => { _mouse.set(-9999, -9999); });
+
+    // Post-processing
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new BloomEffect({ luminanceThreshold: 0.62, luminanceSmoothing: 0.06, intensity: 0.65, radius: 0.60 });
+    const vig   = new VignetteEffect({ offset: 0.55, darkness: 0.28 });
+    const nz    = new NoiseEffect({ blendFunction: BlendFunction.SOFT_LIGHT });
+    nz.blendMode.opacity.value = 0.10;
+    composer.addPass(new EffectPass(camera, bloom, vig, nz));
+
+    // Resize
+    window.addEventListener('resize', () => {
+      const w = W(), h = H();
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      composer.setSize(w, h);
+    });
+
+    // ── ANIMATE ──────────────────────────────────────────────────────────────
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Slow idle rotation
+      clusterGroup.rotation.y += 0.0012;
+      clusterGroup.updateMatrixWorld(true);
+
+      // Scatter + color cycle
+      _inv4.copy(clusterGroup.matrixWorld).invert();
+      _rc.setFromCamera(_mouse, camera);
+      _lRayO.copy(_rc.ray.origin).applyMatrix4(_inv4);
+      _lRayD.copy(_rc.ray.direction).transformDirection(_inv4).normalize();
+      _lRay.set(_lRayO, _lRayD);
+
+      for (let i = 0; i < N_BALLS; i++) {
+        const pos = posArr[i];
+        const vel = velArr[i];
+
+        _lRay.closestPointToPoint(pos, _closest);
+        const d = pos.distanceTo(_closest);
+        if (d < 0.48) {
+          const str = (1 - d / 0.48) * 0.065;
+          _push.copy(pos).sub(_closest).normalize().multiplyScalar(str);
+          vel.add(_push);
+
+          const prevP = huePhase[i] % N_CLR;
+          huePhase[i] += str * 18;
+          const newP  = huePhase[i] % N_CLR;
+          if (Math.floor(newP) !== Math.floor(prevP)) {
+            shedFlash[i] = 1.0;
+            shedScale[i] = 1.0;
+            _pTmpP.copy(pos).applyMatrix4(clusterGroup.matrixWorld);
+            for (let n = 0; n < 10; n++) _emitP(_pTmpP.x, _pTmpP.y, _pTmpP.z, Math.floor(prevP) % N_CLR, 1.2);
+          }
+        }
+
+        const disp = pos.distanceTo(restPositions[i]);
+        if (disp > 0.04) vel.y -= 0.0020;
+        vel.x += (restPositions[i].x - pos.x) * 0.048;
+        vel.y += (restPositions[i].y - pos.y) * 0.048;
+        vel.z += (restPositions[i].z - pos.z) * 0.048;
+        vel.multiplyScalar(0.87);
+        pos.add(vel);
+
+        huePhase[i] = Math.max(0, huePhase[i] - 0.030);
+
+        const cp    = huePhase[i] % N_CLR;
+        const fromC = Math.floor(cp) % N_CLR;
+        const toC   = (fromC + 1) % N_CLR;
+        _tmpClr.lerpColors(colorCycle[fromC], colorCycle[toC], cp - fromC);
+
+        shedFlash[i] *= 0.80;
+        if (shedFlash[i] > 0.005) _tmpClr.lerp(_clrWht, shedFlash[i] * 0.75);
+        cluster.setColorAt(i, _tmpClr);
+
+        if (huePhase[i] > 0.06) {
+          _pTmpP.copy(pos).applyMatrix4(clusterGroup.matrixWorld);
+          if (Math.random() < 0.20) _emitP(_pTmpP.x, _pTmpP.y, _pTmpP.z, fromC, 0.65);
+          if (huePhase[i] > 0.4 && Math.random() < 0.12) _emitP(_pTmpP.x, _pTmpP.y, _pTmpP.z, fromC, 1.0);
+        }
+
+        shedScale[i] *= 0.84;
+        const sc = 1.0 + shedScale[i] * 0.18;
+        _dummy.position.copy(pos);
+        _dummy.scale.setScalar(sc);
+        _dummy.updateMatrix();
+        cluster.setMatrixAt(i, _dummy.matrix);
+      }
+      cluster.instanceMatrix.needsUpdate = true;
+      cluster.instanceColor.needsUpdate  = true;
+
+      // Camera parallax
+      const px = _mouse.x * 0.22;
+      const py = _mouse.y * 0.14;
+      _camPX.x += (px - _camPX.x) * 0.04;
+      _camPX.y += (py - _camPX.y) * 0.04;
+      camera.position.x = _camPX.x;
+      camera.position.y = 0.3 + _camPX.y;
+      camera.position.z = 6.5;
+      camera.lookAt(0, 0, 0);
+
+      // Heartbeat edge glow
+      if (ballMat.userData.shader) {
+        const bt = (performance.now() / 1000) % 4.7;
+        let beat = 0;
+        if      (bt >= 2.00 && bt < 2.25) beat = Math.sin((bt - 2.00) / 0.25 * Math.PI);
+        else if (bt >= 2.45 && bt < 2.70) beat = Math.sin((bt - 2.45) / 0.25 * Math.PI);
+        ballMat.userData.shader.uniforms.uBeat.value = beat;
+      }
+
+      // Animate particles
+      let _pDirty = false;
+      for (let pi = 0; pi < P_MAX; pi++) {
+        if (_pLife[pi] <= 0) continue;
+        _pDirty = true;
+        _pLife[pi] -= 0.024;
+        if (_pLife[pi] <= 0) { _pPos[pi*3+1] = -999; _pLife[pi] = 0; continue; }
+        _pPos[pi*3]   += _pVelX[pi];
+        _pPos[pi*3+1] += _pVelY[pi];
+        _pPos[pi*3+2] += _pVelZ[pi];
+        _pVelX[pi] *= 0.94; _pVelY[pi] *= 0.94; _pVelZ[pi] *= 0.94;
+        const f = _pLife[pi] * _pLife[pi];
+        _pClr[pi*3]   = _pIClr[pi*3]   * f;
+        _pClr[pi*3+1] = _pIClr[pi*3+1] * f;
+        _pClr[pi*3+2] = _pIClr[pi*3+2] * f;
+      }
+      if (_pDirty) {
+        _pGeo.attributes.position.needsUpdate = true;
+        _pGeo.attributes.color.needsUpdate    = true;
+      }
+
+      if (usePost) composer.render(); else renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

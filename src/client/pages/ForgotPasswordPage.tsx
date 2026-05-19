@@ -44,7 +44,7 @@ export function ForgotPasswordPage() {
 
           <div className="mb-7">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500">
-              HCC Prevailing Wage
+              AVERO Prevailing Wage
             </p>
             <h1 className="mt-3 font-headline text-4xl font-bold text-gray-950">
               Reset password

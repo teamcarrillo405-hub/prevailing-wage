@@ -48,7 +48,7 @@ export function LoginPage() {
             </Link>
 
             <div className="mb-7">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500">HCC Prevailing Wage</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500">AVERO Prevailing Wage</p>
               <h2 className="mt-3 font-headline text-4xl font-bold text-gray-950">
                 Sign in
               </h2>

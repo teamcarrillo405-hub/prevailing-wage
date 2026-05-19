@@ -60,7 +60,7 @@ const faqs = [
   },
   {
     q: 'Do contractors need to pay during signup?',
-    a: 'No. The account flow is member-access first. Contractors create an account with their HCC membership number and complete onboarding.',
+    a: 'No. The account flow is free to start. Contractors create an account and complete onboarding before any payment is required.',
   },
   {
     q: 'Can a contractor use Excel or QuickBooks data?',
@@ -72,8 +72,11 @@ function LandingNav() {
   return (
     <header className="absolute left-0 right-0 top-0 z-20">
       <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
-        <Link to="/" className="inline-flex min-h-11 items-center text-sm font-semibold tracking-wide text-white">
-          HCC Prevailing Wage
+        <Link to="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold tracking-wide text-white">
+          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
+            <iframe src="/avero-orb.html" title="AVERO" className="absolute inset-0 h-full w-full border-0" style={{ pointerEvents: 'none' }} scrolling="no" />
+          </div>
+          <span>AVERO <span className="font-normal text-white/70">Prevailing Wage</span></span>
         </Link>
         <div className="hidden items-center gap-8 text-sm font-medium text-white/70 sm:flex">
           <a href="#workflow" className="inline-flex min-h-11 items-center hover:text-white">Workflow</a>
@@ -113,7 +116,7 @@ function HeroSection() {
             Certified payroll without the spreadsheet chase.
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-white/78">
-            PrevWage guides federal prevailing wage projects from wage determination to payroll review, subcontractor CPR follow-up, and audit-ready export.
+            AVERO Prevailing Wage guides federal prevailing wage projects from wage determination to payroll review, subcontractor CPR follow-up, and audit-ready export.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -183,7 +186,7 @@ function ProductProofSection() {
             The dashboard is the product.
           </h2>
           <p className="mt-5 text-base leading-7 text-gray-600">
-            Contractors should not need a one-hour training module to know what to do next. PrevWage uses saved views, source-linked rates, and exact payroll-week links to move work forward.
+            Contractors should not need a one-hour training module to know what to do next. AVERO Prevailing Wage uses saved views, source-linked rates, and exact payroll-week links to move work forward.
           </p>
           <div className="mt-8 space-y-4">
             {productWins.map(({ icon: Icon, title, body }) => (
@@ -327,7 +330,7 @@ function LandingFooter() {
   return (
     <footer className="bg-[#101522] px-5 py-8 text-sm text-white/50 sm:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p>© 2026 PrevWage. Davis-Bacon payroll workflows for construction contractors.</p>
+        <p>© 2026 AVERO Prevailing Wage. Davis-Bacon payroll workflows for construction contractors.</p>
         <div className="flex flex-wrap gap-5">
           <Link to="/contact" className="inline-flex min-h-11 items-center hover:text-white">Contact</Link>
           <Link to="/security" className="inline-flex min-h-11 items-center hover:text-white">Security</Link>

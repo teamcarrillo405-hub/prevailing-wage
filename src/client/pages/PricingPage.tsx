@@ -131,7 +131,7 @@ function PricingNav() {
   return (
     <nav className="bg-nav-dark px-6 py-4 flex items-center justify-between">
       <Link to="/" className="inline-flex min-h-11 items-center text-brand-gold font-headline text-xl font-bold">
-        HCC Prevailing Wage
+        AVERO Prevailing Wage
       </Link>
       <div className="flex items-center gap-6">
         <Link to="/" className="inline-flex min-h-11 min-w-11 items-center text-gray-400 hover:text-white transition-colors text-sm">
@@ -599,7 +599,7 @@ function PricingFooter() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-6">
           <div className="flex items-center gap-3">
             <Shield className="w-4 h-4 text-brand-gold" />
-            <span className="text-white font-headline text-sm">HCC Prevailing Wage</span>
+            <span className="text-white font-headline text-sm">AVERO Prevailing Wage</span>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             {links.map(({ label, to }) => (
