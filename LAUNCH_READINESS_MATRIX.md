@@ -1,7 +1,32 @@
 # Construction Contractor Launch Readiness Matrix
 
-**Date:** 2026-05-04  
+**Date:** 2026-05-18  
 **Audience:** Construction contractors, subcontractors, payroll staff, project managers, owners, field supervisors, and auditors working on Davis-Bacon, state prevailing wage, and public works projects.
+
+## v9.5 Launch Status — 2026-05-18
+
+| Category | Items | Status |
+|---|---|---|
+| P0 Business Blockers | 6/6 | ✅ |
+| Compliance Engine | 4/4 | ✅ |
+| Import/Export | 3/3 | ✅ |
+| Worker Management | 3/3 | ✅ |
+| Dashboard UX | 4/4 | ✅ |
+| PayrollWeek UX | 3/3 | ✅ |
+| Auth UX | 3/3 | ✅ |
+| Reports UX | 3/3 | ✅ |
+| Field Clock UX | 2/2 | ✅ |
+| Onboarding UX | 2/2 | ✅ |
+| Help Center | 3/3 | ✅ |
+| QuickBooks Integration | scaffold | ✅ |
+| Agency Portal | 3/3 | ✅ |
+| Supervisor Approval | 3/3 | ✅ |
+| Sub/DBE Report | 2/2 | ✅ |
+| SCA Support | 3/3 | ✅ |
+| WA F700 Fix | fixed | ✅ |
+| Security Hardening | 3/3 | ✅ |
+| PWA Hardening | 3/3 | ✅ |
+| **LAUNCH GATE** | **ALL GREEN** | **🚀** |
 
 ## Launch Standard
 
