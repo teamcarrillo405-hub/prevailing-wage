@@ -12,6 +12,7 @@ import { validate } from '../middleware/validate.js';
 import { assertProjectAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 import { sendSubUploadRequestEmail } from '../services/emailService.js';
 import { deliverWebhook, WEBHOOK_EVENT_SUBCONTRACTOR_CPR_RECEIVED } from '../services/webhookService.js';
+import { generateDbeReport } from '../services/dbeReportGenerator.js';
 
 const router = Router();
 
@@ -1042,6 +1043,24 @@ router.patch('/:id/subcontractors/:subId/cpr-weeks/:weekId', validate(UpdateCprW
     .limit(1);
 
   res.json({ data: { cprWeek: updated } });
+});
+
+// ── DBE Participation Report ───────────────────────────────────────────────
+
+router.get('/:id/subcontractors/dbe-report', async (req, res) => {
+  const projectId = req.params.id as string;
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const report = await generateDbeReport(parseInt(projectId, 10));
+  res.json(report);
 });
 
 export default router;
