@@ -1,27 +1,38 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../lib/api';
+import { api } from '../lib/api';
 import { PageHeader } from '../components/ui/PageHeader';
+
+interface PendingPunch {
+  id: string;
+  projectId: string;
+  workerId: string;
+  punchType: 'in' | 'out';
+  punchedAt: string;
+  status: string;
+  rejectionReason: string | null;
+  workerName: string | null;
+}
 
 export function SupervisorApprovalsPage() {
   const qc = useQueryClient();
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  const { data: pending = [] } = useQuery({
+  const { data: pending = [] } = useQuery<PendingPunch[]>({
     queryKey: ['pending-time-punches'],
-    queryFn: () => api.get('/time-punches/pending').then(r => r.data),
+    queryFn: () => api.get<PendingPunch[]>('/time-punches/pending'),
     refetchInterval: 30000,
   });
 
   const approve = useMutation({
-    mutationFn: (id: string) => api.post(`/time-punches/${id}/approve`),
+    mutationFn: (id: string) => api.post<{ ok: boolean }>(`/time-punches/${id}/approve`, {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pending-time-punches'] }),
   });
 
   const reject = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      api.post(`/time-punches/${id}/reject`, { reason }),
+      api.post<{ ok: boolean }>(`/time-punches/${id}/reject`, { reason }),
     onSuccess: () => {
       setRejectId(null);
       setRejectReason('');
@@ -41,7 +52,7 @@ export function SupervisorApprovalsPage() {
             All caught up — no pending punches.
           </p>
         )}
-        {pending.map((e: any) => (
+        {pending.map((e) => (
           <div key={e.id} className="bg-surface-card rounded-xl p-4 flex items-start justify-between gap-4">
             <div>
               <p className="font-medium text-white text-sm">{e.workerName ?? 'Unknown Worker'}</p>
