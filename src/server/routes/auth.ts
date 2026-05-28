@@ -111,7 +111,8 @@ authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (r
     const welcomeHtml = welcomeTemplate
       .replace('{{firstName}}', firstName)
       .replace('{{appUrl}}', process.env.APP_URL ?? 'https://hccprevailingwage.com');
-    sendEmail(email, 'Welcome to HCC Prevailing Wage', welcomeHtml).catch(() => {});
+    sendEmail(email, 'Welcome to HCC Prevailing Wage', welcomeHtml)
+      .catch((err: unknown) => console.warn('[auth] welcome email failed:', err));
   }
 
   res.status(201).json({

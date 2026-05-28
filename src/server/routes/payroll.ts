@@ -66,8 +66,9 @@ function maybeSendViolationAlert(weekId: string, projectId: string, ownerEmail: 
       .replace('{{weekEnding}}', weekEndingDate)
       .replace('{{violationList}}', allViolations.map(v => `<li>${v}</li>`).join(''))
       .replace('{{weekUrl}}', weekUrl);
-    sendEmail(ownerEmail, `[${projectName}] Compliance issue detected`, violationHtml).catch(() => {});
-  }).catch(() => {});
+    sendEmail(ownerEmail, `[${projectName}] Compliance issue detected`, violationHtml)
+      .catch((err: unknown) => logger.warn({ err }, '[payroll] violation-alert email failed'));
+  }).catch((err: unknown) => logger.warn({ err }, '[payroll] compliance check failed before violation alert'));
 }
 
 // ── Zod Schemas ───────────────────────────────────────────────────────────

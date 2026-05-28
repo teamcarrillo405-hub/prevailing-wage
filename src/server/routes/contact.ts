@@ -18,7 +18,8 @@ router.post('/', async (req, res) => {
   }
   // Log the contact request and forward to support inbox (non-blocking)
   console.log('[contact]', parsed.data.email, parsed.data.subject ?? '(no subject)');
-  sendSupportForward(parsed.data.email, parsed.data.name, parsed.data.subject ?? '', parsed.data.message).catch(() => {});
+  sendSupportForward(parsed.data.email, parsed.data.name, parsed.data.subject ?? '', parsed.data.message)
+    .catch((err: unknown) => console.warn('[contact] support email failed:', err));
   return res.json({ success: true });
 });
 
