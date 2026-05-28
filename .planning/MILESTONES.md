@@ -1,5 +1,79 @@
 # Milestones
 
+## v2.5 State Portal Integration (Shipped: 2026-05-28)
+
+**Phases completed:** 37 phases, 84 plans, 125 tasks
+
+**Key accomplishments:**
+
+- SQL migration adds 4 nullable submission/amendment columns to payroll_weeks (idx 5 in journal), and GET /api/projects gains active-only default filter with ?status=all override
+- React archive/restore UI: compliance advisory modal, Archived badge on ProjectCard, Show Archived toggle on DashboardPage, Archive/Restore buttons on ProjectDetailPage with TanStack Query invalidation
+- Real-time name search and funding type filter added to DashboardPage with URL-persisted ?q= and ?funding= params — back navigation restores both inputs automatically
+- PATCH/DELETE submit routes + server-side 409 edit lock guard injected in both entry write routes, driven by TDD (assertWeekNotSubmitted x3 confirmed)
+- Submit form + read-only lock banner + Submitted badges on PayrollListPage — SUB-01/02/03 browser-verified end-to-end
+- Three-step modal on PayrollListPage (choose / configure / preview-with-skip-warnings) calling POST /api/payroll/weeks/copy and navigating to the new week on confirm.
+- getWorkerComplianceHistory() service + GET /api/compliance/worker/:workerId/history route + 6-case TDD integration test suite — cross-project violation aggregation via (name, ssnLast4) identity matching
+- WorkerComplianceHistoryPage showing cross-project violation history with Badge-per-type, amounts, and empty state; route and Workers link wired end-to-end
+- 1. [Rule 1 - Bug] Fixed pre-existing TypeScript implicit-any errors in workers.ts (lines 108/115)
+- Instructional empty states with action CTAs on 4 pages, and all 5 compliance terms (Davis-Bacon, WH-347, prevailing wage, CWHSSA, WD) wrapped with inline TermTooltip across 6 pages
+- One-liner:
+- RegisterForm invite code field with brand-gold button token fix deployed to Render — smoke tests passed, app live at https://hcc-prevailing-wage.onrender.com
+- One-liner:
+- CA DIR eCPR XML generator using xmlbuilder2 producing CPR.xsd v1.3 compliant XML with CPR: namespace prefix, plus CA-gated GET /api/export/ecpr-xml/:weekId route handler
+- CA eCPR XML download button and 2-step modal added to PayrollWeekDetailPage — Step 1 collects/persists contractor fields with SSN disclosure, Step 2 shows 6-step DIR portal upload checklist
+- One-liner:
+- WA L&I PWIA XML generator (WaPWCPR root, Mon-first day ordering) and export route with state gate, intentId validation, and trade code enforcement — all Wave 0 RED stubs GREEN
+- WA CPR XML gated download flow (trade code gate + PWIA intentId modal + blob download) and WAL-04 PWIA portal data-entry guide panel added to PayrollWeekDetailPage
+- One-liner:
+- One-liner:
+- One-liner:
+- Paginated GET /api/audit/:projectId endpoint with assertProjectAccess (NFR-03), offset pagination at 25/page, date range + entityType filters, and JSON column parsing — 9 tests green, 412 total suite passing
+- ProjectActivityPage with reverse-chronological audit timeline, useSearchParams date-range filter, 15-action ACTION_LABELS map, and Activity nav link in ProjectDetailPage
+- 8-column workers migration + payroll_week_classifications table + COALESCE classification override query pattern in getPayrollEntriesWithWorkerDetails
+- WorkersPage gains structured 4-field address, always-visible Union Information, conditional Apprenticeship section; PayrollWeekDetailPage gains per-worker classification override dropdown with POST/DELETE mutations
+- One-liner:
+- One-liner:
+- NY 8-hour/day OT compliance rule via TDD (RED+GREEN), plus route tests for nyprcNumber, nysContractorRegNumber, and nysRegisteredApprentice field persistence
+- SQLite migration 0024 adds ny_mpwr_submitted_at to payroll_weeks; getPayrollEntriesWithWorkerDetails now returns nysRegisteredApprentice per row
+- MPWR XML generator using TDD: xmlbuilder2 <ProjectRollup> root, multi-classification worker grouping, 000000+ssnLast4 SSN placeholder, supplementalPayment fringe rates
+- One-liner:
+- NY PW-12 PDF and MPWR XML export routes wired to generators with NY state gate, assertProjectAccess (NFR-03), and audit logs; ny-submit PATCH route sets nyMpwrSubmittedAt; 9 integration tests all passing.
+- NY MPWR 3-step submission modal added to PayrollWeekDetailPage: isNY gate, PRC/reg number persistence (Step 1), PW-12 PDF and MPWR XML downloads (Step 2), 30-day deadline checklist and submit tracking (Step 3).
+- One-liner:
+- One-liner:
+- Five React files updated to surface IL-gated UI: project banner, collapsible worker demographics (race/ethnicity/gender/veteran/skill), payroll Non-PW Hours input, and placeholder export/submission actions — all hidden for non-IL projects.
+- GET /api/export/il-pdf/:weekId
+- 2-step IL IDOL submission modal in PayrollWeekDetailPage replacing Phase 42 placeholder: PDF download (Step 1) + IDOL portal checklist with submit tracking (Step 2), gated to IL projects only
+- One-liner:
+- One-liner:
+- PROVIDER_LABELS map replaces all hardcoded QB/ADP ternaries; Gusto weekly-totals amber banner added to Step 2; client ImportPreviewResult extended to mirror server ImportProvider union.
+- One-liner:
+- One-liner:
+- Step 2b "Map Employees" modal screen injected between Step 1 and Step 2 for Paychex/Sage 300 imports, routing provider numeric IDs to project workers via a dropdown table with POST-then-re-preview save flow.
+- One-liner:
+- One-liner:
+- One-liner:
+- Normalized all CA/WA state comparisons to `.toUpperCase()` across 4 files (8 changes) with 3 passing integration tests confirming lowercase state values pass/fail the correct export gates
+- STATE_FORMS registry with CA/WA/NY/IL/TX entries replaces per-state boolean download-button blocks; adding FL in Phase 48 requires only one registry line
+- TX database migration (0028) + schema columns + project form fields + WH-347 contract number overlay enabling Texas contractors to create TX projects with TxDOT-specific fields
+- Texas LCPtracker informational callout added to PayrollWeekDetailPage, gated on isTX, with links to lcp123.com and TxDOT compliance page per Texas Chapter 2258
+- FL added to STATE_FORMS registry (WH-347 reuse) with isFL booleans in both files and an informational HelpCallout explaining Florida has no state-specific certified payroll form
+- One-liner:
+- ProjectForm.tsx:
+- One-liner:
+- export.test.ts — GET /api/export/nj-mw562/:weekId (4 tests):
+- NJ UI gates wired across three client files: indigo-themed PWC/contract ID fields in ProjectForm, workerSex select in WorkersPage, and nj-mw562 entry in STATE_FORMS registry
+- One-liner:
+- CA button now routes through mandatory eCPR disclosure modal (regulatory fix) and a1131 export route now emits ca_pdf.downloaded audit log (AUDIT-03 parity with all other state export routes)
+- CA-02 formally closed — all 7 a1131 unit tests pass, 152 export route tests pass, Plan 53-01 code changes verified correct by inspection (modal routing fix + audit log)
+- Two-table SQLite schema for GC subcontractor CPR tracking: subcontractors (project-scoped registry) and subcontractor_cpr_weeks (weekly CPR receipt with three-state is_compliant INTEGER), migration registered at idx 28
+- 7 Express route handlers for subcontractor CRUD and CPR-week tracking, with integration tests (16 tests GREEN) covering NFR-03 access control and second-level ownership validation
+- One-liner:
+- One-liner:
+- 1. [Rule 1 - Bug] Implicit-any TypeScript errors in route callbacks
+
+---
+
 ## v3.0 Team & Integration (Shipped: 2026-04-01)
 
 **Phases completed:** 32 phases, 81 plans, 122 tasks

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: State Portal Integration
-status: Ready to execute
+status: v2.5 milestone complete
 stopped_at: "126-04 Task 1 complete — FileErpCard shipped; awaiting checkpoint:human-verify for Task 2"
-last_updated: "2026-05-12T17:32:39.622Z"
+last_updated: "2026-05-28T22:52:00.058Z"
 progress:
   total_phases: 37
-  completed_phases: 34
-  total_plans: 81
-  completed_plans: 83
+  completed_phases: 37
+  total_plans: 84
+  completed_plans: 84
 ---
 
 # State

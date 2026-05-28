@@ -202,6 +202,51 @@
 
 ---
 
+## Milestone: v2.5 — State Portal Integration
+
+**Shipped:** 2026-03-27
+**Phases:** 2 (29-30) | **Plans:** 6 | **Files changed:** 32 | **LOC:** +6,035 / -790
+
+### What Was Built
+
+- **CA DIR eCPR XML Export**: 4 disaggregated fringe columns (H&W, Pension, Vacation, Training) in DB and entry UI; `generateEcprXml()` pure function producing CPR.xsd v1.3 compliant XML; 2-step pre-generation modal (collect FEIN/DIR Project ID/Awarding Agency/Contract Number → post-download 6-item portal checklist); amendment marker support
+- **WA L&I PWIA XML Export**: `generateWaCprXml()` pure function (WaPWCPR root, Mon-first day ordering); export route with state gate + intentId validation + trade code enforcement; PWIA intentId modal with DB persistence and pre-fill; trade code gate screen listing affected workers with edit links
+- **WAL-04 PWIA Submission Guide**: Per-classification Intent to Pay and Affidavit sections as live data-entry reference panel for the PWIA portal
+
+### What Worked
+
+- **Wave-0 TDD on XML generators**: Both phases started with Wave 0 RED stubs for the XML generator and export route before any implementation — generators came out clean with 100% test coverage on the first pass
+- **xmlbuilder2 pure function pattern**: Encapsulating the XML generation in a pure `generateEcprXml(data)` / `generateWaCprXml(data)` function made both generators independently testable without any DB or Express setup
+- **Persist-then-download PATCH flow**: PATCH `/api/projects/:id` before the GET download call meant field values are durable across sessions — re-opening the modal pre-fills from the DB without extra state management
+- **Trade code gate as 422 response**: Returning the workers array in the 422 body (not a separate lookup) kept the gate screen fast with a single fetch — no secondary request to find missing trade codes
+
+### What Was Inefficient
+
+- **F700 handler still uses (row as any) cast**: The `getPayrollEntries()` + type cast pattern introduced in Phase 25 was not cleaned up in Phase 29 even though `getPayrollEntriesWithWorkerDetails()` types `waTradeCode` properly. Left as informational tech debt.
+- **VALIDATION.md nyquist_compliant not updated**: Wave 0 tests went green for Phase 30 but the VALIDATION.md frontmatter was never updated to `nyquist_compliant: true` — a stale artifact that required flagging in the milestone audit.
+- **Empty contractor address in eCPR XML**: No project address field exists in schema, so the CPR.xsd contractor address always emits empty strings. Portal accepts it, but adding a project-level address field would produce a more complete XML submission.
+
+### Patterns Established
+
+- `generateXxx(data: XxxData): string` — pure XML generator with typed input interface; no DB, no Express; tested independently before route integration
+- `PATCH /api/projects/:id → GET /api/export/xxx/:weekId` — persist optional fields before download so modal pre-fills on re-open
+- State gate `project.state?.toUpperCase() === 'XX'` — canonical pattern for all state-specific export routes (locked in Phase 47 as STATE-13)
+- 422 with typed workers array for gate screens — single round-trip delivers both the error and the data needed to render the resolution UI
+
+### Key Lessons
+
+1. **Wave-0 stubs for pure functions pay off fast**: Writing the generator tests RED first constrained the interface before implementation. Both XML generators came out with clean typed interfaces that required no post-hoc refactoring.
+2. **Persist before download**: Always PATCH the project record before triggering the export. This ensures that re-opening the modal on a future visit has the fields pre-filled — which was a user-requested behavior that was free with this pattern.
+3. **Check VALIDATION.md at phase close**: After turning Wave 0 tests green, the workflow should include updating `nyquist_compliant: true` in VALIDATION.md frontmatter as a mandatory phase-close step.
+
+### Cost Observations
+
+- 1 day execution (2026-03-27)
+- 22 tests added (13 ecprXmlGenerator + 9 waCprXmlGenerator)
+- 2 phases, both verified at 100% (7/7 and 10/10 truths)
+
+---
+
 ## Milestone: v3.0 — Team & Integration
 
 **Shipped:** 2026-03-31
