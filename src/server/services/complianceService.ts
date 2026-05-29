@@ -78,6 +78,58 @@ export interface ComplianceResult {
   certAccuratePayroll: boolean;  // false when any 'cwhssa-ot' violation exists
 }
 
+// ── Per-state compliance rules dispatch table (Phase 148) ─────────────────
+// Each entry defines how that state's OT/DT thresholds differ from federal defaults.
+// Federal default: weekly OT only (>40h/week at 1.5×).
+
+export interface StateComplianceRules {
+  /** Daily ST limit before OT kicks in. Federal default: no daily threshold. */
+  dailyStLimit?: number;
+  /** Daily OT ceiling before DT kicks in. Only relevant if dailyDtEnabled. */
+  dailyOtCeiling?: number;
+  /** Whether the state requires double-time beyond the OT ceiling. */
+  dailyDtEnabled?: boolean;
+  /** Apprentice ratio: max apprentice hours per journeyworker hour. Default: 0.5 (1:2). */
+  maxApprenticeRatio?: number;
+  /** Human-readable label for error messages. */
+  label: string;
+}
+
+export const STATE_COMPLIANCE_RULES: Record<string, StateComplianceRules> = {
+  // California: daily OT after 8h, daily DT after 12h (Labor Code §510)
+  CA: { dailyStLimit: 8, dailyOtCeiling: 12, dailyDtEnabled: true, maxApprenticeRatio: 0.5, label: 'California' },
+  // New York: daily OT after 8h (Labor Law §220)
+  NY: { dailyStLimit: 8, maxApprenticeRatio: 0.5, label: 'New York' },
+  // Alaska: daily OT after 8h (AS 23.10.060)
+  AK: { dailyStLimit: 8, maxApprenticeRatio: 0.33, label: 'Alaska' },
+  // Hawaii: daily OT after 8h (HRS §104-2)
+  HI: { dailyStLimit: 8, maxApprenticeRatio: 0.2, label: 'Hawaii' },
+  // Nevada: daily OT after 8h (NRS §608.018)
+  NV: { dailyStLimit: 8, maxApprenticeRatio: 0.2, label: 'Nevada' },
+  // Oregon: daily OT after 8h (ORS §652.020)
+  OR: { dailyStLimit: 8, maxApprenticeRatio: 0.25, label: 'Oregon' },
+  // Montana: weekly OT only, lower apprentice ratio (MCA §18-2-415)
+  MT: { maxApprenticeRatio: 0.33, label: 'Montana' },
+  // New Jersey: weekly OT only, standard ratio (NJSA 34:11-56a4)
+  NJ: { maxApprenticeRatio: 0.5, label: 'New Jersey' },
+  // Minnesota: weekly OT only (MS §177.25)
+  MN: { maxApprenticeRatio: 0.5, label: 'Minnesota' },
+  // Virginia: weekly OT only (Va. Code §2.2-4321.2)
+  VA: { maxApprenticeRatio: 0.5, label: 'Virginia' },
+  // Washington: daily OT after 8h (RCW 49.46.130)
+  WA: { dailyStLimit: 8, maxApprenticeRatio: 0.25, label: 'Washington' },
+  // Illinois: weekly OT only (820 ILCS 130)
+  IL: { maxApprenticeRatio: 0.5, label: 'Illinois' },
+  // Pennsylvania: weekly OT only (43 P.S. §165-4)
+  PA: { maxApprenticeRatio: 0.5, label: 'Pennsylvania' },
+  // Ohio: weekly OT only (ORC 4115.10)
+  OH: { maxApprenticeRatio: 0.5, label: 'Ohio' },
+  // Colorado: weekly OT only (CDLE)
+  CO: { maxApprenticeRatio: 0.25, label: 'Colorado' },
+  // Massachusetts: weekly OT only (MGL c.149 §26)
+  MA: { maxApprenticeRatio: 0.5, label: 'Massachusetts' },
+};
+
 // ── Service ───────────────────────────────────────────────────────────────
 
 export async function computeCompliance(
@@ -95,6 +147,7 @@ export async function computeCompliance(
   const stateCode = project?.state?.toUpperCase();
   const isNY = stateCode === 'NY';
   const isCA = stateCode === 'CA';
+  const stateRules = stateCode ? STATE_COMPLIANCE_RULES[stateCode] : undefined;
 
   // 3. Load entries (with worker names and classification info)
   const rows = await getPayrollEntries(weekId);
@@ -179,6 +232,28 @@ export async function computeCompliance(
             expected: 12,
             actual: st + ot,
             delta: (st + ot) - 12,
+          });
+        }
+      }
+    }
+
+    // Dispatch-table-driven daily OT check for states not already handled above.
+    // Covers AK, HI, NV, OR, WA (dailyStLimit=8 but no daily DT like CA).
+    if (stateRules?.dailyStLimit && !isCA && !isNY) {
+      const stLimit = stateRules.dailyStLimit;
+      const dayPairs = [
+        { st: e.monSt, ot: e.monOt }, { st: e.tueSt, ot: e.tueOt },
+        { st: e.wedSt, ot: e.wedOt }, { st: e.thuSt, ot: e.thuOt },
+        { st: e.friSt, ot: e.friOt }, { st: e.satSt, ot: e.satOt },
+        { st: e.sunSt, ot: e.sunOt },
+      ];
+      for (const d of dayPairs) {
+        const st = d.st ?? 0;
+        if (st > stLimit) {
+          violations.push({
+            entryId: e.id, workerId: e.workerId, workerName: row.workerName,
+            violationType: 'cwhssa-ot',
+            expected: stLimit, actual: st, delta: st - stLimit,
           });
         }
       }

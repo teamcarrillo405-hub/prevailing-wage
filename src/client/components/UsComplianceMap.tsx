@@ -1,16 +1,42 @@
 import { useState } from 'react';
 
-// Active states with certified payroll forms
-const ACTIVE_STATES: Record<string, string> = {
-  WA: 'F700-065-000',
-  CA: 'A-1-131',
-  NY: 'PW-12',
-  MA: 'MA Certified Payroll',
-  NJ: 'NJ Certified Payroll',
-  IL: 'IL Certified Transcript',
-  MN: 'MN Certified Payroll',
-  VA: 'VA Certified Payroll',
+// States with state-specific certified payroll forms (not just WH-347)
+const STATE_CPR_FORMS: Record<string, string> = {
+  CA: 'CA DIR A-1-131',
+  WA: 'WA L&I F700-065-000',
+  NY: 'NY DOL PW-12',
+  IL: 'IL IDOL Certified Transcript',
+  MA: 'MA DLS Payroll Report',
+  NJ: 'NJ DOL MW-562',
+  MN: 'MN DLI Certified Payroll',
+  VA: 'VA DOLI Certified Payroll',
+  PA: 'PA L&I PWC-28',
+  OH: 'OH BWC PWC-28',
+  CO: 'CO CDLE Certified Payroll',
+  MD: 'MD DLLR Certified Payroll',
+  OR: 'OR BOLI Certified Payroll',
+  CT: 'CT DOL Certified Payroll',
+  HI: 'HI DLIR Certified Payroll',
+  KY: 'KY Labor Certified Payroll',
+  NM: 'NM DOL Certified Payroll',
+  NV: 'NV OSHA Certified Payroll',
+  RI: 'RI DOL Certified Payroll',
+  WV: 'WV DOL Certified Payroll',
+  ME: 'ME DOL Certified Payroll',
+  VT: 'VT DOL Certified Payroll',
+  MT: 'MT DOL Certified Payroll',
+  ND: 'ND DOL Certified Payroll',
+  DE: 'DE DOL Certified Payroll',
+  NH: 'NH DOL Certified Payroll',
+  AK: 'AK DOL Certified Payroll',
 };
+
+// States with no state PW law — federal WH-347 is the required form
+const FEDERAL_ONLY_STATES = new Set([
+  'TX', 'FL', 'AL', 'AR', 'AZ', 'GA', 'IA', 'ID', 'IN',
+  'KS', 'LA', 'MI', 'MO', 'MS', 'NC', 'NE', 'OK', 'SC',
+  'SD', 'TN', 'UT', 'WI', 'WY',
+]);
 
 // State abbreviation to full name
 const STATE_NAMES: Record<string, string> = {
@@ -86,21 +112,39 @@ const STATE_PATHS: { abbr: string; d: string }[] = [
   { abbr: 'HI', d: 'M 190 490 L 215 485 L 225 500 L 210 515 L 185 512 Z' },
 ];
 
+type CoverageTier = 'state-form' | 'federal-only' | 'none';
+
 interface StatePathProps {
   abbr: string;
   d: string;
-  isActive: boolean;
+  tier: CoverageTier;
   onHover: (abbr: string, e: React.MouseEvent) => void;
   onLeave: () => void;
 }
 
-function StatePath({ abbr, d, isActive, onHover, onLeave }: StatePathProps) {
+const TIER_FILL: Record<CoverageTier, string> = {
+  'state-form': '#1a1a1a',
+  'federal-only': '#6b7280',
+  'none': '#f3f4f6',
+};
+const TIER_STROKE: Record<CoverageTier, string> = {
+  'state-form': '#F5C518',
+  'federal-only': '#9ca3af',
+  'none': '#d1d5db',
+};
+const TIER_STROKE_WIDTH: Record<CoverageTier, number> = {
+  'state-form': 1.5,
+  'federal-only': 0.75,
+  'none': 0.5,
+};
+
+function StatePath({ abbr, d, tier, onHover, onLeave }: StatePathProps) {
   return (
     <path
       d={d}
-      fill={isActive ? '#1a1a1a' : '#f3f4f6'}
-      stroke={isActive ? '#F5C518' : '#d1d5db'}
-      strokeWidth={isActive ? 1.5 : 0.5}
+      fill={TIER_FILL[tier]}
+      stroke={TIER_STROKE[tier]}
+      strokeWidth={TIER_STROKE_WIDTH[tier]}
       style={{ cursor: 'default', transition: 'opacity 0.15s' }}
       onMouseEnter={(e) => onHover(abbr, e)}
       onMouseLeave={onLeave}
@@ -112,14 +156,26 @@ function StatePath({ abbr, d, isActive, onHover, onLeave }: StatePathProps) {
 export function UsComplianceMap() {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
 
-  function handleHover(abbr: string, e: React.MouseEvent) {
-    const formLabel = ACTIVE_STATES[abbr] ?? 'Federal WH-347 only';
-    setTooltip({
-      x: e.clientX,
-      y: e.clientY,
-      label: `${STATE_NAMES[abbr] ?? abbr} — ${formLabel}`,
-    });
+  function getTier(abbr: string): CoverageTier {
+    if (abbr in STATE_CPR_FORMS) return 'state-form';
+    if (FEDERAL_ONLY_STATES.has(abbr)) return 'federal-only';
+    return 'none';
   }
+
+  function handleHover(abbr: string, e: React.MouseEvent) {
+    const tier = getTier(abbr);
+    const stateName = STATE_NAMES[abbr] ?? abbr;
+    const formLabel =
+      tier === 'state-form'
+        ? STATE_CPR_FORMS[abbr]
+        : tier === 'federal-only'
+        ? 'Federal WH-347 (no state PW law)'
+        : 'Not yet supported';
+    setTooltip({ x: e.clientX, y: e.clientY, label: `${stateName} — ${formLabel}` });
+  }
+
+  const stateCprCount = Object.keys(STATE_CPR_FORMS).length;
+  const federalCount = FEDERAL_ONLY_STATES.size;
 
   return (
     <div className="relative w-full">
@@ -133,7 +189,7 @@ export function UsComplianceMap() {
             key={abbr}
             abbr={abbr}
             d={d}
-            isActive={abbr in ACTIVE_STATES}
+            tier={getTier(abbr)}
             onHover={handleHover}
             onLeave={() => setTooltip(null)}
           />
@@ -155,15 +211,24 @@ export function UsComplianceMap() {
         </div>
       )}
 
+      {/* Coverage stats */}
+      <p className="text-center text-xs text-gray-500 font-body mt-2">
+        {stateCprCount} states with state-specific CPR forms · {federalCount} states federal WH-347
+      </p>
+
       {/* Legend */}
-      <div className="flex items-center gap-6 mt-4 justify-center">
+      <div className="flex flex-wrap items-center gap-4 mt-3 justify-center">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded-sm bg-nav-dark border border-brand-gold" />
-          <span className="text-xs text-gray-600 font-body">State-specific form available</span>
+          <span className="text-xs text-gray-600 font-body">State-specific CPR form</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-sm bg-gray-500 border border-gray-400" />
+          <span className="text-xs text-gray-600 font-body">Federal WH-347 (no state PW law)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded-sm bg-gray-100 border border-gray-300" />
-          <span className="text-xs text-gray-600 font-body">Federal WH-347 only</span>
+          <span className="text-xs text-gray-600 font-body">Not supported</span>
         </div>
       </div>
     </div>
