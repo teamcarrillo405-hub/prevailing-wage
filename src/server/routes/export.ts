@@ -638,10 +638,8 @@ router.get('/f700/:weekId', async (req, res) => {
     workers: workerRows,
   };
 
-  // 7. Load template + fill
-  const templatePath = path.join(process.cwd(), 'assets', 'f700-official.pdf');
-  const templateBytes = readFileSync(templatePath);
-  const filledPdf = await fillF700(f700Data, templateBytes);
+  // 7. Generate PDF from scratch (no template file required)
+  const filledPdf = await fillF700(f700Data);
 
   // 8. Stream as PDF download
   const filename = week.amendmentNumber != null
