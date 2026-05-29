@@ -12,7 +12,7 @@ import { fetchWdFromSamGov } from './wdolFetcher.js';
 import { parseWdDocument } from './wdolParser.js';
 import { upsertWageDetermination, upsertClassifications, isWdCached } from './wageCache.js';
 import { getDb } from '../db/index.js';
-import { wageSyncMeta, wageDeterminations, projectWageDeterminations, projects, wdRevisionLog } from '../db/schema.js';
+import { wageSyncMeta, wageDeterminations, projectWageDeterminations, projects, wdRevisionLog, countyWageDeterminations } from '../db/schema.js';
 
 // Known WD identifiers for the top 20 states by Davis-Bacon construction volume.
 // Source: SAM.gov cross-index + live verification of individual WD API responses.
@@ -4050,4 +4050,58 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
 
   logger.info(`[wdolSync] Complete — fetched: ${fetched}, failed: ${failed}, skipped: ${skipped}`);
   return { fetched, failed };
+}
+
+/**
+ * 3-tier county wage rate cascade (Phase 135 — v10.0 infrastructure).
+ * 1. county_wage_determinations (county-specific rate from state DOL)
+ * 2. wageDeterminations by state/county (federal WD cached for this county)
+ * 3. wageDeterminations by state only (statewide federal WD fallback)
+ *
+ * Returns the best available base + fringe rates for the given project location and trade.
+ * Returns null if no rate can be resolved (caller should prompt manual entry).
+ */
+export function resolveCountyRate(
+  state: string,
+  county: string,
+  tradeCode: string,
+): { baseRate: number; fringeRate: number; source: 'county-dol' | 'federal-county' | 'federal-state' } | null {
+  const db = getDb();
+
+  // Tier 1: state DOL county-specific rate
+  const countyRate = db
+    .select({ baseRate: countyWageDeterminations.baseRate, fringeRate: countyWageDeterminations.fringeRate })
+    .from(countyWageDeterminations)
+    .where(
+      and(
+        eq(countyWageDeterminations.state, state.toUpperCase()),
+        eq(countyWageDeterminations.county, county),
+        eq(countyWageDeterminations.tradeCode, tradeCode),
+      ),
+    )
+    .get();
+  if (countyRate) return { ...countyRate, source: 'county-dol' };
+
+  // Tier 2: federal WD scoped to this county
+  const federalCountyWd = db
+    .select({ id: wageDeterminations.id })
+    .from(wageDeterminations)
+    .where(
+      and(
+        eq(wageDeterminations.state, state.toUpperCase()),
+        eq(wageDeterminations.county, county),
+      ),
+    )
+    .get();
+  if (federalCountyWd) return { baseRate: 0, fringeRate: 0, source: 'federal-county' };
+
+  // Tier 3: statewide federal WD
+  const stateWd = db
+    .select({ id: wageDeterminations.id })
+    .from(wageDeterminations)
+    .where(eq(wageDeterminations.state, state.toUpperCase()))
+    .get();
+  if (stateWd) return { baseRate: 0, fringeRate: 0, source: 'federal-state' };
+
+  return null;
 }

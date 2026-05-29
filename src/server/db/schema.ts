@@ -911,3 +911,32 @@ export const copilotInteractions = sqliteTable('copilot_interactions', {
   idxCopilotUserTime: index('idx_copilot_user_time').on(table.userId, table.createdAt),
   idxCopilotProjectTime: index('idx_copilot_project_time').on(table.projectId, table.createdAt),
 }));
+
+
+// Phase 135 — County wage determinations + state wage sources (v10.0 infrastructure)
+export const countyWageDeterminations = sqliteTable('county_wage_determinations', {
+  id: text('id').primaryKey(),
+  state: text('state').notNull(),
+  county: text('county').notNull(),
+  city: text('city'),
+  tradeCode: text('trade_code').notNull(),
+  laborType: text('labor_type').notNull().default('journeyworker'),
+  baseRate: real('base_rate').notNull(),
+  fringeRate: real('fringe_rate').notNull().default(0),
+  effectiveDate: text('effective_date').notNull(),
+  source: text('source').notNull().default('manual').$type<'dir' | 'dol' | 'lni' | 'manual'>(),
+  syncedAt: text('synced_at').notNull(),
+  expiresAt: text('expires_at'),
+}, (table) => ({
+  idxCountyStateCounty: index('idx_county_wd_state_county').on(table.state, table.county),
+  idxCountyStateTrade: index('idx_county_wd_state_county_trade').on(table.state, table.county, table.tradeCode),
+}));
+
+export const stateWageSources = sqliteTable('state_wage_sources', {
+  state: text('state').primaryKey(),
+  sourceType: text('source_type').notNull().default('manual').$type<'api' | 'pdf' | 'csv' | 'manual'>(),
+  apiUrl: text('api_url'),
+  scrapePath: text('scrape_path'),
+  lastSyncedAt: text('last_synced_at'),
+  syncStatus: text('sync_status').notNull().default('pending').$type<'ok' | 'error' | 'pending'>(),
+});

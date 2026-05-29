@@ -124,6 +124,30 @@ function projectSettingsFromOnboarding(answers?: OnboardingAnswers): string | un
   });
 }
 
+// Major counties per state — used for datalist suggestions on county field
+const STATE_COUNTIES: Record<string, string[]> = {
+  CA: ['Los Angeles','San Diego','Orange','Riverside','San Bernardino','Santa Clara','Alameda','Sacramento','Contra Costa','Fresno','Kern','San Francisco','Ventura','San Mateo','San Joaquin'],
+  TX: ['Harris','Dallas','Tarrant','Bexar','Travis','Collin','Denton','El Paso','Fort Bend','Montgomery'],
+  FL: ['Miami-Dade','Broward','Palm Beach','Hillsborough','Orange','Pinellas','Duval','Lee','Polk','Brevard'],
+  NY: ['Kings','Queens','New York','Suffolk','Nassau','Bronx','Westchester','Erie','Monroe','Staten Island'],
+  IL: ['Cook','DuPage','Lake','Will','Kane','McHenry','Winnebago','Madison','Champaign','Sangamon'],
+  WA: ['King','Pierce','Snohomish','Spokane','Clark','Thurston','Kitsap','Whatcom','Yakima','Benton'],
+  PA: ['Philadelphia','Allegheny','Montgomery','Bucks','Chester','Lancaster','Delaware','York','Berks','Westmoreland'],
+  OH: ['Franklin','Cuyahoga','Hamilton','Summit','Butler','Montgomery','Lucas','Lorain','Stark','Mahoning'],
+  MA: ['Middlesex','Worcester','Essex','Suffolk','Norfolk','Bristol','Plymouth','Hampden','Barnstable','Hampshire'],
+  NJ: ['Bergen','Middlesex','Essex','Hudson','Monmouth','Union','Passaic','Ocean','Morris','Camden'],
+  CO: ['Denver','Jefferson','Arapahoe','Adams','El Paso','Larimer','Boulder','Douglas','Weld','Pueblo'],
+  AZ: ['Maricopa','Pima','Pinal','Yavapai','Yuma','Coconino','Mohave','Navajo','Apache','Graham'],
+  GA: ['Fulton','Gwinnett','Cobb','DeKalb','Chatham','Cherokee','Forsyth','Hall','Henry','Clayton'],
+  NC: ['Mecklenburg','Wake','Guilford','Forsyth','Cumberland','Durham','Buncombe','Union','Gaston','Cabarrus'],
+  VA: ['Fairfax','Virginia Beach','Prince William','Chesterfield','Loudoun','Arlington','Richmond','Henrico','Chesapeake','Norfolk'],
+  MI: ['Wayne','Oakland','Macomb','Kent','Genesee','Washtenaw','Ingham','Ottawa','Kalamazoo','Saginaw'],
+  MN: ['Hennepin','Ramsey','Dakota','Anoka','Washington','Scott','Carver','Stearns','Rice','Wright'],
+  OR: ['Multnomah','Washington','Clackamas','Lane','Marion','Jackson','Deschutes','Linn','Douglas','Yamhill'],
+  MD: ['Montgomery','Prince Georges','Baltimore','Anne Arundel','Howard','Baltimore City','Frederick','Charles','Harford','Carroll'],
+  WI: ['Milwaukee','Dane','Waukesha','Brown','Racine','Outagamie','Winnebago','Kenosha','Rock','Marathon'],
+};
+
 export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -299,9 +323,18 @@ export function ProjectForm({ onSuccess, onCancel }: ProjectFormProps) {
             type="text"
             required
             aria-required="true"
+            list="county-suggestions"
+            placeholder={stateValue && STATE_COUNTIES[stateValue?.toUpperCase()] ? 'Select or type county...' : 'Enter county name'}
             {...register('county')}
             className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
           />
+          {stateValue && STATE_COUNTIES[stateValue.toUpperCase()] && (
+            <datalist id="county-suggestions">
+              {STATE_COUNTIES[stateValue.toUpperCase()].map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          )}
           {errors.county && <p className="text-red-600 text-xs mt-1">{errors.county.message}</p>}
         </div>
       </div>
