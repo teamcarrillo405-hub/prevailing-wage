@@ -18,11 +18,12 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import { normalize } from 'path';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
 import { getDb } from '../db/index.js';
 import type { InferSelectModel } from 'drizzle-orm';
-import { integrationConnections } from '../db/schema.js';
+import { integrationConnections, integrationSyncRuns } from '../db/schema.js';
+import { desc } from 'drizzle-orm';
 
 type IntegrationConnection = InferSelectModel<typeof integrationConnections>;
 import { runSyncForConnection, type ConnectionRow } from '../integrations/syncOrchestrator.js';
@@ -188,4 +189,50 @@ erpIntegrationsRouter.post('/:erpType/sync', requireAuth, async (req, res) => {
 
   const { runId, result } = await runSyncForConnection(connection, 'manual');
   res.json({ runId, recordsSynced: result.recordsSynced, errors: result.errors });
+});
+
+// ── GET /history — sync run history for dashboard ────────────────────────────
+erpIntegrationsRouter.get('/history', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const conns = await db
+    .select({ id: integrationConnections.id })
+    .from(integrationConnections)
+    .where(eq(integrationConnections.userId, userId));
+
+  if (conns.length === 0) {
+    res.json({ runs: [] });
+    return;
+  }
+
+  const limit = Math.min(Number(req.query.limit ?? 50), 200);
+  const connIds = conns.map((c: { id: string }) => c.id);
+  const runs = await db
+    .select()
+    .from(integrationSyncRuns)
+    .where(inArray(integrationSyncRuns.connectionId, connIds))
+    .orderBy(desc(integrationSyncRuns.startedAt))
+    .limit(limit);
+
+  res.json({ runs });
+});
+
+// ── GET /failure-alert — alert data for Dashboard banner ─────────────────────
+erpIntegrationsRouter.get('/failure-alert', requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const db = getDb();
+
+  const conns = await db
+    .select({
+      id: integrationConnections.id,
+      erpType: integrationConnections.erpType,
+      consecutiveFailureCount: integrationConnections.consecutiveFailureCount,
+      lastError: integrationConnections.lastError,
+    })
+    .from(integrationConnections)
+    .where(eq(integrationConnections.userId, userId));
+
+  const failing = conns.filter((c: { id: string; erpType: string; consecutiveFailureCount: number; lastError: string | null }) => c.consecutiveFailureCount >= 2);
+  res.json({ alerts: failing });
 });

@@ -6,6 +6,9 @@ import { Layout } from '../components/shared/Layout.js';
 import { PageHeader } from '../components/ui/PageHeader.js';
 import { Button } from '../components/ui/Button.js';
 import { Badge } from '../components/ui/Badge.js';
+import { Card } from '../components/ui/Card.js';
+import { Input } from '../components/ui/Input.js';
+import { useToast } from '../contexts/ToastContext.js';
 import { IntegrationsSkeleton } from '../components/ui/Skeleton.js';
 import type { OnboardingAnswers, OnboardingResponse } from '../types/onboarding.js';
 
@@ -114,6 +117,165 @@ interface ImportResult {
   created: number;
   skipped: number;
   errors: Array<{ qboId: string; reason: string }>;
+}
+
+interface FileErpCardProps {
+  erpName: string;
+  erpType: 'sage300' | 'vista';
+  description: string;
+}
+
+function FileErpCard({ erpName, erpType, description }: FileErpCardProps) {
+  const { toast } = useToast();
+  const [importDir, setImportDir] = useState('');
+  const [exportDir, setExportDir] = useState('');
+  const [persistedImport, setPersistedImport] = useState('');
+  const [persistedExport, setPersistedExport] = useState('');
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savedFlag, setSavedFlag] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/erp-integrations', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { connections: [] })
+      .then((data: { connections: Array<{ id: string; erpType: string; lastSyncAt: string | null; lastError: string | null; filePathConfig: { importDir: string | null; exportDir: string | null } | null }> }) => {
+        const row = data.connections.find(c => c.erpType === erpType);
+        if (row) {
+          setLastSyncAt(row.lastSyncAt);
+          setLastError(row.lastError);
+          const cfg = row.filePathConfig ?? { importDir: '', exportDir: '' };
+          setImportDir(cfg.importDir ?? '');
+          setExportDir(cfg.exportDir ?? '');
+          setPersistedImport(cfg.importDir ?? '');
+          setPersistedExport(cfg.exportDir ?? '');
+        }
+      })
+      .catch(() => { /* network error — leave defaults */ });
+  }, [erpType]);
+
+  const pathsDirty = importDir !== persistedImport || exportDir !== persistedExport;
+
+  async function handleSavePaths() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/erp-integrations/${erpType}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ importDir, exportDir }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setPersistedImport(importDir);
+      setPersistedExport(exportDir);
+      setSavedFlag(true);
+      setTimeout(() => setSavedFlag(false), 2000);
+    } catch {
+      setSaveError('Failed to save paths. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleImportNow() {
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/erp-integrations/${erpType}/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const body = await res.json() as { recordsSynced?: number };
+      toast.success(`${erpName} sync completed — ${body.recordsSynced ?? 0} records synced.`);
+      setLastSyncAt(new Date().toISOString());
+      setLastError(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'unknown error';
+      toast.error(`Sync failed — ${msg}. Check the configured import directory.`);
+      setLastError(msg);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  function relativeTime(iso: string | null): string {
+    if (!iso) return 'Last sync: Never';
+    const ms = Date.now() - new Date(iso).getTime();
+    const minutes = Math.floor(ms / 60000);
+    if (minutes < 60) return `Last sync: ${minutes} minutes ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Last sync: ${hours} hours ago`;
+    const days = Math.floor(hours / 24);
+    return `Last sync: ${days} days ago`;
+  }
+
+  return (
+    <Card padding="default">
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-lg font-semibold font-headline text-nav-dark">{erpName}</h2>
+          <p className="text-sm text-gray-600 mt-1">{description}</p>
+        </div>
+        <Badge variant="warning">File Exchange</Badge>
+      </div>
+      <p className="text-sm italic text-gray-500 mt-1">
+        No live connection — place export files in the configured import directory.
+      </p>
+      <div className="mt-4 space-y-3">
+        <Input
+          label="Import directory"
+          placeholder="/path/to/import"
+          value={importDir}
+          onChange={e => setImportDir(e.target.value)}
+        />
+        <Input
+          label="Export directory"
+          placeholder="/path/to/export"
+          value={exportDir}
+          onChange={e => setExportDir(e.target.value)}
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSavePaths}
+            disabled={!pathsDirty || saving}
+            loading={saving}
+          >
+            {saving ? 'Saving...' : 'Save Paths'}
+          </Button>
+          {savedFlag && <span className="text-sm text-green-600 ml-2">Saved.</span>}
+        </div>
+        {saveError && <p className="text-xs text-red-600 mt-1">{saveError}</p>}
+      </div>
+      <div className="flex items-center gap-2 mt-4">
+        <p className="text-xs text-gray-500">{relativeTime(lastSyncAt)}</p>
+        {lastError && (
+          <span title={lastError}>
+            <Badge variant="violation">Sync Error</Badge>
+          </span>
+        )}
+      </div>
+      <div className="mt-3">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleImportNow}
+          disabled={syncing || !persistedImport}
+          loading={syncing}
+        >
+          {syncing ? 'Importing...' : 'Import Now'}
+        </Button>
+      </div>
+    </Card>
+  );
 }
 
 function EmployeeImportSection({ projectId }: { projectId: string }) {
@@ -817,6 +979,12 @@ export function IntegrationsPage() {
     queryFn: () => api.get<ProcoreStatusResponse>('/integrations/procore/status'),
   });
 
+  const { data: syncHistoryData } = useQuery<{ runs: Array<{ id: string; erpType: string; startedAt: string; completedAt: string | null; recordsSynced: number; errorsCount: number; trigger: string }> }>({
+    queryKey: ['erp-sync-history'],
+    queryFn: () => api.get('/erp-integrations/history'),
+    refetchInterval: 30000,
+  });
+
   const disconnectProcore = useMutation({
     mutationFn: () => api.delete<unknown>('/integrations/procore'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['procore-status'] }),
@@ -1115,10 +1283,62 @@ export function IntegrationsPage() {
               )}
             </div>
 
+            <FileErpCard
+              erpName="Sage 300 CRE"
+              erpType="sage300"
+              description="Import employee and timesheet data from Sage 300 CRE export files placed in a configured directory."
+            />
+            <FileErpCard
+              erpName="Viewpoint Vista"
+              erpType="vista"
+              description="Import employee and timesheet data from Viewpoint Vista export files placed in a configured directory."
+            />
+
             <p className="text-xs text-gray-500">
-              QuickBooks and Procore credentials are stored encrypted with AES-256-GCM and never
+              QuickBooks, Procore, Sage 300 CRE, and Viewpoint Vista credentials are stored encrypted with AES-256-GCM and never
               appear in plaintext.
             </p>
+
+            {/* Phase 134: Integration Sync History Dashboard */}
+            {syncHistoryData && syncHistoryData.runs && syncHistoryData.runs.length > 0 && (
+              <div className="mt-10">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Sync History</h2>
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ERP</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Records</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Errors</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trigger</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {syncHistoryData.runs.slice(0, 20).map(run => (
+                        <tr key={run.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium capitalize">{run.erpType}</td>
+                          <td className="px-4 py-3 text-gray-600">{new Date(run.startedAt).toLocaleString()}</td>
+                          <td className="px-4 py-3">{run.recordsSynced}</td>
+                          <td className="px-4 py-3">
+                            {run.errorsCount > 0
+                              ? <Badge variant="violation">{run.errorsCount} error{run.errorsCount !== 1 ? 's' : ''}</Badge>
+                              : <span className="text-gray-400">—</span>}
+                          </td>
+                          <td className="px-4 py-3 capitalize text-gray-600">{run.trigger}</td>
+                          <td className="px-4 py-3">
+                            {run.completedAt
+                              ? <Badge variant="compliant">Done</Badge>
+                              : <Badge variant="warning">Running</Badge>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Enterprise SSO — Phase 110 ENT-03 */}
             <div className="mt-10">

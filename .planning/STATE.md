@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.5
-milestone_name: State Portal Integration
-status: v2.5 milestone complete
-stopped_at: "126-04 Task 1 complete — FileErpCard shipped; awaiting checkpoint:human-verify for Task 2"
-last_updated: "2026-05-28T22:52:00.058Z"
+milestone: v9.5
+milestone_name: Launch Readiness + Compliance Accuracy + UX Superiority
+status: executing
+stopped_at: "Phase 134 complete — v9.0 ERP integrations shipped; v9.5 phases 151-170 in progress"
+last_updated: "2026-05-28T17:00:00.000Z"
 progress:
   total_phases: 37
   completed_phases: 37
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** GC can run a full project end-to-end -- create -> workers -> payroll -> WH-347 -> submit -- with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** Phase 126 — integration-foundation
+**Current focus:** v9.5 launch readiness — phases 151-170
 
 ## Current Position
 
-Phase: 126 (integration-foundation) — EXECUTING
-Plan: 4 of 4
+Phase: 170 (launch-gate) — complete
+v9.0 milestone: all 9 phases (126-134) complete
 
 ## Performance Metrics
 

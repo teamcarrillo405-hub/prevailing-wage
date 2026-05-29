@@ -276,6 +276,12 @@ export function DashboardPage() {
     staleTime: 30_000,
   });
 
+  const { data: erpAlerts } = useQuery<{ alerts: Array<{ id: string; erpType: string; consecutiveFailureCount: number; lastError: string | null }> }>({
+    queryKey: ['erp-failure-alerts'],
+    queryFn: () => api.get('/erp-integrations/failure-alert'),
+    staleTime: 60_000,
+  });
+
   // Derive all sub-data from the unified response
   const mfaStatus = dashData?.mfaStatus ? { data: dashData.mfaStatus } : undefined;
   const isOwner = dashData?.team?.isOwner === true;
@@ -537,6 +543,22 @@ export function DashboardPage() {
 
   return (
     <Layout>
+
+      {/* Phase 134: ERP sync failure alert banner — shows when 2+ consecutive failures */}
+      {erpAlerts && erpAlerts.alerts && erpAlerts.alerts.length > 0 && (
+        <div className="mb-4 flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>
+              ERP sync is failing: {erpAlerts.alerts.map(a => a.erpType.replace('sage300', 'Sage 300').replace('vista', 'Vista').replace('procore', 'Procore')).join(', ')}.
+              {' '}Check your import directory configuration.
+            </span>
+          </div>
+          <Link to="/integrations" className="inline-flex min-h-11 items-center font-medium underline underline-offset-4 whitespace-nowrap">
+            View Integrations
+          </Link>
+        </div>
+      )}
 
       {/* MFA enrollment nag banner — owners only, dismissible, advisory only */}
       {isOwner && mfaStatus?.data?.enabled === false && !bannerDismissed && (

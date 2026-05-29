@@ -175,6 +175,9 @@ export const workers = sqliteTable('workers', {
   apprenticeshipProgramName: text('apprenticeship_program_name'),
   rapidsNumber: text('rapids_number'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  // Phase 127: ERP integration dedup columns
+  erpExternalId: text('erp_external_id'),
+  erpSource: text('erp_source'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

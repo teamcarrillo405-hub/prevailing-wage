@@ -30,16 +30,29 @@ export interface ConnectionRow {
 }
 
 /**
- * Phase 126 stub dispatch — Phase 127+ replaces this with real adapter calls.
- * Returns a zero-row, zero-error SyncResult so the orchestrator scaffolding
- * is testable end-to-end without ERP-specific logic.
+ * Phase 127: Real adapter dispatch — routes to Procore, Sage300, or Vista adapter.
+ * Runs pullWorkers + pullTimesheets sequentially (SQLite single-writer constraint).
  */
-async function dispatchNoop(connection: ConnectionRow): Promise<SyncResult> {
-  logger.info(
-    { erpType: connection.erpType, connectionId: connection.id },
-    'erp-sync: stub dispatch (Phase 126)'
-  );
-  return { recordsSynced: 0, errors: [] };
+async function dispatch(connection: ConnectionRow): Promise<SyncResult> {
+  const { ProcoreAdapter } = await import('./procoreAdapter.js');
+  const { Sage300Adapter } = await import('./sage300Adapter.js');
+  const { VistaAdapter } = await import('./vistaAdapter.js');
+
+  const adapter =
+    connection.erpType === 'procore'
+      ? new ProcoreAdapter()
+      : connection.erpType === 'sage300'
+        ? new Sage300Adapter()
+        : new VistaAdapter();
+
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days back
+  const workerResult = await adapter.pullWorkers(connection.id);
+  const timesheetResult = await adapter.pullTimesheets(connection.id, since);
+
+  return {
+    recordsSynced: workerResult.recordsSynced + timesheetResult.recordsSynced,
+    errors: [...workerResult.errors, ...timesheetResult.errors],
+  };
 }
 
 export async function runSyncForConnection(
@@ -68,8 +81,8 @@ export async function runSyncForConnection(
     .where(eq(integrationConnections.id, connection.id));
 
   try {
-    // 3. Dispatch (stub in Phase 126; real adapter in Phase 127+)
-    const result = await dispatchNoop(connection);
+    // 3. Dispatch to real adapter (Phase 127+)
+    const result = await dispatch(connection);
     const completedAt = new Date().toISOString();
 
     // 4. Update sync_runs with completion
