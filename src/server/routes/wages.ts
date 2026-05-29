@@ -292,6 +292,33 @@ wagesRouter.post('/manual', (req, res) => {
   });
 });
 
+// GET /api/wages/local-ordinances?state=CA
+// Returns local wage ordinance metadata for a state (table created in migration 0075).
+// Used to surface county/municipal wage law overrides in the UI.
+wagesRouter.get('/local-ordinances', async (req, res) => {
+  const state = typeof req.query['state'] === 'string' ? req.query['state'].toUpperCase() : null;
+  const { getDb } = await import('../db/index.js');
+  const { localWageOrdinances } = await import('../db/schema.js');
+  const { eq } = await import('drizzle-orm');
+  const db = getDb();
+
+  const rows = state
+    ? db.select().from(localWageOrdinances).where(eq(localWageOrdinances.state, state)).all()
+    : db.select().from(localWageOrdinances).all();
+
+  res.json({ data: rows });
+});
+
+// GET /api/wages/state-sources
+// Returns sync status and metadata for all state wage sources (CA, NY, WA, etc.)
+wagesRouter.get('/state-sources', async (_req, res) => {
+  const { getDb } = await import('../db/index.js');
+  const { stateWageSources } = await import('../db/schema.js');
+  const db = getDb();
+  const rows = db.select().from(stateWageSources).all();
+  res.json({ data: rows });
+});
+
 // POST /api/wages/sync
 // Triggers runWageSync() asynchronously — returns 202 immediately.
 // Never await the sync in the request handler.

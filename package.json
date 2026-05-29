@@ -17,6 +17,9 @@
     "qa:deployment": "tsx scripts/deployment-qa-smoke.mts",
     "generate-secrets": "node scripts/generate-secrets.js",
     "demo:seed": "tsx scripts/seed-demo.mts",
+    "seed:ny-rates": "tsx scripts/seed-ny-rates.mts",
+    "seed:wa-rates": "tsx scripts/seed-wa-rates.mts",
+    "seed:ca-rates": "tsx scripts/seed-ca-rates.mts",
     "wh347:build": "tsx scripts/build-wh347-template.mts",
     "wh347:calibrate": "tsx scripts/calibrate/server.mts"
   },

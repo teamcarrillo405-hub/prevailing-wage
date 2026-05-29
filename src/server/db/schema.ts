@@ -940,3 +940,18 @@ export const stateWageSources = sqliteTable('state_wage_sources', {
   lastSyncedAt: text('last_synced_at'),
   syncStatus: text('sync_status').notNull().default('pending').$type<'ok' | 'error' | 'pending'>(),
 });
+
+// Phase 135 gap-wire — local_wage_ordinances was created in migration 0075 but not exported
+export const localWageOrdinances = sqliteTable('local_wage_ordinances', {
+  id: text('id').primaryKey(),
+  state: text('state').notNull(),
+  localityName: text('locality_name').notNull(),
+  jurisdictionType: text('jurisdiction_type').notNull().$type<'county' | 'local'>(),
+  administeringAgency: text('administering_agency').notNull(),
+  effectiveDate: text('effective_date').notNull(),
+  expirationDate: text('expiration_date'),
+  sourceUrl: text('source_url'),
+  notes: text('notes'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
