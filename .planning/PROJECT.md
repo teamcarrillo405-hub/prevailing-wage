@@ -20,6 +20,10 @@ A contractor can run a full project end-to-end — create project → add worker
 
 **Delivered:** IErpAdapter interface + encrypted credential vault; ProcoreAdapter with OAuth2 PKCE worker sync + rate-limit-aware timesheet pull; Sage300Adapter and VistaAdapter with file-based CSV import; FileErpCard UI for directory config + manual sync; Integration Dashboard sync history table + ERP failure alert banner on DashboardPage. All three ERP adapters dedup workers by erp_external_id (not name); SSN excluded from all outbound payloads. See `.planning/milestones/v9.0-ROADMAP.md`.
 
+## Current Milestone: v10.0 — Complete State + County + Local Coverage ✅ SHIPPED 2026-05-28
+
+**Delivered:** county_wage_determinations + state_wage_sources tables (migration 0091); resolveCountyRate() 4-tier cascade (city→county→federal-county→federal-state); county datalist across 20 states; GET /api/projects/:id/county-rate route; STATE_COMPLIANCE_RULES 16-state dispatch table replacing ad-hoc if-blocks; 12-test dispatch suite (1305 total passing); UsComplianceMap 3-tier visual (27 state CPR / 23 federal WH-347); verified 50-state coverage. See `.planning/milestones/v10.0-ROADMAP.md`.
+
 ## Previous Milestone: v9.5 — Launch Readiness + Compliance Accuracy ✅ SHIPPED 2026-05-28
 
 **Delivered:** Phases 151-170 complete — compliance accuracy hardening, launch gate smoke tests, brand token audit, landing page assets, terms acceptance, onboarding improvements, agency portal, supervisor approval workflow, Sub/DBE reporting, SCA support, QuickBooks write-back, AVERO rebranding. See `.planning/milestones/v9.5-ROADMAP.md`.
@@ -211,4 +215,4 @@ _(empty — v3.0 shipped; start `/gsd:new-milestone` to define v4.0 requirements
 | Agency auto-submit deferred (no public CA DIR / WA L&I API) | Research confirmed no public machine-to-machine API as of 2026-03; replaced with "Mark as Submitted" tracking | ✓ Good — v3.0 |
 
 ---
-*Last updated: 2026-04-01 — v3.0 milestone complete (Team & Integration — 6 phases, 17 plans shipped)*
+*Last updated: 2026-05-28 — v10.0 milestone complete (Complete State + County + Local Coverage — 16 phases shipped)*
