@@ -3308,22 +3308,22 @@ AL, AR, AZ, GA, IA, ID, IN, KS, LA, MS, NC, ND, NE, NH, OK, SC, SD, TN, UT, VT, 
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 135. State Coverage Infrastructure | v10.0 | 0/TBD | Not started | - |
-| 136. Pacific West — AK, HI, OR, NV | v10.0 | 0/TBD | Not started | - |
-| 137. Mountain/Southwest — CO, MT, NM | v10.0 | 0/TBD | Not started | - |
-| 138. New England — CT, ME, RI | v10.0 | 0/TBD | Not started | - |
-| 139. Mid-Atlantic — DC, DE, MD, WV | v10.0 | 0/TBD | Not started | - |
-| 140. Great Lakes — MI, OH, WI | v10.0 | 0/TBD | Not started | - |
-| 141. Appalachian/Border — KY, MO, PA | v10.0 | 0/TBD | Not started | - |
-| 142. California County Wage System | v10.0 | 0/TBD | Not started | - |
-| 143. New York County Wage System | v10.0 | 0/TBD | Not started | - |
-| 144. Illinois County + Chicago Municipal | v10.0 | 0/TBD | Not started | - |
-| 145. Washington County Wage System | v10.0 | 0/TBD | Not started | - |
-| 146. Multi-State County Systems | v10.0 | 0/TBD | Not started | - |
-| 147. Municipal/Local Rate Layer | v10.0 | 0/TBD | Not started | - |
-| 148. State Compliance Engine Expansion | v10.0 | 0/TBD | Not started | - |
-| 149. Complete State + County Test Suite | v10.0 | 0/TBD | Not started | - |
-| 150. 50-State Coverage Dashboard + Guidance | v10.0 | 0/TBD | Not started | - |
+| 135. State Coverage Infrastructure | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 136. Pacific West — AK, HI, OR, NV | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 137. Mountain/Southwest — CO, MT, NM | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 138. New England — CT, ME, RI | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 139. Mid-Atlantic — DC, DE, MD, WV | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 140. Great Lakes — MI, OH, WI | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 141. Appalachian/Border — KY, MO, PA | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 142. California County Wage System | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 143. New York County Wage System | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 144. Illinois County + Chicago Municipal | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 145. Washington County Wage System | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 146. Multi-State County Systems | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 147. Municipal/Local Rate Layer | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 148. State Compliance Engine Expansion | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 149. Complete State + County Test Suite | v10.0 | 1/1 | Complete | 2026-05-28 |
+| 150. 50-State Coverage Dashboard + Guidance | v10.0 | 1/1 | Complete | 2026-05-28 |
 
 ---
 
