@@ -3,34 +3,17 @@ import { randomBytes, randomUUID } from 'crypto';
 import { and, eq, isNull, gt } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { teamInvites, projectMembers, users } from '../db/schema.js';
-
-// Resend SDK — lazy init, null if no API key
-let resendInstance: any = null;
-async function getResend() {
-  if (!process.env.RESEND_API_KEY) return null;
-  if (!resendInstance) {
-    const { Resend } = await import('resend');
-    resendInstance = new Resend(process.env.RESEND_API_KEY);
-  }
-  return resendInstance;
-}
-
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'team@hccprevailingwage.com';
+import { sendEmail } from './emailService.js';
 
 export async function sendInviteEmail(to: string, inviteUrl: string): Promise<void> {
-  const resend = await getResend();
-  if (!resend) {
-    logger.info(`[invite] RESEND_API_KEY not set. Invite URL: ${inviteUrl}`);
-    return;
-  }
-  const { error } = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: [to],
-    subject: 'You have been invited to join HCC Prevailing Wage',
-    html: `<p>You've been invited to join a team on HCC Prevailing Wage.</p><p>Click the link below to create your account:</p><p><a href="${inviteUrl}">${inviteUrl}</a></p><p>This link expires in 72 hours.</p>`,
-  });
-  if (error) {
-    logger.error({ err: error }, '[invite] Resend error:');
+  try {
+    await sendEmail(
+      to,
+      'You have been invited to join AVERO Prevailing Wage',
+      `<p>You've been invited to join a team on AVERO Prevailing Wage.</p><p>Click the link below to create your account:</p><p><a href="${inviteUrl}">${inviteUrl}</a></p><p>This link expires in 72 hours.</p>`,
+    );
+  } catch (err) {
+    logger.error({ err: err }, '[invite] email send failed:');
     // Non-fatal per D-02 — invite row is created; email failure doesn't block
   }
 }

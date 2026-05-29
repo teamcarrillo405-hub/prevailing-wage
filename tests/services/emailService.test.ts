@@ -449,7 +449,7 @@ describe('sendEmail', () => {
 
     expect(mockSend).toHaveBeenCalledTimes(1);
     const args = mockSend.mock.calls[0][0];
-    expect(args.to).toBe('recipient@example.com');
+    expect(args.to).toEqual(['recipient@example.com']);
     expect(args.subject).toBe('Hello World');
     expect(args.html).toBe('<p>Body</p>');
     delete process.env.RESEND_API_KEY;

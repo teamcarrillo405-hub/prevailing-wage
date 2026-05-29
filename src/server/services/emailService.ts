@@ -3,6 +3,7 @@ import { logger } from '../logger.js';
 // All email notifications for Phase 46+. Mirrors inviteService.ts lazy-init pattern exactly.
 // All send functions are non-fatal per NFR-02: catch errors, log, never rethrow.
 // Phase 151-03 additions: sendEmail() and sendSupportForward() for welcome/contact/violation wiring.
+// Transport priority: SMTP (Google Workspace) → Resend → silent skip.
 
 import { eq, isNull, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
@@ -27,7 +28,34 @@ const DEFAULT_SETTINGS: NotifSettings = {
   notifySubmission: true,
 };
 
-// ── Resend lazy-init — mirrors inviteService.ts exactly ─────────────────────
+// ── From address — env var with AVERO default ──────────────────────────────
+const FROM_EMAIL = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? process.env.RESEND_FROM_EMAIL ?? 'notifications@averopw.com';
+const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+
+// ── SMTP transport (Google Workspace / any SMTP) ───────────────────────────
+// Activated when SMTP_HOST + SMTP_USER + SMTP_PASS are all set.
+
+import nodemailer from 'nodemailer';
+
+let _smtpTransport: nodemailer.Transporter | null = null;
+
+function getSmtpTransport(): nodemailer.Transporter | null {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return null;
+  if (!_smtpTransport) {
+    _smtpTransport = nodemailer.createTransport({
+      host,
+      port: parseInt(process.env.SMTP_PORT ?? '587', 10),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: { user, pass },
+    });
+  }
+  return _smtpTransport;
+}
+
+// ── Resend lazy-init — fallback when SMTP not configured ───────────────────
 
 let resendInstance: any = null;
 async function getResend() {
@@ -39,8 +67,33 @@ async function getResend() {
   return resendInstance;
 }
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'notifications@hccprevailingwage.com';
-const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+// ── Unified send — SMTP → Resend → skip ───────────────────────────────────
+
+async function sendTransactional(
+  to: string | string[],
+  subject: string,
+  html: string,
+): Promise<void> {
+  const recipients = Array.isArray(to) ? to : [to];
+
+  // 1. Try SMTP (Google Workspace or any SMTP server)
+  const smtp = getSmtpTransport();
+  if (smtp) {
+    await smtp.sendMail({ from: FROM_EMAIL, to: recipients.join(', '), subject, html });
+    return;
+  }
+
+  // 2. Try Resend
+  const resend = await getResend();
+  if (resend) {
+    const { error } = await resend.emails.send({ from: FROM_EMAIL, to: recipients, subject, html });
+    if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
+    return;
+  }
+
+  // 3. No transport configured — log and skip (non-fatal)
+  logger.info('[email] no transport configured (set SMTP_HOST/SMTP_USER/SMTP_PASS or RESEND_API_KEY) — skipping');
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -115,11 +168,10 @@ export async function sendViolationEmail(
       )
       .join('');
 
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: recipients,
-      subject: `Compliance violation detected — ${projectName} (Week ending ${weekEndingDate})`,
-      html: `
+    await sendTransactional(
+      recipients,
+      `Compliance violation detected — ${projectName} (Week ending ${weekEndingDate})`,
+      `
         <p>A compliance check on <strong>${projectName}</strong> for the week ending <strong>${weekEndingDate}</strong> detected <strong>${allViolationCount} violation(s)</strong>.</p>
         ${violations.length > 0 ? `<p>Entry violations:</p><ul>${violationRows}</ul>` : ''}
         ${weekViolations.length > 0 ? `<p>Week-level violations:</p><ul>${weekViolationRows}</ul>` : ''}
@@ -127,10 +179,7 @@ export async function sendViolationEmail(
         <p><a href="${weekUrl}">Review payroll week</a></p>
         <p style="color:#888;font-size:12px">You are receiving this because you are a member of this project. Manage notification preferences in the project settings.</p>
       `,
-    });
-    if (error) {
-      logger.error({ err: error }, '[email] violation notification Resend error:');
-    }
+    );
   } catch (err) {
     logger.error({ err: err }, '[email] violation notification failed:');
     // Non-fatal per NFR-02 — never rethrow
@@ -150,27 +199,16 @@ export async function sendDueSoonEmail(
   dueSoonDays: number,
 ): Promise<void> {
   try {
-    const resend = await getResend();
-    if (!resend) {
-      logger.info('[email] RESEND_API_KEY not set — skipping due-soon notification');
-      return;
-    }
-
     const projectUrl = `${APP_URL}/projects/${projectId}`;
-
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [ownerEmail],
-      subject: `Payroll due soon — ${projectName} (Week ending ${weekEndingDate})`,
-      html: `
+    await sendTransactional(
+      ownerEmail,
+      `Payroll due soon — ${projectName} (Week ending ${weekEndingDate})`,
+      `
         <p>The payroll week ending <strong>${weekEndingDate}</strong> for project <strong>${projectName}</strong> is due in <strong>${daysUntilDue} day(s)</strong> and has not yet been submitted.</p>
         <p><a href="${projectUrl}">Go to project</a></p>
         <p style="color:#888;font-size:12px">You configured a ${dueSoonDays}-day reminder in project settings.</p>
       `,
-    });
-    if (error) {
-      logger.error({ err: error }, '[email] due-soon notification Resend error:');
-    }
+    );
   } catch (err) {
     logger.error({ err: err }, '[email] due-soon notification failed:');
   }
@@ -186,39 +224,27 @@ export async function sendActivityEmail(
   activityDescription: string,
 ): Promise<void> {
   try {
-    const resend = await getResend();
-    if (!resend) {
-      logger.info('[email] RESEND_API_KEY not set — skipping activity notification');
-      return;
-    }
-
     const members = await getProjectMemberRows(projectId);
     const ownerRow = members.find((m: { userId: string; role: string; email: string }) => m.role === 'owner');
 
     // NOTIF-03: skip if the acting user IS the owner (no self-notification)
     if (ownerRow?.userId === actingUserId) return;
-
     if (!ownerRow?.email) return;
 
     const settings = await getProjectSettings(projectId);
     if (!settings.notifyActivity) return;
 
     const projectUrl = `${APP_URL}/projects/${projectId}`;
-
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [ownerRow.email],
-      subject: `Team activity on ${projectName}`,
-      html: `
+    await sendTransactional(
+      ownerRow.email,
+      `Team activity on ${projectName}`,
+      `
         <p>A team member (<strong>${actingUserEmail}</strong>) has made a change to <strong>${projectName}</strong>:</p>
         <p>${activityDescription}</p>
         <p><a href="${projectUrl}">View project</a></p>
         <p style="color:#888;font-size:12px">You are receiving this as the project owner.</p>
       `,
-    });
-    if (error) {
-      logger.error({ err: error }, '[email] activity notification Resend error:');
-    }
+    );
   } catch (err) {
     logger.error({ err: err }, '[email] activity notification failed:');
   }
@@ -234,23 +260,16 @@ export async function sendSubUploadRequestEmail(opts: {
   uploadUrl: string;
 }): Promise<void> {
   try {
-    const resend = await getResend();
-    if (!resend) {
-      logger.info('[email] RESEND_API_KEY not set — skipping sub upload request');
-      return;
-    }
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [opts.toEmail],
-      subject: `Upload your certified payroll — ${opts.projectName} week ending ${opts.weekEndingDate}`,
-      html: `
+    await sendTransactional(
+      opts.toEmail,
+      `Upload your certified payroll — ${opts.projectName} week ending ${opts.weekEndingDate}`,
+      `
         <p>Hi ${opts.subName} team,</p>
         <p>Please upload your certified payroll report for the week ending <strong>${opts.weekEndingDate}</strong> on <strong>${opts.projectName}</strong>.</p>
         <p><a href="${opts.uploadUrl}" style="background:#b8860b;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;">Upload Certified Payroll</a></p>
         <p>This link expires in 7 days.</p>
       `,
-    });
-    if (error) logger.error({ err: error }, '[email] sendSubUploadRequestEmail Resend error:');
+    );
   } catch (err) {
     logger.error({ err: err }, '[email] sendSubUploadRequestEmail failed:');
   }
@@ -265,25 +284,18 @@ export async function sendSubCprReceivedEmail(opts: {
   weekEndingDate: string;
 }): Promise<void> {
   try {
-    const resend = await getResend();
-    if (!resend) {
-      logger.info('[email] RESEND_API_KEY not set — skipping sub CPR received notification');
-      return;
-    }
     const memberRows = await getProjectMemberRows(opts.projectId);
     const owners = memberRows.filter((r: { userId: string; role: string; email: string }) => r.role === 'owner' && r.email);
     for (const owner of owners) {
       try {
-        const { error } = await resend.emails.send({
-          from: FROM_EMAIL,
-          to: owner.email!,
-          subject: `CPR received — ${opts.subName} week ending ${opts.weekEndingDate}`,
-          html: `
+        await sendTransactional(
+          owner.email!,
+          `CPR received — ${opts.subName} week ending ${opts.weekEndingDate}`,
+          `
             <p><strong>${opts.subName}</strong> uploaded their certified payroll for the week ending <strong>${opts.weekEndingDate}</strong> on <strong>${opts.projectName}</strong>.</p>
             <p><a href="${APP_URL}/projects/${opts.projectId}">Review in dashboard →</a></p>
           `,
-        });
-        if (error) logger.error({ err: error }, '[email] sendSubCprReceivedEmail Resend error:');
+        );
       } catch (err) {
         logger.error({ err: err }, '[email] sendSubCprReceivedEmail failed:');
       }
@@ -303,20 +315,11 @@ export async function sendWdChangedEmail(opts: {
   newRevision: number;
 }): Promise<void> {
   try {
-    const resend = await getResend();
-    if (!resend) {
-      logger.info('[email] RESEND_API_KEY not set — skipping WD change notification');
-      return;
-    }
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [opts.toEmail],
-      subject: `Wage determination updated: ${opts.wdNumber}`,
-      html: `<p>The wage determination <strong>${opts.wdNumber}</strong> for project <strong>${opts.projectName}</strong> has been updated from revision ${opts.oldRevision} to revision ${opts.newRevision}.</p><p>Please review your payroll entries for compliance.</p>`,
-    });
-    if (error) {
-      logger.error({ err: error }, '[email] sendWdChangedEmail Resend error:');
-    }
+    await sendTransactional(
+      opts.toEmail,
+      `Wage determination updated: ${opts.wdNumber}`,
+      `<p>The wage determination <strong>${opts.wdNumber}</strong> for project <strong>${opts.projectName}</strong> has been updated from revision ${opts.oldRevision} to revision ${opts.newRevision}.</p><p>Please review your payroll entries for compliance.</p>`,
+    );
   } catch (err) {
     logger.error({ err: err }, '[email] sendWdChangedEmail failed:');
   }
@@ -332,43 +335,26 @@ export async function sendViolationAlertEmail(opts: {
   violationSummary: string;
 }): Promise<void> {
   try {
-    const resend = await getResend();
-    if (!resend) {
-      logger.info('[email] RESEND_API_KEY not set — skipping violation alert');
-      return;
-    }
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [opts.toEmail],
-      subject: `Payroll violation detected: ${opts.projectName} (week ending ${opts.weekEndingDate})`,
-      html: `<p>A payroll compliance violation was detected for project <strong>${opts.projectName}</strong>, week ending <strong>${opts.weekEndingDate}</strong>.</p><p><strong>Summary:</strong> ${opts.violationSummary}</p><p>Please review and correct the payroll entries.</p>`,
-    });
-    if (error) {
-      logger.error({ err: error }, '[email] sendViolationAlertEmail Resend error:');
-    }
+    await sendTransactional(
+      opts.toEmail,
+      `Payroll violation detected: ${opts.projectName} (week ending ${opts.weekEndingDate})`,
+      `<p>A payroll compliance violation was detected for project <strong>${opts.projectName}</strong>, week ending <strong>${opts.weekEndingDate}</strong>.</p><p><strong>Summary:</strong> ${opts.violationSummary}</p><p>Please review and correct the payroll entries.</p>`,
+    );
   } catch (err) {
     logger.error({ err: err }, '[email] sendViolationAlertEmail failed:');
-    // Non-fatal per NFR-02 — never rethrow
   }
 }
 
 // ── Generic sendEmail() — used by welcome, contact forward, and violation alert ──
-// Graceful no-op when RESEND_API_KEY is absent (never throws per NFR-02).
+// Routes through sendTransactional (SMTP → Resend → skip). Never throws per NFR-02.
 
-const FROM_ADDRESS = process.env.EMAIL_FROM ?? 'noreply@hccprevailingwage.com';
-const SUPPORT_ADDRESS = process.env.EMAIL_SUPPORT ?? 'support@hccprevailingwage.com';
+const SUPPORT_ADDRESS = process.env.EMAIL_SUPPORT ?? 'support@averopw.com';
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const resend = await getResend();
-  if (!resend) {
-    console.warn('[emailService] RESEND_API_KEY not set — emails suppressed');
-    return; // graceful no-op
-  }
   try {
-    await resend.emails.send({ from: FROM_ADDRESS, to, subject, html });
+    await sendTransactional(to, subject, html);
   } catch (err) {
     console.error('[emailService] send failed:', err);
-    // non-blocking — never throw
   }
 }
 
@@ -387,26 +373,15 @@ export async function sendSubmissionConfirmationEmail(
   projectId: string,
 ): Promise<void> {
   try {
-    const resend = await getResend();
-    if (!resend) {
-      logger.info('[email] RESEND_API_KEY not set — skipping submission confirmation');
-      return;
-    }
-
     const projectUrl = `${APP_URL}/projects/${projectId}`;
-
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [toEmail],
-      subject: `Submission confirmed — ${agencyName} — ${projectName} (Week ending ${weekEndingDate})`,
-      html: `
+    await sendTransactional(
+      toEmail,
+      `Submission confirmed — ${agencyName} — ${projectName} (Week ending ${weekEndingDate})`,
+      `
         <p>The payroll week ending <strong>${weekEndingDate}</strong> for <strong>${projectName}</strong> has been marked as submitted to <strong>${agencyName}</strong>.</p>
         <p><a href="${projectUrl}">View project</a></p>
       `,
-    });
-    if (error) {
-      logger.error({ err: error }, '[email] submission confirmation Resend error:');
-    }
+    );
   } catch (err) {
     logger.error({ err: err }, '[email] submission confirmation failed:');
   }
