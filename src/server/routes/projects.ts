@@ -9,6 +9,7 @@ import { validate } from '../middleware/validate.js';
 import { assertProjectAccess, assertProjectReviewAccess, assertProjectWriteAccess } from '../utils/assertProjectAccess.js';
 import type { Project } from '../utils/assertProjectAccess.js';
 import { getLimits, type PlanTier } from '../utils/planLimits.js';
+import { resolveCountyRate } from '../services/wdolSync.js';
 
 const router = Router();
 
@@ -355,6 +356,48 @@ router.post('/:id/review', validate(ReviewProjectSchema), async (req, res) => {
     .where(eq(projects.id, projectId));
 
   res.json({ data: { reviewState } });
+});
+
+// GET /api/projects/:id/county-rate?trade=ELEC[&city=NYC]
+// Resolves the best available prevailing wage rate for the project's state+county.
+// Optional ?city= param triggers city-specific (municipal) Tier 0 lookup first.
+router.get('/:id/county-rate', async (req, res) => {
+  const userId = req.user!.userId;
+  const projectId = String(req.params.id);
+  const tradeCode = String(req.query.trade ?? '');
+  const city = req.query.city ? String(req.query.city) : undefined;
+
+  if (!tradeCode) {
+    res.status(400).json({ error: 'trade query parameter is required' });
+    return;
+  }
+
+  const db = getDb();
+  try {
+    await assertProjectAccess(db, projectId, userId);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: err.message ?? 'Internal server error' });
+    return;
+  }
+
+  const [project] = await db
+    .select({ state: projects.state, county: projects.county })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+
+  if (!project.state || !project.county) {
+    res.json({ data: null });
+    return;
+  }
+
+  const rate = resolveCountyRate(project.state, project.county, tradeCode, city);
+  res.json({ data: rate });
 });
 
 export default router;

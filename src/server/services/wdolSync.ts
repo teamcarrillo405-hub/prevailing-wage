@@ -4065,8 +4065,26 @@ export function resolveCountyRate(
   state: string,
   county: string,
   tradeCode: string,
-): { baseRate: number; fringeRate: number; source: 'county-dol' | 'federal-county' | 'federal-state' } | null {
+  city?: string,
+): { baseRate: number; fringeRate: number; source: 'city-dol' | 'county-dol' | 'federal-county' | 'federal-state' } | null {
   const db = getDb();
+
+  // Tier 0: city-specific municipal rate (NYC DDC, Chicago DOT, Seattle, Boston, etc.)
+  if (city) {
+    const cityRate = db
+      .select({ baseRate: countyWageDeterminations.baseRate, fringeRate: countyWageDeterminations.fringeRate })
+      .from(countyWageDeterminations)
+      .where(
+        and(
+          eq(countyWageDeterminations.state, state.toUpperCase()),
+          eq(countyWageDeterminations.county, county),
+          eq(countyWageDeterminations.city, city),
+          eq(countyWageDeterminations.tradeCode, tradeCode),
+        ),
+      )
+      .get();
+    if (cityRate) return { ...cityRate, source: 'city-dol' };
+  }
 
   // Tier 1: state DOL county-specific rate
   const countyRate = db
