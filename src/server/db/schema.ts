@@ -22,6 +22,11 @@ export const users = sqliteTable('users', {
   // Incremented when the user invokes "Revoke all sessions". JWTs carry an `sv`
   // claim; mismatched JWTs are rejected by the auth middleware. Default 0.
   sessionVersion: integer('session_version').notNull().default(0),
+  // ── Terms acceptance tracking ────────────────────────────────────────────
+  // ISO 8601 timestamp recorded at account creation when the user accepts the
+  // Terms of Service and Privacy Policy. Null for accounts created before this
+  // column was added (pre-migration rows).
+  termsAcceptedAt: text('terms_accepted_at'),
 });
 
 export const onboardingProfiles = sqliteTable('onboarding_profiles', {

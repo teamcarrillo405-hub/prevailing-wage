@@ -60,6 +60,7 @@ const RegisterSchema = z.object({
   inviteCode: z.string().optional(),
   hccMembershipNumber: z.string().trim().min(3).max(64).optional(),
   companyName: z.string().trim().min(2).max(160).optional(),
+  acceptedTerms: z.boolean().optional(),
 });
 
 const LoginSchema = z.object({
@@ -97,6 +98,7 @@ authRouter.post('/register', registerLimiter, validate(RegisterSchema), async (r
     companyName: companyName || null,
     createdAt: now,
     updatedAt: now,
+    termsAcceptedAt: now,
   });
 
   // sessionVersion defaults to 0 on insert

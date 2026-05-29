@@ -99,6 +99,12 @@ const AgencyReviewPage = React.lazy(() =>
 const SettingsPage = React.lazy(() =>
   import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage }))
 );
+const TermsPage = React.lazy(() =>
+  import('./pages/TermsPage').then(m => ({ default: m.TermsPage }))
+);
+const PrivacyPage = React.lazy(() =>
+  import('./pages/PrivacyPage').then(m => ({ default: m.PrivacyPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -222,6 +228,8 @@ export default function App() {
               <Route path="/testimonials" element={<TestimonialsPage />} />
               <Route path="/reviews" element={<TestimonialsPage />} />
               <Route path="/methodology" element={<PublicComplianceMethodologyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
 
               {/* Public accept-invite route — no auth wrapper per D-09 */}
               <Route path="/accept-invite" element={<AcceptInvitePage />} />

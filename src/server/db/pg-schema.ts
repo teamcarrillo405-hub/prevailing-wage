@@ -16,6 +16,7 @@ export const users = pgTable('users', {
   totpEnabled: integer('totp_enabled').default(0),
   totpBackupCodes: text('totp_backup_codes'),
   sessionVersion: integer('session_version').notNull().default(0),
+  termsAcceptedAt: text('terms_accepted_at'),
 });
 
 export const onboardingProfiles = pgTable('onboarding_profiles', {
