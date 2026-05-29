@@ -58,7 +58,7 @@ abstract class ManualImportStateAdapter implements WageAdapter {
 
   async fetchDetermination(state: string, county: string): Promise<WageDetermination | null> {
     const db = getDb();
-    const row = db
+    const [row] = await db
       .select()
       .from(wageDeterminations)
       .where(
@@ -70,12 +70,11 @@ abstract class ManualImportStateAdapter implements WageAdapter {
         )
       )
       .orderBy(desc(wageDeterminations.publishDate))
-      .limit(1)
-      .get() as typeof wageDeterminations.$inferSelect | undefined;
+      .limit(1);
 
     if (!row) return null;
 
-    const classifications = getCachedClassifications(row.id);
+    const classifications = await getCachedClassifications(row.id);
     return {
       id: row.id,
       source: this.source,

@@ -61,7 +61,7 @@ export class FederalWdolAdapter implements WageAdapter {
     const cacheExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const wdId = crypto.randomUUID();
 
-    const actualId = upsertWageDetermination({
+    const actualId = await upsertWageDetermination({
       id: wdId,
       source: 'federal-dol',
       wdNumber: response.fullReferenceNumber,
@@ -78,7 +78,7 @@ export class FederalWdolAdapter implements WageAdapter {
     });
 
     const classifications = response.document ? parseWdDocument(response.document) : [];
-    upsertClassifications(actualId, classifications);
+    await upsertClassifications(actualId, classifications);
 
     return {
       id: actualId,
@@ -126,16 +126,15 @@ export async function fetchAndCacheByWdNumber(wdNumber: string): Promise<WageDet
   const now = new Date().toISOString();
 
   // Cache hit: return if unexpired
-  const cached = db
+  const [cached] = await db
     .select()
     .from(wageDeterminations)
     .where(eq(wageDeterminations.wdNumber, wdNumber))
     .orderBy(desc(wageDeterminations.revisionNumber))
-    .limit(1)
-    .get() as typeof wageDeterminations.$inferSelect | undefined;
+    .limit(1);
 
   if (cached && cached.cacheExpiresAt > now) {
-    const classifications = getCachedClassifications(cached.id);
+    const classifications = await getCachedClassifications(cached.id);
     return {
       ...cached,
       county: cached.county ?? null,
@@ -168,7 +167,7 @@ export async function fetchAndCacheByWdNumber(wdNumber: string): Promise<WageDet
   // Extract state from WD number prefix (e.g. "CA20250001" → "CA") — more reliable than location.description.
   const stateCode = /^([A-Z]{2})\d/.exec(response.fullReferenceNumber)?.[1] ?? 'XX';
 
-  const actualId = upsertWageDetermination({
+  const actualId = await upsertWageDetermination({
     id: wdId,
     source: 'federal-dol',
     wdNumber: response.fullReferenceNumber,
@@ -186,7 +185,7 @@ export async function fetchAndCacheByWdNumber(wdNumber: string): Promise<WageDet
   });
 
   const classifications = response.document ? parseWdDocument(response.document) : [];
-  upsertClassifications(actualId, classifications);
+  await upsertClassifications(actualId, classifications);
 
   return {
     id: actualId,
@@ -222,9 +221,9 @@ export async function lookupWageDetermination(
   county: string
 ): Promise<WageDetermination | null> {
   // 1. Check cache first
-  const cached = getCachedWd(state, county);
+  const cached = await getCachedWd(state, county);
   if (cached) {
-    const classifications = getCachedClassifications(cached.id);
+    const classifications = await getCachedClassifications(cached.id);
     return {
       ...cached,
       county: cached.county ?? null,

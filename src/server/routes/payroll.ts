@@ -229,7 +229,8 @@ router.post('/weeks', validate(CreateWeekSchema), async (req, res) => {
     if (
       err?.message?.includes('UNIQUE constraint failed') ||
       err?.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
-      err?.code === 'SQLITE_CONSTRAINT'
+      err?.code === 'SQLITE_CONSTRAINT' ||
+      err?.code === '23505'
     ) {
       res.status(409).json({
         error: 'DUPLICATE_PAYROLL_NUMBER',
@@ -907,11 +908,10 @@ router.get('/due-soon', async (req, res) => {
   const { payrollWeeks: pw, projectMembers } = await import('../db/schema.js');
   const { sql: sq } = await import('drizzle-orm');
 
-  const memberships = db
+  const memberships = await db
     .select({ projectId: projectMembers.projectId })
     .from(projectMembers)
-    .where(eq(projectMembers.userId, userId))
-    .all();
+    .where(eq(projectMembers.userId, userId));
 
   if (memberships.length === 0) return res.json([]);
 
@@ -921,7 +921,7 @@ router.get('/due-soon', async (req, res) => {
 
   const idList = sq.join(projectIds.map((id: string) => sq`${id}`), sq`, `);
 
-  const rows = db
+  const rows = await db
     .select({
       weekId: pw.id,
       projectId: pw.projectId,
@@ -932,8 +932,7 @@ router.get('/due-soon', async (req, res) => {
     .from(pw)
     .innerJoin(projects, eq(pw.projectId, projects.id))
     .where(sq`${pw.submittedAt} IS NULL AND ${pw.projectId} IN (${idList}) AND ${pw.weekEndingDate} <= ${windowEnd}`)
-    .orderBy(pw.weekEndingDate)
-    .all();
+    .orderBy(pw.weekEndingDate);
 
   const result = rows.map((r: typeof rows[number]) => ({
     weekId: r.weekId,

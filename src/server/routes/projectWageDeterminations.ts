@@ -32,38 +32,37 @@ const PinBodySchema = z.object({
   constructionType: z.enum(['Building', 'Heavy', 'Highway', 'Residential']).nullable().optional(),
 });
 
-function lockProjectToWd(projectId: string, wageDeterminationId: string): void {
+async function lockProjectToWd(projectId: string, wageDeterminationId: string): Promise<void> {
   const db = getDb();
-  const wd = db
+  const [wd] = await db
     .select({
       wdNumber: wageDeterminations.wdNumber,
       revisionNumber: wageDeterminations.revisionNumber,
     })
     .from(wageDeterminations)
     .where(eq(wageDeterminations.id, wageDeterminationId))
-    .get();
+    .limit(1);
 
   if (!wd) {
     throw new Error('Wage determination not found');
   }
 
-  db.update(projects)
+  await db.update(projects)
     .set({
       wdIdentifier: wd.wdNumber,
       wdModNumber: wd.revisionNumber,
       wdLockedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(projects.id, projectId))
-    .run();
+    .where(eq(projects.id, projectId));
 }
 
 // GET /api/projects/:projectId/wage-determinations
 // Returns each pin with lastFetchedAt, wdNumber, revisionNumber (COMP-06 Phase 88)
-projectWdRouter.get('/', (req, res) => {
+projectWdRouter.get('/', async (req, res) => {
   const { projectId } = req.params as { projectId: string };
   const db = getDb();
-  const pins = db
+  const pins = await db
     .select({
       wageDeterminationId: projectWageDeterminations.wageDeterminationId,
       constructionType: projectWageDeterminations.constructionType,
@@ -86,13 +85,12 @@ projectWdRouter.get('/', (req, res) => {
       wageDeterminations,
       eq(projectWageDeterminations.wageDeterminationId, wageDeterminations.id),
     )
-    .where(eq(projectWageDeterminations.projectId, projectId))
-    .all();
+    .where(eq(projectWageDeterminations.projectId, projectId));
   res.json({ pins });
 });
 
 // POST /api/projects/:projectId/wage-determinations
-projectWdRouter.post('/', (req, res) => {
+projectWdRouter.post('/', async (req, res) => {
   const { projectId } = req.params as { projectId: string };
   const userId = req.user!.userId;
   const parsed = PinBodySchema.safeParse(req.body);
@@ -102,15 +100,14 @@ projectWdRouter.post('/', (req, res) => {
   }
   try {
     const db = getDb();
-    const existingPins = db
+    const existingPins = await db
       .select({ wageDeterminationId: projectWageDeterminations.wageDeterminationId })
       .from(projectWageDeterminations)
-      .where(eq(projectWageDeterminations.projectId, projectId))
-      .all();
-    pinWdToProject(projectId, parsed.data.wageDeterminationId, parsed.data.constructionType ?? null, userId);
+      .where(eq(projectWageDeterminations.projectId, projectId));
+    await pinWdToProject(projectId, parsed.data.wageDeterminationId, parsed.data.constructionType ?? null, userId);
     if (existingPins.length === 0) {
-      setPrimaryWd(projectId, parsed.data.wageDeterminationId);
-      lockProjectToWd(projectId, parsed.data.wageDeterminationId);
+      await setPrimaryWd(projectId, parsed.data.wageDeterminationId);
+      await lockProjectToWd(projectId, parsed.data.wageDeterminationId);
     }
     res.status(201).json({ ok: true, isPrimary: existingPins.length === 0 });
   } catch (err) {
@@ -123,22 +120,22 @@ projectWdRouter.post('/', (req, res) => {
 });
 
 // DELETE /api/projects/:projectId/wage-determinations/:wdId
-projectWdRouter.delete('/:wdId', (req, res) => {
+projectWdRouter.delete('/:wdId', async (req, res) => {
   const { projectId, wdId } = req.params as { projectId: string; wdId: string };
-  unpinWdFromProject(projectId, wdId);
+  await unpinWdFromProject(projectId, wdId);
   res.json({ ok: true });
 });
 
 // PATCH /api/projects/:projectId/wage-determinations/:wdId
-projectWdRouter.patch('/:wdId', (req, res) => {
+projectWdRouter.patch('/:wdId', async (req, res) => {
   const { projectId, wdId } = req.params as { projectId: string; wdId: string };
   if (req.body?.isPrimary !== true) {
     res.status(400).json({ error: 'Only { isPrimary: true } is supported' });
     return;
   }
-  setPrimaryWd(projectId, wdId);
+  await setPrimaryWd(projectId, wdId);
   try {
-    lockProjectToWd(projectId, wdId);
+    await lockProjectToWd(projectId, wdId);
   } catch {
     res.status(404).json({ error: 'Wage determination not found' });
     return;

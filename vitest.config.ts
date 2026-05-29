@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/helpers/db.ts'],
+    pool: 'forks',
     fileParallelism: false,
     maxWorkers: 1,
     // Exclude agent worktree scratch dirs — each contains a full repo copy and

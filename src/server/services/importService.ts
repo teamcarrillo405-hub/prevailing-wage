@@ -5,8 +5,6 @@
 
 import Papa from 'papaparse';
 import { eq, and, inArray } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type * as schema from '../db/schema.js';
 import {
   payrollWeeks,
   payrollEntries,
@@ -26,8 +24,10 @@ import { analyzeImportPayDetailColumns, hasImportPayDetails } from './importPayD
 import type { ImportProvider, ImportPreviewResult, ImportedRow, UnmatchedRow, ConflictRow } from './importTypes.js';
 import type { ImportPayDetails } from './importTypes.js';
 import { resolveEffectiveClassificationRates } from './classificationRates.js';
+import { getDb } from '../db/index.js';
 
-type DrizzleDb = BetterSQLite3Database<typeof schema>;
+// Accept any Drizzle database (SQLite or Postgres) — both implement the same query interface.
+type DrizzleDb = ReturnType<typeof getDb>;
 
 // ── Column signatures for provider detection ──────────────────────────────
 // QB Desktop: has "Employee" + "Duration"
@@ -132,11 +132,11 @@ export async function parseImportFile(
   }
 
   // 3. Get week's weekEndingDate from DB
-  const weekRow = db
+  const [weekRow] = await db
     .select({ weekEndingDate: payrollWeeks.weekEndingDate })
     .from(payrollWeeks)
     .where(eq(payrollWeeks.id, weekId))
-    .get() as { weekEndingDate: string } | undefined;
+    .limit(1);
 
   if (!weekRow) {
     throw new Error(`Payroll week not found: ${weekId}`);
@@ -178,14 +178,14 @@ export async function parseImportFile(
   }
 
   // 5. Fetch project with wageDeterminationId
-  const projectRow = db
+  const [projectRow] = await db
     .select({ wageDeterminationId: wageDeterminations.id, wdNumber: wageDeterminations.wdNumber })
     .from(projects)
     .leftJoin(wageDeterminations, and(
       eq(wageDeterminations.wdNumber, projects.wdIdentifier!),
     ))
     .where(eq(projects.id, projectId))
-    .get() as { wageDeterminationId: string | null; wdNumber: string | null } | undefined;
+    .limit(1);
 
   const wageDeterminationId = projectRow?.wageDeterminationId ?? null;
 
@@ -204,7 +204,7 @@ export async function parseImportFile(
   };
 
   // Query worker classifications for this project
-  const workerRows = db
+  const workerRows = await db
     .select({
       workerId: workers.id,
       workerName: workers.name,
@@ -223,8 +223,7 @@ export async function parseImportFile(
         eq(workerClassifications.isActive, true),
         eq(workerClassifications.projectId, projectId),
       ),
-    )
-    .all() as Array<{
+    ) as Array<{
       workerId: string;
       workerName: string;
       classificationId: string;
@@ -237,15 +236,14 @@ export async function parseImportFile(
   // Fetch wage classifications for rate lookup (if project has a WD)
   let rateMap = new Map<string, { baseRate: number; fringeRate: number }>();
   if (wageDeterminationId) {
-    const wageRows = db
+    const wageRows = await db
       .select({
         tradeCode: wageClassifications.tradeCode,
         baseRate: wageClassifications.baseRate,
         fringeRate: wageClassifications.fringeRate,
       })
       .from(wageClassifications)
-      .where(eq(wageClassifications.wageDeterminationId, wageDeterminationId))
-      .all() as Array<{ tradeCode: string; baseRate: number; fringeRate: number }>;
+      .where(eq(wageClassifications.wageDeterminationId, wageDeterminationId)) as Array<{ tradeCode: string; baseRate: number; fringeRate: number }>;
 
     for (const wr of wageRows) {
       rateMap.set(wr.tradeCode, { baseRate: wr.baseRate, fringeRate: wr.fringeRate });
@@ -253,14 +251,13 @@ export async function parseImportFile(
   }
 
   // 7. Fetch existing payrollEntries for conflict detection (per D-06)
-  const existingEntries = db
+  const existingEntries = await db
     .select({
       workerId: payrollEntries.workerId,
       classificationId: payrollEntries.classificationId,
     })
     .from(payrollEntries)
-    .where(eq(payrollEntries.payrollWeekId, weekId))
-    .all() as Array<{ workerId: string; classificationId: string }>;
+    .where(eq(payrollEntries.payrollWeekId, weekId)) as Array<{ workerId: string; classificationId: string }>;
 
   const conflictSet = new Set(
     existingEntries.map((e) => `${e.workerId}::${e.classificationId}`),
@@ -356,7 +353,7 @@ export async function parseImportFile(
 
     // Query existing mappings for this project + provider + providerWorkerIds
     const existingMappings = providerWorkerIds.length > 0
-      ? db
+      ? await db
           .select({
             providerWorkerId: payrollProviderMappings.providerWorkerId,
             workerId: payrollProviderMappings.workerId,
@@ -366,8 +363,7 @@ export async function parseImportFile(
             eq(payrollProviderMappings.projectId, projectId),
             eq(payrollProviderMappings.provider, provider),
             inArray(payrollProviderMappings.providerWorkerId, providerWorkerIds),
-          ))
-          .all() as Array<{ providerWorkerId: string; workerId: string }>
+          )) as Array<{ providerWorkerId: string; workerId: string }>
       : [];
 
     // Build mapping lookup: providerWorkerId -> workerId

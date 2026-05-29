@@ -39,8 +39,8 @@ describe('lookupWageDetermination', () => {
     mockFetch.mockClear();
 
     const wd = makeWdRow({ state: 'CA', county: 'Plumas' });
-    upsertWageDetermination(wd);
-    upsertClassifications(wd.id, [
+    await upsertWageDetermination(wd);
+    await upsertClassifications(wd.id, [
       { code: 'CARP', description: 'Carpenter', baseRate: 45.00, fringeRate: 20.00, totalRate: 65.00 },
     ]);
 
@@ -113,7 +113,7 @@ describe('lookupWageDetermination — adapter dispatch', () => {
     const county = `CaDispatch${Date.now()}`;
 
     // Seed a CA WD row as if it came from a state CSV import
-    upsertWageDetermination({
+    await upsertWageDetermination({
       id: wdId,
       source: 'ca-dir',
       wdNumber: 'CA-DIR-TEST',
@@ -128,7 +128,7 @@ describe('lookupWageDetermination — adapter dispatch', () => {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
-    upsertClassifications(wdId, [
+    await upsertClassifications(wdId, [
       { code: 'CARP', description: 'Carpenter', baseRate: 62.50, fringeRate: 28.75, totalRate: 91.25 },
     ]);
 

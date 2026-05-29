@@ -216,20 +216,20 @@ async function lookupRatesForEntry(
     .limit(1);
   if (!wc) return null;
 
-  const pinnedWds = getPinnedWdsForProject(week.projectId);
+  const pinnedWds = await getPinnedWdsForProject(week.projectId);
   const pinnedWd = pinnedWds.find((wd) => wd.isPrimary) ?? pinnedWds[0];
   if (pinnedWd) {
-    const pinnedMatch = getCachedClassifications(pinnedWd.wageDeterminationId)
-      .find((c) => c.tradeCode === wc.tradeCode);
+    const pinnedClassifications = await getCachedClassifications(pinnedWd.wageDeterminationId);
+    const pinnedMatch = pinnedClassifications.find((c) => c.tradeCode === wc.tradeCode);
     if (pinnedMatch) {
       return resolveEffectiveClassificationRates(pinnedMatch, wc);
     }
   }
 
-  const cachedWd = getCachedWd(project.state, project.county ?? '');
+  const cachedWd = await getCachedWd(project.state, project.county ?? '');
   if (cachedWd) {
-    const cachedMatch = getCachedClassifications(cachedWd.id)
-      .find((c) => c.tradeCode === wc.tradeCode);
+    const cachedClassifications = await getCachedClassifications(cachedWd.id);
+    const cachedMatch = cachedClassifications.find((c) => c.tradeCode === wc.tradeCode);
     if (cachedMatch) {
       return resolveEffectiveClassificationRates(cachedMatch, wc);
     }
@@ -886,14 +886,15 @@ export async function copyPayrollWeek(input: CopyWeekInput): Promise<CopyWeekRes
   }
 
   // 2. Build rate map using the project-pinned WD first, then state/county cache.
-  const pinnedWds = getPinnedWdsForProject(input.projectId);
+  const pinnedWds = await getPinnedWdsForProject(input.projectId);
   const pinnedWd = pinnedWds.find((row) => row.isPrimary) ?? pinnedWds[0];
+  const cachedCountyWd = pinnedWd ? null : await getCachedWd(project.state, project.county);
   const wd = pinnedWd
     ? { id: pinnedWd.wageDeterminationId }
-    : getCachedWd(project.state, project.county) ?? (await lookupWageDetermination(project.state, project.county));
+    : cachedCountyWd ?? (await lookupWageDetermination(project.state, project.county));
   const rateMap = new Map<string, { baseRate: number; fringeRate: number }>();
   if (wd) {
-    for (const wc of getCachedClassifications(wd.id)) {
+    for (const wc of await getCachedClassifications(wd.id)) {
       rateMap.set(wc.tradeCode, { baseRate: wc.baseRate, fringeRate: wc.fringeRate });
     }
   }

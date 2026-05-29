@@ -26,7 +26,7 @@ export class LocalWageAdapter implements WageAdapter {
 
   async fetchDetermination(state: string, _county: string): Promise<WageDetermination | null> {
     const db = getDb();
-    const row = db
+    const [row] = await db
       .select()
       .from(wageDeterminations)
       .where(
@@ -37,12 +37,11 @@ export class LocalWageAdapter implements WageAdapter {
           eq(wageDeterminations.isActive, true),
         )
       )
-      .limit(1)
-      .get() as typeof wageDeterminations.$inferSelect | undefined;
+      .limit(1);
 
     if (!row) return null;
 
-    const classifications = getCachedClassifications(row.id);
+    const classifications = await getCachedClassifications(row.id);
     return {
       id: row.id,
       source: 'local',

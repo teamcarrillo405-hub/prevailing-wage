@@ -109,24 +109,24 @@ const CreateClassificationSchema = z.object({
 
 // GET /api/projects/:projectId/wage-classifications — available trades from WD for this project.
 // Auto-fetches from SAM.gov if not cached — the project already knows its state + county.
-function getProjectWageRateContext(projectId: string, state: string, county: string) {
-  const pinnedWds = getPinnedWdsForProject(projectId);
+async function getProjectWageRateContext(projectId: string, state: string, county: string) {
+  const pinnedWds = await getPinnedWdsForProject(projectId);
   const pinnedWd = pinnedWds.find((wd) => wd.isPrimary) ?? pinnedWds[0];
   if (pinnedWd) {
-    const classifications = getCachedClassifications(pinnedWd.wageDeterminationId);
+    const classifications = await getCachedClassifications(pinnedWd.wageDeterminationId);
     if (classifications.length > 0) {
       return {
-        wd: getWdById(pinnedWd.wageDeterminationId),
+        wd: await getWdById(pinnedWd.wageDeterminationId),
         classifications,
         source: 'pinned' as const,
       };
     }
   }
 
-  const wd = getCachedWd(state, county);
+  const wd = await getCachedWd(state, county);
   return {
     wd,
-    classifications: wd ? getCachedClassifications(wd.id) : [],
+    classifications: wd ? await getCachedClassifications(wd.id) : [],
     source: 'state-county-cache' as const,
   };
 }
@@ -149,11 +149,11 @@ router.get('/:projectId/wage-classifications', async (req, res) => {
   }
 
   // Prefer the WD pinned to this project. Fall back to state/county cache, then live lookup.
-  let rateContext = getProjectWageRateContext(projectId, project.state, project.county);
+  let rateContext = await getProjectWageRateContext(projectId, project.state, project.county);
   if (!rateContext.wd) {
     const fetched = await lookupWageDetermination(project.state, project.county);
     if (fetched) {
-      rateContext = getProjectWageRateContext(projectId, project.state, project.county);
+      rateContext = await getProjectWageRateContext(projectId, project.state, project.county);
     }
   }
 
@@ -191,7 +191,7 @@ router.get('/:projectId/workers', async (req, res) => {
   }
 
   // Build a tradeCode → rate map from the project's wage determination
-  const rateContext = getProjectWageRateContext(projectId, project.state, project.county);
+  const rateContext = await getProjectWageRateContext(projectId, project.state, project.county);
   const rateMap = new Map<string, { baseRate: number; fringeRate: number }>();
   for (const wc of rateContext.classifications) {
     rateMap.set(wageRateKey(wc.tradeCode, wc.tradeDescription), { baseRate: wc.baseRate, fringeRate: wc.fringeRate });

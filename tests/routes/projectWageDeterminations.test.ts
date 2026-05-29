@@ -25,10 +25,10 @@ async function createProject(cookie: string) {
   return res.body.data.project.id as string;
 }
 
-function seedWd() {
+async function seedWd(): Promise<string> {
   const now = new Date();
   const id = crypto.randomUUID();
-  upsertWageDetermination({
+  await upsertWageDetermination({
     id,
     source: 'federal-dol',
     wdNumber: `CA2025PIN${Date.now()}`,
@@ -55,7 +55,7 @@ describe('project wage-determinations routes', () => {
   it('POST /api/projects/:id/wage-determinations pins a WD', async () => {
     const cookie = await registerUser(`wd-pin-${Date.now()}@test.com`);
     const projectId = await createProject(cookie);
-    const wdId = seedWd();
+    const wdId = await seedWd();
     const res = await supertest(app)
       .post(`/api/projects/${projectId}/wage-determinations`)
       .set('Cookie', cookie)
@@ -66,7 +66,7 @@ describe('project wage-determinations routes', () => {
   it('GET /api/projects/:id/wage-determinations lists pinned WDs', async () => {
     const cookie = await registerUser(`wd-list-${Date.now()}@test.com`);
     const projectId = await createProject(cookie);
-    const wdId = seedWd();
+    const wdId = await seedWd();
     await supertest(app)
       .post(`/api/projects/${projectId}/wage-determinations`)
       .set('Cookie', cookie)
@@ -83,7 +83,7 @@ describe('project wage-determinations routes', () => {
   it('POST duplicate pin returns 409', async () => {
     const cookie = await registerUser(`wd-dup-${Date.now()}@test.com`);
     const projectId = await createProject(cookie);
-    const wdId = seedWd();
+    const wdId = await seedWd();
     await supertest(app)
       .post(`/api/projects/${projectId}/wage-determinations`)
       .set('Cookie', cookie)
@@ -98,7 +98,7 @@ describe('project wage-determinations routes', () => {
   it('DELETE /api/projects/:id/wage-determinations/:wdId unpins', async () => {
     const cookie = await registerUser(`wd-del-${Date.now()}@test.com`);
     const projectId = await createProject(cookie);
-    const wdId = seedWd();
+    const wdId = await seedWd();
     await supertest(app)
       .post(`/api/projects/${projectId}/wage-determinations`)
       .set('Cookie', cookie)
@@ -116,8 +116,8 @@ describe('project wage-determinations routes', () => {
   it('PATCH /api/projects/:id/wage-determinations/:wdId sets primary', async () => {
     const cookie = await registerUser(`wd-patch-${Date.now()}@test.com`);
     const projectId = await createProject(cookie);
-    const wdId1 = seedWd();
-    const wdId2 = seedWd();
+    const wdId1 = await seedWd();
+    const wdId2 = await seedWd();
     await supertest(app).post(`/api/projects/${projectId}/wage-determinations`).set('Cookie', cookie).send({ wageDeterminationId: wdId1, constructionType: 'Building' });
     await supertest(app).post(`/api/projects/${projectId}/wage-determinations`).set('Cookie', cookie).send({ wageDeterminationId: wdId2, constructionType: 'Highway' });
     const patch = await supertest(app)

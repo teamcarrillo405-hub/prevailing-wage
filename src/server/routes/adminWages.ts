@@ -26,7 +26,7 @@ const upload = multer({
 // Groups rows by wd_number, inserts one wageDeterminations row per unique WD,
 // then inserts all classification rows for that WD.
 // Returns: { inserted: N, skipped: 0 } on success.
-adminWagesRouter.post('/import-state', upload.single('file'), (req, res) => {
+adminWagesRouter.post('/import-state', upload.single('file'), async (req, res) => {
   try {
     // Validate file presence
     if (!req.file) {
@@ -89,9 +89,9 @@ adminWagesRouter.post('/import-state', upload.single('file'), (req, res) => {
       const cacheExpiresAt = new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString();
       const wdId = crypto.randomUUID();
 
-      upsertWageDetermination({
+      await upsertWageDetermination({
         id: wdId,
-        source,
+        source: source as 'federal-dol' | 'ca-dir' | 'wa-li' | 'ny-dol' | 'manual',
         wdNumber,
         revisionNumber: 0,
         state,
@@ -105,7 +105,7 @@ adminWagesRouter.post('/import-state', upload.single('file'), (req, res) => {
         updatedAt: nowIso,
       });
 
-      upsertClassifications(
+      await upsertClassifications(
         wdId,
         rows.map((row) => ({
           code: row.trade_code.toUpperCase(),

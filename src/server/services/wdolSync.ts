@@ -3901,10 +3901,10 @@ type ActiveWdRow = {
 
 // Returns full WD rows for WDs pinned to active projects whose cache expires within 48h.
 // Single JOIN query — no N+1.
-function getActiveProjectWds(): ActiveWdRow[] {
+async function getActiveProjectWds(): Promise<ActiveWdRow[]> {
   const db = getDb();
   const cutoff = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-  const rows = db
+  const rows = (await db
     .select({
       id: wageDeterminations.id,
       wdNumber: wageDeterminations.wdNumber,
@@ -3923,8 +3923,7 @@ function getActiveProjectWds(): ActiveWdRow[] {
         eq(projects.status, 'active'),
         lt(wageDeterminations.cacheExpiresAt, cutoff),
       ),
-    )
-    .all() as ActiveWdRow[];
+    )) as ActiveWdRow[];
   // Deduplicate by WD id (multiple projects may pin the same WD)
   return [...new Map(rows.map((r) => [r.id, r])).values()];
 }
@@ -3934,19 +3933,19 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
   const syncId = crypto.randomUUID();
   const startedAt = new Date().toISOString();
 
-  db.insert(wageSyncMeta).values({
+  await db.insert(wageSyncMeta).values({
     id: syncId,
     startedAt,
     status: 'running',
     wdsFetched: 0,
     wdsFailed: 0,
-  }).run();
+  });
 
   let fetched = 0;
   let failed = 0;
 
   // Phase 1: proactively refresh WDs pinned to active projects expiring within 48h
-  for (const wd of getActiveProjectWds()) {
+  for (const wd of await getActiveProjectWds()) {
     try {
       const response = await fetchWdFromSamGov(wd.wdNumber, wd.revisionNumber);
       if (!response) { failed++; continue; }
@@ -3960,12 +3959,12 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
           detectedAt: new Date().toISOString(),
           changeSummary: `Revision ${wd.revisionNumber} -> ${response.revisionNumber} detected during weekly sync on ${new Date().toISOString().slice(0, 10)}`,
         };
-        db.insert(wdRevisionLog).values(logEntry).run();
+        await db.insert(wdRevisionLog).values(logEntry);
         logger.info(`[wdolSync] ${wd.wdNumber} revision bump: ${wd.revisionNumber} -> ${response.revisionNumber}`);
       }
       const nowIso = new Date().toISOString();
       const classifications = response.document ? parseWdDocument(response.document) : [];
-      upsertWageDetermination({
+      await upsertWageDetermination({
         id: wd.id,
         source: wd.source as 'federal-dol',
         wdNumber: wd.wdNumber,
@@ -3981,7 +3980,7 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
         updatedAt: nowIso,
         lastFetchedAt: nowIso,
       });
-      upsertClassifications(wd.id, classifications);
+      await upsertClassifications(wd.id, classifications);
       fetched++;
     } catch (err) {
       logger.error({ err }, `[wdolSync] Phase 1 error refreshing ${wd.wdNumber}`);
@@ -3994,7 +3993,7 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
     try {
       // Skip if this specific WD (by wdNumber+revision) is already cached and unexpired.
       // Silent skip — logging 1,000+ skip lines before real progress is just noise.
-      if (isWdCached(seed.wdNumber, seed.revision)) {
+      if (await isWdCached(seed.wdNumber, seed.revision)) {
         skipped++;
         continue;
       }
@@ -4011,7 +4010,7 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
       const cacheExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
       const wdId = crypto.randomUUID();
 
-      upsertWageDetermination({
+      await upsertWageDetermination({
         id: wdId,
         source: 'federal-dol',
         wdNumber: response.fullReferenceNumber,
@@ -4029,7 +4028,7 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
 
       if (response.document) {
         const classifications = parseWdDocument(response.document);
-        upsertClassifications(wdId, classifications);
+        await upsertClassifications(wdId, classifications);
         logger.info(`[wdolSync] ${seed.wdNumber} — ${classifications.length} classifications cached`);
       }
 
@@ -4043,10 +4042,9 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
   const completedAt = new Date().toISOString();
   const finalStatus = failed === 0 ? 'success' : fetched > 0 ? 'partial' : 'failed';
 
-  db.update(wageSyncMeta)
+  await db.update(wageSyncMeta)
     .set({ completedAt, status: finalStatus, wdsFetched: fetched, wdsFailed: failed })
-    .where(eq(wageSyncMeta.id, syncId))
-    .run();
+    .where(eq(wageSyncMeta.id, syncId));
 
   logger.info(`[wdolSync] Complete — fetched: ${fetched}, failed: ${failed}, skipped: ${skipped}`);
   return { fetched, failed };
@@ -4061,17 +4059,17 @@ export async function runWageSync(): Promise<{ fetched: number; failed: number }
  * Returns the best available base + fringe rates for the given project location and trade.
  * Returns null if no rate can be resolved (caller should prompt manual entry).
  */
-export function resolveCountyRate(
+export async function resolveCountyRate(
   state: string,
   county: string,
   tradeCode: string,
   city?: string,
-): { baseRate: number; fringeRate: number; source: 'city-dol' | 'county-dol' | 'federal-county' | 'federal-state' } | null {
+): Promise<{ baseRate: number; fringeRate: number; source: 'city-dol' | 'county-dol' | 'federal-county' | 'federal-state' } | null> {
   const db = getDb();
 
   // Tier 0: city-specific municipal rate (NYC DDC, Chicago DOT, Seattle, Boston, etc.)
   if (city) {
-    const cityRate = db
+    const [cityRate] = await db
       .select({ baseRate: countyWageDeterminations.baseRate, fringeRate: countyWageDeterminations.fringeRate })
       .from(countyWageDeterminations)
       .where(
@@ -4082,12 +4080,12 @@ export function resolveCountyRate(
           eq(countyWageDeterminations.tradeCode, tradeCode),
         ),
       )
-      .get();
+      .limit(1);
     if (cityRate) return { ...cityRate, source: 'city-dol' };
   }
 
   // Tier 1: state DOL county-specific rate
-  const countyRate = db
+  const [countyRate] = await db
     .select({ baseRate: countyWageDeterminations.baseRate, fringeRate: countyWageDeterminations.fringeRate })
     .from(countyWageDeterminations)
     .where(
@@ -4097,11 +4095,11 @@ export function resolveCountyRate(
         eq(countyWageDeterminations.tradeCode, tradeCode),
       ),
     )
-    .get();
+    .limit(1);
   if (countyRate) return { ...countyRate, source: 'county-dol' };
 
   // Tier 2: federal WD scoped to this county
-  const federalCountyWd = db
+  const [federalCountyWd] = await db
     .select({ id: wageDeterminations.id })
     .from(wageDeterminations)
     .where(
@@ -4110,15 +4108,15 @@ export function resolveCountyRate(
         eq(wageDeterminations.county, county),
       ),
     )
-    .get();
+    .limit(1);
   if (federalCountyWd) return { baseRate: 0, fringeRate: 0, source: 'federal-county' };
 
   // Tier 3: statewide federal WD
-  const stateWd = db
+  const [stateWd] = await db
     .select({ id: wageDeterminations.id })
     .from(wageDeterminations)
     .where(eq(wageDeterminations.state, state.toUpperCase()))
-    .get();
+    .limit(1);
   if (stateWd) return { baseRate: 0, fringeRate: 0, source: 'federal-state' };
 
   return null;

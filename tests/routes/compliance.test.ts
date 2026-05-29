@@ -273,7 +273,7 @@ describe('GET /api/compliance/:weekId/submit-ready', () => {
     const cookie = await registerUser('submit-ready-pinned-wd');
     const { projectId, weekId } = await seedFixture(cookie);
     const now = new Date();
-    const wdId = upsertWageDetermination({
+    const wdId = await upsertWageDetermination({
       id: randomUUID(),
       source: 'federal-dol',
       wdNumber: `TX-PINNED-${Date.now()}`,
@@ -288,10 +288,10 @@ describe('GET /api/compliance/:weekId/submit-ready', () => {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
-    upsertClassifications(wdId, [
+    await upsertClassifications(wdId, [
       { code: 'CARP', description: 'Carpenter', baseRate: 45, fringeRate: 20, totalRate: 65 },
     ]);
-    pinWdToProject(projectId, wdId, 'Building', null);
+    await pinWdToProject(projectId, wdId, 'Building', null);
 
     const res = await supertest(app)
       .get(`/api/compliance/${weekId}/submit-ready`)

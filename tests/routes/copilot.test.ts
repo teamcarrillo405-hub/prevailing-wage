@@ -72,9 +72,9 @@ async function createWeek(cookie: string, projectId: string, payrollNumber: numb
   return res.body.id as string;
 }
 
-function seedPinnedWd(cookie: string, projectId: string, tradeCode = 'CARP') {
+async function seedPinnedWd(cookie: string, projectId: string, tradeCode = 'CARP') {
   const now = new Date();
-  const wdId = upsertWageDetermination({
+  const wdId = await upsertWageDetermination({
     id: randomUUID(),
     source: 'federal-dol',
     wdNumber: `CA2026COP${Date.now()}`,
@@ -89,7 +89,7 @@ function seedPinnedWd(cookie: string, projectId: string, tradeCode = 'CARP') {
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   });
-  upsertClassifications(wdId, [{
+  await upsertClassifications(wdId, [{
     code: tradeCode,
     description: tradeCode === 'CARP' ? 'Carpenter' : 'Electrician',
     baseRate: 45,

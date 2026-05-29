@@ -86,7 +86,7 @@ wagesRouter.get('/coverage', async (_req, res) => {
   }
 
   // Per-state aggregate
-  const byStateRaw = db
+  const byStateRaw = await db
     .select({
       state: wageDeterminations.state,
       wdCount: sql<number>`count(*)`.as('wdCount'),
@@ -98,10 +98,9 @@ wagesRouter.get('/coverage', async (_req, res) => {
     .from(wageDeterminations)
     .where(sql`${wageDeterminations.isActive} = 1`)
     .groupBy(wageDeterminations.state)
-    .orderBy(wageDeterminations.state)
-    .all();
+    .orderBy(wageDeterminations.state);
 
-  const classificationsByStateRaw = db
+  const classificationsByStateRaw = await db
     .select({
       state: wageDeterminations.state,
       classificationCount: sql<number>`count(${wageClassifications.id})`.as('classificationCount'),
@@ -109,8 +108,7 @@ wagesRouter.get('/coverage', async (_req, res) => {
     .from(wageDeterminations)
     .leftJoin(wageClassifications, sql`${wageClassifications.wageDeterminationId} = ${wageDeterminations.id}`)
     .where(sql`${wageDeterminations.isActive} = 1`)
-    .groupBy(wageDeterminations.state)
-    .all();
+    .groupBy(wageDeterminations.state);
 
   const classificationCountByState = new Map<string, number>(
     classificationsByStateRaw.map((r: typeof classificationsByStateRaw[number]) => [
@@ -146,12 +144,11 @@ wagesRouter.get('/coverage', async (_req, res) => {
   });
 
   // Latest sync run
-  const [latestSync] = db
+  const [latestSync] = await db
     .select()
     .from(wageSyncMeta)
     .orderBy(desc(wageSyncMeta.startedAt))
-    .limit(1)
-    .all();
+    .limit(1);
 
   const totals = byState.reduce((acc, row) => {
     acc.seededWds += row.seededWds;
@@ -233,19 +230,19 @@ wagesRouter.get('/fetch', async (req, res) => {
 
 // GET /api/wages/:id
 // Returns { wd, classifications } or 404.
-wagesRouter.get('/:id', (req, res) => {
+wagesRouter.get('/:id', async (req, res) => {
   const id = String(req.params.id); // Express 5 params type is string | string[]
-  const wd = getWdById(id);
+  const wd = await getWdById(id);
   if (!wd) return res.status(404).json({ error: 'Wage determination not found' });
 
-  const classifications = getCachedClassifications(id);
+  const classifications = await getCachedClassifications(id);
   return res.json({ wd, classifications });
 });
 
 // POST /api/wages/manual
 // Creates a WD with source='manual'. Does not call SAM.gov.
 // Manual entries expire after 365 days (not 30 — manual data doesn't get stale the same way).
-wagesRouter.post('/manual', (req, res) => {
+wagesRouter.post('/manual', async (req, res) => {
   const parsed = ManualWdSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid request body', issues: parsed.error.issues });
@@ -257,7 +254,7 @@ wagesRouter.post('/manual', (req, res) => {
   const cacheExpiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
   const wdId = crypto.randomUUID();
 
-  upsertWageDetermination({
+  await upsertWageDetermination({
     id: wdId,
     source: 'manual',
     wdNumber,
@@ -273,7 +270,7 @@ wagesRouter.post('/manual', (req, res) => {
     updatedAt: nowIso,
   });
 
-  upsertClassifications(wdId, classifications.map((c) => ({
+  await upsertClassifications(wdId, classifications.map((c) => ({
     code: c.tradeCode,
     description: c.tradeDescription,
     baseRate: c.baseRate,
@@ -281,7 +278,7 @@ wagesRouter.post('/manual', (req, res) => {
     totalRate: c.totalRate,
   })));
 
-  const inserted = getCachedClassifications(wdId);
+  const inserted = await getCachedClassifications(wdId);
   return res.status(201).json({
     wd: {
       id: wdId, source: 'manual', wdNumber, revisionNumber: 0, state, county,
@@ -303,8 +300,8 @@ wagesRouter.get('/local-ordinances', async (req, res) => {
   const db = getDb();
 
   const rows = state
-    ? db.select().from(localWageOrdinances).where(eq(localWageOrdinances.state, state)).all()
-    : db.select().from(localWageOrdinances).all();
+    ? await db.select().from(localWageOrdinances).where(eq(localWageOrdinances.state, state))
+    : await db.select().from(localWageOrdinances);
 
   res.json({ data: rows });
 });
@@ -315,7 +312,7 @@ wagesRouter.get('/state-sources', async (_req, res) => {
   const { getDb } = await import('../db/index.js');
   const { stateWageSources } = await import('../db/schema.js');
   const db = getDb();
-  const rows = db.select().from(stateWageSources).all();
+  const rows = await db.select().from(stateWageSources);
   res.json({ data: rows });
 });
 

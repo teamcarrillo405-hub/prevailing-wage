@@ -112,10 +112,10 @@ async function createProject(cookie: string, name: string): Promise<string> {
   return res.body.data.project.id as string;
 }
 
-function seedWd(): string {
+async function seedWd(): Promise<string> {
   const now = new Date();
   const wdId = randomUUID();
-  upsertWageDetermination({
+  await upsertWageDetermination({
     id: wdId,
     source: 'federal-dol',
     wdNumber: `CA202650SCENARIO${Date.now()}`,
@@ -130,7 +130,7 @@ function seedWd(): string {
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   });
-  upsertClassifications(wdId, [
+  await upsertClassifications(wdId, [
     { code: 'CARP', description: 'Carpenter', baseRate: 45, fringeRate: 20, totalRate: 65 },
     { code: 'LAB', description: 'Laborer - Group 1', baseRate: 38, fringeRate: 18, totalRate: 56 },
   ]);
@@ -141,7 +141,7 @@ async function pinWd(cookie: string, projectId: string): Promise<void> {
   const res = await supertest(app)
     .post(`/api/projects/${projectId}/wage-determinations`)
     .set('Cookie', cookie)
-    .send({ wageDeterminationId: seedWd(), constructionType: 'Building' });
+    .send({ wageDeterminationId: await seedWd(), constructionType: 'Building' });
   expect(res.status).toBe(201);
 }
 

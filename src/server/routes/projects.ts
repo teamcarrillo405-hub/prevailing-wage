@@ -396,7 +396,7 @@ router.get('/:id/county-rate', async (req, res) => {
     return;
   }
 
-  const rate = resolveCountyRate(project.state, project.county, tradeCode, city);
+  const rate = await resolveCountyRate(project.state, project.county, tradeCode, city);
   res.json({ data: rate });
 });
 

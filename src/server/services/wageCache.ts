@@ -1,9 +1,9 @@
 // src/server/services/wageCache.ts
-// All SQLite wage reads and writes go through here.
+// All wage reads and writes go through here.
 // Uses the getDb() pattern from Phase 1.
 // wdolSync.ts and wageLookup.ts both import from here — never access the tables directly.
 
-import { eq, and, gt, desc, isNull, or, sql } from 'drizzle-orm';
+import { eq, and, gt, desc, isNull, sql } from 'drizzle-orm';
 import { wageDeterminations, wageClassifications, projectWageDeterminations } from '../db/schema.js';
 import { getDb } from '../db/index.js';
 import type { ParsedClassification } from './wdolParser.js';
@@ -29,9 +29,9 @@ export interface NewWageDetermination {
 // Upsert: if (wdNumber, revisionNumber) already exists, update the cache fields.
 // Returns the actual DB row id (may differ from data.id on conflict — caller must use
 // the returned id when inserting classifications to avoid FK constraint failure).
-export function upsertWageDetermination(data: NewWageDetermination): string {
+export async function upsertWageDetermination(data: NewWageDetermination): Promise<string> {
   const db = getDb();
-  const existing = db
+  const [existing] = await db
     .select({ id: wageDeterminations.id })
     .from(wageDeterminations)
     .where(
@@ -40,10 +40,10 @@ export function upsertWageDetermination(data: NewWageDetermination): string {
         eq(wageDeterminations.revisionNumber, data.revisionNumber),
       )
     )
-    .get() as { id: string } | undefined;
+    .limit(1);
 
   if (existing) {
-    db.update(wageDeterminations)
+    await db.update(wageDeterminations)
       .set({
         rawDocument: data.rawDocument,
         cachedAt: data.cachedAt,
@@ -51,12 +51,11 @@ export function upsertWageDetermination(data: NewWageDetermination): string {
         updatedAt: data.updatedAt,
         lastFetchedAt: data.lastFetchedAt ?? null,
       })
-      .where(eq(wageDeterminations.id, existing.id))
-      .run();
+      .where(eq(wageDeterminations.id, existing.id));
     return existing.id;
   }
 
-  db.insert(wageDeterminations).values({ ...data, isActive: true }).run();
+  await db.insert(wageDeterminations).values({ ...data, isActive: true });
   return data.id;
 }
 
@@ -64,14 +63,13 @@ export function upsertWageDetermination(data: NewWageDetermination): string {
 // Insert parsed classifications for a WD. Deletes existing rows first to prevent
 // duplicate classifications on re-sync. Uses the cascade-delete FK but we delete
 // explicitly here because upsertWageDetermination may reuse the existing row id.
-export function upsertClassifications(
+export async function upsertClassifications(
   wageDeterminationId: string,
   classifications: ParsedClassification[]
-): void {
+): Promise<void> {
   const db = getDb();
-  db.delete(wageClassifications)
-    .where(eq(wageClassifications.wageDeterminationId, wageDeterminationId))
-    .run();
+  await db.delete(wageClassifications)
+    .where(eq(wageClassifications.wageDeterminationId, wageDeterminationId));
 
   if (classifications.length === 0) return;
 
@@ -88,20 +86,20 @@ export function upsertClassifications(
     createdAt: now,
   }));
 
-  db.insert(wageClassifications).values(rows).run();
+  await db.insert(wageClassifications).values(rows);
 }
 
 // Returns the freshest unexpired WD for state+county.
 // Tries exact county match first; falls back to statewide (county IS NULL) for the same state.
-export function getCachedWd(
+export async function getCachedWd(
   state: string,
   county: string
-): typeof wageDeterminations.$inferSelect | undefined {
+): Promise<typeof wageDeterminations.$inferSelect | undefined> {
   const db = getDb();
   const now = new Date().toISOString();
 
   // Exact county match first (case-insensitive — project stores lowercase, WD may be title case)
-  const exact = db
+  const [exact] = await db
     .select()
     .from(wageDeterminations)
     .where(
@@ -112,13 +110,12 @@ export function getCachedWd(
       )
     )
     .orderBy(desc(wageDeterminations.publishDate))
-    .limit(1)
-    .get() as typeof wageDeterminations.$inferSelect | undefined;
+    .limit(1);
 
   if (exact) return exact;
 
   // Fallback: statewide WD (county IS NULL) for same state
-  return db
+  const [statewide] = await db
     .select()
     .from(wageDeterminations)
     .where(
@@ -129,17 +126,18 @@ export function getCachedWd(
       )
     )
     .orderBy(desc(wageDeterminations.publishDate))
-    .limit(1)
-    .get() as typeof wageDeterminations.$inferSelect | undefined;
+    .limit(1);
+
+  return statewide;
 }
 
 // Returns true iff the WD identified by (wdNumber, revisionNumber) exists AND its cache
 // has not expired. Used by runWageSync() to skip re-fetching already-cached WDs.
 // Distinct from getCachedWd() which looks up by (state, county) for runtime lookups.
-export function isWdCached(wdNumber: string, revisionNumber: number): boolean {
+export async function isWdCached(wdNumber: string, revisionNumber: number): Promise<boolean> {
   const db = getDb();
   const now = new Date().toISOString();
-  const row = db
+  const [row] = await db
     .select({ id: wageDeterminations.id })
     .from(wageDeterminations)
     .where(
@@ -149,32 +147,32 @@ export function isWdCached(wdNumber: string, revisionNumber: number): boolean {
         gt(wageDeterminations.cacheExpiresAt, now),
       )
     )
-    .get() as { id: string } | undefined;
+    .limit(1);
   return row !== undefined;
 }
 
 // Returns all classification rows for a WD.
-export function getCachedClassifications(
+export async function getCachedClassifications(
   wageDeterminationId: string
-): (typeof wageClassifications.$inferSelect)[] {
+): Promise<(typeof wageClassifications.$inferSelect)[]> {
   const db = getDb();
   return db
     .select()
     .from(wageClassifications)
-    .where(eq(wageClassifications.wageDeterminationId, wageDeterminationId))
-    .all() as (typeof wageClassifications.$inferSelect)[];
+    .where(eq(wageClassifications.wageDeterminationId, wageDeterminationId));
 }
 
 // Returns a WD by primary key id.
-export function getWdById(
+export async function getWdById(
   id: string
-): typeof wageDeterminations.$inferSelect | undefined {
+): Promise<typeof wageDeterminations.$inferSelect | undefined> {
   const db = getDb();
-  return db
+  const [row] = await db
     .select()
     .from(wageDeterminations)
     .where(eq(wageDeterminations.id, id))
-    .get() as typeof wageDeterminations.$inferSelect | undefined;
+    .limit(1);
+  return row;
 }
 
 export interface PinnedWdRow {
@@ -185,7 +183,7 @@ export interface PinnedWdRow {
   pinnedByUserId: string | null;
 }
 
-export function getPinnedWdsForProject(projectId: string): PinnedWdRow[] {
+export async function getPinnedWdsForProject(projectId: string): Promise<PinnedWdRow[]> {
   const db = getDb();
   return db
     .select({
@@ -196,18 +194,17 @@ export function getPinnedWdsForProject(projectId: string): PinnedWdRow[] {
       pinnedByUserId: projectWageDeterminations.pinnedByUserId,
     })
     .from(projectWageDeterminations)
-    .where(eq(projectWageDeterminations.projectId, projectId))
-    .all() as PinnedWdRow[];
+    .where(eq(projectWageDeterminations.projectId, projectId)) as Promise<PinnedWdRow[]>;
 }
 
-export function pinWdToProject(
+export async function pinWdToProject(
   projectId: string,
   wageDeterminationId: string,
   constructionType: string | null,
   pinnedByUserId: string | null,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.insert(projectWageDeterminations).values({
+  await db.insert(projectWageDeterminations).values({
     id: crypto.randomUUID(),
     projectId,
     wageDeterminationId,
@@ -215,35 +212,32 @@ export function pinWdToProject(
     isPrimary: false,
     pinnedAt: new Date().toISOString(),
     pinnedByUserId,
-  }).run();
+  });
 }
 
-export function unpinWdFromProject(projectId: string, wageDeterminationId: string): void {
+export async function unpinWdFromProject(projectId: string, wageDeterminationId: string): Promise<void> {
   const db = getDb();
-  db.delete(projectWageDeterminations)
+  await db.delete(projectWageDeterminations)
     .where(
       and(
         eq(projectWageDeterminations.projectId, projectId),
         eq(projectWageDeterminations.wageDeterminationId, wageDeterminationId),
       ),
-    )
-    .run();
+    );
 }
 
 // Atomically sets isPrimary=true for the given WD and clears it for all others in the project.
-export function setPrimaryWd(projectId: string, wageDeterminationId: string): void {
+export async function setPrimaryWd(projectId: string, wageDeterminationId: string): Promise<void> {
   const db = getDb();
-  db.update(projectWageDeterminations)
+  await db.update(projectWageDeterminations)
     .set({ isPrimary: false })
-    .where(eq(projectWageDeterminations.projectId, projectId))
-    .run();
-  db.update(projectWageDeterminations)
+    .where(eq(projectWageDeterminations.projectId, projectId));
+  await db.update(projectWageDeterminations)
     .set({ isPrimary: true })
     .where(
       and(
         eq(projectWageDeterminations.projectId, projectId),
         eq(projectWageDeterminations.wageDeterminationId, wageDeterminationId),
       ),
-    )
-    .run();
+    );
 }

@@ -18,7 +18,7 @@ vi.mock('../../src/server/services/wdolSync.js', async (importOriginal) => {
   return { ...actual, runWageSync: vi.fn().mockResolvedValue({ fetched: 0, failed: 0 }) };
 });
 
-function seedWd(overrides = {}) {
+async function seedWd(overrides = {}) {
   const now = new Date();
   const future = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const id = crypto.randomUUID();
@@ -38,8 +38,8 @@ function seedWd(overrides = {}) {
     updatedAt: now.toISOString(),
     ...overrides,
   };
-  upsertWageDetermination(wd);
-  upsertClassifications(id, [
+  await upsertWageDetermination(wd);
+  await upsertClassifications(id, [
     { code: 'CARP', description: 'Carpenter', baseRate: 45.00, fringeRate: 20.00, totalRate: 65.00 },
     { code: 'ELEC', description: 'Electrician', baseRate: 55.00, fringeRate: 25.00, totalRate: 80.00 },
   ]);
@@ -49,7 +49,7 @@ function seedWd(overrides = {}) {
 describe('GET /api/wages/lookup', () => {
   it('returns 200 with WD data when cache has a fresh entry', async () => {
     const county = `County${Date.now()}`;
-    seedWd({ state: 'CA', county });
+    await seedWd({ state: 'CA', county });
     const res = await request(app).get(`/api/wages/lookup?state=CA&county=${encodeURIComponent(county)}`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('wds');
@@ -80,7 +80,7 @@ describe('GET /api/wages/lookup', () => {
 
 describe('GET /api/wages/:id', () => {
   it('returns 200 with WD and classifications when id exists', async () => {
-    const id = seedWd({ state: 'CA', county: `IDTest${Date.now()}` });
+    const id = await seedWd({ state: 'CA', county: `IDTest${Date.now()}` });
     const res = await request(app).get(`/api/wages/${id}`);
     expect(res.status).toBe(200);
     expect(res.body.wd.id).toBe(id);
@@ -144,7 +144,7 @@ describe('GET /api/wages/fetch', () => {
 
   it('returns cached WD when found in cache', async () => {
     const wdNumber = `FETCHCACHE${Date.now()}`;
-    seedWd({ wdNumber, state: 'CA', county: `FetchCounty${Date.now()}` });
+    await seedWd({ wdNumber, state: 'CA', county: `FetchCounty${Date.now()}` });
     const res = await request(app).get(`/api/wages/fetch?wdNumber=${wdNumber}`);
     expect(res.status).toBe(200);
     expect(res.body.wd.wdNumber).toBe(wdNumber);

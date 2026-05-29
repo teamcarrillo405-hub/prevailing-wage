@@ -58,10 +58,10 @@ async function createProject(cookie: string): Promise<string> {
   return res.body.data.project.id as string;
 }
 
-function seedFederalWd(): string {
+async function seedFederalWd(): Promise<string> {
   const now = new Date();
   const id = crypto.randomUUID();
-  upsertWageDetermination({
+  await upsertWageDetermination({
     id,
     source: 'federal-dol',
     wdNumber: `CA2026SCENARIO${Date.now()}`,
@@ -76,7 +76,7 @@ function seedFederalWd(): string {
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   });
-  upsertClassifications(id, [
+  await upsertClassifications(id, [
     { code: 'CARP', description: 'Carpenter', baseRate: 45, fringeRate: 20, totalRate: 65 },
   ]);
   return id;
@@ -121,7 +121,7 @@ describe('internal contractor scenario', () => {
   it('runs project setup, federal WD pin, QuickBooks import, CPR follow-up, submit-ready, submission, and evidence packet', async () => {
     const cookie = await registerAndLogin('launch-demo');
     const projectId = await createProject(cookie);
-    const wdId = seedFederalWd();
+    const wdId = await seedFederalWd();
 
     const pinRes = await supertest(app)
       .post(`/api/projects/${projectId}/wage-determinations`)

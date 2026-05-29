@@ -152,16 +152,15 @@ async function loadCensusCounties(): Promise<{ retrievedAt: string; counties: Ce
   return censusCountyCache;
 }
 
-function getWdCoverageByState(): Map<string, WdStateCoverage> {
+async function getWdCoverageByState(): Promise<Map<string, WdStateCoverage>> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select({
       state: wageDeterminations.state,
       county: wageDeterminations.county,
     })
     .from(wageDeterminations)
-    .where(eq(wageDeterminations.isActive, true))
-    .all();
+    .where(eq(wageDeterminations.isActive, true));
 
   const coverage = new Map<string, WdStateCoverage>();
   for (const row of rows) {
@@ -181,7 +180,7 @@ function getWdCoverageByState(): Map<string, WdStateCoverage> {
 
 export async function getCountyCoverageAudit(): Promise<CountyCoverageAudit> {
   const { counties, retrievedAt } = await loadCensusCounties();
-  const wdCoverage = getWdCoverageByState();
+  const wdCoverage = await getWdCoverageByState();
   const byState: CountyCoverageAudit['byState'] = [];
   const missing: CountyCoverageAudit['missing'] = [];
 

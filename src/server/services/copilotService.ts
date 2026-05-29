@@ -1089,9 +1089,9 @@ function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
-function findApplicablePinnedWd(projectId: string) {
+async function findApplicablePinnedWd(projectId: string) {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select({
       wageDeterminationId: projectWageDeterminations.wageDeterminationId,
       isPrimary: projectWageDeterminations.isPrimary,
@@ -1102,14 +1102,13 @@ function findApplicablePinnedWd(projectId: string) {
     })
     .from(projectWageDeterminations)
     .innerJoin(wageDeterminations, eq(projectWageDeterminations.wageDeterminationId, wageDeterminations.id))
-    .where(eq(projectWageDeterminations.projectId, projectId))
-    .all();
+    .where(eq(projectWageDeterminations.projectId, projectId));
 
-  return rows.find((row: typeof rows[number]) => row.isPrimary) ?? (rows.length === 1 ? rows[0] : null);
+  return rows.find((row) => row.isPrimary) ?? (rows.length === 1 ? rows[0] : null);
 }
 
-function lockProjectToPinnedWd(projectId: string, wd: NonNullable<ReturnType<typeof findApplicablePinnedWd>>) {
-  getDb()
+async function lockProjectToPinnedWd(projectId: string, wd: NonNullable<Awaited<ReturnType<typeof findApplicablePinnedWd>>>) {
+  await getDb()
     .update(projects)
     .set({
       wdIdentifier: wd.wdNumber,
@@ -1117,8 +1116,7 @@ function lockProjectToPinnedWd(projectId: string, wd: NonNullable<ReturnType<typ
       wdLockedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(projects.id, projectId))
-    .run();
+    .where(eq(projects.id, projectId));
 }
 
 function assertMutablePayrollWeek(context: CopilotContext) {
@@ -1165,7 +1163,7 @@ async function recomputePayrollWeekPay(payrollWeekId: string) {
 
 async function refreshZeroRateSnapshotsFromPinnedWd(projectId: string, payrollWeekId: string) {
   const db = getDb();
-  const pinnedWd = findApplicablePinnedWd(projectId);
+  const pinnedWd = await findApplicablePinnedWd(projectId);
   if (!pinnedWd) {
     const err = new Error('Pin exactly one WD or mark one pinned WD as primary before Copilot can refresh rate snapshots') as Error & { status?: number };
     err.status = 409;
@@ -1233,7 +1231,7 @@ async function refreshZeroRateSnapshotsFromPinnedWd(projectId: string, payrollWe
   };
 }
 
-function buildPreparedAction(actionId: string, context: CopilotContext): CopilotPreparedAction {
+async function buildPreparedAction(actionId: string, context: CopilotContext): Promise<CopilotPreparedAction> {
   const id = randomUUID();
   const projectName = context.project?.name ?? 'this project';
   const findings: string[] = [];
@@ -1249,7 +1247,7 @@ function buildPreparedAction(actionId: string, context: CopilotContext): Copilot
 
   if (context.project && !context.project.wdIdentifier && context.project.contractType === 'federal-davis-bacon') {
     findings.push('The project is marked federal Davis-Bacon but no wage determination identifier is locked on the project.');
-    const pinnedWd = findApplicablePinnedWd(context.project.id);
+    const pinnedWd = await findApplicablePinnedWd(context.project.id);
     if (pinnedWd) {
       findings.push(`A ${pinnedWd.isPrimary ? 'primary ' : ''}pinned WD is available: ${pinnedWd.wdNumber} revision ${pinnedWd.revisionNumber}.`);
       proposedSteps.push('Review the pinned WD details, then approve Copilot to lock this project to that already-pinned WD.');
@@ -1352,7 +1350,7 @@ export async function prepareCopilotAction(input: {
 }): Promise<CopilotPreparedAction> {
   const startedAt = Date.now();
   const context = await buildCopilotContext(input);
-  const preparedAction = buildPreparedAction(input.actionId, context);
+  const preparedAction = await buildPreparedAction(input.actionId, context);
   const interactionId = randomUUID();
 
   await getDb().insert(copilotInteractions).values({
@@ -1460,14 +1458,14 @@ export async function applyCopilotAction(input: {
       throw err;
     }
 
-    const pinnedWd = findApplicablePinnedWd(context.project.id);
+    const pinnedWd = await findApplicablePinnedWd(context.project.id);
     if (!pinnedWd) {
       const err = new Error('Pin exactly one WD or mark one pinned WD as primary before Copilot can lock it') as Error & { status?: number };
       err.status = 409;
       throw err;
     }
 
-    lockProjectToPinnedWd(context.project.id, pinnedWd);
+    await lockProjectToPinnedWd(context.project.id, pinnedWd);
     message = `Applied approved action: locked ${context.project.name} to ${pinnedWd.wdNumber} revision ${pinnedWd.revisionNumber}.`;
     mutation = 'project.wd_lock';
     mutationDetails = {

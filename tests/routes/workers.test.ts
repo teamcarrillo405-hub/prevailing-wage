@@ -219,7 +219,7 @@ describe('GET /workers programName field', () => {
     const projectId = await createProject(cookie);
     const now = new Date();
 
-    const pinnedWdId = upsertWageDetermination({
+    const pinnedWdId = await upsertWageDetermination({
       id: randomUUID(),
       source: 'federal-dol',
       wdNumber: `PINNED${Date.now()}`,
@@ -234,12 +234,12 @@ describe('GET /workers programName field', () => {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
-    upsertClassifications(pinnedWdId, [
+    await upsertClassifications(pinnedWdId, [
       { code: 'CARP', description: 'Carpenter', baseRate: 44.15, fringeRate: 19.82, totalRate: 63.97 },
     ]);
-    pinWdToProject(projectId, pinnedWdId, 'Building', null);
+    await pinWdToProject(projectId, pinnedWdId, 'Building', null);
 
-    const newerUnpinnedWdId = upsertWageDetermination({
+    const newerUnpinnedWdId = await upsertWageDetermination({
       id: randomUUID(),
       source: 'federal-dol',
       wdNumber: `UNPINNED${Date.now()}`,
@@ -254,7 +254,7 @@ describe('GET /workers programName field', () => {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
-    upsertClassifications(newerUnpinnedWdId, [
+    await upsertClassifications(newerUnpinnedWdId, [
       { code: 'ELEC', description: 'Electrician', baseRate: 70, fringeRate: 25, totalRate: 95 },
     ]);
 
@@ -275,7 +275,7 @@ describe('GET /workers programName field', () => {
     const projectId = await createProject(cookie);
     const now = new Date();
 
-    const pinnedWdId = upsertWageDetermination({
+    const pinnedWdId = await upsertWageDetermination({
       id: randomUUID(),
       source: 'federal-dol',
       wdNumber: `APP-PINNED${Date.now()}`,
@@ -290,10 +290,10 @@ describe('GET /workers programName field', () => {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
-    upsertClassifications(pinnedWdId, [
+    await upsertClassifications(pinnedWdId, [
       { code: 'ELEC', description: 'Electrician', baseRate: 50, fringeRate: 20, totalRate: 70 },
     ]);
-    pinWdToProject(projectId, pinnedWdId, 'Building', null);
+    await pinWdToProject(projectId, pinnedWdId, 'Building', null);
 
     const wRes = await supertest(app)
       .post(`/api/projects/${projectId}/workers`)

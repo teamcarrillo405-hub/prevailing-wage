@@ -109,7 +109,7 @@ describe('payroll routes', () => {
     const { upsertWageDetermination, upsertClassifications, pinWdToProject } = await import('../../src/server/services/wageCache.js');
     const now = new Date();
 
-    const pinnedWdId = upsertWageDetermination({
+    const pinnedWdId = await upsertWageDetermination({
       id: `payroll-pinned-wd-${Date.now()}`,
       source: 'federal-dol',
       wdNumber: `PAYROLL-PINNED-${Date.now()}`,
@@ -124,10 +124,10 @@ describe('payroll routes', () => {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
-    upsertClassifications(pinnedWdId, [
+    await upsertClassifications(pinnedWdId, [
       { code: 'CARP', description: 'Carpenter', baseRate: 44.15, fringeRate: 19.82, totalRate: 63.97 },
     ]);
-    pinWdToProject(projectId, pinnedWdId, 'Building', null);
+    await pinWdToProject(projectId, pinnedWdId, 'Building', null);
 
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
@@ -199,7 +199,7 @@ describe('payroll routes', () => {
 
     const { upsertWageDetermination, upsertClassifications, pinWdToProject } = await import('../../src/server/services/wageCache.js');
     const now = new Date();
-    const pinnedWdId = upsertWageDetermination({
+    const pinnedWdId = await upsertWageDetermination({
       id: `payroll-apprentice-pinned-wd-${Date.now()}`,
       source: 'federal-dol',
       wdNumber: `PAYROLL-APP-PINNED-${Date.now()}`,
@@ -214,10 +214,10 @@ describe('payroll routes', () => {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
-    upsertClassifications(pinnedWdId, [
+    await upsertClassifications(pinnedWdId, [
       { code: 'ELEC', description: 'Electrician', baseRate: 44.15, fringeRate: 19.82, totalRate: 63.97 },
     ]);
-    pinWdToProject(projectId, pinnedWdId, 'Building', null);
+    await pinWdToProject(projectId, pinnedWdId, 'Building', null);
 
     const weekRes = await supertest(app)
       .post('/api/payroll/weeks')
