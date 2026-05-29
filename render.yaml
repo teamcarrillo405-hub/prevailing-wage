@@ -1,24 +1,54 @@
 services:
   - type: web
-    name: hcc-prevailing-wage
+    name: avero-prevailing-wage
     runtime: node
     buildCommand: npm run build
     startCommand: node dist/server/index.js
     healthCheckPath: /api/health
     envVars:
+      # ── Runtime ───────────────────────────────────────────────────────────
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 4099
+      - key: CORS_ORIGIN
+        value: https://avero-prevailing-wage.onrender.com   # update if using custom domain
+      - key: APP_URL
+        value: https://avero-prevailing-wage.onrender.com   # update if using custom domain
+
+      # ── Database (SQLite on persistent disk) ──────────────────────────────
+      # To switch to Postgres, remove DATABASE_PATH, add DATABASE_URL (sync: false)
       - key: DATABASE_PATH
         value: /var/data/prevailing-wage.db
-      - key: CORS_ORIGIN
-        value: https://hcc-prevailing-wage.onrender.com
+
+      # ── Security ──────────────────────────────────────────────────────────
       - key: JWT_SECRET
-        generateValue: true
+        generateValue: true           # Render auto-generates; set manually to rotate
+      - key: ENCRYPTION_KEY_V1
+        sync: false                   # 64-char hex — see .env.example for generation command
+
+      # ── Registration gate ─────────────────────────────────────────────────
       - key: INVITE_CODE
-        sync: false
-      - key: LOGTAIL_TOKEN
-        sync: false
+        sync: false                   # leave blank for open registration
+
+      # ── Email (Google Workspace SMTP → Resend fallback → silent skip) ─────
+      - key: SMTP_HOST
+        sync: false                   # e.g. smtp.gmail.com
+      - key: SMTP_PORT
+        sync: false                   # 587
+      - key: SMTP_USER
+        sync: false                   # e.g. noreply@averopw.com
+      - key: SMTP_PASS
+        sync: false                   # Google Workspace App Password
+      - key: SMTP_FROM
+        sync: false                   # e.g. AVERO Prevailing Wage <noreply@averopw.com>
+      - key: RESEND_API_KEY
+        sync: false                   # fallback only — leave blank if using SMTP
+
+      # ── Billing (Stripe) ─────────────────────────────────────────────────
       - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRICE_STARTER
         sync: false
       - key: STRIPE_PRICE_PRO
         sync: false
@@ -26,16 +56,17 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+
+      # ── External APIs ────────────────────────────────────────────────────
+      - key: SAM_GOV_API_KEY
+        sync: false                   # free key at api.data.gov — rate-limit relief for wage lookups
       - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: APP_URL
-        sync: false
-      - key: SSO_SP_CERT
-        sync: false
-      - key: SSO_SP_KEY
-        sync: false
+        sync: false                   # optional — powers PrevWage Copilot AI assistant
+
+      # ── Logging (Better Stack / Logtail) ─────────────────────────────────
+      - key: LOGTAIL_TOKEN
+        sync: false                   # optional — structured log shipping to Better Stack
+
     disk:
       name: data
       mountPath: /var/data
