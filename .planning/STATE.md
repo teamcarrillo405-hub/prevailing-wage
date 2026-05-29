@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v9.5
-milestone_name: Launch Readiness + Compliance Accuracy + UX Superiority
-status: executing
-stopped_at: "Phase 134 complete — v9.0 ERP integrations shipped; v9.5 phases 151-170 in progress"
-last_updated: "2026-05-28T17:00:00.000Z"
+milestone: v10.0
+milestone_name: Complete State + County + Local Coverage
+status: planning
+stopped_at: "v9.0 + v9.5 archived and tagged. v10.0 phases 135-150 not yet started."
+last_updated: "2026-05-28T17:30:00.000Z"
 progress:
-  total_phases: 37
-  completed_phases: 37
-  total_plans: 84
-  completed_plans: 84
+  total_phases: 16
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # State
@@ -19,12 +19,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** GC can run a full project end-to-end -- create -> workers -> payroll -> WH-347 -> submit -- with compliance feedback, no missing steps. Team-ready with encrypted SSN storage and payroll imports.
-**Current focus:** v9.5 launch readiness — phases 151-170
+**Current focus:** v10.0 state/county coverage — phases 135-150
 
 ## Current Position
 
-Phase: 170 (launch-gate) — complete
-v9.0 milestone: all 9 phases (126-134) complete
+v9.0 milestone (phases 126-134): archived 2026-05-28, tagged v9.0
+v9.5 milestone (phases 151-170): archived 2026-05-28, tagged v9.5
+v10.0 milestone (phases 135-150): not started — 16 phases of state/county/local coverage
 
 ## Performance Metrics
 
