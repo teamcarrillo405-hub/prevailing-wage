@@ -16,20 +16,13 @@ A contractor can run a full project end-to-end — create project → add worker
 
 **Delivered:** Premium mobile-responsive UI across all core pages (Phase 125 complete); design token elevated cards, skeleton loading, route transitions, empty states, filter chips; QuickBooks OAuth, apprenticeship ratio enforcement, DBE/MBE/WBE sub certification tracking; state portal integrations (CA eCPR, WA PWIA); compliance dashboard real-time counters.
 
-## Current Milestone: v9.0 — Construction ERP Integrations
+## Previous Milestone: v9.0 — Construction ERP Integrations ✅ SHIPPED 2026-05-28
 
-**Goal:** Bidirectional sync with Procore, Sage 300 CRE, and Viewpoint Vista — pulling workers, timesheets, and projects in; pushing WH-347 status and compliance violations back out — making this the only prevailing wage platform that stays live-connected to the ERPs contractors already use.
+**Delivered:** IErpAdapter interface + encrypted credential vault; ProcoreAdapter with OAuth2 PKCE worker sync + rate-limit-aware timesheet pull; Sage300Adapter and VistaAdapter with file-based CSV import; FileErpCard UI for directory config + manual sync; Integration Dashboard sync history table + ERP failure alert banner on DashboardPage. All three ERP adapters dedup workers by erp_external_id (not name); SSN excluded from all outbound payloads. See `.planning/milestones/v9.0-ROADMAP.md`.
 
-**Target features:**
-- Phase 126 — Integration Foundation: connection management UI, credential vault, IntegrationsPage
-- Phase 127 — Procore OAuth + Project/Employee Sync (pull in)
-- Phase 128 — Procore Timesheet Pull: daily timesheet sync
-- Phase 129 — Procore Compliance Push: WH-347 status + violations → Procore custom fields
-- Phase 130 — Sage 300 CRE Adapter: cloud REST + on-premise file-based adapter, employee sync
-- Phase 131 — Sage 300 Payroll Sync + compliance push
-- Phase 132 — Viewpoint Vista Foundation: API/file hybrid adapter
-- Phase 133 — Viewpoint Timesheet + Compliance Push
-- Phase 134 — Integration Dashboard: unified sync history, field mapping, scheduling UI
+## Previous Milestone: v9.5 — Launch Readiness + Compliance Accuracy ✅ SHIPPED 2026-05-28
+
+**Delivered:** Phases 151-170 complete — compliance accuracy hardening, launch gate smoke tests, brand token audit, landing page assets, terms acceptance, onboarding improvements, agency portal, supervisor approval workflow, Sub/DBE reporting, SCA support, QuickBooks write-back, AVERO rebranding. See `.planning/milestones/v9.5-ROADMAP.md`.
 
 ## Previous Milestone: v4.0 — Compliance Depth + Operations ✅ SHIPPED 2026-04-07
 
