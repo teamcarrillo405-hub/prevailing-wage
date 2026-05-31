@@ -2,7 +2,7 @@ services:
   - type: web
     name: avero-prevailing-wage
     runtime: node
-    buildCommand: npm run build
+    buildCommand: npm ci && npm run build
     startCommand: node dist/server/index.js
     healthCheckPath: /api/health
     envVars:
