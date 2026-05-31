@@ -16,16 +16,15 @@ services:
       - key: APP_URL
         value: https://avero-prevailing-wage.onrender.com   # update if using custom domain
 
-      # ── Database (SQLite on persistent disk) ──────────────────────────────
-      # To switch to Postgres, remove DATABASE_PATH, add DATABASE_URL (sync: false)
-      - key: DATABASE_PATH
-        value: /var/data/prevailing-wage.db
+      # ── Database (Supabase Postgres) ──────────────────────────────────────
+      - key: DATABASE_URL
+        value: postgresql://postgres:GrayLinc405!@db.ksmszfluidjdcpkswjog.supabase.co:5432/postgres
 
       # ── Security ──────────────────────────────────────────────────────────
       - key: JWT_SECRET
         generateValue: true           # Render auto-generates; set manually to rotate
       - key: ENCRYPTION_KEY_V1
-        sync: false                   # 64-char hex — see .env.example for generation command
+        value: b4ecd03adf9181578701345408ab1d513c94181ab81c786db229543503506a41
 
       # ── Registration gate ─────────────────────────────────────────────────
       - key: INVITE_CODE
@@ -66,8 +65,3 @@ services:
       # ── Logging (Better Stack / Logtail) ─────────────────────────────────
       - key: LOGTAIL_TOKEN
         sync: false                   # optional — structured log shipping to Better Stack
-
-    disk:
-      name: data
-      mountPath: /var/data
-      sizeGB: 1
