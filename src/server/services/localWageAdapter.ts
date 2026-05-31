@@ -31,7 +31,7 @@ export class LocalWageAdapter implements WageAdapter {
       .from(wageDeterminations)
       .where(
         and(
-          eq(wageDeterminations.source, 'local'),
+          eq(wageDeterminations.source, 'local' as any),
           eq(wageDeterminations.state, state.toUpperCase()),
           eq(wageDeterminations.county, this.localityName),
           eq(wageDeterminations.isActive, true),
@@ -44,7 +44,7 @@ export class LocalWageAdapter implements WageAdapter {
     const classifications = await getCachedClassifications(row.id);
     return {
       id: row.id,
-      source: 'local',
+      source: 'local' as any,
       wdNumber: row.wdNumber,
       revisionNumber: row.revisionNumber,
       state: row.state,

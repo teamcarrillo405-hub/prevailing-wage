@@ -63,7 +63,7 @@ abstract class ManualImportStateAdapter implements WageAdapter {
       .from(wageDeterminations)
       .where(
         and(
-          eq(wageDeterminations.source, this.source),
+          eq(wageDeterminations.source, this.source as any),
           eq(wageDeterminations.state, state.toUpperCase()),
           eq(wageDeterminations.county, county),
           eq(wageDeterminations.isActive, true)
@@ -77,7 +77,7 @@ abstract class ManualImportStateAdapter implements WageAdapter {
     const classifications = await getCachedClassifications(row.id);
     return {
       id: row.id,
-      source: this.source,
+      source: this.source as any,
       wdNumber: row.wdNumber,
       revisionNumber: row.revisionNumber,
       state: row.state,
